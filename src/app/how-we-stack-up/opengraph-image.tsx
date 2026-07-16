@@ -12,9 +12,9 @@ export const contentType = "image/png";
 // launched, so it shows "?" (matches the table's not-launched-yet state).
 const SCORES = [
   { name: "IndieCrowdfund", score: "31", highlight: true },
-  { name: "Indiegogo", score: "11", highlight: false },
-  { name: "Kickstarter", score: "8", highlight: false },
-  { name: "Fund My Comic", score: "5", highlight: false },
+  { name: "Indiegogo", score: "12", highlight: false },
+  { name: "Kickstarter", score: "9", highlight: false },
+  { name: "Fund My Comic", score: "6", highlight: false },
   { name: "Backmebro", score: "?", highlight: false },
 ];
 

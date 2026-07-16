@@ -58,7 +58,7 @@ export const GROUPS: FeatureGroup[] = [
       { label: "Native à-la-carte add-ons", ic: "yes", ks: "yes", ig: "yes", fmc: "yes", bmb: "unknown" },
       { label: "Late pledges after the campaign ends", ic: "yes", ks: "yes", ig: "yes", fmc: "partial", bmb: "unknown" },
       { label: "Backer reviews & star ratings", ic: "yes", ks: "no", ig: "no", fmc: "no", bmb: "unknown" },
-      { label: "Team collaborators on a campaign", ic: "yes", ks: "no", ig: "no", fmc: "no", bmb: "unknown" },
+      { label: "Team collaborators on a campaign", ic: "yes", ks: "yes", ig: "yes", fmc: "no", bmb: "unknown" },
       { label: "Built-in referral tracking", ic: "yes", ks: "partial", ig: "partial", fmc: "partial", bmb: "unknown" },
     ],
   },
@@ -67,7 +67,7 @@ export const GROUPS: FeatureGroup[] = [
     rows: [
       { label: "Multiple payment processors", ic: "yes", ks: "no", ig: "yes", fmc: "partial", bmb: "unknown" },
       { label: "PayPal accepted", ic: "yes", ks: "no", ig: "yes", fmc: "yes", bmb: "unknown" },
-      { label: "Crypto / token payments (DivinityCoin)", ic: "yes", ks: "no", ig: "no", fmc: "no", bmb: "unknown" },
+      { label: "Crypto / token payments (via Whop)", ic: "yes", ks: "no", ig: "no", fmc: "no", bmb: "unknown" },
     ],
   },
   {
@@ -85,7 +85,7 @@ export const GROUPS: FeatureGroup[] = [
   {
     title: "Ongoing store",
     rows: [
-      { label: "Digital storefront (sell after the campaign)", ic: "yes", ks: "partial", ig: "yes", fmc: "no", bmb: "unknown" },
+      { label: "Digital storefront (sell after the campaign)", ic: "yes", ks: "partial", ig: "yes", fmc: "yes", bmb: "unknown" },
       { label: "Music streaming store", ic: "yes", ks: "no", ig: "no", fmc: "no", bmb: "unknown" },
       { label: "Movie / video streaming store", ic: "yes", ks: "no", ig: "no", fmc: "no", bmb: "unknown" },
       { label: "Physical-media store", ic: "yes", ks: "no", ig: "no", fmc: "no", bmb: "unknown" },
