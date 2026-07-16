@@ -245,6 +245,7 @@ export async function PATCH(
         userId: session.user.id,
       },
       include: {
+        reward: { select: { shippingType: true } },
         project: {
           select: {
             id: true,
@@ -640,6 +641,23 @@ export async function PATCH(
 
         if (validAddons.length !== addonIdList.length) {
           return NextResponse.json({ error: "Invalid addons" }, { status: 400 });
+        }
+
+        // Digital-reward gate: the effective main reward after this modify
+        // (the swapped-in reward if changing, else the pledge's current
+        // reward) determines eligibility. A digital reward (NO_SHIPPING) may
+        // only carry digital add-ons; a physical reward can carry any.
+        const effectiveRewardShipping = newReward
+          ? newReward.shippingType
+          : pledge.reward?.shippingType;
+        if (
+          effectiveRewardShipping === "NO_SHIPPING" &&
+          validAddons.some((a) => a.shippingType !== "NO_SHIPPING")
+        ) {
+          return NextResponse.json(
+            { error: "Physical add-ons can't be added to a digital reward. Only digital add-ons are available for this tier." },
+            { status: 400 }
+          );
         }
       }
 

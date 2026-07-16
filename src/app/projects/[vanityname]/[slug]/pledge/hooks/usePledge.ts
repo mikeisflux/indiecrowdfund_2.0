@@ -1,7 +1,7 @@
 "use client";
 
 import { apiFetch } from "@/lib/fetch-utils";
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useSearchParams, useParams, useRouter } from "next/navigation";
 import { useSession } from "@/components/providers/auth-provider";
 import { loadStripe } from "@stripe/stripe-js/pure";
@@ -528,8 +528,38 @@ export function usePledge() {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
+  // Add-on eligibility rule: a DIGITAL main reward (shippingType
+  // NO_SHIPPING) may only be paired with digital add-ons. A physical reward
+  // can take any add-on (digital or physical). A custom pledge with no
+  // reward selected is unrestricted.
+  const rewardIsDigital = !!selectedReward && selectedReward.shippingType === "NO_SHIPPING";
+  const availableAddons = useMemo(
+    () => (rewardIsDigital ? addons.filter((a) => a.shippingType === "NO_SHIPPING") : addons),
+    [addons, rewardIsDigital]
+  );
+
+  // If the selection tightens to digital-only (e.g. the backer switches from
+  // a physical tier to a digital one), drop any physical add-ons already
+  // picked so they aren't silently carried into the charge/fulfillment.
+  useEffect(() => {
+    if (!rewardIsDigital) return;
+    const allowed = new Set(availableAddons.map((a) => a.id));
+    setSelectedAddons((prev) => {
+      let changed = false;
+      const next: Record<string, number> = {};
+      for (const [id, qty] of Object.entries(prev)) {
+        if (allowed.has(id)) next[id] = qty;
+        else changed = true;
+      }
+      return changed ? next : prev;
+    });
+  }, [rewardIsDigital, availableAddons]);
+
   // Handlers
   const handleAddonToggle = (addonId: string) => {
+    // Guard: never let a physical add-on onto a digital reward.
+    const addon = addons.find((a) => a.id === addonId);
+    if (rewardIsDigital && addon && addon.shippingType !== "NO_SHIPPING") return;
     setSelectedAddons((prev) => {
       if (prev[addonId]) {
         const { [addonId]: _removed, ...rest } = prev;
@@ -609,7 +639,7 @@ export function usePledge() {
     // Navigation
     projectPath,
     // Data
-    project, allRewards, selectedReward, addons, isLoading, error,
+    project, allRewards, selectedReward, addons: availableAddons, isLoading, error,
     pledgeWithoutReward, customPledgeAmount, setCustomPledgeAmount,
     // UI
     step, setStep, selectedAddons, bonusSupport, setBonusSupport,

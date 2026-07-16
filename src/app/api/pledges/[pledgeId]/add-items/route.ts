@@ -53,6 +53,7 @@ export async function POST(
         userId: session.user.id,
       },
       include: {
+        reward: { select: { shippingType: true } },
         project: {
           select: {
             id: true,
@@ -133,6 +134,20 @@ export async function POST(
     if (validAddons.length !== addonIdList.length) {
       return NextResponse.json(
         { error: "Some addons are invalid" },
+        { status: 400 }
+      );
+    }
+
+    // Digital-reward gate: if this pledge's main reward is digital
+    // (shippingType NO_SHIPPING), only digital add-ons may be added. A
+    // physical reward can take any add-on. Enforced here too so the rule
+    // can't be bypassed by posting directly to this endpoint.
+    if (
+      pledge.reward?.shippingType === "NO_SHIPPING" &&
+      validAddons.some((a) => a.shippingType !== "NO_SHIPPING")
+    ) {
+      return NextResponse.json(
+        { error: "Physical add-ons can't be added to a digital reward. Only digital add-ons are available for this pledge." },
         { status: 400 }
       );
     }

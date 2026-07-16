@@ -141,6 +141,18 @@ export async function POST(req: NextRequest) {
         for (const row of addonRows) addonShippingTypes.push(row.shippingType);
       }
 
+      // Digital-reward gate: a digital main reward (shippingType NO_SHIPPING)
+      // may only be paired with digital add-ons. A physical reward can take
+      // any add-on. Enforced server-side so a crafted request can't attach a
+      // physical add-on to a digital pledge. (No restriction when there's no
+      // reward — a custom/bonus pledge.)
+      if (reward && reward.shippingType === "NO_SHIPPING" && addonShippingTypes.some((t) => t !== "NO_SHIPPING")) {
+        return NextResponse.json(
+          { error: "Physical add-ons can't be added to a digital reward. Only digital add-ons are available for this tier." },
+          { status: 400 }
+        );
+      }
+
       // Address-required gate. If anything in this cart ships, the
       // backer must have a saved address. Shipping cost is calculated
       // against the saved profile address. We auto-attach the user's
