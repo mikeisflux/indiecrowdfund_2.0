@@ -226,3 +226,101 @@ ${projectSection}
     </html>
   `;
 }
+
+// ---- Creator newsletter ("what's new") ----
+export interface CreatorNewsletterContent {
+  subject: string;
+  preheader: string;
+  intro: string;
+  features: { title: string; body: string }[];
+  footer: string;
+  // Optional call-to-action button.
+  ctaLabel?: string;
+  ctaUrl?: string; // site-relative, prefixed with {{SITE_URL}}
+}
+
+// Render the creator "what's new" newsletter: a branded header, a warm intro,
+// a stack of feature blurbs, and a CTA — same look as the campaign emails but
+// feature-driven rather than project-driven. Placeholders {{USER_NAME}},
+// {{SITE_URL}}, {{UNSUBSCRIBE_URL}} are resolved by the caller at send time.
+export function renderCreatorNewsletterHtml(content: CreatorNewsletterContent): string {
+  const featureBlocks = content.features
+    .map(
+      (f) => `
+        <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 18px; border: 1px solid #e5e7eb; border-radius: 12px; background: #ffffff;">
+          <tr>
+            <td style="padding: 18px 20px;">
+              <div style="display: inline-block; width: 34px; height: 4px; border-radius: 999px; background: linear-gradient(90deg, #10b981 0%, #06b6d4 100%); margin-bottom: 12px;"></div>
+              <h3 style="margin: 0 0 6px 0; color: #111827; font-size: 18px; font-weight: 700;">${esc(f.title)}</h3>
+              <p style="margin: 0; color: #4b5563; font-size: 14px; line-height: 1.6;">${esc(f.body)}</p>
+            </td>
+          </tr>
+        </table>`
+    )
+    .join("");
+
+  const cta =
+    content.ctaLabel && content.ctaUrl
+      ? `
+              <tr>
+                <td align="center" style="padding: 8px 24px 24px 24px;">
+                  <table role="presentation" cellpadding="0" cellspacing="0">
+                    <tr>
+                      <td style="border-radius: 8px; background: #10b981;">
+                        <a href="{{SITE_URL}}${esc(content.ctaUrl)}" style="display: inline-block; padding: 12px 26px; color: #ffffff; text-decoration: none; font-weight: 600; font-size: 15px; border-radius: 8px;">${esc(content.ctaLabel)} &rarr;</a>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>`
+      : "";
+
+  return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>${esc(content.subject)}</title>
+    </head>
+    <body style="margin: 0; padding: 0; background: #f4f4f7; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #374151;">
+      <div style="display: none; max-height: 0; overflow: hidden;">${esc(content.preheader)}</div>
+      <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background: #f4f4f7;">
+        <tr>
+          <td align="center" style="padding: 24px 12px;">
+            <table role="presentation" cellpadding="0" cellspacing="0" width="600" style="max-width: 600px; width: 100%; background: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.06);">
+              <tr>
+                <td align="center" style="padding: 28px 24px; background: linear-gradient(135deg, #10b981 0%, #059669 100%); background-color: #10b981;">
+                  <h1 style="margin: 0; color: #ffffff; font-size: 26px; font-weight: 800; letter-spacing: -0.02em;">IndieCrowdfund</h1>
+                  <p style="margin: 6px 0 0 0; color: rgba(255,255,255,0.9); font-size: 13px;">What's new for creators</p>
+                </td>
+              </tr>
+              <tr>
+                <td style="padding: 32px 24px 8px 24px;">
+                  <p style="margin: 0 0 12px 0; font-size: 16px; color: #111827; font-weight: 600;">Hi {{USER_NAME}},</p>
+                  <p style="margin: 0; font-size: 16px; color: #374151;">${esc(content.intro)}</p>
+                </td>
+              </tr>
+              <tr>
+                <td style="padding: 20px 24px 4px 24px;">
+                  ${featureBlocks}
+                </td>
+              </tr>
+${cta}
+              <tr>
+                <td style="padding: 8px 24px 32px 24px; border-top: 1px solid #e5e7eb; text-align: center;">
+                  <p style="color: #6b7280; font-size: 14px; margin: 16px 0 0 0;">${esc(content.footer)}</p>
+                  <p style="color: #9ca3af; font-size: 12px; margin-top: 16px;">
+                    <a href="{{UNSUBSCRIBE_URL}}" style="color: #9ca3af;">Unsubscribe</a> &nbsp;|&nbsp;
+                    <a href="{{SITE_URL}}" style="color: #9ca3af;">Visit IndieCrowdfund</a>
+                  </p>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+    </body>
+    </html>
+  `;
+}

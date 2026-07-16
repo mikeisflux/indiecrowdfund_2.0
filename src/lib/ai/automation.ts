@@ -11,8 +11,12 @@
  */
 
 import { db } from "@/lib/db";
-import { generateCampaignContent } from "@/lib/ai/anthropic";
-import { renderCampaignEmailHtml, preferProjectsWithEmailableImage } from "@/lib/ai/campaign-email-template";
+import { generateCampaignContent, generateCreatorNewsletter } from "@/lib/ai/anthropic";
+import {
+  renderCampaignEmailHtml,
+  renderCreatorNewsletterHtml,
+  preferProjectsWithEmailableImage,
+} from "@/lib/ai/campaign-email-template";
 import { generateSmartSegments } from "@/lib/ai/marketing-services";
 import { getAISettings, canSendEmail } from "@/lib/ai/settings-integration";
 import { batchUpdateUserInterests, calculateProjectMatchScore } from "@/lib/ai/user-interests";
@@ -71,6 +75,23 @@ export async function runAutomatedMarketing(): Promise<AutomationResult> {
       const msg = `Profile refresh failed: ${err instanceof Error ? err.message : String(err)}`;
       errors.push(msg);
       steps.push({ step: "Refresh user profiles", success: false, message: msg });
+    }
+
+    // =============================================
+    // STEP 1b: Creator newsletter (twice a week)
+    // Runs on its own Mon/Thu cadence, independent of the project-campaign
+    // eligibility gate below.
+    // =============================================
+    try {
+      const newsletterStep = await maybeSendCreatorNewsletter();
+      if (newsletterStep) {
+        steps.push(newsletterStep);
+        campaignsCreated++;
+      }
+    } catch (err) {
+      const msg = `Creator newsletter failed: ${err instanceof Error ? err.message : String(err)}`;
+      errors.push(msg);
+      steps.push({ step: "Creator newsletter", success: false, message: msg });
     }
 
     // =============================================
@@ -314,6 +335,134 @@ interface CampaignPlan {
   }>;
   // Only populated for abandoned_cart campaigns
   abandonedPledgeUserIds?: string[];
+}
+
+// Recent creator-facing features/updates the newsletter can highlight. A few
+// are picked at random each send. Intentionally EXCLUDES PayPal Connect,
+// which isn't ready for public use yet.
+const CREATOR_FEATURES: { title: string; description: string }[] = [
+  { title: "Order Lock", description: "Send backers a “confirm & lock your order” request. When they approve, we lock the order and collect payment so you can send it straight to production — no waiting on stragglers." },
+  { title: "Printing Comics — bulk print runs", description: "Order a professional print run of your book right inside IndieKit, with a live price quote as you configure trim, paper, and cover stock. Cartons ship to you." },
+  { title: "Hard-copy & PDF proofs", description: "Request a proof from the printer and review it before the full run. Production doesn’t start until you approve, so surprises stay off the press." },
+  { title: "Shipping-carrier integrations", description: "Buy labels and track shipments through Shippo, ShipStation, EasyPost, and Stamps.com — connected directly to your backer list." },
+  { title: "Shopify integration", description: "Sync your campaign fulfillment with your Shopify store, SKU mapping included, so orders flow into the tools you already use." },
+  { title: "Backer surveys & pledge manager", description: "Collect addresses and reward choices, then charge for add-ons — all in one place, no third-party pledge manager required." },
+  { title: "À-la-carte add-ons & late pledges", description: "Offer add-ons backers can stack onto any tier, and keep taking pledges after your campaign ends." },
+  { title: "Digital downloads & the Digital Library", description: "Deliver digital rewards instantly; backers read and re-download them anytime from their Digital Library." },
+  { title: "Production order tracking", description: "See needed vs. already-shipped counts at a glance so you never over-produce a print run." },
+  { title: "Your own storefront", description: "Keep selling after the campaign — list books, music, movies, and physical media in the IndieCrowdfund shop." },
+  { title: "AI marketing that promotes you", description: "We automatically feature your live campaign to backers whose interests match, so discovery keeps working while you focus on making." },
+];
+
+// Creator "what's new" newsletter — goes out twice a week (Mon + Thu) to
+// anyone who has created at least a draft project. Feature-driven (not
+// project-recommendation based); picks a few features at random each send.
+async function maybeSendCreatorNewsletter(): Promise<AutomationStepResult | null> {
+  const now = new Date();
+  const day = now.getDay(); // 0=Sun, 1=Mon, ... 4=Thu
+  if (day !== 1 && day !== 4) return null;
+
+  // Dedupe: at most one creator newsletter per 2-day window (guards against
+  // multiple cron fires and keeps the Mon/Thu cadence to twice a week).
+  const recent = await db.emailCampaign.findFirst({
+    where: {
+      sentAt: { gte: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000) },
+      filters: { path: ["campaignType"], equals: "creator_newsletter" },
+    },
+    select: { id: true },
+  });
+  if (recent) return null;
+
+  // Pick up to 3 random features (no repeats within a send).
+  const pool = [...CREATOR_FEATURES];
+  const picked: { title: string; description: string }[] = [];
+  for (let i = 0; i < 3 && pool.length > 0; i++) {
+    picked.push(pool.splice(Math.floor(Math.random() * pool.length), 1)[0]);
+  }
+
+  const content = await generateCreatorNewsletter({ features: picked });
+  const html = renderCreatorNewsletterHtml({
+    ...content,
+    ctaLabel: "Open your dashboard",
+    ctaUrl: "/dashboard",
+  });
+
+  const campaign = await db.emailCampaign.create({
+    data: {
+      name: `Creator Newsletter — ${now.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`,
+      subject: content.subject,
+      htmlContent: html,
+      targetAudience: "creator",
+      status: "SENDING",
+      sentAt: new Date(),
+      filters: {
+        automated: true,
+        campaignType: "creator_newsletter",
+        aiGenerated: true,
+        preheader: content.preheader,
+      },
+    },
+  });
+
+  // Recipients: anyone who has created at least one (non-deleted) project of
+  // ANY status — including DRAFT — with a verified email, respecting the
+  // per-user frequency cap.
+  const creators = await db.user.findMany({
+    where: {
+      emailVerified: { not: null },
+      deletedAt: null,
+      createdProjects: { some: { deletedAt: null } },
+    },
+    select: { id: true, email: true, name: true },
+  });
+
+  const recipients: { id: string; email: string; name: string | null }[] = [];
+  for (const u of creators) {
+    const check = await canSendEmail(u.id);
+    if (check.canSend) recipients.push({ id: u.id, email: u.email.toLowerCase(), name: u.name });
+  }
+
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://indiecrowdfund.com";
+  let queuedCount = 0;
+  for (const r of recipients) {
+    try {
+      let personalized = html
+        .replace(/\{\{USER_NAME\}\}/gi, r.name?.split(" ")[0] || "there")
+        .replace(/\{\{SITE_URL\}\}/gi, baseUrl);
+      const encodedEmail = Buffer.from(r.email).toString("base64");
+      const pixel = `<img src="${baseUrl}/api/email/track/open?c=${campaign.id}&e=${encodedEmail}" width="1" height="1" style="display:none;" alt="" />`;
+      personalized = personalized.includes("</body>")
+        ? personalized.replace("</body>", `${pixel}</body>`)
+        : personalized + pixel;
+      const linkRegex = /href="(https?:\/\/(?:www\.)?indiecrowdfund\.com[^"]*)"/gi;
+      personalized = personalized.replace(linkRegex, (_m, url) => {
+        const encodedUrl = Buffer.from(url).toString("base64");
+        return `href="${baseUrl}/api/email/track/click?c=${campaign.id}&e=${encodedEmail}&url=${encodedUrl}"`;
+      });
+      personalized = personalized.replace(/\{\{UNSUBSCRIBE_URL\}\}/gi, getUnsubscribeUrl(r.email));
+
+      const result = await queueEmail({
+        to: r.email,
+        subject: content.subject,
+        html: personalized,
+        priority: EMAIL_PRIORITY.AI_MARKETING,
+      });
+      if (result.success) queuedCount++;
+    } catch {
+      // Skip a single failed recipient; keep sending the rest.
+    }
+  }
+
+  await db.emailCampaign.update({
+    where: { id: campaign.id },
+    data: { status: "SENT", sentCount: queuedCount, recipientCount: recipients.length },
+  });
+
+  return {
+    step: "Creator newsletter",
+    success: true,
+    message: `Sent creator newsletter to ${queuedCount} creator(s): ${picked.map((f) => f.title).join(", ")}`,
+  };
 }
 
 async function planCampaigns(
