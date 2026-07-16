@@ -12,7 +12,7 @@
 
 import { db } from "@/lib/db";
 import { generateCampaignContent } from "@/lib/ai/anthropic";
-import { renderCampaignEmailHtml } from "@/lib/ai/campaign-email-template";
+import { renderCampaignEmailHtml, preferProjectsWithEmailableImage } from "@/lib/ai/campaign-email-template";
 import { generateSmartSegments } from "@/lib/ai/marketing-services";
 import { getAISettings, canSendEmail } from "@/lib/ai/settings-integration";
 import { batchUpdateUserInterests, calculateProjectMatchScore } from "@/lib/ai/user-interests";
@@ -361,6 +361,11 @@ async function planCampaigns(
   });
 
   if (liveProjects.length === 0) return plans;
+
+  // Lead every marketing email with campaigns that have a real, emailable
+  // cover image (newest-first within each group). Sorts in place so every
+  // campaign type built below benefits.
+  preferProjectsWithEmailableImage(liveProjects);
 
   const formatProject = (p: typeof liveProjects[0]) => ({
     id: p.id,

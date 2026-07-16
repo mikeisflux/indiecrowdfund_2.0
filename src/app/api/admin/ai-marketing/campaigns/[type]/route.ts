@@ -6,7 +6,7 @@ const adminAiMarketingCampaignsLogger = logger.child({ module: "admin-ai-marketi
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { generateCampaignContent } from "@/lib/ai";
-import { renderCampaignEmailHtml } from "@/lib/ai/campaign-email-template";
+import { renderCampaignEmailHtml, preferProjectsWithEmailableImage } from "@/lib/ai/campaign-email-template";
 import {
   getAISettings,
   generateVariantsIfEnabled,
@@ -425,6 +425,8 @@ export async function POST(
         creator: { select: { vanityUrl: true } },
       },
     });
+    // Lead with campaigns that have an emailable cover image (sorts in place).
+    preferProjectsWithEmailableImage(projects);
 
     if (projects.length === 0) {
       return NextResponse.json({ error: "No projects available for campaign" }, { status: 400 });

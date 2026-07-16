@@ -33,6 +33,19 @@ export interface CampaignEmailProject {
   category: string | null;
 }
 
+// Sort projects IN PLACE so those with a publicly-servable cover image come
+// first, so every marketing email the AI sends leads with real imagery
+// instead of the gradient placeholder. Stable, so the newest-first order is
+// preserved within the imaged / non-imaged groups. The /api/r2/serve route is
+// auth-gated (won't load in an email client) and data: URIs are stripped, so
+// neither counts as an emailable image. Returns the same array for chaining.
+export function preferProjectsWithEmailableImage<T extends { imageUrl: string | null }>(
+  projects: T[]
+): T[] {
+  const ok = (u: string | null) => !!u && !u.startsWith("/api/r2/serve") && !u.startsWith("data:");
+  return projects.sort((a, b) => (ok(a.imageUrl) ? 0 : 1) - (ok(b.imageUrl) ? 0 : 1));
+}
+
 // Local HTML-escape — keep this module self-contained so every call site
 // gets escaping for free (one of the older admin generators didn't escape
 // at all, which this replaces).
@@ -118,12 +131,34 @@ export function renderCampaignEmailHtml(
 
   let projectCards = "";
   if (includeProjects) {
-    projectCards = aiContent.projectRecommendations
-      .map((rec, i) => {
-        const project =
-          projects.find((p) => p.title === rec.projectTitle) || projects[i];
-        if (!project) return "";
-        return renderProjectCard(project, rec.recommendationReason, rec.callToAction);
+    // Render one card PER PROJECT (not per AI recommendation) so every
+    // campaign in the list always shows — with its image — even if the AI
+    // returned fewer recommendations than there are projects. We order by
+    // the (personalized) recommendation order first, then append any
+    // projects the AI didn't explicitly mention.
+    const recs = aiContent.projectRecommendations || [];
+    const ordered: { project: CampaignEmailProject; rec?: (typeof recs)[number] }[] = [];
+    const used = new Set<string>();
+    for (const rec of recs) {
+      const project = projects.find((p) => p.title === rec.projectTitle);
+      if (project && !used.has(project.title)) {
+        ordered.push({ project, rec });
+        used.add(project.title);
+      }
+    }
+    for (const project of projects) {
+      if (!used.has(project.title)) {
+        ordered.push({ project });
+        used.add(project.title);
+      }
+    }
+    projectCards = ordered
+      .map(({ project, rec }) => {
+        const reason =
+          rec?.recommendationReason ||
+          `A ${project.category && project.category !== "General" ? project.category.toLowerCase() : "creative"} project we think you'll love.`;
+        const cta = rec?.callToAction || "Check it out";
+        return renderProjectCard(project, reason, cta);
       })
       .join("");
   }
