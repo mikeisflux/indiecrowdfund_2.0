@@ -37,6 +37,11 @@ model Reward {
   // Survey integration - whether this addon appears in the IndieKit survey
   showInSurvey      Boolean      @default(false)
 
+  // Creator-chosen display order for reward tiers / add-ons. Null = not
+  // manually ordered → fall back to price (amount asc). Ordered within each
+  // type (TIER / ADDON) since those render as separate lists.
+  displayOrder      Int?
+
   // Tracking if copied
   copiedFromId      String?
 

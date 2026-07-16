@@ -22,7 +22,9 @@ export async function GET(
       include: {
         items: true,
       },
-      orderBy: { amount: "asc" },
+      // Creator's manual order first (displayOrder asc, nulls last), then
+      // price as the default/fallback.
+      orderBy: [{ displayOrder: { sort: "asc", nulls: "last" } }, { amount: "asc" }],
     });
 
     // Convert Decimal fields to numbers for JSON serialization

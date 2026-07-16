@@ -44,6 +44,26 @@ export function RewardsStep({ onFormOpenChange }: RewardsStepProps) {
   // Check if campaign is live (can't edit rewards with backers)
   const isLive = projectStatus === "LIVE" || projectStatus === "FUNDED";
 
+  // Reorder handler: update the local store immediately, then persist the
+  // creator's chosen display order for any already-saved rewards. New/unsaved
+  // rewards (no id) keep their local position and get their displayOrder when
+  // saved / re-ordered again.
+  const handleReorderRewards = async (newRewards: RewardData[]) => {
+    reorderRewards(newRewards);
+    if (!projectId) return;
+    const orderedIds = newRewards.map((r) => r.id).filter((id): id is string => !!id);
+    if (orderedIds.length === 0) return;
+    try {
+      await apiFetch(`/api/projects/${projectId}/rewards/reorder`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ rewardIds: orderedIds }),
+      });
+    } catch {
+      // Non-fatal — the local order is already applied; it re-syncs on save.
+    }
+  };
+
   const [activeTab, setActiveTab] = useState<"items" | "tiers" | "addons">("items");
   const [isSaving, setIsSaving] = useState(false);
 
@@ -801,7 +821,7 @@ export function RewardsStep({ onFormOpenChange }: RewardsStepProps) {
               onEndReward={handleEndReward}
               onRewardImageChange={handleRewardImageChange}
               onOpenImportDialog={() => setIsImportRewardDialogOpen(true)}
-              onReorderRewards={reorderRewards}
+              onReorderRewards={handleReorderRewards}
             />
           </TabsContent>
 
@@ -818,7 +838,7 @@ export function RewardsStep({ onFormOpenChange }: RewardsStepProps) {
               onEndReward={handleEndReward}
               onRewardImageChange={handleRewardImageChange}
               onOpenImportDialog={() => setIsImportAddonDialogOpen(true)}
-              onReorderRewards={reorderRewards}
+              onReorderRewards={handleReorderRewards}
             />
           </TabsContent>
         </Tabs>

@@ -241,7 +241,7 @@ export async function GET(
         quantityClaimed: true,
         imageUrl: true,
       },
-      orderBy: { amount: "asc" },
+      orderBy: [{ displayOrder: { sort: "asc", nulls: "last" } }, { amount: "asc" }],
     });
 
     // Filter out sold out addons and format for frontend

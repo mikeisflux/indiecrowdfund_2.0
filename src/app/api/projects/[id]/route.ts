@@ -339,7 +339,7 @@ export async function GET(
           include: {
             items: true,
           },
-          orderBy: { amount: "asc" },
+          orderBy: [{ displayOrder: { sort: "asc", nulls: "last" } }, { amount: "asc" }],
         },
         updates: {
           where: { status: "PUBLISHED" },

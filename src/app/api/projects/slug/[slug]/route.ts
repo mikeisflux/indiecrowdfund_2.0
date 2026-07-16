@@ -79,7 +79,7 @@ export async function GET(
               },
             },
           },
-          orderBy: { amount: "asc" },
+          orderBy: [{ displayOrder: { sort: "asc", nulls: "last" } }, { amount: "asc" }],
         },
         updates: {
           where: { status: "PUBLISHED" },

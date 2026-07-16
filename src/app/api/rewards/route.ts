@@ -279,7 +279,7 @@ export async function GET(req: NextRequest) {
         items: true,
         _count: { select: { pledges: true } },
       },
-      orderBy: [{ type: "asc" }, { amount: "asc" }],
+      orderBy: [{ type: "asc" }, { displayOrder: { sort: "asc", nulls: "last" } }, { amount: "asc" }],
     });
 
     // Also get project status to determine if campaign is live
