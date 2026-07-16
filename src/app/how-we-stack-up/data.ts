@@ -33,11 +33,13 @@ export interface FeatureGroup {
 //     Thrinacia's WordPress-blog integration module, not the platform.)
 //   - Backmebro: Next.js (App Router) / React / Tailwind (pre-launch).
 //   - Kickstarter: Ruby on Rails (long publicly documented).
-//   - Indiegogo: not publicly disclosed post-2025 Gamefound migration.
+//   - Indiegogo: historically Ruby on Rails + AngularJS (StackShare, public
+//     GitHub); rebuilt on Gamefound's (.NET) infrastructure after the 2025
+//     acquisition, per Indiegogo's own launch announcement.
 export const PLATFORM: Record<"ic" | "ks" | "ig" | "fmc" | "bmb", string> = {
   ic: "Next.js / React",
   ks: "Ruby on Rails",
-  ig: "Not publicly disclosed",
+  ig: "Gamefound platform (.NET)",
   fmc: "Thrinacia · AngularJS",
   bmb: "Next.js / React (pre-launch)",
 };
