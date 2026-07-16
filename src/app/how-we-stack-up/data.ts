@@ -31,7 +31,7 @@ export interface FeatureGroup {
 //     Thrinacia instance with an AngularJS (Angular 1.x, end-of-lifed
 //     Jan 2022) frontend. (The "Wp*" controllers in its source are
 //     Thrinacia's WordPress-blog integration module, not the platform.)
-//   - Backmebro: Node.js, per the vendor (pre-launch).
+//   - Backmebro: Next.js (App Router) / React / Tailwind (pre-launch).
 //   - Kickstarter: Ruby on Rails (long publicly documented).
 //   - Indiegogo: not publicly disclosed post-2025 Gamefound migration.
 export const PLATFORM: Record<"ic" | "ks" | "ig" | "fmc" | "bmb", string> = {
@@ -39,7 +39,7 @@ export const PLATFORM: Record<"ic" | "ks" | "ig" | "fmc" | "bmb", string> = {
   ks: "Ruby on Rails",
   ig: "Not publicly disclosed",
   fmc: "Thrinacia · AngularJS",
-  bmb: "Node.js (pre-launch)",
+  bmb: "Next.js / React (pre-launch)",
 };
 
 export const GROUPS: FeatureGroup[] = [
