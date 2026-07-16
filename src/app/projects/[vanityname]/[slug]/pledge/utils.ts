@@ -80,6 +80,14 @@ export async function modifyPledge(
   paymentMethod?: string;
   clientSecret?: string;
   publishableKey?: string;
+  // Whop upcharge
+  sessionId?: string;
+  planId?: string;
+  environment?: "production" | "sandbox";
+  // PayPal upcharge
+  paypalOrderId?: string;
+  paypalClientId?: string;
+  paypalMode?: string;
   amountDiff?: number;
   refundAmount?: number;
   message: string;
@@ -109,6 +117,12 @@ export async function modifyPledge(
     paymentMethod: data.paymentMethod,
     clientSecret: data.clientSecret,
     publishableKey: data.publishableKey,
+    sessionId: data.sessionId,
+    planId: data.planId,
+    environment: data.environment,
+    paypalOrderId: data.paypalOrderId,
+    paypalClientId: data.paypalClientId,
+    paypalMode: data.paypalMode,
     amountDiff: data.amountDiff,
     refundAmount: data.refundAmount,
     message: data.message,

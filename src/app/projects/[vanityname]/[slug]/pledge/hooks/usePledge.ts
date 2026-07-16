@@ -324,15 +324,42 @@ export function usePledge() {
     try {
       const addonsWithQuantity = Object.entries(selectedAddons).map(([id, quantity]) => ({ id, quantity }));
       const result = await modifyPledgeAPI(modifyPledgeId, selectedReward?.id || "no-reward", addonsWithQuantity, total, totalShipping, shippingCountry);
-      if (result.requiresPayment && result.clientSecret) {
+      if (result.requiresPayment) {
+        // Upcharge required. Mount the matching payment form for the
+        // project's processor; on success PaymentStep fires
+        // handlePaymentSuccess, which calls /confirm-modify to actually
+        // charge, apply the add-ons, and update the pledge amount.
         const chargeAmount = total - originalPledgeAmount;
         setModifyChargeAmount(chargeAmount > 0 ? chargeAmount : null);
-        setClientSecret(result.clientSecret);
-        setIntentType("payment_intent");
         setCurrentPledgeId(modifyPledgeId);
-        if (result.publishableKey && !dcStripePromise) setDcStripePromise(loadStripe(result.publishableKey));
-        setIsProcessing(false);
+        if (result.paypalOrderId) {
+          // PayPal upcharge: drive the PayPal buttons off paypalOrderId.
+          setPaypalOrderId(result.paypalOrderId);
+          if (result.paypalClientId) setPaypalClientId(result.paypalClientId);
+          if (result.paypalMode) setPaypalMode(result.paypalMode);
+          setIsProcessing(false);
+        } else if (result.sessionId) {
+          // Whop upcharge: mount the embedded Whop checkout.
+          setWhopSessionId(result.sessionId);
+          if (result.planId) setWhopPlanId(result.planId);
+          if (result.environment) setWhopEnvironment(result.environment);
+          setIsProcessing(false);
+        } else if (result.clientSecret) {
+          // DivinityCoin upcharge: Stripe-style PaymentIntent.
+          setClientSecret(result.clientSecret);
+          setIntentType("payment_intent");
+          if (result.publishableKey && !dcStripePromise) setDcStripePromise(loadStripe(result.publishableKey));
+          setIsProcessing(false);
+        } else {
+          // requiresPayment with no usable payment handle — don't fake
+          // success on an unpaid, unapplied modification.
+          setPaymentError("We couldn't start the payment for this change. Please try again or contact support.");
+          setIsProcessing(false);
+          creatingPaymentRef.current = false;
+        }
       } else {
+        // No additional payment needed (e.g. lowered/unchanged amount) —
+        // the server already applied the change.
         setCurrentPledgeId(modifyPledgeId);
         setStep("success");
         setIsProcessing(false);

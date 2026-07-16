@@ -172,6 +172,16 @@ export function PaymentStep({
 }: PaymentStepProps) {
   // In modify mode, show the charge amount (difference), not the full total
   const displayTotal = isModifyMode && modifyChargeAmount != null ? modifyChargeAmount : total;
+  // For upcharge flows (modify / add-items) the Whop & PayPal forms must
+  // confirm through the endpoint that captures the upcharge AND applies the
+  // pending change, rather than the original-pledge confirm. New pledges pass
+  // undefined and keep the default capture + /confirm path.
+  const upchargeConfirmUrl =
+    currentPledgeId && isModifyMode
+      ? `/api/pledges/${currentPledgeId}/confirm-modify`
+      : currentPledgeId && isAddItemsMode
+        ? `/api/pledges/${currentPledgeId}/confirm-add-items`
+        : undefined;
   return (
     <div className="space-y-8">
       {/* Payment method heading */}
@@ -297,6 +307,7 @@ export function PaymentStep({
                 onSuccess={handlePaymentSuccess}
                 onError={handlePaymentError}
                 total={displayTotal}
+                confirmUrl={upchargeConfirmUrl}
               />
             ) : paymentError ? (
               <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
@@ -333,6 +344,7 @@ export function PaymentStep({
                 total={displayTotal}
                 onSuccess={handlePaymentSuccess}
                 onError={handlePaymentError}
+                upchargeConfirmUrl={upchargeConfirmUrl}
               />
             ) : paymentError ? (
               <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
