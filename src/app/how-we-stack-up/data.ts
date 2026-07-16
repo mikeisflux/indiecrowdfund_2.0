@@ -62,6 +62,9 @@ export const GROUPS: FeatureGroup[] = [
       // IG: Indiegogo's help center documents drag handles to reorder perks.
       // FMC: not verified (Thrinacia docs don't mention it; site not reachable).
       { label: "Drag-to-reorder reward tiers & add-ons", ic: "yes", ks: "no", ig: "yes", fmc: "no", bmb: "unknown" },
+      // Secret/hidden reward gated by a private link/code. KS + IG both offer
+      // "secret" rewards; FMC not verified.
+      { label: "Secret rewards (private link/code)", ic: "yes", ks: "yes", ig: "yes", fmc: "no", bmb: "unknown" },
       { label: "Late pledges after the campaign ends", ic: "yes", ks: "yes", ig: "yes", fmc: "partial", bmb: "unknown" },
       { label: "Backer reviews & star ratings", ic: "yes", ks: "no", ig: "no", fmc: "no", bmb: "unknown" },
       { label: "Team collaborators on a campaign", ic: "yes", ks: "yes", ig: "yes", fmc: "no", bmb: "unknown" },

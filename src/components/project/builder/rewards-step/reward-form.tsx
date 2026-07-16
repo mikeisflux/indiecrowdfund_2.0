@@ -26,9 +26,11 @@ import {
   Check,
   Copy,
   Plus,
+  Mail,
   Image as ImageIcon,
 } from "lucide-react";
 import { toast } from "sonner";
+import { apiFetch } from "@/lib/fetch-utils";
 import { ImageUpload } from "@/components/ui/image-upload";
 import { cn } from "@/lib/utils";
 import { RewardData, RewardItemData, ShippingType, SHIPPING_COUNTRIES } from "@/types";
@@ -88,6 +90,37 @@ export function RewardForm({
   onCreateItem,
 }: RewardFormProps) {
   const [isCopied, setIsCopied] = React.useState(false);
+  const [isEmailing, setIsEmailing] = React.useState(false);
+
+  // Blast the secret reward's private link to the campaign's followers.
+  const handleEmailFollowers = async () => {
+    const rewardId = currentReward.id;
+    if (!projectId || !rewardId) {
+      toast.error("Save this reward first, then you can email your followers.");
+      return;
+    }
+    setIsEmailing(true);
+    try {
+      const res = await apiFetch(
+        `/api/projects/${projectId}/rewards/${rewardId}/email-followers`,
+        { method: "POST" }
+      );
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data?.error || "Couldn't email your followers.");
+        return;
+      }
+      toast.success(
+        data.sent > 0
+          ? `Secret reward emailed to ${data.sent} follower${data.sent === 1 ? "" : "s"}.`
+          : data.message || "No followers to email yet."
+      );
+    } catch {
+      toast.error("Couldn't email your followers.");
+    } finally {
+      setIsEmailing(false);
+    }
+  };
 
   const handleCopySecretLink = () => {
     const token = secretToken || currentReward.secretToken;
@@ -345,6 +378,28 @@ export function RewardForm({
                         {isCopied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
                       </Button>
                     </div>
+
+                    {/* One-click blast to campaign followers */}
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="mt-3"
+                      onClick={handleEmailFollowers}
+                      disabled={isEmailing || !currentReward.id}
+                    >
+                      {isEmailing ? (
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      ) : (
+                        <Mail className="h-4 w-4 mr-2" />
+                      )}
+                      Email this to my followers
+                    </Button>
+                    {!currentReward.id && (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Save this reward first to email your followers.
+                      </p>
+                    )}
                   </div>
                 )}
               </div>

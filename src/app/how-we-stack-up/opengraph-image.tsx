@@ -11,9 +11,9 @@ export const contentType = "image/png";
 // Keep in sync with the headline scoreboard on the page. Backmebro hasn't
 // launched, so it shows "?" (matches the table's not-launched-yet state).
 const SCORES = [
-  { name: "IndieCrowdfund", score: "32", highlight: true },
-  { name: "Indiegogo", score: "13", highlight: false },
-  { name: "Kickstarter", score: "9", highlight: false },
+  { name: "IndieCrowdfund", score: "33", highlight: true },
+  { name: "Indiegogo", score: "14", highlight: false },
+  { name: "Kickstarter", score: "10", highlight: false },
   { name: "Fund My Comic", score: "6", highlight: false },
   { name: "Backmebro", score: "?", highlight: false },
 ];
