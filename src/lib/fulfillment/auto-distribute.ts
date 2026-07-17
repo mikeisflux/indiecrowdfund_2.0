@@ -77,6 +77,53 @@ async function sendDeliveryEmails(
   return sent;
 }
 
+// A pledge is "digital only" when nothing in it physically ships: the main
+// reward (if any) is digital and every add-on is digital. shippingType
+// NO_SHIPPING is the digital marker (matches orderRequiresShipping elsewhere).
+function isDigitalOnly(p: {
+  reward: { shippingType: string } | null;
+  addons: { addon: { shippingType: string } | null }[];
+}): boolean {
+  const rewardShips = p.reward ? p.reward.shippingType !== "NO_SHIPPING" : false;
+  const addonShips = p.addons.some((a) => a.addon && a.addon.shippingType !== "NO_SHIPPING");
+  return !rewardShips && !addonShips;
+}
+
+// After digital files are delivered to these pledges, mark any that are
+// digital-only as SHIPPED — there's nothing physical to send, so delivery of
+// the files is the fulfillment. Never downgrades an already SHIPPED/DELIVERED
+// pledge, and only touches COMPLETED (paid) orders.
+export async function markDigitalOnlyPledgesShipped(pledgeIds: string[]): Promise<number> {
+  const ids = Array.from(new Set(pledgeIds.filter(Boolean)));
+  if (ids.length === 0) return 0;
+
+  const pledges = await db.pledge.findMany({
+    where: {
+      id: { in: ids },
+      status: "COMPLETED",
+      deletedAt: null,
+      fulfillmentStatus: { in: ["NOT_STARTED", "IN_PROGRESS"] },
+    },
+    select: {
+      id: true,
+      reward: { select: { shippingType: true } },
+      addons: { select: { addon: { select: { shippingType: true } } } },
+    },
+  });
+
+  const digitalOnly = pledges.filter(isDigitalOnly).map((p) => p.id);
+  if (digitalOnly.length === 0) return 0;
+
+  const res = await db.pledge.updateMany({
+    where: { id: { in: digitalOnly }, fulfillmentStatus: { in: ["NOT_STARTED", "IN_PROGRESS"] } },
+    data: { fulfillmentStatus: "SHIPPED" },
+  });
+  if (res.count > 0) {
+    log.info({ count: res.count }, "digital-only pledges marked shipped after digital delivery");
+  }
+  return res.count;
+}
+
 export interface AutoDistributeResult {
   rulesProcessed: number;
   distributed: number;
@@ -179,6 +226,9 @@ export async function distributeReadyFilesForProject(
   }
 
   const emailed = await sendDeliveryEmails(project.title, newFilesByPledge);
+
+  // Digital-only backers who just received files have nothing left to ship.
+  await markDigitalOnlyPledgesShipped(Array.from(newFilesByPledge.keys()));
 
   if (distributed > 0) {
     log.info(

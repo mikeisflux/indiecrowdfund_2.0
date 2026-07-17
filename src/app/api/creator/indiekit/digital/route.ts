@@ -6,6 +6,7 @@ const creatorIndiekitDigitalLogger = logger.child({ module: "creator-indiekit-di
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { sendDigitalDeliveryEmail } from "@/lib/email/email-templates-misc";
+import { markDigitalOnlyPledgesShipped } from "@/lib/fulfillment/auto-distribute";
 
 /**
  * Group pledge IDs by backer and send digital delivery emails.
@@ -505,6 +506,9 @@ export async function POST(req: NextRequest) {
       // Send delivery notification emails to backers
       const emailResult = await sendDeliveryEmailsForPledges(projectId, distributedPledgeIds);
 
+      // Digital-only backers who got their files have nothing left to ship.
+      await markDigitalOnlyPledgesShipped(distributedPledgeIds);
+
       return NextResponse.json({
         success: true,
         distributedCount: createdCount,
@@ -625,6 +629,9 @@ export async function POST(req: NextRequest) {
         Array.from(allDistributedPledgeIds)
       );
 
+      // Digital-only backers who got their files have nothing left to ship.
+      await markDigitalOnlyPledgesShipped(Array.from(allDistributedPledgeIds));
+
       return NextResponse.json({
         success: true,
         updatedCount: ruleIds.length,
@@ -671,9 +678,14 @@ export async function POST(req: NextRequest) {
 
       const emailResult = await sendDeliveryEmailsForPledges(projectId, activePledgeIds);
 
+      // Catch up any digital-only backers who were delivered files before this
+      // behavior existed — they have nothing physical to ship, so mark shipped.
+      const markedShipped = await markDigitalOnlyPledgesShipped(activePledgeIds);
+
       return NextResponse.json({
         success: true,
         count: activePledgeIds.length,
+        markedShipped,
         emailsSent: emailResult.sent,
         emailsFailed: emailResult.failed,
       });
@@ -728,6 +740,7 @@ export async function POST(req: NextRequest) {
       // Create DigitalDistribution records
       const now = new Date();
       let createdCount = 0;
+      const distributedPledgeIds: string[] = [];
       for (const pledge of eligiblePledges) {
         try {
           await db.digitalDistribution.upsert({
@@ -747,6 +760,7 @@ export async function POST(req: NextRequest) {
             },
           });
           createdCount++;
+          distributedPledgeIds.push(pledge.id);
         } catch (e) {
           creatorIndiekitDigitalLogger.error({ err: String(e) }, `Failed to create distribution for pledge ${pledge.id}:`);
         }
@@ -760,6 +774,9 @@ export async function POST(req: NextRequest) {
           totalEligible: eligiblePledges.length,
         },
       });
+
+      // Digital-only backers who got their files have nothing left to ship.
+      await markDigitalOnlyPledgesShipped(distributedPledgeIds);
 
       return NextResponse.json({
         success: true,
