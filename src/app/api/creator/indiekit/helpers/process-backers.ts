@@ -88,6 +88,9 @@ export function processBackers(
       line2?: string;
       city?: string;
       state?: string;
+      // The Order Lock page stores the state/province under `region`; normalize
+      // it to `state` below so it doesn't read as missing.
+      region?: string;
       postalCode?: string;
       country?: string;
       phone?: string;
@@ -222,7 +225,7 @@ export function processBackers(
         line1: shippingAddress.line1 || "",
         line2: shippingAddress.line2 || "",
         city: shippingAddress.city || "",
-        state: shippingAddress.state || "",
+        state: shippingAddress.state || shippingAddress.region || "",
         country: shippingAddress.country || "",
         postalCode: shippingAddress.postalCode || "",
         phone: shippingAddress.phone || "",
