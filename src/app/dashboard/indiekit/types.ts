@@ -75,6 +75,7 @@ export interface Backer {
   rewardId?: string;
   rewardAmount: number;
   status: "not_pushed" | "push_errored" | "pushed" | "shipped";
+  orderLockStatus?: "UNLOCKED" | "LOCK_REQUESTED" | "LOCKED" | "DECLINED";
   chargeStatus: "not_charged" | "errored" | "charged" | "paypal_collected";
   paymentProcessor?: "STRIPE" | "DIVINITYCOIN" | "PAYPAL";
   // True for pledges that were migrated from Mentom Payments to

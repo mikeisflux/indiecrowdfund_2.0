@@ -14,6 +14,7 @@ interface PledgeForProcessing {
   addonsAmount?: unknown;
   shippingAmount: unknown;
   fulfillmentStatus: string | null;
+  orderLockStatus: string | null;
   paymentProcessor: string | null;
   chargeStatus?: string;
   confirmationEmailSent?: boolean;
@@ -198,6 +199,7 @@ export function processBackers(
       rewardId: pledge.reward?.id,
       rewardAmount: pledge.reward ? Number(pledge.reward.amount) : 0,
       status,
+      orderLockStatus: pledge.orderLockStatus || "UNLOCKED",
       chargeStatus,
       paymentProcessor: pledge.paymentProcessor,
       needsMigrationPayment,

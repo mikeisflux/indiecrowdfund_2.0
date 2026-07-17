@@ -1017,6 +1017,7 @@ export function BackersTab({
                 <TableHead>Reward</TableHead>
                 <TableHead>Amount</TableHead>
                 <TableHead>Survey</TableHead>
+                <TableHead>Order Lock</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="w-12"></TableHead>
               </TableRow>
@@ -1069,6 +1070,26 @@ export function BackersTab({
                         <Clock className="h-3 w-3 mr-1" />
                         Pending
                       </Badge>
+                    )}
+                  </TableCell>
+                  <TableCell onClick={() => onOpenBackerDetail(backer)}>
+                    {backer.orderLockStatus === "LOCKED" ? (
+                      <Badge variant="outline" className="text-emerald-600 border-emerald-200">
+                        <Lock className="h-3 w-3 mr-1" />
+                        Locked
+                      </Badge>
+                    ) : backer.orderLockStatus === "LOCK_REQUESTED" ? (
+                      <Badge variant="outline" className="text-amber-600 border-amber-200">
+                        <Clock className="h-3 w-3 mr-1" />
+                        Requested
+                      </Badge>
+                    ) : backer.orderLockStatus === "DECLINED" ? (
+                      <Badge variant="outline" className="text-red-600 border-red-200">
+                        <X className="h-3 w-3 mr-1" />
+                        Declined
+                      </Badge>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">Unlocked</span>
                     )}
                   </TableCell>
                   <TableCell onClick={() => onOpenBackerDetail(backer)}>
