@@ -5,6 +5,7 @@ import { logger } from "@/lib/logger";
 const creatorIndiekitSurveysLogger = logger.child({ module: "creator-indiekit-surveys" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { resolvePledgeShippingAddress } from "@/lib/fulfillment/shipping-address";
 
 export const dynamic = "force-dynamic";
 
@@ -110,6 +111,13 @@ export async function GET(
       where: { pledgeId },
     });
 
+    // Order-locked backers store their address on the pledge with no
+    // SurveyResponse row — resolve + normalize so the detail view shows it.
+    const resolvedAddress = resolvePledgeShippingAddress(
+      response?.shippingAddress,
+      pledge.shippingAddress
+    );
+
     // For creator view, return ALL survey questions (not filtered by reward)
     // This allows creators to see the complete survey configuration
     return NextResponse.json({
@@ -141,11 +149,19 @@ export async function GET(
         ? {
             itemResponses: response.itemResponses,
             backerResponses: response.backerResponses,
-            shippingAddress: response.shippingAddress,
+            shippingAddress: resolvedAddress ?? response.shippingAddress,
             isComplete: response.isComplete,
             completedAt: response.completedAt,
           }
-        : null,
+        : resolvedAddress
+          ? {
+              itemResponses: null,
+              backerResponses: null,
+              shippingAddress: resolvedAddress,
+              isComplete: pledge.surveyCompleted === true,
+              completedAt: null,
+            }
+          : null,
     });
   } catch (error) {
     creatorIndiekitSurveysLogger.error({ err: formatError(error) }, "Error fetching pledge survey response:");

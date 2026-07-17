@@ -9,6 +9,7 @@ import { db } from "@/lib/db";
 import { z } from "zod";
 import { circuitBreaker } from "@/lib/circuit-breaker";
 import { decryptCredential } from "@/lib/encryption";
+import { resolvePledgeShippingAddress } from "@/lib/fulfillment/shipping-address";
 function safeDecrypt(v: string): string { try { return decryptCredential(v); } catch { return v; } }
 
 const actionSchema = z.object({
@@ -97,11 +98,7 @@ export async function POST(req: NextRequest) {
           },
           include: {
             user: { select: { email: true, name: true } },
-            surveyResponse: {
-              include: {
-                shippingAddress: true,
-              },
-            },
+            surveyResponse: true,
             reward: true,
             addons: {
               include: {
@@ -121,7 +118,10 @@ export async function POST(req: NextRequest) {
         // We'll create addresses for each pledge and store them for later shipment creation
         for (const pledge of pledges) {
           try {
-            const shippingAddress = pledge.surveyResponse?.shippingAddress;
+            const shippingAddress = resolvePledgeShippingAddress(
+              pledge.surveyResponse?.shippingAddress,
+              pledge.shippingAddress
+            );
             if (!shippingAddress) {
               results.failed++;
               results.errors.push(`Pledge ${pledge.id}: No shipping address`);

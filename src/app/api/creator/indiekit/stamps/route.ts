@@ -7,6 +7,7 @@ import { auth } from "@/lib/auth";
 const creatorIndiekitStampsLogger = logger.child({ module: "creator-indiekit-stamps" });
 import { db } from "@/lib/db";
 import { z } from "zod";
+import { resolvePledgeShippingAddress } from "@/lib/fulfillment/shipping-address";
 
 const actionSchema = z.object({
   projectId: z.string(),
@@ -94,11 +95,7 @@ export async function POST(req: NextRequest) {
           },
           include: {
             user: { select: { email: true, name: true } },
-            surveyResponse: {
-              include: {
-                shippingAddress: true,
-              },
-            },
+            surveyResponse: true,
             reward: true,
             addons: {
               include: {
@@ -119,7 +116,10 @@ export async function POST(req: NextRequest) {
         // Full SOAP integration would require additional libraries
         for (const pledge of pledges) {
           try {
-            const shippingAddress = pledge.surveyResponse?.shippingAddress;
+            const shippingAddress = resolvePledgeShippingAddress(
+              pledge.surveyResponse?.shippingAddress,
+              pledge.shippingAddress
+            );
             if (!shippingAddress) {
               results.failed++;
               results.errors.push(`Pledge ${pledge.id}: No shipping address`);

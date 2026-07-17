@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import { resolvePledgeShippingAddress } from "@/lib/fulfillment/shipping-address";
 
 import { logger } from "@/lib/logger";
 
@@ -562,31 +563,13 @@ export async function pushOrdersToShopify(
         }
       }
 
-      // Get shipping address - prefer survey response, fall back to pledge
-      const surveyAddress = surveyResponseMap.get(pledge.id) as {
-        name?: string;
-        line1?: string;
-        line2?: string;
-        city?: string;
-        state?: string;
-        postalCode?: string;
-        country?: string;
-        phone?: string;
-      } | null;
-
-      const pledgeAddress = pledge.shippingAddress as {
-        line1?: string;
-        line2?: string;
-        city?: string;
-        state?: string;
-        country?: string;
-        postalCode?: string;
-        name?: string;
-        phone?: string;
-      } | null;
-
-      // Use survey address if available, otherwise use pledge address
-      const shippingAddress = surveyAddress || pledgeAddress;
+      // Get shipping address - prefer survey response, fall back to the
+      // pledge's own address (Order Lock / checkout), normalizing the differing
+      // field shapes (region/state, line1/address1, postalCode/zip).
+      const shippingAddress = resolvePledgeShippingAddress(
+        surveyResponseMap.get(pledge.id),
+        pledge.shippingAddress
+      );
 
       // Build customer info
       const customerEmail = pledge.user?.email || (pledge as { email?: string }).email;
@@ -602,7 +585,7 @@ export async function pushOrdersToShopify(
         email: customerEmail,
         name: customerName,
         hasShippingAddress: !!shippingAddress,
-        shippingAddressSource: surveyAddress ? "survey" : (pledgeAddress ? "pledge" : "none"),
+        shippingAddressSource: surveyResponseMap.get(pledge.id) ? "survey" : (pledge.shippingAddress ? "pledge" : "none"),
       }, "Customer data for pledge");
 
       // Find or create customer in Shopify first

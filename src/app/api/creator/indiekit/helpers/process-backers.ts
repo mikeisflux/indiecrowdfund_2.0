@@ -1,4 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
+import { resolvePledgeShippingAddress } from "@/lib/fulfillment/shipping-address";
 
 interface PledgeForProcessing {
   id: string;
@@ -81,20 +82,13 @@ export function processBackers(
     // The Order Lock flow saves the address on the pledge (not through a
     // SurveyResponse), so fall back to pledge.shippingAddress when there's no
     // survey response address — otherwise locked backers show "Address
-    // Incomplete" even though they provided one at lock time.
-    const shippingAddress = (surveyResponse?.shippingAddress ?? pledge.shippingAddress) as {
-      name?: string;
-      line1?: string;
-      line2?: string;
-      city?: string;
-      state?: string;
-      // The Order Lock page stores the state/province under `region`; normalize
-      // it to `state` below so it doesn't read as missing.
-      region?: string;
-      postalCode?: string;
-      country?: string;
-      phone?: string;
-    } | null;
+    // Incomplete" even though they provided one at lock time. The normalizer
+    // also reconciles the differing field shapes (region/state, line1/address1,
+    // postalCode/zip) written by the lock / survey / checkout flows.
+    const shippingAddress = resolvePledgeShippingAddress(
+      surveyResponse?.shippingAddress,
+      pledge.shippingAddress
+    );
     // Locked orders are survey-complete too (the lock flow sets
     // pledge.surveyCompleted), even without a SurveyResponse row.
     const surveyIsComplete = surveyResponse?.isComplete || pledge.surveyCompleted === true;
@@ -221,14 +215,14 @@ export function processBackers(
       addressComplete,
       pledgeDate: pledge.createdAt.toISOString(),
       shippingAddress: shippingAddress ? {
-        name: shippingAddress.name || "",
-        line1: shippingAddress.line1 || "",
-        line2: shippingAddress.line2 || "",
-        city: shippingAddress.city || "",
-        state: shippingAddress.state || shippingAddress.region || "",
-        country: shippingAddress.country || "",
-        postalCode: shippingAddress.postalCode || "",
-        phone: shippingAddress.phone || "",
+        name: shippingAddress.name,
+        line1: shippingAddress.line1,
+        line2: shippingAddress.line2,
+        city: shippingAddress.city,
+        state: shippingAddress.state,
+        country: shippingAddress.country,
+        postalCode: shippingAddress.postalCode,
+        phone: shippingAddress.phone,
       } : undefined,
       balance: {
         pledgeAmount: pledgeTotal,

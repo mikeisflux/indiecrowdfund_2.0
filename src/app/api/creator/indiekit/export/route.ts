@@ -5,6 +5,7 @@ import { logger } from "@/lib/logger";
 const creatorIndiekitExportLogger = logger.child({ module: "creator-indiekit-export" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { resolvePledgeShippingAddress } from "@/lib/fulfillment/shipping-address";
 
 export const dynamic = "force-dynamic";
 
@@ -131,15 +132,9 @@ export async function GET(req: NextRequest) {
 
         for (const pledge of pledges) {
           const sr = surveyMap.get(pledge.id);
-          const address = sr?.shippingAddress as {
-            name?: string;
-            line1?: string;
-            line2?: string;
-            city?: string;
-            state?: string;
-            postalCode?: string;
-            country?: string;
-          } | null;
+          // Fall back to the pledge's own address (Order Lock / checkout) and
+          // normalize the field shapes so locked backers export cleanly.
+          const address = resolvePledgeShippingAddress(sr?.shippingAddress, pledge.shippingAddress);
 
           const addonsText = pledge.addons
             .map((a: { addon: { title: string }; quantity: number }) => `${a.addon.title} x${a.quantity}`)
@@ -179,30 +174,28 @@ export async function GET(req: NextRequest) {
       }
 
       case "addresses": {
-        // Get survey responses with shipping addresses
-        const survey = await db.survey.findUnique({
-          where: { projectId },
-        });
-
-        if (!survey) {
-          return NextResponse.json({ error: "No survey found" }, { status: 404 });
-        }
-
-        const surveyResponses = await db.surveyResponse.findMany({
+        // Iterate every committed backer (not just survey responders) so
+        // order-locked backers — whose address lives on the pledge, with no
+        // SurveyResponse row — are included and normalized.
+        const addrPledges = await db.pledge.findMany({
           where: {
-            surveyId: survey.id,
-            isComplete: true,
+            projectId,
+            deletedAt: null,
+            OR: [
+              { status: "COMPLETED" },
+              { status: "PENDING", confirmationEmailSent: true },
+            ],
           },
-          include: {
-            pledge: {
-              include: {
-                user: {
-                  select: { name: true, email: true },
-                },
-              },
-            },
-          },
+          take: 50000,
+          include: { user: { select: { name: true, email: true } } },
+          orderBy: { backerNumber: "asc" },
         });
+
+        const addrSurvey = await db.survey.findUnique({ where: { projectId } });
+        const addrSurveyResponses = addrSurvey
+          ? await db.surveyResponse.findMany({ where: { surveyId: addrSurvey.id } })
+          : [];
+        const addrSurveyMap = new Map(addrSurveyResponses.map((sr) => [sr.pledgeId, sr]));
 
         const headers = [
           "Name",
@@ -218,29 +211,23 @@ export async function GET(req: NextRequest) {
 
         csvContent = headers.join(",") + "\n";
 
-        for (const sr of surveyResponses) {
-          const address = sr.shippingAddress as {
-            name?: string;
-            line1?: string;
-            line2?: string;
-            city?: string;
-            state?: string;
-            postalCode?: string;
-            country?: string;
-          } | null;
-
+        for (const pledge of addrPledges) {
+          const address = resolvePledgeShippingAddress(
+            addrSurveyMap.get(pledge.id)?.shippingAddress,
+            pledge.shippingAddress
+          );
           if (!address) continue;
 
           const row = [
-            escapeCSV(sr.pledge.user.name || ""),
-            escapeCSV(sr.pledge.user.email || ""),
-            escapeCSV(address.name || ""),
-            escapeCSV(address.line1 || ""),
-            escapeCSV(address.line2 || ""),
-            escapeCSV(address.city || ""),
-            escapeCSV(address.state || ""),
-            escapeCSV(address.postalCode || ""),
-            escapeCSV(address.country || ""),
+            escapeCSV(pledge.user.name || ""),
+            escapeCSV(pledge.user.email || ""),
+            escapeCSV(address.name),
+            escapeCSV(address.line1),
+            escapeCSV(address.line2),
+            escapeCSV(address.city),
+            escapeCSV(address.state),
+            escapeCSV(address.postalCode),
+            escapeCSV(address.country),
           ];
 
           csvContent += row.join(",") + "\n";
