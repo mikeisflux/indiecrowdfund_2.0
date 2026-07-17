@@ -807,7 +807,11 @@ export default function IndieKitPage() {
               )}
 
               {activeSection === "phase" && activePhaseTab === "order-lock" && (
-                <OrderLockTab projectId={selectedProjectId} />
+                <OrderLockTab
+                  projectId={selectedProjectId}
+                  backers={backers}
+                  onOpenBackerDetail={openBackerDetail}
+                />
               )}
 
               {activeSection === "phase" && activePhaseTab === "finalize" && (

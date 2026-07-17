@@ -6,11 +6,16 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Lock, Send, Bell, CheckCircle2, Clock, XCircle } from "lucide-react";
+import { Lock, Send, Bell, CheckCircle2, Clock, XCircle, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import type { Backer } from "../../types";
 
 interface OrderLockTabProps {
   projectId: string | null;
+  // The full backer list (shared with the Backers tab) so clicking a name can
+  // open the exact same detail dialog.
+  backers: Backer[];
+  onOpenBackerDetail: (backer: Backer) => void;
 }
 
 type LockStatus = "UNLOCKED" | "LOCK_REQUESTED" | "LOCKED" | "DECLINED";
@@ -36,10 +41,12 @@ const STATUS_META: Record<LockStatus, { label: string; className: string }> = {
   DECLINED: { label: "Declined", className: "bg-amber-500/15 text-amber-600" },
 };
 
-export function OrderLockTab({ projectId }: OrderLockTabProps) {
+export function OrderLockTab({ projectId, backers, onOpenBackerDetail }: OrderLockTabProps) {
   const [data, setData] = useState<StatusData | null>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
+  // pledgeId currently sending an individual request/reminder.
+  const [sendingId, setSendingId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     if (!projectId) return;
@@ -80,6 +87,36 @@ export function OrderLockTab({ projectId }: OrderLockTabProps) {
     } finally {
       setBusy(false);
     }
+  };
+
+  // Send (or re-send) a lock request to a single backer.
+  const sendOne = async (pledgeId: string, action: "request" | "remind") => {
+    if (!projectId) return;
+    setSendingId(pledgeId);
+    try {
+      const res = await apiFetch("/api/creator/indiekit/lock-orders", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ projectId, action, pledgeIds: [pledgeId] }),
+      });
+      const j = await res.json();
+      if (!res.ok || (j.requested ?? 0) === 0) {
+        toast.error(j.error || "Couldn't send the lock request.");
+        return;
+      }
+      toast.success(action === "remind" ? "Reminder sent." : "Lock request sent.");
+      await load();
+    } catch {
+      toast.error("Something went wrong.");
+    } finally {
+      setSendingId(null);
+    }
+  };
+
+  // Open the shared backer detail dialog for a row (matched by pledge id).
+  const openDetail = (pledgeId: string) => {
+    const match = backers.find((b) => b.id === pledgeId);
+    if (match) onOpenBackerDetail(match);
   };
 
   if (!projectId) {
@@ -149,15 +186,44 @@ export function OrderLockTab({ projectId }: OrderLockTabProps) {
             <div className="rounded-lg border divide-y">
               {data.backers.map((b) => {
                 const meta = STATUS_META[b.lockStatus];
+                const isSending = sendingId === b.pledgeId;
+                // Locked backers are done; everyone else can be pinged. A backer
+                // already in LOCK_REQUESTED gets a "Remind" (re-ping); others get
+                // a fresh "Send lock request".
+                const canSend = b.lockStatus !== "LOCKED";
+                const sendAction: "request" | "remind" = b.lockStatus === "LOCK_REQUESTED" ? "remind" : "request";
                 return (
                   <div key={b.pledgeId} className="flex items-center justify-between gap-3 px-3 py-2 text-sm">
-                    <div className="min-w-0">
-                      <p className="font-medium truncate">
+                    <button
+                      type="button"
+                      onClick={() => openDetail(b.pledgeId)}
+                      className="min-w-0 text-left group"
+                      title="View pledge & address details"
+                    >
+                      <p className="font-medium truncate group-hover:underline">
                         {b.backerNumber != null ? `#${b.backerNumber} ` : ""}{b.name}
                       </p>
                       <p className="text-xs text-muted-foreground truncate">{b.reward || b.email}</p>
+                    </button>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <Badge className={meta.className} variant="secondary">{meta.label}</Badge>
+                      {canSend && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-7"
+                          disabled={isSending || busy}
+                          onClick={() => sendOne(b.pledgeId, sendAction)}
+                        >
+                          {isSending ? (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          ) : (
+                            <Send className="h-3.5 w-3.5" />
+                          )}
+                          <span className="ml-1.5">{sendAction === "remind" ? "Remind" : "Send lock request"}</span>
+                        </Button>
+                      )}
                     </div>
-                    <Badge className={`shrink-0 ${meta.className}`} variant="secondary">{meta.label}</Badge>
                   </div>
                 );
               })}
