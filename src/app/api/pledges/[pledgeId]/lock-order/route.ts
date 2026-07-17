@@ -5,6 +5,7 @@ import { logger } from "@/lib/logger";
 import { formatError } from "@/lib/errors";
 import { z } from "zod";
 import { chargeDcSavedPaymentMethod, handlePaymentSucceeded } from "@/lib/payments/divinitycoin";
+import { distributeReadyFilesForProject } from "@/lib/fulfillment/auto-distribute";
 
 const log = logger.child({ module: "backer-lock-order" });
 
@@ -197,6 +198,16 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ ple
         data: { projectId: pledge.projectId, pledgeId: pledge.id, userId: session.user.id, type: "ORDER_LOCK_APPROVED", title: charged ? "Backer locked & paid for their order" : "Backer locked their order" },
       })
       .catch(() => {});
+
+    // If the creator has already run "Process Distribution" for this campaign,
+    // this newly-locked backer now qualifies — deliver those files to them
+    // automatically so the creator doesn't have to re-process. Best-effort:
+    // a delivery hiccup must not fail the lock itself.
+    try {
+      await distributeReadyFilesForProject(pledge.projectId, { pledgeId: pledge.id });
+    } catch (err) {
+      log.error({ err: String(err), pledgeId: pledge.id }, "auto-distribute on lock failed");
+    }
 
     return NextResponse.json({ success: true, locked: true, charged, note: chargeNote || undefined });
   } catch (error) {

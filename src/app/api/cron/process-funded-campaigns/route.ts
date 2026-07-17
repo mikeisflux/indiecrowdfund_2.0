@@ -6,6 +6,7 @@ const cronProcessFundedCampaignsLogger = logger.child({ module: "cron-process-fu
 import { db } from "@/lib/db";
 import { captureAuthorizedPaypalPledges } from "@/lib/payments/paypal";
 import { chargeDcSavedPaymentMethod, verifyDcPayment, handlePaymentSucceeded, formatDeclineReason } from "@/lib/payments/divinitycoin";
+import { distributeReadyFilesForProject } from "@/lib/fulfillment/auto-distribute";
 
 // Charge all PENDING DivinityCoin pledges with a saved card (pm_...)
 // for a project that has hit its goal. CAS-claim chargedImmediately
@@ -342,6 +343,14 @@ export async function GET(req: NextRequest) {
           );
           return { checked: 0, completed: 0 };
         });
+
+        // Post-close catch-up: as AoN pledges settle to COMPLETED here, deliver
+        // any already-processed distribution rules to the newly-charged backers
+        // (the campaign has closed, so the LIVE lock gate no longer applies).
+        // Idempotent — backers who already have their files are skipped.
+        await distributeReadyFilesForProject(project.id).catch((err) =>
+          cronProcessFundedCampaignsLogger.error({ err: String(err) }, `[Cron] auto-distribute catch-up failed for ${project.id}`)
+        );
 
         results.processed.push({
           projectId: project.id,

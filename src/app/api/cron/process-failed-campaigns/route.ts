@@ -6,6 +6,7 @@ const cronProcessFailedCampaignsLogger = logger.child({ module: "cron-process-fa
 import { db } from "@/lib/db";
 import { callDivinityCoinAPI } from "@/lib/payments/divinitycoin";
 import { getPayPalConfig, getPayPalAccessToken } from "@/lib/payments/paypal";
+import { distributeReadyFilesForProject } from "@/lib/fulfillment/auto-distribute";
 
 /**
  * Cron job endpoint for processing ended campaigns
@@ -121,6 +122,15 @@ export async function GET(req: NextRequest) {
         });
 
         cronProcessFailedCampaignsLogger.info(`[Cron Ended Campaigns] "${project.title}" → FUNDED ($${project.currentAmount}/$${project.goalAmount})`);
+
+        // Campaign just closed: the LIVE lock gate has lifted, so push any
+        // already-processed distribution rules to every backer who now
+        // qualifies (not just those who locked during the campaign). Backers
+        // still awaiting their post-close charge are picked up on the next
+        // process-funded-campaigns pass once they complete.
+        await distributeReadyFilesForProject(project.id).catch((err) =>
+          cronProcessFailedCampaignsLogger.error({ err: String(err) }, `[Cron Ended Campaigns] auto-distribute on close failed for ${project.id}`)
+        );
       } catch (error) {
         cronProcessFailedCampaignsLogger.error({ err: error }, `[Cron Ended Campaigns] Error transitioning project ${project.id} to FUNDED:`);
       }
