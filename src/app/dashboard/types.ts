@@ -126,6 +126,8 @@ export interface ProductionOrderItem {
   // Units already shipped/delivered for this item, so the view can show
   // "still to produce = count − shippedCount" and avoid over-producing.
   shippedCount: number;
+  // Units on order-locked pledges (final, confirmed orders) for this item.
+  lockedCount: number;
   projectItemId: string | null;
   sku: string | null;
   inStock: boolean;

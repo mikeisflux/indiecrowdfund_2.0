@@ -422,6 +422,7 @@ export async function GET(req: NextRequest) {
         select: {
           id: true,
           fulfillmentStatus: true,
+          orderLockStatus: true,
           reward: {
             select: {
               id: true,
@@ -601,7 +602,7 @@ export async function GET(req: NextRequest) {
 
     // Count items needed for fulfillment (from rewards and addons)
     // Key by projectItemId or item title to deduplicate items that appear in multiple reward tiers
-    const itemCounts = new Map<string, { name: string; count: number; shippedCount: number; projectItemId: string | null; sku: string | null; inStock: boolean }>();
+    const itemCounts = new Map<string, { name: string; count: number; shippedCount: number; lockedCount: number; projectItemId: string | null; sku: string | null; inStock: boolean }>();
     // SKU-level aggregation: sums item qty across rewards + addons for every backer
     // (aftersales add-ons create new PledgeAddon rows, so they're included automatically)
     const skuCounts = new Map<string, { sku: string | null; name: string; quantity: number; backerIds: Set<string>; projectItemId: string | null }>();
@@ -613,6 +614,9 @@ export async function GET(req: NextRequest) {
       // already sent (e.g. lock-and-ship-while-live backers).
       const isShipped =
         pledge.fulfillmentStatus === "SHIPPED" || pledge.fulfillmentStatus === "DELIVERED";
+      // Units on an order-locked pledge, so the Production view can show how
+      // many of each item are already locked in (final, won't change).
+      const isLocked = pledge.orderLockStatus === "LOCKED";
       // Count items from reward tiers
       if (pledge.reward?.items) {
         pledge.reward.items.forEach((item: { id: string; title: string; projectItemId: string | null; projectItem?: { id: string; title: string; sku: string | null } | null }) => {
@@ -624,8 +628,9 @@ export async function GET(req: NextRequest) {
           if (existingItem) {
             existingItem.count += 1;
             if (isShipped) existingItem.shippedCount += 1;
+            if (isLocked) existingItem.lockedCount += 1;
           } else {
-            itemCounts.set(itemKey, { name: itemName, count: 1, shippedCount: isShipped ? 1 : 0, projectItemId: item.projectItemId, sku: null, inStock: false });
+            itemCounts.set(itemKey, { name: itemName, count: 1, shippedCount: isShipped ? 1 : 0, lockedCount: isLocked ? 1 : 0, projectItemId: item.projectItemId, sku: null, inStock: false });
           }
 
           const skuValue = item.projectItem?.sku?.trim() || null;
@@ -672,8 +677,9 @@ export async function GET(req: NextRequest) {
           if (existingItem) {
             existingItem.count += pledgeAddon.quantity;
             if (isShipped) existingItem.shippedCount += pledgeAddon.quantity;
+            if (isLocked) existingItem.lockedCount += pledgeAddon.quantity;
           } else {
-            itemCounts.set(itemKey, { name: itemName, count: pledgeAddon.quantity, shippedCount: isShipped ? pledgeAddon.quantity : 0, projectItemId: null, sku: null, inStock: false });
+            itemCounts.set(itemKey, { name: itemName, count: pledgeAddon.quantity, shippedCount: isShipped ? pledgeAddon.quantity : 0, lockedCount: isLocked ? pledgeAddon.quantity : 0, projectItemId: null, sku: null, inStock: false });
           }
 
           const existingSku = skuCounts.get(itemKey);
@@ -701,8 +707,9 @@ export async function GET(req: NextRequest) {
           if (existingItem) {
             existingItem.count += pledgeAddon.quantity;
             if (isShipped) existingItem.shippedCount += pledgeAddon.quantity;
+            if (isLocked) existingItem.lockedCount += pledgeAddon.quantity;
           } else {
-            itemCounts.set(itemKey, { name: itemName, count: pledgeAddon.quantity, shippedCount: isShipped ? pledgeAddon.quantity : 0, projectItemId: item.projectItemId, sku: null, inStock: false });
+            itemCounts.set(itemKey, { name: itemName, count: pledgeAddon.quantity, shippedCount: isShipped ? pledgeAddon.quantity : 0, lockedCount: isLocked ? pledgeAddon.quantity : 0, projectItemId: item.projectItemId, sku: null, inStock: false });
           }
 
           const skuValue = item.projectItem?.sku?.trim() || null;

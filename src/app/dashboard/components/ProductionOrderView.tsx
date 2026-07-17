@@ -176,12 +176,12 @@ export function ProductionOrderView({ productionOrderStats, projectId }: Product
     lines.push("");
 
     lines.push("Items to Produce");
-    lines.push("Item Name,SKU,Quantity Needed,Already Shipped,Still to Produce,In Stock");
+    lines.push("Item Name,SKU,Quantity Needed,Locked Orders,Already Shipped,Still to Produce,In Stock");
     for (const item of productionOrderStats.items) {
       const sku = getDisplaySku(item);
       const inStock = getInStock(item) ? "Yes" : "No";
       const toProduce = Math.max(0, item.count - item.shippedCount);
-      lines.push(`${escapeCSV(item.name)},${escapeCSV(sku)},${item.count},${item.shippedCount},${toProduce},${inStock}`);
+      lines.push(`${escapeCSV(item.name)},${escapeCSV(sku)},${item.count},${item.lockedCount ?? 0},${item.shippedCount},${toProduce},${inStock}`);
     }
 
     const csvContent = lines.join("\n");
@@ -337,12 +337,13 @@ export function ProductionOrderView({ productionOrderStats, projectId }: Product
           {productionOrderStats.items.length > 0 ? (
             <div className="rounded-lg border border-border/50 overflow-hidden">
               <div className="overflow-x-auto">
-              <div className="min-w-[560px]">
+              <div className="min-w-[620px]">
               {/* Header */}
-              <div className="grid grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)_56px_64px_76px_80px] gap-2 bg-muted/30 px-3 py-2 text-xs font-medium text-muted-foreground">
+              <div className="grid grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)_56px_60px_64px_76px_80px] gap-2 bg-muted/30 px-3 py-2 text-xs font-medium text-muted-foreground">
                 <div>Item Name</div>
                 <div>SKU</div>
                 <div className="text-center">Needed</div>
+                <div className="text-center">Locked</div>
                 <div className="text-center">Shipped</div>
                 <div className="text-center">To Produce</div>
                 <div className="text-center">In Stock</div>
@@ -361,7 +362,7 @@ export function ProductionOrderView({ productionOrderStats, projectId }: Product
                 return (
                   <div
                     key={item.projectItemId || index}
-                    className="grid grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)_56px_64px_76px_80px] gap-2 px-3 py-2 text-sm border-t border-border/50 items-center hover:bg-muted/10 transition-colors"
+                    className="grid grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)_56px_60px_64px_76px_80px] gap-2 px-3 py-2 text-sm border-t border-border/50 items-center hover:bg-muted/10 transition-colors"
                   >
                     <div className="font-medium truncate">{item.name}</div>
                     <div className="flex items-center gap-1 min-w-0">
@@ -419,6 +420,9 @@ export function ProductionOrderView({ productionOrderStats, projectId }: Product
                     </div>
                     <div className="text-center">
                       <span className="font-bold">{item.count.toLocaleString()}</span>
+                    </div>
+                    <div className="text-center">
+                      <span className="font-semibold tabular-nums text-amber-500">{(item.lockedCount ?? 0).toLocaleString()}</span>
                     </div>
                     <div className="text-center">
                       <span className="text-muted-foreground tabular-nums">{item.shippedCount.toLocaleString()}</span>
