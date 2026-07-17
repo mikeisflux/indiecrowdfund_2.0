@@ -154,6 +154,11 @@ export async function GET(
     const endDatePassed = !!(pledge.project.endDate && new Date(pledge.project.endDate) < new Date());
     const campaignClosed = ["FUNDED", "FAILED", "CANCELLED"].includes(pledge.project.status) || endDatePassed;
     const campaignActive = pledge.project.status === "LIVE" && !endDatePassed;
+    // A locked order is frozen: the backer can no longer edit it or cancel /
+    // request a refund on it. All the action flags below are gated on this so
+    // the manage-pledge UI hides those controls. Placing a new pledge is a
+    // separate flow and stays available.
+    const locked = pledge.orderLockStatus === "LOCKED";
 
     // Build project URL with vanity URL if available
     const projectUrl = pledge.project.creator.vanityUrl
@@ -189,11 +194,12 @@ export async function GET(
           amount: Number(a.addon.amount),
           quantity: a.quantity,
         })),
-        canCancel: (!isFunded && pledge.status === "PENDING") || (pledge.status === "COMPLETED" && !campaignClosed),
-        canRefund: pledge.status === "COMPLETED" && !campaignClosed,
-        canRequestRefund: pledge.status === "COMPLETED" && campaignClosed && !pledge.refundRequest,
-        canModify: campaignActive && (pledge.status === "PENDING" || pledge.status === "COMPLETED"),
-        canIncrease: campaignActive,
+        canCancel: !locked && ((!isFunded && pledge.status === "PENDING") || (pledge.status === "COMPLETED" && !campaignClosed)),
+        canRefund: !locked && pledge.status === "COMPLETED" && !campaignClosed,
+        canRequestRefund: !locked && pledge.status === "COMPLETED" && campaignClosed && !pledge.refundRequest,
+        canModify: !locked && campaignActive && (pledge.status === "PENDING" || pledge.status === "COMPLETED"),
+        canIncrease: !locked && campaignActive,
+        locked,
         isFunded,
         campaignClosed,
         refundRequest: pledge.refundRequest ?? null,
@@ -277,6 +283,22 @@ export async function PATCH(
     // exploit the hourly window between campaign end and the cron running to
     // process an immediate refund that should have required creator approval.
     const campaignClosed = ["FUNDED", "FAILED", "CANCELLED"].includes(pledge.project.status) || campaignEnded;
+
+    // Order-lock freeze: once a backer locks their order it's final. They can
+    // neither edit it (modify / increase) nor cancel or request a refund on it.
+    // If they want something else they can place a brand-new pledge, which gets
+    // its own backer number. This covers every mutating action on this route.
+    if (pledge.orderLockStatus === "LOCKED") {
+      return NextResponse.json(
+        {
+          error:
+            "Your order is locked, so it can't be changed or refunded. If you'd like something else, you can place a new pledge.",
+          locked: true,
+        },
+        { status: 403 }
+      );
+    }
+
     if (action === "cancel") {
       const paymentProcessor = pledge.project.paymentProcessor || "STRIPE";
 
@@ -1086,6 +1108,14 @@ export async function DELETE(
 
     if (!pledge) {
       return NextResponse.json({ error: "Pledge not found" }, { status: 404 });
+    }
+
+    // A locked order is final — no cancellation.
+    if (pledge.orderLockStatus === "LOCKED") {
+      return NextResponse.json(
+        { error: "Your order is locked and can no longer be cancelled." },
+        { status: 403 }
+      );
     }
 
     const isFunded = Number(pledge.project.currentAmount) >= Number(pledge.project.goalAmount) || pledge.project.status === "FUNDED";

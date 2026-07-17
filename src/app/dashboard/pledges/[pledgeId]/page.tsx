@@ -49,6 +49,7 @@ import {
   Loader2,
   Edit,
   ShieldAlert,
+  Lock,
   Hash,
   Shield,
   FileText,
@@ -99,6 +100,7 @@ interface PledgeDetails {
   canRequestRefund: boolean;
   canModify: boolean;
   canIncrease: boolean;
+  locked: boolean;
   isFunded: boolean;
   campaignClosed: boolean;
   refundRequest: {
@@ -543,6 +545,34 @@ export default function ManagePledgePage() {
           </Link>
         </CardContent>
       </Card>
+
+      {/* Order locked: pledge is final — no edits, no refunds. They can still
+          start a fresh pledge (which gets its own backer number). */}
+      {pledge.locked && (
+        <Card className="mb-6 border-emerald-200 bg-emerald-50 dark:border-emerald-900 dark:bg-emerald-950/40">
+          <CardContent className="py-5">
+            <div className="flex items-start gap-3">
+              <Lock className="h-5 w-5 text-emerald-600 mt-0.5 shrink-0" />
+              <div className="space-y-2">
+                <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-300">
+                  Your order is locked
+                </p>
+                <p className="text-sm text-emerald-800/90 dark:text-emerald-300/90">
+                  You&apos;ve locked in this pledge, so it can no longer be edited, cancelled, or refunded.
+                  If you&apos;d like to add something else, you can place a new pledge — it&apos;ll be tracked
+                  separately with its own backer number.
+                </p>
+                <Link href={`${pledge.project.projectUrl}/pledge`}>
+                  <Button size="sm" className="mt-1">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Back this project again
+                  </Button>
+                </Link>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* PENDING + NOT FUNDED: Full modification options */}
       {isPending && !hasReachedGoal && (
