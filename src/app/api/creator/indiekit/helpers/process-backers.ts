@@ -15,6 +15,10 @@ interface PledgeForProcessing {
   shippingAmount: unknown;
   fulfillmentStatus: string | null;
   orderLockStatus: string | null;
+  // Set true and populated by the Order Lock flow (which stores the address on
+  // the pledge itself, not via a SurveyResponse).
+  surveyCompleted?: boolean;
+  shippingAddress?: unknown;
   paymentProcessor: string | null;
   chargeStatus?: string;
   confirmationEmailSent?: boolean;
@@ -74,7 +78,11 @@ export function processBackers(
 
   return uniquePledges.map(pledge => {
     const surveyResponse = surveyResponseMap.get(pledge.id);
-    const shippingAddress = surveyResponse?.shippingAddress as {
+    // The Order Lock flow saves the address on the pledge (not through a
+    // SurveyResponse), so fall back to pledge.shippingAddress when there's no
+    // survey response address — otherwise locked backers show "Address
+    // Incomplete" even though they provided one at lock time.
+    const shippingAddress = (surveyResponse?.shippingAddress ?? pledge.shippingAddress) as {
       name?: string;
       line1?: string;
       line2?: string;
@@ -84,6 +92,9 @@ export function processBackers(
       country?: string;
       phone?: string;
     } | null;
+    // Locked orders are survey-complete too (the lock flow sets
+    // pledge.surveyCompleted), even without a SurveyResponse row.
+    const surveyIsComplete = surveyResponse?.isComplete || pledge.surveyCompleted === true;
 
     // Map fulfillment status to our display status
     let status: "not_pushed" | "push_errored" | "pushed" | "shipped" = "not_pushed";
@@ -93,7 +104,7 @@ export function processBackers(
       status = "push_errored";
     } else if (pledge.fulfillmentStatus === "IN_PROGRESS") {
       status = "pushed";
-    } else if (pledge.status === "COMPLETED" && surveyResponse?.isComplete) {
+    } else if (pledge.status === "COMPLETED" && surveyIsComplete) {
       status = "not_pushed"; // Ready to push
     }
 
@@ -203,7 +214,7 @@ export function processBackers(
       chargeStatus,
       paymentProcessor: pledge.paymentProcessor,
       needsMigrationPayment,
-      surveyCompleted: surveyResponse?.isComplete || false,
+      surveyCompleted: surveyIsComplete,
       addressComplete,
       pledgeDate: pledge.createdAt.toISOString(),
       shippingAddress: shippingAddress ? {
