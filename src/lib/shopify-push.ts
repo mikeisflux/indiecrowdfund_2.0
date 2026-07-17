@@ -618,7 +618,7 @@ export async function pushOrdersToShopify(
           ],
           email: customerEmail || undefined,
           phone: phone || undefined,
-          note: `IndieCrowdfund Backer #${pledge.backerNumber || pledge.id}`,
+          note: `IndieCrowdfund · ${project?.title || "Campaign"} · Backer #${pledge.backerNumber || pledge.id}`,
           tags: `indiecrowdfund,project-${projectId},backer-${pledge.backerNumber || pledge.id}`,
         },
       };

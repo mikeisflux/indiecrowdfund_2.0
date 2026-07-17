@@ -179,7 +179,7 @@ export async function POST(req: NextRequest) {
               },
               items,
               amountPaid: Number(pledge.amount) / 100,
-              internalNotes: `IndieKit pledge from ${project.title}`,
+              internalNotes: `IndieCrowdfund · ${project.title} · Backer #${pledge.backerNumber || pledge.id}`,
             };
 
             const response = await circuitBreaker.execute("shipstation", () =>

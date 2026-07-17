@@ -166,7 +166,7 @@ export async function POST(req: NextRequest) {
               placed_at: pledge.createdAt.toISOString(),
               total_price: String(Number(pledge.amount) / 100),
               currency: "USD",
-              notes: `IndieKit pledge from ${project.title}`,
+              notes: `IndieCrowdfund · ${project.title} · Backer #${pledge.backerNumber || pledge.id}`,
             };
 
             const response = await circuitBreaker.execute("shippo", () =>
