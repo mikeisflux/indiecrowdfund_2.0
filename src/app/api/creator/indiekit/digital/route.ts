@@ -264,6 +264,16 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Project not found or access denied" }, { status: 404 });
     }
 
+    // While the campaign is still LIVE, digital files may only be released
+    // to backers who have locked their order with the new Order Lock system
+    // (orderLockStatus === "LOCKED"). Once the campaign is no longer live
+    // (e.g. FUNDED), distribution reverts to all eligible backers. This gate
+    // is spread into every eligible-pledge query in the distribution paths
+    // below so both the "Distribute" button and rule-based distribution
+    // honor it, along with the eligible-count shown when creating a rule.
+    const liveLockGate =
+      project.status === "LIVE" ? { orderLockStatus: "LOCKED" as const } : {};
+
     // Handle creating a distribution rule
     if (action === "create_distribution_rule") {
       if (!fileId) {
@@ -300,6 +310,7 @@ export async function POST(req: NextRequest) {
             projectId,
             status: requirePayment ? "COMPLETED" : { in: ["COMPLETED", "PENDING"] },
             deletedAt: null,
+            ...liveLockGate,
           },
         });
       } else if (dbTriggerType === "SPECIFIC_REWARD" && triggerRewardId) {
@@ -309,6 +320,7 @@ export async function POST(req: NextRequest) {
             rewardId: triggerRewardId,
             status: requirePayment ? "COMPLETED" : { in: ["COMPLETED", "PENDING"] },
             deletedAt: null,
+            ...liveLockGate,
           },
         });
       } else if (dbTriggerType === "SPECIFIC_ADDON" && triggerAddonId) {
@@ -318,6 +330,7 @@ export async function POST(req: NextRequest) {
             addons: { some: { addonId: triggerAddonId } },
             status: requirePayment ? "COMPLETED" : { in: ["COMPLETED", "PENDING"] },
             deletedAt: null,
+            ...liveLockGate,
           },
         });
       }
@@ -409,6 +422,7 @@ export async function POST(req: NextRequest) {
             projectId,
             status: rule.requiresPayment ? "COMPLETED" : { in: ["COMPLETED", "PENDING"] },
             deletedAt: null,
+            ...liveLockGate,
           },
           select: { id: true },
         });
@@ -419,6 +433,7 @@ export async function POST(req: NextRequest) {
             rewardId: rule.triggerRewardId,
             status: rule.requiresPayment ? "COMPLETED" : { in: ["COMPLETED", "PENDING"] },
             deletedAt: null,
+            ...liveLockGate,
           },
           select: { id: true },
         });
@@ -429,6 +444,7 @@ export async function POST(req: NextRequest) {
             addons: { some: { addonId: rule.triggerAddonId } },
             status: rule.requiresPayment ? "COMPLETED" : { in: ["COMPLETED", "PENDING"] },
             deletedAt: null,
+            ...liveLockGate,
           },
           select: { id: true },
         });
@@ -521,6 +537,7 @@ export async function POST(req: NextRequest) {
               projectId,
               status: rule.requiresPayment ? "COMPLETED" : { in: ["COMPLETED", "PENDING"] },
               deletedAt: null,
+              ...liveLockGate,
             },
             select: { id: true },
           });
@@ -531,6 +548,7 @@ export async function POST(req: NextRequest) {
               rewardId: rule.triggerRewardId,
               status: rule.requiresPayment ? "COMPLETED" : { in: ["COMPLETED", "PENDING"] },
               deletedAt: null,
+              ...liveLockGate,
             },
             select: { id: true },
           });
@@ -541,6 +559,7 @@ export async function POST(req: NextRequest) {
               addons: { some: { addonId: rule.triggerAddonId } },
               status: rule.requiresPayment ? "COMPLETED" : { in: ["COMPLETED", "PENDING"] },
               deletedAt: null,
+              ...liveLockGate,
             },
             select: { id: true },
           });
@@ -674,7 +693,7 @@ export async function POST(req: NextRequest) {
       let eligiblePledges;
       if (file.accessType === "ALL_BACKERS") {
         eligiblePledges = await db.pledge.findMany({
-          where: { projectId, status: "COMPLETED", deletedAt: null },
+          where: { projectId, status: "COMPLETED", deletedAt: null, ...liveLockGate },
           select: { id: true },
         });
       } else if (file.accessType === "SPECIFIC_REWARDS" && file.rewardIds.length > 0) {
@@ -684,6 +703,7 @@ export async function POST(req: NextRequest) {
             rewardId: { in: file.rewardIds },
             status: "COMPLETED",
             deletedAt: null,
+            ...liveLockGate,
           },
           select: { id: true },
         });
@@ -694,12 +714,13 @@ export async function POST(req: NextRequest) {
             addons: { some: { addonId: { in: file.addonIds } } },
             status: "COMPLETED",
             deletedAt: null,
+            ...liveLockGate,
           },
           select: { id: true },
         });
       } else {
         eligiblePledges = await db.pledge.findMany({
-          where: { projectId, status: "COMPLETED", deletedAt: null },
+          where: { projectId, status: "COMPLETED", deletedAt: null, ...liveLockGate },
           select: { id: true },
         });
       }
