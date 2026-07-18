@@ -100,7 +100,7 @@ export async function GET(req: NextRequest) {
 
 const postSchema = z.object({
   projectId: z.string().min(1),
-  action: z.enum(["request", "remind"]).default("request"),
+  action: z.enum(["request", "remind", "unlock"]).default("request"),
   // Specific pledges to target; omit to target all eligible backers.
   pledgeIds: z.array(z.string()).optional(),
 });
@@ -118,6 +118,33 @@ export async function POST(req: NextRequest) {
     const project = await verifyProjectAccess(projectId, session.user.id);
     if (!project) {
       return NextResponse.json({ error: "Project not found or access denied" }, { status: 404 });
+    }
+
+    // "unlock" reverses a completed lock so the backer can edit their order
+    // again. Only touches currently-LOCKED pledges. Does not refund — it just
+    // lifts the freeze. Targets specific pledgeIds (per-backer from the UI) or
+    // all locked backers when none are given.
+    if (action === "unlock") {
+      const unlockTargets = await db.pledge.findMany({
+        where: {
+          projectId,
+          ...committedPledgeWhere,
+          orderLockStatus: "LOCKED",
+          ...(pledgeIds && pledgeIds.length > 0 ? { id: { in: pledgeIds } } : {}),
+        },
+        select: { id: true },
+      });
+      if (unlockTargets.length === 0) {
+        return NextResponse.json({ requested: 0, message: "No locked orders to unlock." });
+      }
+      await db.pledge.updateMany({
+        where: { id: { in: unlockTargets.map((t) => t.id) } },
+        data: { orderLockStatus: "UNLOCKED", orderLockedAt: null },
+      });
+      return NextResponse.json({
+        requested: unlockTargets.length,
+        message: `Unlocked ${unlockTargets.length} order${unlockTargets.length === 1 ? "" : "s"}.`,
+      });
     }
 
     // "request" targets not-yet-locked backers (fresh or previously

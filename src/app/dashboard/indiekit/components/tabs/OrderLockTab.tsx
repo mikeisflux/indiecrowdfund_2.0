@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Lock, Send, Bell, CheckCircle2, Clock, XCircle, Loader2 } from "lucide-react";
+import { Lock, LockOpen, Send, Bell, CheckCircle2, Clock, XCircle, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import type { Backer } from "../../types";
 
@@ -113,6 +113,30 @@ export function OrderLockTab({ projectId, backers, onOpenBackerDetail }: OrderLo
     }
   };
 
+  // Unlock a single backer's order so they can edit it again.
+  const unlockOne = async (pledgeId: string) => {
+    if (!projectId) return;
+    setSendingId(pledgeId);
+    try {
+      const res = await apiFetch("/api/creator/indiekit/lock-orders", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ projectId, action: "unlock", pledgeIds: [pledgeId] }),
+      });
+      const j = await res.json();
+      if (!res.ok || (j.requested ?? 0) === 0) {
+        toast.error(j.error || "Couldn't unlock this order.");
+        return;
+      }
+      toast.success("Order unlocked.");
+      await load();
+    } catch {
+      toast.error("Something went wrong.");
+    } finally {
+      setSendingId(null);
+    }
+  };
+
   // Open the shared backer detail dialog for a row (matched by pledge id).
   const openDetail = (pledgeId: string) => {
     const match = backers.find((b) => b.id === pledgeId);
@@ -207,7 +231,22 @@ export function OrderLockTab({ projectId, backers, onOpenBackerDetail }: OrderLo
                     </button>
                     <div className="flex items-center gap-2 shrink-0">
                       <Badge className={meta.className} variant="secondary">{meta.label}</Badge>
-                      {canSend && (
+                      {b.lockStatus === "LOCKED" ? (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-7"
+                          disabled={isSending || busy}
+                          onClick={() => unlockOne(b.pledgeId)}
+                        >
+                          {isSending ? (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          ) : (
+                            <LockOpen className="h-3.5 w-3.5" />
+                          )}
+                          <span className="ml-1.5">Unlock</span>
+                        </Button>
+                      ) : canSend ? (
                         <Button
                           size="sm"
                           variant="outline"
@@ -222,7 +261,7 @@ export function OrderLockTab({ projectId, backers, onOpenBackerDetail }: OrderLo
                           )}
                           <span className="ml-1.5">{sendAction === "remind" ? "Remind" : "Send lock request"}</span>
                         </Button>
-                      )}
+                      ) : null}
                     </div>
                   </div>
                 );
