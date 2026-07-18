@@ -87,7 +87,7 @@ export async function POST(req: NextRequest) {
     const countryRaw = String(bankCountry || "US").toUpperCase();
     if (!SUPPORTED_BANK_COUNTRIES.has(countryRaw)) {
       return NextResponse.json(
-        { error: "Unsupported bank country. Currently supported: US, CA (Canada), GB (UK), IT (Italy), JP (Japan)." },
+        { error: "Unsupported bank country. Currently supported: US, CA (Canada), GB (UK), IT (Italy), CH (Switzerland), JP (Japan)." },
         { status: 400 }
       );
     }

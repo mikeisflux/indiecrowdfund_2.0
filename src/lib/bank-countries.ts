@@ -6,7 +6,7 @@
 // digit fields) the per-file copies diverge too easily, so the country
 // config + sanitizer + validator live here once.
 
-export type BankCountry = "US" | "GB" | "IT" | "JP" | "CA";
+export type BankCountry = "US" | "GB" | "IT" | "JP" | "CA" | "CH";
 
 export const BANK_COUNTRY_OPTIONS: { value: BankCountry; label: string }[] = [
   { value: "US", label: "United States" },
@@ -14,10 +14,11 @@ export const BANK_COUNTRY_OPTIONS: { value: BankCountry; label: string }[] = [
   { value: "GB", label: "United Kingdom" },
   { value: "IT", label: "Italy" },
   { value: "JP", label: "Japan" },
+  { value: "CH", label: "Switzerland" },
 ];
 
 // Country codes the API routes accept in a save request.
-export const SUPPORTED_BANK_COUNTRIES = new Set<string>(["US", "GB", "IT", "JP", "CA"]);
+export const SUPPORTED_BANK_COUNTRIES = new Set<string>(["US", "GB", "IT", "JP", "CA", "CH"]);
 
 interface BankCountryFields {
   // The "routing identifier" field — US ABA routing number, UK Sort
@@ -111,12 +112,26 @@ export const BANK_COUNTRY_FIELDS: Record<BankCountry, BankCountryFields> = {
     bankNamePlaceholder: "e.g., RBC, TD, Scotiabank, BMO, CIBC",
     inputMode: "numeric",
   },
+  CH: {
+    // Switzerland uses BIC/SWIFT + IBAN, same shape as Italy. The Swiss
+    // IBAN is 21 characters: "CH" + 2 check digits + a 17-char BBAN.
+    routingLabel: "Bank code (BIC/SWIFT)",
+    routingPlaceholder: "e.g. UBSWCHZH80A",
+    routingHelp: "8 or 11 characters — your bank's BIC/SWIFT code",
+    routingMaxLength: 11,
+    accountLabel: "IBAN",
+    accountPlaceholder: "CH93 0076 2011 6238 5295 7",
+    accountMaxLength: 34,
+    accountSliceLength: 21,
+    bankNamePlaceholder: "e.g., UBS, Credit Suisse, PostFinance",
+    inputMode: "text",
+  },
 };
 
 // Normalises whatever the API returns into a known BankCountry. Anything
 // unrecognised — including a pre-international null — falls back to "US".
 export function parseBankCountry(value: unknown): BankCountry {
-  if (value === "GB" || value === "IT" || value === "JP" || value === "CA") return value;
+  if (value === "GB" || value === "IT" || value === "JP" || value === "CA" || value === "CH") return value;
   return "US";
 }
 
@@ -130,7 +145,7 @@ export function sanitizeBankField(
   maxLength?: number
 ): string {
   const cleaned =
-    country === "IT"
+    country === "IT" || country === "CH"
       ? raw.replace(/[^A-Za-z0-9]/g, "").toUpperCase()
       : raw.replace(/\D/g, "");
   return maxLength != null ? cleaned.slice(0, maxLength) : cleaned;
@@ -183,6 +198,18 @@ export function validateBankAccountFormat(
     }
     if (accountNumber !== undefined && !/^\d{7,12}$/.test(accountNumber)) {
       return "Canadian account number must be 7–12 digits";
+    }
+    return null;
+  }
+
+  if (country === "CH") {
+    // Switzerland — BIC/SWIFT (8 or 11 chars) + Swiss IBAN, which is
+    // exactly 21 chars: "CH" + 2 check digits + a 17-char BBAN.
+    if (routingNumber !== undefined && !/^[A-Z]{6}[A-Z0-9]{2}([A-Z0-9]{3})?$/.test(routingNumber)) {
+      return "Enter a valid BIC/SWIFT code (8 or 11 characters)";
+    }
+    if (accountNumber !== undefined && !/^CH\d{2}[A-Z0-9]{17}$/.test(accountNumber)) {
+      return "Enter a valid Swiss IBAN (21 characters, starting with CH)";
     }
     return null;
   }

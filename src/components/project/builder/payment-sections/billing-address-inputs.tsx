@@ -100,6 +100,7 @@ export function BillingAddressInputs({ idPrefix, value, onChange }: Props) {
                 <SelectItem value="DE">Germany</SelectItem>
                 <SelectItem value="FR">France</SelectItem>
                 <SelectItem value="IT">Italy</SelectItem>
+                <SelectItem value="CH">Switzerland</SelectItem>
                 <SelectItem value="JP">Japan</SelectItem>
               </SelectContent>
             </Select>
