@@ -5,10 +5,12 @@
 # Run it on the host server (or any machine that can reach the site):
 #     bash scripts/make-copyright-pdf.sh
 #
-# It self-installs its tooling (Playwright + pdf-lib) into an isolated folder,
-# installs a headless Chromium (and its system libraries), screenshots each
-# page full-length, and assembles them into a single PDF. Nothing here touches
-# the app's own node_modules or package.json.
+# Playwright + pdf-lib are declared as app dependencies, so `npm ci` at deploy
+# time installs them into the repo's node_modules — this script uses them from
+# there (no fragile runtime npm install, and nothing to wipe on rebuild). It
+# ensures a headless Chromium (and its system libraries) is installed — the
+# browser lives in ~/.cache/ms-playwright, outside the repo, so it too survives
+# rebuilds — then screenshots each page full-length and assembles one PDF.
 #
 # It captures in TWO passes:
 #   1. Public pages (logged out) — marketing, legal, shop, handbooks, etc.
@@ -44,8 +46,16 @@
 #
 set -euo pipefail
 
+# Repo root, resolved from this script's own location (robust to cwd / how it
+# was invoked). playwright + pdf-lib are declared as app dependencies, so they
+# live in the repo's node_modules after `npm ci` — this script uses them from
+# there rather than installing its own copy.
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+REPO_ROOT="$(dirname "$SCRIPT_DIR")"
+PLAYWRIGHT_BIN="$REPO_ROOT/node_modules/.bin/playwright"
+
 BASE_URL="${BASE_URL:-https://indiecrowdfund.com}"
-OUT_DIR="${OUT_DIR:-$(pwd)/copyrightpdf}"
+OUT_DIR="${OUT_DIR:-$REPO_ROOT/copyrightpdf}"
 MAX_PAGES="${MAX_PAGES:-500}"
 SAMPLE="${SAMPLE:-8}"
 TOOLING_DIR="$OUT_DIR/.tooling"
@@ -56,52 +66,45 @@ echo "==> Auth:    $( { [ -n "${IC_COOKIE:-}" ] || { [ -n "${IC_EMAIL:-}" ] && [
 echo
 
 command -v node >/dev/null 2>&1 || { echo "ERROR: node is not installed (need Node 18+)."; exit 1; }
-command -v npm  >/dev/null 2>&1 || { echo "ERROR: npm is not installed."; exit 1; }
 
-# Diagnostics — when this runs spawned by the app (pm2), a stripped environment
-# is the usual reason npm dies instantly. Log what we actually resolved.
-echo "==> Env:     node=$(command -v node) npm=$(command -v npm) HOME=${HOME:-<unset>}"
+echo "==> Env:     node=$(command -v node) HOME=${HOME:-<unset>}"
 
 mkdir -p "$TOOLING_DIR" "$OUT_DIR/screenshots"
-cd "$TOOLING_DIR"
 
-# --- Install tooling (isolated) ---------------------------------------------
-if [ ! -d node_modules/playwright ] || [ ! -d node_modules/pdf-lib ]; then
-  echo "==> Installing Playwright + pdf-lib (one-time)..."
-  [ -f package.json ] || npm init -y >/dev/null 2>&1
-  # Skip the playwright package's postinstall browser download here (it pulls
-  # all engines and commonly hangs on a server). We install just Chromium in
-  # the next step. Check the exit code explicitly so a failure is LOUD, not
-  # swallowed by set -e / the pipeline. Merge stderr into stdout so npm's error
-  # can't be lost when this runs detached with output redirected to a log.
-  set +e
-  PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 npm install --no-audit --no-fund playwright pdf-lib 2>&1
-  rc=$?
-  set -e
-  # Verify the install actually produced the packages — a stripped-env npm can
-  # exit oddly without writing node_modules; don't march on into a broken run.
-  if [ $rc -ne 0 ] || [ ! -d node_modules/playwright ] || [ ! -d node_modules/pdf-lib ]; then
-    echo "ERROR: installing playwright + pdf-lib failed (exit $rc; node_modules present: playwright=$([ -d node_modules/playwright ] && echo yes || echo no), pdf-lib=$([ -d node_modules/pdf-lib ] && echo yes || echo no))."
-    echo "       This usually means the environment is missing HOME/PATH (common when"
-    echo "       spawned by pm2). Run it by hand in an SSH shell to restore the tooling:"
-    echo "         cd \"$TOOLING_DIR\" && npm install playwright pdf-lib"
-    exit 1
-  fi
+# --- Verify tooling (playwright + pdf-lib) is available ---------------------
+# These are declared as dependencies of the app, so `npm ci` at deploy time
+# installs them into the repo's node_modules. Resolve them from the repo root
+# rather than installing a private copy — that avoids the fragile runtime
+# `npm install` that fails under pm2's stripped environment.
+if ! ( cd "$REPO_ROOT" && node -e "require.resolve('playwright'); require.resolve('pdf-lib')" ) >/dev/null 2>&1; then
+  echo "ERROR: 'playwright' and/or 'pdf-lib' are not installed in the app's node_modules."
+  echo "       They are declared as dependencies — install them by running a deploy:"
+  echo "         cd \"$REPO_ROOT\" && npm ci"
+  echo "       (quick one-off:  cd \"$REPO_ROOT\" && npm install playwright pdf-lib )"
+  exit 1
+fi
+if [ ! -x "$PLAYWRIGHT_BIN" ]; then
+  echo "ERROR: playwright CLI not found at $PLAYWRIGHT_BIN (run 'npm ci' in $REPO_ROOT)."
+  exit 1
 fi
 
+cd "$TOOLING_DIR"
+
 # --- Install Chromium + its system libraries --------------------------------
+# The browser itself lives in ~/.cache/ms-playwright (outside the repo), so it
+# survives rebuilds; these steps are idempotent and no-op once installed.
 # install-deps apt-installs the shared libraries Chromium needs (libnspr4,
 # libnss3, libgbm, ...). Do NOT hide its output — a silent failure here is what
 # produces the "libnspr4.so: cannot open shared object file" crash at launch.
-echo "==> Installing Chromium system libraries (needs root/sudo; apt)..."
-if ! npx --yes playwright install-deps chromium; then
+echo "==> Ensuring Chromium system libraries (needs root/sudo; apt)..."
+if ! "$PLAYWRIGHT_BIN" install-deps chromium; then
   echo "    !! install-deps failed. If capture crashes on a missing library, run:"
   echo "       apt-get update && apt-get install -y libnspr4 libnss3 libnssutil3 libsmime3 \\"
   echo "         libatk1.0-0 libatk-bridge2.0-0 libcups2 libdrm2 libxkbcommon0 libxcomposite1 \\"
   echo "         libxdamage1 libxfixes3 libxrandr2 libgbm1 libpango-1.0-0 libcairo2 libasound2t64"
 fi
-echo "==> Installing headless Chromium browser..."
-npx --yes playwright install chromium
+echo "==> Ensuring headless Chromium browser..."
+"$PLAYWRIGHT_BIN" install chromium
 
 # --- Screenshot + assemble ---------------------------------------------------
 cat > shoot.mjs <<'NODE'
