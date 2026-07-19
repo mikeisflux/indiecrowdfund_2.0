@@ -104,6 +104,9 @@ export const GROUPS: FeatureGroup[] = [
       { label: "Built-in comic printing & hard-copy proofs", ic: "yes", ks: "no", ig: "no", fmc: "no", bmb: "no" },
       { label: "Production / already-shipped tracking", ic: "yes", ks: "partial", ig: "partial", fmc: "no", bmb: "no" },
       { label: "Digital file delivery & downloads", ic: "yes", ks: "yes", ig: "partial", fmc: "partial", bmb: "no" },
+      // IC + KS "yes": both deliver digital reward files natively from the
+      // platform. IG/FMC/BMB leave creators to distribute files themselves.
+      { label: "Integrated digital file delivery", ic: "yes", ks: "yes", ig: "no", fmc: "no", bmb: "no" },
     ],
   },
   {
