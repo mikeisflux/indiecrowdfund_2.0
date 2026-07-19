@@ -176,7 +176,8 @@ export default function CopyrightPage() {
                   Re-capture everything
                 </Label>
                 <p className="text-xs text-muted-foreground">
-                  Ignore the cache and re-shoot every page from scratch.
+                  Wipes the old screenshots and re-shoots every page, overwriting
+                  in place — no duplicate files.
                 </p>
               </div>
               <Switch

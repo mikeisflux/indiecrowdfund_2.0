@@ -820,7 +820,7 @@ export default function ProjectPage() {
                 <Handshake className="h-5 w-5 text-black" />
               </div>
               <p className="text-sm">
-                <strong>IndieCrowdfund connects creators with backers</strong> to fund projects.
+                <strong>IndieCrowdfund helps independent creators raise the funds</strong> to bring their projects to life.
               </p>
             </div>
             <div className="flex items-start gap-3 glass-card rounded-xl p-4">
@@ -828,7 +828,7 @@ export default function ProjectPage() {
                 <AlertTriangle className="h-5 w-5 text-black" />
               </div>
               <p className="text-sm">
-                <strong>Rewards aren&apos;t guaranteed,</strong> but creators must regularly update backers.
+                <strong>Backing a project isn&apos;t a pre-order.</strong> Plans and timelines can change, and creators are expected to keep their backers posted on progress.
               </p>
             </div>
             <div className="flex items-start gap-3 glass-card rounded-xl p-4">
@@ -838,15 +838,15 @@ export default function ProjectPage() {
               <p className="text-sm">
                 {project.campaignType === "KEEP_IT_ALL" ? (
                   <>
-                    <strong>Your payment is collected immediately</strong> when you back this project — the creator keeps all pledges.
+                    <strong>Your card is charged at checkout,</strong> and this creator keeps every pledge whether or not the goal is reached.
                   </>
                 ) : Number(project.currentAmount) >= Number(project.goalAmount) ? (
                   <>
-                    <strong>Your card is charged immediately</strong> when you back this funded project.
+                    <strong>This project has already reached its goal,</strong> so your card is charged as soon as you pledge.
                   </>
                 ) : (
                   <>
-                    <strong>You&apos;re only charged if the project meets</strong> its funding goal by the campaign deadline.
+                    <strong>You won&apos;t be charged unless</strong> this project hits its funding goal before the campaign deadline.
                   </>
                 )}
               </p>

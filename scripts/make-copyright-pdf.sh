@@ -283,6 +283,21 @@ async function login(ctx) {
 async function main() {
   fs.mkdirSync(SHOT_DIR, { recursive: true });
 
+  // FRESH = re-capture everything: wipe old screenshots first so the run
+  // OVERWRITES cleanly instead of leaving orphaned PNGs behind (e.g. from an
+  // earlier naming scheme, or pages that no longer exist). Per-URL filenames
+  // are deterministic, so same-URL shots overwrite in place regardless; this
+  // just clears anything stale so the PDF is exactly this run's pages.
+  if (FRESH) {
+    let removed = 0;
+    for (const f of fs.readdirSync(SHOT_DIR)) {
+      if (f.toLowerCase().endsWith(".png")) {
+        try { fs.unlinkSync(path.join(SHOT_DIR, f)); removed++; } catch { /* ignore */ }
+      }
+    }
+    console.log(`==> FRESH: cleared ${removed} existing screenshot(s) — re-capturing all.`);
+  }
+
   const browser = await chromium.launch({ args: ["--no-sandbox", "--disable-dev-shm-usage"] });
   const mkctx = (extra = {}) => browser.newContext({
     viewport: { width: 1440, height: 900 },
