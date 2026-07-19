@@ -84,9 +84,13 @@ export const GROUPS: FeatureGroup[] = [
   {
     title: "Payments",
     rows: [
-      { label: "Multiple payment processors", ic: "yes", ks: "no", ig: "yes", fmc: "partial", bmb: "unknown" },
-      { label: "PayPal accepted", ic: "yes", ks: "no", ig: "yes", fmc: "yes", bmb: "unknown" },
-      { label: "Crypto / token payments (via Whop)", ic: "yes", ks: "no", ig: "no", fmc: "no", bmb: "unknown" },
+      // BMB "no" across payments: its own ToS (§8.D, §9) names Stripe as its
+      // sole payment processor — "Back Me Bro currently uses Stripe as our
+      // Payment Processor" / "all payments … are processed through Stripe
+      // Connect" — with no PayPal or crypto option (checkout confirmed Stripe).
+      { label: "Multiple payment processors", ic: "yes", ks: "no", ig: "yes", fmc: "partial", bmb: "no" },
+      { label: "PayPal accepted", ic: "yes", ks: "no", ig: "yes", fmc: "yes", bmb: "no" },
+      { label: "Crypto / token payments (via Whop)", ic: "yes", ks: "no", ig: "no", fmc: "no", bmb: "no" },
     ],
   },
   {
@@ -104,7 +108,10 @@ export const GROUPS: FeatureGroup[] = [
   {
     title: "Ongoing store",
     rows: [
-      { label: "Digital storefront (sell after the campaign)", ic: "yes", ks: "partial", ig: "yes", fmc: "yes", bmb: "unknown" },
+      // BMB "yes": its ToS (§9.C) describes a Creator Storefront that sells
+      // "physical or digital products … outside of (or in addition to) a
+      // crowdfunding Project."
+      { label: "Digital storefront (sell after the campaign)", ic: "yes", ks: "partial", ig: "yes", fmc: "yes", bmb: "yes" },
       { label: "Music streaming store", ic: "yes", ks: "no", ig: "no", fmc: "no", bmb: "unknown" },
       { label: "Movie / video streaming store", ic: "yes", ks: "no", ig: "no", fmc: "no", bmb: "unknown" },
       // FMC "partial": each creator's campaign can keep selling its own physical
