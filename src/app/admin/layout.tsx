@@ -58,6 +58,7 @@ import {
   AlertCircle,
   Newspaper,
   Calendar,
+  Copyright,
 } from "lucide-react";
 import { LucideIcon } from "lucide-react";
 import { fetchWithRetry } from "@/lib/fetch-utils";
@@ -165,6 +166,7 @@ const navigation: NavSection[] = [
       { name: "Changelog", href: "/admin/changelog", icon: FileEdit },
       { name: "Cron Jobs", href: "/admin/cron", icon: Clock },
       { name: "Dev Calendar", href: "/admin/dev-calendar", icon: Calendar },
+      { name: "Copyright", href: "/admin/copyright", icon: Copyright },
     ],
   },
 ];
