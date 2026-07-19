@@ -97,12 +97,12 @@ export const GROUPS: FeatureGroup[] = [
     title: "Fulfillment (IndieKit)",
     rows: [
       { label: "Built-in pledge manager & backer surveys", ic: "yes", ks: "yes", ig: "yes", fmc: "partial", bmb: "unknown" },
-      { label: "Order Lock — confirm & charge early", ic: "yes", ks: "no", ig: "no", fmc: "no", bmb: "unknown" },
-      { label: "Shipping-carrier integrations (Shippo, ShipStation, EasyPost, Stamps)", ic: "yes", ks: "partial", ig: "partial", fmc: "no", bmb: "unknown" },
-      { label: "Shopify integration", ic: "yes", ks: "no", ig: "no", fmc: "no", bmb: "unknown" },
-      { label: "Built-in comic printing & hard-copy proofs", ic: "yes", ks: "no", ig: "no", fmc: "no", bmb: "unknown" },
-      { label: "Production / already-shipped tracking", ic: "yes", ks: "partial", ig: "partial", fmc: "no", bmb: "unknown" },
-      { label: "Digital file delivery & downloads", ic: "yes", ks: "yes", ig: "partial", fmc: "partial", bmb: "unknown" },
+      { label: "Order Lock — confirm & charge early", ic: "yes", ks: "no", ig: "no", fmc: "no", bmb: "no" },
+      { label: "Shipping-carrier integrations (Shippo, ShipStation, EasyPost, Stamps)", ic: "yes", ks: "partial", ig: "partial", fmc: "no", bmb: "no" },
+      { label: "Shopify integration", ic: "yes", ks: "no", ig: "no", fmc: "no", bmb: "no" },
+      { label: "Built-in comic printing & hard-copy proofs", ic: "yes", ks: "no", ig: "no", fmc: "no", bmb: "no" },
+      { label: "Production / already-shipped tracking", ic: "yes", ks: "partial", ig: "partial", fmc: "no", bmb: "no" },
+      { label: "Digital file delivery & downloads", ic: "yes", ks: "yes", ig: "partial", fmc: "partial", bmb: "no" },
     ],
   },
   {
