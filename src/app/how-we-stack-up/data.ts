@@ -126,11 +126,12 @@ export const GROUPS: FeatureGroup[] = [
     title: "Growth & community",
     rows: [
       { label: "AI-powered marketing campaigns", ic: "yes", ks: "no", ig: "no", fmc: "no", bmb: "unknown" },
-      { label: "Creator email inbox & marketing", ic: "yes", ks: "no", ig: "no", fmc: "no", bmb: "unknown" },
-      { label: "Community chat", ic: "yes", ks: "no", ig: "no", fmc: "no", bmb: "unknown" },
-      { label: "Wholesale / retailer program", ic: "yes", ks: "no", ig: "no", fmc: "no", bmb: "unknown" },
-      { label: "Backer digital library", ic: "yes", ks: "no", ig: "no", fmc: "no", bmb: "unknown" },
-      { label: "Mature / adult content allowed", ic: "yes", ks: "no", ig: "no", fmc: "no", bmb: "unknown" },
+      { label: "Creator email inbox & marketing", ic: "yes", ks: "no", ig: "no", fmc: "no", bmb: "no" },
+      { label: "Community chat", ic: "yes", ks: "no", ig: "no", fmc: "no", bmb: "no" },
+      { label: "Wholesale / retailer program", ic: "yes", ks: "no", ig: "no", fmc: "no", bmb: "no" },
+      { label: "Backer digital library", ic: "yes", ks: "no", ig: "no", fmc: "no", bmb: "no" },
+      // BMB "no": its ToS gates content behind a Prohibited Content policy.
+      { label: "Mature / adult content allowed", ic: "yes", ks: "no", ig: "no", fmc: "no", bmb: "no" },
     ],
   },
   {
