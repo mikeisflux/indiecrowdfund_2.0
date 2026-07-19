@@ -5,7 +5,7 @@ import { logger } from "@/lib/logger";
 const adminAiMarketingCampaignsManageSendLogger = logger.child({ module: "admin-ai-marketing-campaigns-manage-send" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { queueEmail, EMAIL_PRIORITY, getUnsubscribeUrl } from "@/lib/email";
+import { queueEmail, EMAIL_PRIORITY, getUnsubscribeUrl, hasVisibleEmailContent } from "@/lib/email";
 
 export const dynamic = "force-dynamic";
 
@@ -155,6 +155,17 @@ export async function POST(
     if (campaign.status === "SENDING") {
       return NextResponse.json(
         { error: "Campaign is already being sent" },
+        { status: 400 }
+      );
+    }
+
+    // Guard: never blast an empty campaign. AI generation (or a bad edit) can
+    // leave htmlContent blank, which would queue empty emails to the whole
+    // list. This runs before the status CAS below, so the campaign is left as
+    // it was — we just refuse to send.
+    if (!hasVisibleEmailContent(campaign.htmlContent)) {
+      return NextResponse.json(
+        { error: "This campaign has no body content — nothing was sent. Regenerate or edit the campaign, then try again." },
         { status: 400 }
       );
     }

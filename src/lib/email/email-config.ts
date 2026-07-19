@@ -609,8 +609,53 @@ export async function sendEmail({ to, subject, html, text, skipUnsubscribeCheck,
 }
 
 // Queue an email for rate-limited sending (1 per second max)
+// True if the email has a real body: visible text after stripping markup, OR a
+// real (non-tracking) image, OR a non-empty plain-text part. Used to block
+// blank sends at the queue chokepoint.
+export function hasVisibleEmailContent(html?: string | null, text?: string | null): boolean {
+  if (text && text.trim().length > 0) return true;
+
+  const raw = html || "";
+  if (raw.trim().length === 0) return false;
+
+  // Remove non-content markup (styles/scripts/head/comments) BEFORE stripping
+  // tags, so CSS text inside <style> isn't mistaken for visible content.
+  const withoutMeta = raw
+    .replace(/<!--[\s\S]*?-->/g, "")
+    .replace(/<(style|script|head)\b[^>]*>[\s\S]*?<\/\1>/gi, "");
+
+  const visibleText = withoutMeta
+    .replace(/<[^>]+>/g, "")
+    .replace(/&nbsp;|&#160;|&#xa0;|&zwnj;|&#8203;/gi, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (visibleText.length > 0) return true;
+
+  // A "real" image counts as content, but a 1x1 / hidden tracking pixel does
+  // not — drop those first, then look for any remaining <img src=…>.
+  const withoutPixels = withoutMeta.replace(
+    /<img\b[^>]*(?:width\s*=\s*["']?1["']?|height\s*=\s*["']?1["']?|display\s*:\s*none)[^>]*>/gi,
+    ""
+  );
+  return /<img\b[^>]*\bsrc\s*=\s*["']?[^"'\s>]/i.test(withoutPixels);
+}
+
 export async function queueEmail(options: SendEmailOptions & { priority?: number }): Promise<{ success: boolean; queueId?: string; error?: string }> {
   const { to, subject, html, text, fromEmail, fromName, replyTo, isCreatorEmail, skipUnsubscribeCheck, priority = 0, scheduledFor } = options;
+
+  // Guard: never queue an email with no visible body. AI-generated marketing
+  // content can come back empty (generation failure / timeout), and the send
+  // loops add a 1x1 tracking pixel before queueing — so an "empty" campaign
+  // would otherwise ship as a blank email (just the pixel) to the whole list.
+  // Strip <style>/<script>/<head>/comments, tags, and the tracking pixel (and
+  // any 1x1 / hidden image), then check for real text OR a real image OR a
+  // plain-text body. This is the single chokepoint every send path uses.
+  if (!hasVisibleEmailContent(html, text)) {
+    emailLogger.error(
+      `[Email Queue] BLOCKED empty email to ${to} (subject: "${subject}") — no visible body content. Not queued.`
+    );
+    return { success: false, error: "Refusing to queue an email with no body content." };
+  }
 
   try {
     const queueEntry = await db.emailQueue.create({
