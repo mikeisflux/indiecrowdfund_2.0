@@ -63,10 +63,11 @@ export default function HowWeStackUpPage() {
         if (r.ks === "yes") acc.ks++;
         if (r.ig === "yes") acc.ig++;
         if (r.fmc === "yes") acc.fmc++;
+        if (r.bmb === "yes") acc.bmb++;
       }
       return acc;
     },
-    { ic: 0, ks: 0, ig: 0, fmc: 0 }
+    { ic: 0, ks: 0, ig: 0, fmc: 0, bmb: 0 }
   );
   const totalRows = GROUPS.reduce((n, g) => n + g.rows.length, 0);
 
@@ -184,7 +185,8 @@ export default function HowWeStackUpPage() {
                 <td className="px-3 py-3 text-center text-sm font-semibold text-muted-foreground">{totalYes.ks}</td>
                 <td className="px-3 py-3 text-center text-sm font-semibold text-muted-foreground">{totalYes.ig}</td>
                 <td className="px-3 py-3 text-center text-sm font-semibold text-muted-foreground">{totalYes.fmc}</td>
-                <td className="px-3 py-3 text-center text-sm font-semibold text-muted-foreground/50">&mdash;</td>
+                {/* "+" because many of Backmebro's cells are still unverified (shown as ?). */}
+                <td className="px-3 py-3 text-center text-sm font-semibold text-muted-foreground">{totalYes.bmb}+</td>
               </tr>
               {/* Platform / technology — facts only */}
               <tr className="border-t border-border/60 bg-muted/10">

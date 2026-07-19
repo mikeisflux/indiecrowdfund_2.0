@@ -8,14 +8,15 @@ export const alt = "How IndieCrowdfund stacks up against Kickstarter, Indiegogo,
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
-// Keep in sync with the headline scoreboard on the page. Backmebro hasn't
-// launched, so it shows "?" (matches the table's not-launched-yet state).
+// Keep in sync with the headline scoreboard on the page. Backmebro shows "7+"
+// because it has launched and 7 of our features are verified from its live
+// site, but many cells remain unverified (shown as "?" in the table).
 const SCORES = [
   { name: "IndieCrowdfund", score: "33", highlight: true },
   { name: "Indiegogo", score: "14", highlight: false },
   { name: "Kickstarter", score: "10", highlight: false },
   { name: "Fund My Comic", score: "6", highlight: false },
-  { name: "Backmebro", score: "?", highlight: false },
+  { name: "Backmebro", score: "7+", highlight: false },
 ];
 
 export default function Image() {
