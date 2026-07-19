@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { spawn } from "child_process";
 import fs from "fs";
+import path from "path";
+import os from "os";
 import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 import {
@@ -65,8 +67,20 @@ export async function POST(req: NextRequest) {
       `# Copyright capture started ${startedAt}\n# base=${baseUrl} includeAuth=${includeAuth} fresh=${fresh}\n\n`
     );
 
+    // pm2 often runs the app with a stripped environment (no HOME, minimal
+    // PATH). npm/npx/node then fail — silently and instantly — when the capture
+    // script tries to install its tooling, which is why a run spawned from here
+    // dies at "Installing Playwright…" even though the same command works in an
+    // SSH shell. Rebuild a sane env: guarantee HOME, and put the app's own node
+    // bin dir (process.execPath's dir — has node/npm/npx) first on PATH.
+    const nodeBinDir = path.dirname(process.execPath);
+    const basePath = process.env.PATH || "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin";
+    const homeDir = process.env.HOME || os.homedir() || "/root";
     const env: NodeJS.ProcessEnv = {
       ...process.env,
+      HOME: homeDir,
+      PATH: `${nodeBinDir}:${basePath}`,
+      npm_config_cache: path.join(homeDir, ".npm"),
       BASE_URL: baseUrl,
       OUT_DIR,
       FRESH: fresh ? "1" : "",

@@ -58,6 +58,10 @@ echo
 command -v node >/dev/null 2>&1 || { echo "ERROR: node is not installed (need Node 18+)."; exit 1; }
 command -v npm  >/dev/null 2>&1 || { echo "ERROR: npm is not installed."; exit 1; }
 
+# Diagnostics — when this runs spawned by the app (pm2), a stripped environment
+# is the usual reason npm dies instantly. Log what we actually resolved.
+echo "==> Env:     node=$(command -v node) npm=$(command -v npm) HOME=${HOME:-<unset>}"
+
 mkdir -p "$TOOLING_DIR" "$OUT_DIR/screenshots"
 cd "$TOOLING_DIR"
 
@@ -68,14 +72,19 @@ if [ ! -d node_modules/playwright ] || [ ! -d node_modules/pdf-lib ]; then
   # Skip the playwright package's postinstall browser download here (it pulls
   # all engines and commonly hangs on a server). We install just Chromium in
   # the next step. Check the exit code explicitly so a failure is LOUD, not
-  # swallowed by set -e / the pipeline.
+  # swallowed by set -e / the pipeline. Merge stderr into stdout so npm's error
+  # can't be lost when this runs detached with output redirected to a log.
   set +e
-  PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 npm install --no-audit --no-fund playwright pdf-lib
+  PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 npm install --no-audit --no-fund playwright pdf-lib 2>&1
   rc=$?
   set -e
-  if [ $rc -ne 0 ]; then
-    echo "ERROR: 'npm install playwright pdf-lib' failed (exit $rc). Run it by hand to see why:"
-    echo "  cd \"$TOOLING_DIR\" && npm install playwright pdf-lib"
+  # Verify the install actually produced the packages — a stripped-env npm can
+  # exit oddly without writing node_modules; don't march on into a broken run.
+  if [ $rc -ne 0 ] || [ ! -d node_modules/playwright ] || [ ! -d node_modules/pdf-lib ]; then
+    echo "ERROR: installing playwright + pdf-lib failed (exit $rc; node_modules present: playwright=$([ -d node_modules/playwright ] && echo yes || echo no), pdf-lib=$([ -d node_modules/pdf-lib ] && echo yes || echo no))."
+    echo "       This usually means the environment is missing HOME/PATH (common when"
+    echo "       spawned by pm2). Run it by hand in an SSH shell to restore the tooling:"
+    echo "         cd \"$TOOLING_DIR\" && npm install playwright pdf-lib"
     exit 1
   fi
 fi
