@@ -15,7 +15,7 @@ export const SOCIAL_CARD_ALT =
 const SCORES = [
   { name: "IndieCrowdfund", score: "33", highlight: true },
   { name: "Indiegogo", score: "14", highlight: false },
-  { name: "Kickstarter", score: "10", highlight: false },
+  { name: "Kickstarter", score: "11", highlight: false },
   { name: "Fund My Comic", score: "6", highlight: false },
   { name: "Backmebro", score: "10", highlight: false },
 ];

@@ -77,7 +77,9 @@ export const GROUPS: FeatureGroup[] = [
       { label: "Late pledges after the campaign ends", ic: "yes", ks: "yes", ig: "yes", fmc: "partial", bmb: "no" },
       { label: "Backer reviews & star ratings", ic: "yes", ks: "no", ig: "no", fmc: "no", bmb: "no" },
       { label: "Team collaborators on a campaign", ic: "yes", ks: "yes", ig: "yes", fmc: "no", bmb: "no" },
-      { label: "Built-in referral tracking", ic: "yes", ks: "partial", ig: "partial", fmc: "partial", bmb: "no" },
+      // KS "yes": Kickstarter's dashboard has built-in referral/traffic-source
+      // tracking (referrer breakdown of pledges + custom referral tags).
+      { label: "Built-in referral tracking", ic: "yes", ks: "yes", ig: "partial", fmc: "partial", bmb: "no" },
     ],
   },
   {
