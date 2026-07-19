@@ -49,7 +49,15 @@ cd "$TOOLING_DIR"
 if [ ! -d node_modules/playwright ] || [ ! -d node_modules/pdf-lib ]; then
   echo "==> Installing Playwright + pdf-lib (one-time)..."
   [ -f package.json ] || npm init -y >/dev/null 2>&1
-  npm install playwright pdf-lib
+  # Skip the playwright package's postinstall browser download here — it pulls
+  # ALL engines (chromium+firefox+webkit+ffmpeg, ~400MB) and commonly hangs or
+  # fails on a server, which used to abort the whole script. We install just
+  # Chromium separately in the next step.
+  if ! PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 npm install playwright pdf-lib; then
+    echo "ERROR: 'npm install playwright pdf-lib' failed. Run it by hand to see why:"
+    echo "  cd \"$TOOLING_DIR\" && npm install playwright pdf-lib"
+    exit 1
+  fi
 fi
 
 # --- Install Chromium (+ OS libraries) --------------------------------------
