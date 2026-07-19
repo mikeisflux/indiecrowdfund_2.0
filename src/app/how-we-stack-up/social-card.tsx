@@ -118,7 +118,10 @@ export function renderSocialCard() {
           Features included, compared across the field
         </div>
 
-        {/* Legend — matches the page: green check = included, red cross = not */}
+        {/* Legend — matches the page: green check = included, red cross = not.
+            Drawn as inline SVG (not ✓/✕ glyphs) so next/og never tries to fetch
+            a remote emoji font — that download is blocked on the server and was
+            crashing OG rendering. */}
         <div
           style={{
             display: "flex",
@@ -128,15 +131,16 @@ export function renderSocialCard() {
           }}
         >
           <div style={{ display: "flex", alignItems: "center", gap: "9px" }}>
-            <div style={{ display: "flex", fontSize: "26px", fontWeight: 800, color: "#10b981" }}>
-              ✓
-            </div>
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M20 6 9 17l-5-5" />
+            </svg>
             <div style={{ display: "flex", fontSize: "20px", color: "#9ca3af" }}>Included</div>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: "9px" }}>
-            <div style={{ display: "flex", fontSize: "26px", fontWeight: 800, color: "#ef4444" }}>
-              ✕
-            </div>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M18 6 6 18" />
+              <path d="M6 6l12 12" />
+            </svg>
             <div style={{ display: "flex", fontSize: "20px", color: "#9ca3af" }}>Not available</div>
           </div>
         </div>
