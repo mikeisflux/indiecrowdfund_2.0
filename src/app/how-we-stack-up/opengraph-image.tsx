@@ -111,10 +111,33 @@ export default function Image() {
             fontSize: "26px",
             color: "#9ca3af",
             marginTop: "16px",
-            marginBottom: "44px",
+            marginBottom: "20px",
           }}
         >
           Features included, compared across the field
+        </div>
+
+        {/* Legend — matches the page: green check = included, red cross = not */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "28px",
+            marginBottom: "40px",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: "9px" }}>
+            <div style={{ display: "flex", fontSize: "26px", fontWeight: 800, color: "#10b981" }}>
+              ✓
+            </div>
+            <div style={{ display: "flex", fontSize: "20px", color: "#9ca3af" }}>Included</div>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: "9px" }}>
+            <div style={{ display: "flex", fontSize: "26px", fontWeight: 800, color: "#ef4444" }}>
+              ✕
+            </div>
+            <div style={{ display: "flex", fontSize: "20px", color: "#9ca3af" }}>Not available</div>
+          </div>
         </div>
 
         {/* Scoreboard */}

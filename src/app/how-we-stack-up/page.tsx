@@ -41,7 +41,7 @@ function Cell({ value }: { value: Support }) {
   }
   return (
     <span className="inline-flex items-center justify-center" aria-label="Not available">
-      <X className="h-4 w-4 text-muted-foreground/40" strokeWidth={2.5} />
+      <X className="h-5 w-5 text-red-500 dark:text-red-400" strokeWidth={3} />
     </span>
   );
 }
@@ -95,7 +95,7 @@ export default function HowWeStackUpPage() {
             <LegendItem icon={<Minus className="h-4 w-4 text-amber-500" strokeWidth={3} />}>
               Limited / third-party
             </LegendItem>
-            <LegendItem icon={<X className="h-4 w-4 text-muted-foreground/40" strokeWidth={2.5} />}>
+            <LegendItem icon={<X className="h-4 w-4 text-red-500 dark:text-red-400" strokeWidth={3} />}>
               Not available
             </LegendItem>
             <LegendItem icon={<span className="text-sm font-bold text-muted-foreground/50">?</span>}>
