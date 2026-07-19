@@ -7,10 +7,9 @@
 //
 // Competitor columns (Kickstarter, Indiegogo, Fund My Comic, Backmebro) reflect
 // publicly available information and may change; the page carries a note to
-// that effect. Backmebro has now launched; its marks are what's verifiable from
-// its live public site — features we can't confirm are left "unknown" rather
-// than assumed absent. IndieCrowdfund marks are drawn from the platform's own
-// feature set.
+// that effect. Backmebro has launched and its column is now fully assessed from
+// its live public site + Terms of Service. IndieCrowdfund marks are drawn from
+// the platform's own feature set.
 export type Support = "yes" | "partial" | "no" | "unknown";
 
 export interface FeatureRow {
@@ -64,7 +63,7 @@ export const GROUPS: FeatureGroup[] = [
       // BMB "yes": its campaign header shows only on-platform pledges
       // ("$0 pledged of $500 goal, 3 backers") — no externally-raised inflation.
       { label: "Public funding total reflects on-platform pledges only", ic: "yes", ks: "yes", ig: "yes", fmc: "no", bmb: "yes" },
-      { label: "Prelaunch / coming-soon pages", ic: "yes", ks: "yes", ig: "yes", fmc: "yes", bmb: "unknown" },
+      { label: "Prelaunch / coming-soon pages", ic: "yes", ks: "yes", ig: "yes", fmc: "yes", bmb: "yes" },
       // BMB "yes": reward tiers list "1 item included + optional add-ons".
       { label: "Native à-la-carte add-ons", ic: "yes", ks: "yes", ig: "yes", fmc: "yes", bmb: "yes" },
       // KS: Kickstarter orders rewards by pledge amount with no manual reorder.
@@ -75,7 +74,7 @@ export const GROUPS: FeatureGroup[] = [
       // "secret" rewards; FMC not verified. BMB "yes": every reward object in
       // its page data carries an `is_secret` flag.
       { label: "Secret rewards (private link/code)", ic: "yes", ks: "yes", ig: "yes", fmc: "no", bmb: "yes" },
-      { label: "Late pledges after the campaign ends", ic: "yes", ks: "yes", ig: "yes", fmc: "partial", bmb: "unknown" },
+      { label: "Late pledges after the campaign ends", ic: "yes", ks: "yes", ig: "yes", fmc: "partial", bmb: "no" },
       { label: "Backer reviews & star ratings", ic: "yes", ks: "no", ig: "no", fmc: "no", bmb: "no" },
       { label: "Team collaborators on a campaign", ic: "yes", ks: "yes", ig: "yes", fmc: "no", bmb: "no" },
       { label: "Built-in referral tracking", ic: "yes", ks: "partial", ig: "partial", fmc: "partial", bmb: "no" },
@@ -125,7 +124,7 @@ export const GROUPS: FeatureGroup[] = [
   {
     title: "Growth & community",
     rows: [
-      { label: "AI-powered marketing campaigns", ic: "yes", ks: "no", ig: "no", fmc: "no", bmb: "unknown" },
+      { label: "AI-powered marketing campaigns", ic: "yes", ks: "no", ig: "no", fmc: "no", bmb: "no" },
       { label: "Creator email inbox & marketing", ic: "yes", ks: "no", ig: "no", fmc: "no", bmb: "no" },
       { label: "Community chat", ic: "yes", ks: "no", ig: "no", fmc: "no", bmb: "no" },
       { label: "Wholesale / retailer program", ic: "yes", ks: "no", ig: "no", fmc: "no", bmb: "no" },

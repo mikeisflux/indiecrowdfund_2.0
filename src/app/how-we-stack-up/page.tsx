@@ -185,8 +185,7 @@ export default function HowWeStackUpPage() {
                 <td className="px-3 py-3 text-center text-sm font-semibold text-muted-foreground">{totalYes.ks}</td>
                 <td className="px-3 py-3 text-center text-sm font-semibold text-muted-foreground">{totalYes.ig}</td>
                 <td className="px-3 py-3 text-center text-sm font-semibold text-muted-foreground">{totalYes.fmc}</td>
-                {/* "+" because many of Backmebro's cells are still unverified (shown as ?). */}
-                <td className="px-3 py-3 text-center text-sm font-semibold text-muted-foreground">{totalYes.bmb}+</td>
+                <td className="px-3 py-3 text-center text-sm font-semibold text-muted-foreground">{totalYes.bmb}</td>
               </tr>
               {/* Platform / technology — facts only */}
               <tr className="border-t border-border/60 bg-muted/10">
