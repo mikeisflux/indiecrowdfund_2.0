@@ -110,6 +110,16 @@ export function ErrorReporter() {
       // flight, or the user navigates away mid-load. User-driven, benign.
       /fetching process for the media resource was aborted/i,
       /media resource was aborted/i,
+      // HTMLMediaElement.play() rejected because autoplay is blocked or the
+      // element was paused/removed before play resolved. Browsers reject the
+      // play() promise when there was no user gesture (Firefox: "play method
+      // is not allowed…"; Chrome: "play() request was interrupted"/"failed
+      // because the user didn't interact"). Benign — the user just presses
+      // play. Our own play() calls already .catch(); this covers rejections
+      // from native controls, extensions, and browser autoplay policy.
+      /play\(\) (request was interrupted|failed because)/i,
+      /play method is not allowed/i,
+      /NotAllowedError/,
       // iOS Safari privacy-mode quota errors
       /QuotaExceededError/,
       // Google reCAPTCHA widget timeouts — their service, not ours
@@ -525,17 +535,38 @@ export function ErrorReporter() {
           responseBody = (await response.clone().text()).slice(0, 500);
         } catch {}
 
-        reportError(
-          `HTTP ${response.status} ${response.statusText}: ${requestUrl}`,
-          undefined,
-          {
-            source: "fetch-error-interceptor",
-            statusCode: response.status,
-            requestUrl,
-            responseBody,
-            referrer: document.referrer || undefined,
-          }
-        );
+        // Generalized noise filter — supersedes the per-endpoint allow-lists
+        // above (which keep leaking new cases as endpoints are added):
+        //  - Any 4xx carrying a structured JSON { error } / { message } is a
+        //    DELIBERATE API response (validation, auth, permission, business
+        //    rule) that the calling UI already surfaces to the user. Logging it
+        //    duplicates a message the user already saw — skip it. Genuine 5xx
+        //    server bugs are NOT covered here, so real regressions still report.
+        //  - Any 5xx whose body is an HTML page (the nginx / "Site Maintenance"
+        //    page served during a deploy or overload) is transient infra noise,
+        //    not an app error — skip it. Real app 5xx return JSON { error }.
+        const body = (responseBody || "").trim();
+        const isHandledClient4xx =
+          response.status >= 400 &&
+          response.status < 500 &&
+          body.startsWith("{") &&
+          /"(error|message)"\s*:\s*"/.test(body);
+        const isTransientMaintenance5xx =
+          response.status >= 500 && (body.startsWith("<") || /Site Maintenance/i.test(body));
+
+        if (!isHandledClient4xx && !isTransientMaintenance5xx) {
+          reportError(
+            `HTTP ${response.status} ${response.statusText}: ${requestUrl}`,
+            undefined,
+            {
+              source: "fetch-error-interceptor",
+              statusCode: response.status,
+              requestUrl,
+              responseBody,
+              referrer: document.referrer || undefined,
+            }
+          );
+        }
       }
 
       return response;
