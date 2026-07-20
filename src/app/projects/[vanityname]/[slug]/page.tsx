@@ -7,6 +7,7 @@ import { useParams, useSearchParams } from "next/navigation";
 import { useSession } from "@/components/providers/auth-provider";
 import { useProjectTracking } from "@/components/tracking-provider";
 import Image from "next/image";
+import { ProjectVideoPlayer } from "@/components/project-details/project-video-player";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import {
@@ -579,49 +580,11 @@ export default function ProjectPage() {
             <div className="md:col-span-3 animate-in fade-in slide-in-from-left-4 duration-500" style={{ animationDelay: '200ms' }}>
               <div className="aspect-video overflow-hidden rounded-2xl bg-muted relative shadow-2xl shadow-black/20 ring-1 ring-border/50">
                 {project.videoUrl ? (
-                  (() => {
-                    // Extract embed URL for YouTube or Vimeo
-                    const youtubeMatch = project.videoUrl.match(/(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
-                    const vimeoMatch = project.videoUrl.match(/(?:vimeo\.com\/)(\d+)/);
-
-                    if (youtubeMatch) {
-                      return (
-                        <iframe
-                          src={`https://www.youtube.com/embed/${youtubeMatch[1]}?rel=0`}
-                          className="absolute inset-0 w-full h-full"
-                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                          allowFullScreen
-                          title={project.title}
-                        />
-                      );
-                    } else if (vimeoMatch) {
-                      return (
-                        <iframe
-                          src={`https://player.vimeo.com/video/${vimeoMatch[1]}`}
-                          className="absolute inset-0 w-full h-full"
-                          allow="autoplay; fullscreen; picture-in-picture"
-                          allowFullScreen
-                          title={project.title}
-                        />
-                      );
-                    } else {
-                      // For other video URLs, show image with play button overlay
-                      return (
-                        <a href={project.videoUrl} target="_blank" rel="noopener noreferrer" className="block h-full">
-                          {project.imageUrl ? (
-                            <Image src={project.imageUrl} alt={project.title} fill sizes="(max-width: 1024px) 100vw, 60vw" priority className="object-cover" unoptimized={project.imageUrl.endsWith(".gif")} />
-                          ) : (
-                            <div className="flex h-full items-center justify-center bg-gradient-to-br from-gray-800 to-gray-900" />
-                          )}
-                          <div className="absolute inset-0 flex items-center justify-center bg-black/20 hover:bg-black/30 transition-colors">
-                            <div className="h-16 w-16 rounded-full bg-white/90 flex items-center justify-center">
-                              <Play className="h-8 w-8 text-gray-900 ml-1" />
-                            </div>
-                          </div>
-                        </a>
-                      );
-                    }
-                  })()
+                  <ProjectVideoPlayer
+                    videoUrl={project.videoUrl}
+                    imageUrl={project.imageUrl}
+                    title={project.title}
+                  />
                 ) : project.imageUrl ? (
                   <Image src={project.imageUrl} alt={project.title} fill sizes="(max-width: 1024px) 100vw, 60vw" priority className="object-cover" unoptimized={project.imageUrl.endsWith(".gif")} />
                 ) : (

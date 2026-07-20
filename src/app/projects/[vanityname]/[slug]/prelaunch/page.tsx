@@ -5,6 +5,7 @@ import { apiFetch } from "@/lib/fetch-utils";
 import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import { useSession } from "@/components/providers/auth-provider";
+import { ProjectVideoPlayer } from "@/components/project-details/project-video-player";
 import Image from "next/image";
 import Link from "next/link";
 import { sanitizeHtml } from "@/lib/utils/sanitize";
@@ -330,6 +331,19 @@ export default function PrelaunchPage() {
             <p className="text-base sm:text-xl text-center text-white/90 mb-6 max-w-2xl mx-auto">
               {project.subtitle}
             </p>
+          )}
+
+          {/* Campaign video (plays inline; volume + fullscreen) */}
+          {project.videoUrl && (
+            <div className="mx-auto mb-8 w-full max-w-3xl">
+              <div className="relative aspect-video overflow-hidden rounded-2xl bg-black shadow-2xl ring-1 ring-white/10">
+                <ProjectVideoPlayer
+                  videoUrl={project.videoUrl}
+                  imageUrl={project.imageUrl}
+                  title={project.title}
+                />
+              </div>
+            </div>
           )}
 
           {/* Category & Location */}

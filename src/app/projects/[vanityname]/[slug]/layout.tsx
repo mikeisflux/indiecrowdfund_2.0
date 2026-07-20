@@ -116,8 +116,18 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   // file forever (Cache-Control: immutable from our uploads route tells
   // them to never refetch).
   const imageInfo = await getOgImageInfo(baseImageUrl);
-  const imageUrl = imageInfo.version
-    ? `${baseImageUrl}?v=${imageInfo.version}`
+  // Force JPEG for our own uploads via ?format=jpeg. WebP og:images render as a
+  // BLANK card on X/Facebook, and the .jpg companion may not exist yet for a
+  // brand-new project — this makes the uploads route convert on the fly so
+  // every project's card resolves to a JPEG derived from its campaign graphic.
+  const isOwnUpload =
+    baseImageUrl.startsWith(baseUrl) && !baseImageUrl.startsWith(`${baseUrl}/api/og`);
+  const ogParams = new URLSearchParams();
+  if (isOwnUpload) ogParams.set("format", "jpeg");
+  if (imageInfo.version) ogParams.set("v", imageInfo.version);
+  const ogQs = ogParams.toString();
+  const imageUrl = ogQs
+    ? `${baseImageUrl}${baseImageUrl.includes("?") ? "&" : "?"}${ogQs}`
     : baseImageUrl;
   const imageDimensions = { width: imageInfo.width, height: imageInfo.height };
 

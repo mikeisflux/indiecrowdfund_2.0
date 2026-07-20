@@ -89,8 +89,20 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     ? rawImageUrl.replace(/\.webp$/i, ".jpg")
     : rawImageUrl;
   const imageInfo = await getOgImageInfo(baseImageUrl);
-  const imageUrl = imageInfo.version
-    ? `${baseImageUrl}?v=${imageInfo.version}`
+  // Force JPEG for our own uploads. WebP og:images render as a BLANK card on
+  // X/Facebook, and the .jpg-swapped path only serves a real JPEG if a
+  // pre-generated companion exists OR the crawler UA is recognized — both
+  // unreliable for brand-new projects. Appending ?format=jpeg makes the uploads
+  // route convert on the fly for every request, so every project's card
+  // resolves to a JPEG derived from its campaign graphic by default.
+  const isOwnUpload =
+    baseImageUrl.startsWith(baseUrl) && !baseImageUrl.startsWith(`${baseUrl}/api/og`);
+  const ogParams = new URLSearchParams();
+  if (isOwnUpload) ogParams.set("format", "jpeg");
+  if (imageInfo.version) ogParams.set("v", imageInfo.version);
+  const ogQs = ogParams.toString();
+  const imageUrl = ogQs
+    ? `${baseImageUrl}${baseImageUrl.includes("?") ? "&" : "?"}${ogQs}`
     : baseImageUrl;
   const imageDimensions = { width: imageInfo.width, height: imageInfo.height };
 
