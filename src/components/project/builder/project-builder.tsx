@@ -10,6 +10,7 @@ import { StoryStep } from "./story-step";
 import { PeopleStep } from "./people-step";
 import { PaymentStep } from "./payment-step";
 import { PromotionStep } from "./promotion-step";
+import { VanityUrlSetupDialog } from "./vanity-url-setup-dialog";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
@@ -56,6 +57,28 @@ export function ProjectBuilder() {
   const [isSubFormOpen, setIsSubFormOpen] = useState(false);
   const [showReReviewWarning, setShowReReviewWarning] = useState(false);
   const [justSaved, setJustSaved] = useState(false);
+
+  // A creator must claim a custom URL before building a campaign — without one,
+  // their project links (/projects/[vanityname]/[slug]) collapse to a 2-segment
+  // URL that 404s. Check on mount and, if missing, force the guided setup.
+  const [needsVanityUrl, setNeedsVanityUrl] = useState(false);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/user/vanity-url");
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!cancelled && !data.isSet) setNeedsVanityUrl(true);
+      } catch {
+        // Non-fatal: if the check fails we don't block building; launch still
+        // requires a vanity server-side.
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // Unsaved-changes guard: warn before the tab closes or reloads while the
   // builder holds edits that haven't been pushed to the server yet.
@@ -632,6 +655,12 @@ export function ProjectBuilder() {
 
   return (
     <div className="min-h-screen bg-muted/30">
+      {/* Mandatory custom-URL setup — gates the whole builder until claimed */}
+      <VanityUrlSetupDialog
+        open={needsVanityUrl}
+        onComplete={() => setNeedsVanityUrl(false)}
+      />
+
       {/* Re-review Warning Dialog */}
       <AlertDialog open={showReReviewWarning} onOpenChange={setShowReReviewWarning}>
         <AlertDialogContent>
