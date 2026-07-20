@@ -617,37 +617,73 @@ export async function GET(req: NextRequest) {
       // Units on an order-locked pledge, so the Production view can show how
       // many of each item are already locked in (final, won't change).
       const isLocked = pledge.orderLockStatus === "LOCKED";
-      // Count items from reward tiers
-      if (pledge.reward?.items) {
-        pledge.reward.items.forEach((item: { id: string; title: string; projectItemId: string | null; projectItem?: { id: string; title: string; sku: string | null } | null }) => {
-          const itemName = item.projectItem?.title || item.title;
-          const itemKey = item.projectItemId
-            ? `projectItem_${item.projectItemId}`
-            : `itemTitle_${item.title}`;
+      // Count items from reward tiers. Two shapes, mirroring the addon logic:
+      //   1. The tier has a RewardItem[] breakdown -- each ProjectItem becomes
+      //      its own production-order row.
+      //   2. The tier has NO RewardItem rows -- the tier itself IS the
+      //      deliverable (e.g., a single "Hardcover Book" reward the creator
+      //      never decomposed into sub-items). Fall back to counting the tier.
+      // Without the (2) fallback, undecomposed reward tiers silently dropped
+      // out of the production order even though the backer is owed the item —
+      // the same class of bug that used to hide survey-purchased addons.
+      if (pledge.reward) {
+        const rewardItems = pledge.reward.items || [];
+        if (rewardItems.length === 0) {
+          const itemKey = `reward_${pledge.reward.id}`;
+          const itemName = pledge.reward.title;
           const existingItem = itemCounts.get(itemKey);
           if (existingItem) {
             existingItem.count += 1;
             if (isShipped) existingItem.shippedCount += 1;
             if (isLocked) existingItem.lockedCount += 1;
           } else {
-            itemCounts.set(itemKey, { name: itemName, count: 1, shippedCount: isShipped ? 1 : 0, lockedCount: isLocked ? 1 : 0, projectItemId: item.projectItemId, sku: null, inStock: false });
+            itemCounts.set(itemKey, { name: itemName, count: 1, shippedCount: isShipped ? 1 : 0, lockedCount: isLocked ? 1 : 0, projectItemId: null, sku: null, inStock: false });
           }
 
-          const skuValue = item.projectItem?.sku?.trim() || null;
           const existingSku = skuCounts.get(itemKey);
           if (existingSku) {
             existingSku.quantity += 1;
             existingSku.backerIds.add(pledge.id);
           } else {
             skuCounts.set(itemKey, {
-              sku: skuValue,
+              sku: null,
               name: itemName,
               quantity: 1,
               backerIds: new Set([pledge.id]),
-              projectItemId: item.projectItemId,
+              projectItemId: null,
             });
           }
-        });
+        } else {
+          rewardItems.forEach((item: { id: string; title: string; projectItemId: string | null; projectItem?: { id: string; title: string; sku: string | null } | null }) => {
+            const itemName = item.projectItem?.title || item.title;
+            const itemKey = item.projectItemId
+              ? `projectItem_${item.projectItemId}`
+              : `itemTitle_${item.title}`;
+            const existingItem = itemCounts.get(itemKey);
+            if (existingItem) {
+              existingItem.count += 1;
+              if (isShipped) existingItem.shippedCount += 1;
+              if (isLocked) existingItem.lockedCount += 1;
+            } else {
+              itemCounts.set(itemKey, { name: itemName, count: 1, shippedCount: isShipped ? 1 : 0, lockedCount: isLocked ? 1 : 0, projectItemId: item.projectItemId, sku: null, inStock: false });
+            }
+
+            const skuValue = item.projectItem?.sku?.trim() || null;
+            const existingSku = skuCounts.get(itemKey);
+            if (existingSku) {
+              existingSku.quantity += 1;
+              existingSku.backerIds.add(pledge.id);
+            } else {
+              skuCounts.set(itemKey, {
+                sku: skuValue,
+                name: itemName,
+                quantity: 1,
+                backerIds: new Set([pledge.id]),
+                projectItemId: item.projectItemId,
+              });
+            }
+          });
+        }
       }
 
       // Count items from addons (with quantity multiplier).
