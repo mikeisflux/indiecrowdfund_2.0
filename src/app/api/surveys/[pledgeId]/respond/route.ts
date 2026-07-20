@@ -208,11 +208,16 @@ export async function GET(
     );
 
     // Determine if pledge requires physical shipping
-    // A pledge needs shipping only if the main reward OR any of its addons require shipping
-    const rewardWithShipping = await db.reward.findUnique({
-      where: { id: pledge.rewardId },
-      select: { shippingType: true },
-    });
+    // A pledge needs shipping only if the main reward OR any of its addons require shipping.
+    // pledge.rewardId is null for a "No Reward" pledge — guard it so findUnique
+    // (which rejects a null id) doesn't 500 the survey, and treat a missing
+    // reward as contributing no shipping requirement.
+    const rewardWithShipping = pledge.rewardId
+      ? await db.reward.findUnique({
+          where: { id: pledge.rewardId },
+          select: { shippingType: true },
+        })
+      : null;
 
     const addonRewards = addonIds.length > 0
       ? await db.reward.findMany({
@@ -222,7 +227,7 @@ export async function GET(
       : [];
 
     const requiresShipping =
-      (rewardWithShipping?.shippingType !== "NO_SHIPPING") ||
+      (!!pledge.rewardId && rewardWithShipping?.shippingType !== "NO_SHIPPING") ||
       addonRewards.some(a => a.shippingType !== "NO_SHIPPING");
 
     // Get available addons for this project that the backer can purchase
@@ -534,11 +539,14 @@ export async function POST(
 
       // Check address if required - but only for pledges that need physical shipping
       if (survey.collectAddresses) {
-        // Determine if this pledge requires shipping
-        const rewardForShipping = await db.reward.findUnique({
-          where: { id: pledge.rewardId },
-          select: { shippingType: true },
-        });
+        // Determine if this pledge requires shipping. Guard the null rewardId
+        // ("No Reward" pledge) so findUnique doesn't 500 the survey.
+        const rewardForShipping = pledge.rewardId
+          ? await db.reward.findUnique({
+              where: { id: pledge.rewardId },
+              select: { shippingType: true },
+            })
+          : null;
         const addonRewardsForShipping = addonIds.length > 0
           ? await db.reward.findMany({
               where: { id: { in: addonIds } },
@@ -546,7 +554,7 @@ export async function POST(
             })
           : [];
         const pledgeRequiresShipping =
-          (rewardForShipping?.shippingType !== "NO_SHIPPING") ||
+          (!!pledge.rewardId && rewardForShipping?.shippingType !== "NO_SHIPPING") ||
           addonRewardsForShipping.some(a => a.shippingType !== "NO_SHIPPING");
 
         if (pledgeRequiresShipping) {

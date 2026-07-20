@@ -82,7 +82,29 @@ const batchRewardsSchema = z.object({
 type RewardData = z.infer<typeof rewardSchema>;
 
 // Helper function to save a single reward (create or update)
+// A RewardItem.projectItemId must reference an existing ProjectItem in THIS
+// project. Stale/temp ids sent by the client (a deleted item, an unsaved draft,
+// or an item copied from another project) otherwise trip a foreign-key
+// violation and 500 the whole reward save. Return the subset of ids that
+// actually exist so callers can null out the rest instead of crashing.
+async function existingProjectItemIds(
+  items: { projectItemId?: string | null }[],
+  projectId: string
+): Promise<Set<string>> {
+  const ids = Array.from(
+    new Set(items.map((i) => i.projectItemId).filter((x): x is string => !!x))
+  );
+  if (ids.length === 0) return new Set();
+  const rows = await db.projectItem.findMany({
+    where: { id: { in: ids }, projectId },
+    select: { id: true },
+  });
+  return new Set(rows.map((r: { id: string }) => r.id));
+}
+
 async function saveReward(projectId: string, reward: RewardData) {
+  // Only keep projectItemId references that exist in this project.
+  const validItemIds = await existingProjectItemIds(reward.items, projectId);
   // Generate secret token for SECRET visibility if not provided
   let secretToken = reward.secretToken || null;
   if (reward.visibility === "SECRET" && !secretToken) {
@@ -131,7 +153,7 @@ async function saveReward(projectId: string, reward: RewardData) {
           isEnded: reward.isEnded,
           items: {
             create: reward.items.map(item => ({
-              projectItemId: item.projectItemId || null,
+              projectItemId: item.projectItemId && validItemIds.has(item.projectItemId) ? item.projectItemId : null,
               title: item.title,
               description: item.description || null,
               imageUrl: item.imageUrl || null,
@@ -169,7 +191,7 @@ async function saveReward(projectId: string, reward: RewardData) {
       isEnded: reward.isEnded,
       items: {
         create: reward.items.map(item => ({
-          projectItemId: item.projectItemId || null,
+          projectItemId: item.projectItemId && validItemIds.has(item.projectItemId) ? item.projectItemId : null,
           title: item.title,
           description: item.description || null,
           imageUrl: item.imageUrl || null,
@@ -393,6 +415,10 @@ export async function PATCH(
       secretToken = null;
     }
 
+    // Only keep projectItemId references that exist in this project (a stale
+    // client id otherwise trips the RewardItem FK and 500s the save).
+    const validItemIds = await existingProjectItemIds(reward.items, projectId);
+
     // Update reward and replace items
     const updated = await db.$transaction(async (tx) => {
       // Delete existing items
@@ -419,7 +445,7 @@ export async function PATCH(
           isEnded: reward.isEnded,
           items: {
             create: reward.items.map(item => ({
-              projectItemId: item.projectItemId || null, // Link to ProjectItem
+              projectItemId: item.projectItemId && validItemIds.has(item.projectItemId) ? item.projectItemId : null, // Link to ProjectItem
               title: item.title,
               description: item.description || null,
               imageUrl: item.imageUrl || null,
