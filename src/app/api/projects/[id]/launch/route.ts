@@ -15,16 +15,24 @@ async function getProjectFulfillmentPercentage(projectId: string): Promise<numbe
     where: {
       projectId,
       status: "COMPLETED",
+      deletedAt: null,
     },
     select: {
       fulfillmentStatus: true,
     },
   });
 
-  if (pledges.length === 0) return 0;
+  // Nothing owed to anyone — treat as fully fulfilled so an empty FUNDED
+  // project can never block the creator's campaign limit forever.
+  if (pledges.length === 0) return 100;
 
+  // SHIPPED counts as fulfilled, matching how the rest of the platform
+  // (IndieKit workflow, production stats) measures fulfillment. Requiring
+  // DELIVERED here stranded creators at 0% even after shipping every order
+  // (delivery confirmation is often never recorded), which wrongly tripped
+  // the "Campaign limit reached" block on their next launch.
   const fulfilledCount = pledges.filter(
-    (p) => p.fulfillmentStatus === "DELIVERED"
+    (p) => p.fulfillmentStatus === "SHIPPED" || p.fulfillmentStatus === "DELIVERED"
   ).length;
 
   return (fulfilledCount / pledges.length) * 100;
