@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense } from "react";
+import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useSession } from "@/components/providers/auth-provider";
@@ -17,6 +17,22 @@ import {
 
 function MessagesContent() {
   const { data: session, status } = useSession();
+  // Creators get the unified inbox (email + chat in one place). Detect via
+  // the email-setup endpoint, which reports whether this user has projects.
+  const [isCreator, setIsCreator] = useState(false);
+  useEffect(() => {
+    if (!session?.user) return;
+    let cancelled = false;
+    fetch("/api/creator/email/setup")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (!cancelled && data?.isCreator) setIsCreator(true);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [session?.user]);
   const searchParams = useSearchParams();
   const projectId = searchParams?.get("projectId") || undefined;
   const recipientId = searchParams?.get("recipientId") || undefined;
@@ -99,6 +115,7 @@ function MessagesContent() {
           currentUserId={session.user.id}
           projectId={projectId}
           recipientId={recipientId}
+          creatorEmail={isCreator}
         />
       </div>
     </div>

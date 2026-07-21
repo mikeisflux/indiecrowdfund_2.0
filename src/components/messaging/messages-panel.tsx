@@ -21,10 +21,35 @@ import {
   CheckCheck,
   Sparkles,
   X,
+  Paperclip,
+  PenSquare,
+  LifeBuoy,
+  MoreHorizontal,
+  Archive,
+  Trash2,
+  AtSign,
 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
 import { cn } from "@/lib/utils";
 import { UserTransactionsDialog } from "./user-transactions-dialog";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import {
+  AttachmentChips,
+  BackerSupportDialog,
+  ComposeEmailDialog,
+  EmailSetupDialog,
+  filesToAttachments,
+  MAX_ATTACHMENT_BYTES,
+  type EmailSetupState,
+} from "./creator-email-tools";
 
 interface User {
   id: string;
@@ -78,6 +103,12 @@ interface MessagesPanelProps {
   projectId?: string;
   recipientId?: string;
   variant?: "full" | "compact";
+  // Creator mode: the unified inbox. Sends go out as REAL email from the
+  // creator's @indiecrowdfund.com address (email + chat share the Message
+  // table), the composer gains attachments, and the header gains New email /
+  // Backer Support. Requires the creator to claim their username first —
+  // the EmailSetupDialog gate.
+  creatorEmail?: boolean;
 }
 
 export function MessagesPanel({
@@ -85,6 +116,7 @@ export function MessagesPanel({
   projectId,
   recipientId,
   variant = "full",
+  creatorEmail = false,
 }: MessagesPanelProps) {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -98,6 +130,13 @@ export function MessagesPanel({
   // Backer transactions popup: opens when the creator clicks the other
   // user's name in the thread header.
   const [transactionsOpen, setTransactionsOpen] = useState(false);
+  // Creator email mode state
+  const [emailSetup, setEmailSetup] = useState<EmailSetupState | null>(null);
+  const [setupOpen, setSetupOpen] = useState(false);
+  const [composeOpen, setComposeOpen] = useState(false);
+  const [supportOpen, setSupportOpen] = useState(false);
+  const [attachments, setAttachments] = useState<File[]>([]);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const prevMessagesLengthRef = useRef(0);
   const prevConversationKeyRef = useRef<string | null>(null);
@@ -107,6 +146,29 @@ export function MessagesPanel({
   // selection back to the URL-provided recipient, overriding the user's
   // click on a different conversation.
   const processedRecipientKeyRef = useRef<string | null>(null);
+
+  // Creator mode: check whether the creator has claimed their
+  // @indiecrowdfund.com username (required before any send goes out).
+  useEffect(() => {
+    if (!creatorEmail) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/creator/email/setup");
+        if (!res.ok) return;
+        const data: EmailSetupState = await res.json();
+        if (!cancelled) {
+          setEmailSetup(data);
+          if (!data.hasEmailSetup) setSetupOpen(true);
+        }
+      } catch {
+        // Non-fatal; the send path re-checks and re-prompts.
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [creatorEmail]);
 
   // Fetch conversations
   useEffect(() => {
@@ -296,20 +358,91 @@ export function MessagesPanel({
 
     if (!targetRecipientId) return;
 
+    // Creator mode gate: sends go out as real email from the creator's
+    // @indiecrowdfund.com address — they must claim their username first.
+    if (creatorEmail && emailSetup && !emailSetup.hasEmailSetup) {
+      setSetupOpen(true);
+      return;
+    }
+
     setSending(true);
     try {
-      const res = await apiFetch("/api/messages", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          recipientId: targetRecipientId,
-          ...(targetProjectId ? { projectId: targetProjectId } : {}),
-          content: newMessage.trim(),
-        }),
-      });
+      let res: Response;
+      let usedEmailPath = false;
+      if (creatorEmail) {
+        // Unified path: send through the email backend so the backer gets a
+        // real email (with attachments) AND the Message row is persisted —
+        // it renders here as a chat bubble either way.
+        const threadId = `${targetRecipientId}::${targetProjectId || "none"}`;
+        const emailAttachments =
+          attachments.length > 0 ? await filesToAttachments(attachments) : undefined;
+        res = await apiFetch(
+          `/api/creator/email/threads/${encodeURIComponent(threadId)}/reply`,
+          {
+            method: "POST",
+            json: { content: newMessage.trim(), attachments: emailAttachments },
+          }
+        );
+        usedEmailPath = true;
+        if (res.status === 404 && !targetProjectId) {
+          // Projectless thread with no prior inbound email (the reply route
+          // blocks cold outreach). Fall back to a plain in-app message so the
+          // creator isn't dead-ended.
+          res = await apiFetch("/api/messages", {
+            method: "POST",
+            json: { recipientId: targetRecipientId, content: newMessage.trim() },
+          });
+          usedEmailPath = false;
+        } else if (res.status === 400) {
+          const err = await res.clone().json().catch(() => ({}));
+          if (typeof err?.error === "string" && err.error.includes("email address first")) {
+            setSetupOpen(true);
+            return;
+          }
+        }
+      } else {
+        res = await apiFetch("/api/messages", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            recipientId: targetRecipientId,
+            ...(targetProjectId ? { projectId: targetProjectId } : {}),
+            content: newMessage.trim(),
+          }),
+        });
+      }
 
       if (res.ok) {
-        const data = await res.json();
+        const raw = await res.json();
+        // The email reply endpoint returns a slimmer shape than /api/messages;
+        // normalize both into the Message the thread renders.
+        const data = usedEmailPath
+          ? {
+              message: {
+                id: raw.message.id,
+                content: raw.message.content,
+                senderId: currentUserId,
+                recipientId: targetRecipientId,
+                read: false,
+                createdAt: raw.message.createdAt,
+                sender: {
+                  id: currentUserId,
+                  name: raw.message.sender?.name ?? null,
+                  image: raw.message.sender?.image ?? null,
+                },
+                recipient: selectedConversation?.otherUser ?? {
+                  id: targetRecipientId,
+                  name: newConversation?.recipientName ?? null,
+                  image: newConversation?.recipientImage ?? null,
+                },
+                project: selectedConversation?.project ?? null,
+              } as unknown as Message,
+            }
+          : raw;
+        if (usedEmailPath && attachments.length > 0) {
+          toast.success(`Sent with ${attachments.length} attachment${attachments.length > 1 ? "s" : ""}`);
+        }
+        setAttachments([]);
         setMessages((prev) => [...prev, data.message]);
         setNewMessage("");
 
@@ -359,11 +492,72 @@ export function MessagesPanel({
             )
           );
         }
+      } else if (creatorEmail) {
+        // Surface the server's reason (e.g. permission, invalid thread) —
+        // an email send failing silently would look like lost mail.
+        const err = await res.json().catch(() => ({}));
+        toast.error(typeof err?.error === "string" ? err.error : "Failed to send message");
       }
     } catch (error) {
       console.error("Failed to send message:", error);
+      if (creatorEmail) toast.error("Failed to send message");
     } finally {
       setSending(false);
+    }
+  };
+
+  const handleAttachmentSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const picked = Array.from(e.target.files || []).filter((f) => {
+      if (f.size > MAX_ATTACHMENT_BYTES) {
+        toast.error(`${f.name} exceeds the 10MB limit`);
+        return false;
+      }
+      return true;
+    });
+    setAttachments((prev) => [...prev, ...picked]);
+    e.target.value = "";
+  };
+
+  // Derived helpers for creator email actions on the open conversation.
+  const selectedThreadId = selectedConversation
+    ? `${selectedConversation.otherUser.id}::${selectedConversation.project?.id || "none"}`
+    : null;
+
+  const removeSelectedConversation = () => {
+    if (!selectedConversation) return;
+    const removedId = selectedConversation.id;
+    setConversations((prev) => prev.filter((c) => c.id !== removedId));
+    setSelectedConversation(null);
+    setMessages([]);
+  };
+
+  const handleArchiveThread = async () => {
+    if (!selectedThreadId) return;
+    try {
+      const res = await apiFetch(
+        `/api/creator/email/threads/${encodeURIComponent(selectedThreadId)}/archive`,
+        { method: "POST" }
+      );
+      if (!res.ok) throw new Error();
+      toast.success("Conversation archived");
+      removeSelectedConversation();
+    } catch {
+      toast.error("Failed to archive conversation");
+    }
+  };
+
+  const handleDeleteThread = async () => {
+    if (!selectedThreadId) return;
+    try {
+      const res = await apiFetch(
+        `/api/creator/email/threads/${encodeURIComponent(selectedThreadId)}/delete`,
+        { method: "DELETE" }
+      );
+      if (!res.ok) throw new Error();
+      toast.success("Conversation deleted");
+      removeSelectedConversation();
+    } catch {
+      toast.error("Failed to delete conversation");
     }
   };
 
@@ -445,6 +639,58 @@ export function MessagesPanel({
               Sent
             </Button>
           </div>
+
+          {/* Creator email actions */}
+          {creatorEmail && (
+            <div className="mt-3 space-y-2">
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="flex-1"
+                  onClick={() => {
+                    // Gate: can't compose until the username is claimed.
+                    if (emailSetup && !emailSetup.hasEmailSetup) {
+                      setSetupOpen(true);
+                      return;
+                    }
+                    setComposeOpen(true);
+                  }}
+                >
+                  <PenSquare className="mr-1 h-4 w-4" />
+                  New email
+                </Button>
+                <Button variant="outline" size="sm" className="flex-1" onClick={() => setSupportOpen(true)}>
+                  <LifeBuoy className="mr-1 h-4 w-4" />
+                  Support
+                </Button>
+              </div>
+              {emailSetup?.fullEmail ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigator.clipboard.writeText(emailSetup.fullEmail || "");
+                    toast.success("Email address copied");
+                  }}
+                  className="flex w-full items-center gap-1.5 truncate rounded-md bg-muted/50 px-2 py-1 text-left text-[11px] text-muted-foreground hover:bg-muted"
+                  title="Copy your email address"
+                >
+                  <AtSign className="h-3 w-3 flex-shrink-0" />
+                  <span className="truncate">{emailSetup.fullEmail}</span>
+                </button>
+              ) : emailSetup ? (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="w-full"
+                  onClick={() => setSetupOpen(true)}
+                >
+                  <AtSign className="mr-1 h-4 w-4" />
+                  Claim your email address
+                </Button>
+              ) : null}
+            </div>
+          )}
         </div>
 
         {/* Conversations */}
@@ -570,6 +816,16 @@ export function MessagesPanel({
             {/* Message Input for New Conversation */}
             <div className="p-4 border-t border-border/50">
               <div className="flex gap-2">
+                {creatorEmail && (
+                  <label className="cursor-pointer self-end">
+                    <input type="file" multiple className="hidden" onChange={handleAttachmentSelect} />
+                    <Button type="button" variant="ghost" size="icon" asChild aria-label="Attach files">
+                      <span>
+                        <Paperclip className="h-4 w-4" />
+                      </span>
+                    </Button>
+                  </label>
+                )}
                 <Textarea
                   placeholder="Type your message..."
                   value={newMessage}
@@ -595,6 +851,17 @@ export function MessagesPanel({
                   )}
                 </Button>
               </div>
+              {creatorEmail && (
+                <AttachmentChips
+                  files={attachments}
+                  onRemove={(i) => setAttachments((prev) => prev.filter((_, idx) => idx !== i))}
+                />
+              )}
+              {creatorEmail && emailSetup?.fullEmail && (
+                <p className="mt-1.5 text-[10px] text-muted-foreground">
+                  Delivered as email from {emailSetup.fullEmail}
+                </p>
+              )}
             </div>
           </>
         ) : selectedConversation ? (
@@ -627,9 +894,33 @@ export function MessagesPanel({
                   {selectedConversation.otherUser.name || "Unknown User"}
                 </button>
                 <p className="text-xs text-muted-foreground truncate">
-                  {selectedConversation.project?.title ? `Re: ${selectedConversation.project.title}` : "Direct Message"}
+                  {(creatorEmail && [...messages].reverse().find((m) => m.subject)?.subject) ||
+                    (selectedConversation.project?.title ? `Re: ${selectedConversation.project.title}` : "Direct Message")}
                 </p>
               </div>
+              {creatorEmail && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" aria-label="Conversation actions">
+                      <MoreHorizontal className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={handleArchiveThread}>
+                      <Archive className="mr-2 h-4 w-4" />
+                      Archive
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      onClick={() => setDeleteConfirmOpen(true)}
+                      className="text-red-600 focus:text-red-600"
+                    >
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      Delete
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
               <Button variant="ghost" size="icon" onClick={() => setSelectedConversation(null)}>
                 <X className="h-4 w-4" />
                 <span className="sr-only">Close conversation</span>
@@ -699,6 +990,16 @@ export function MessagesPanel({
             {/* Message Input */}
             <div className="p-4 border-t border-border/50">
               <div className="flex gap-2">
+                {creatorEmail && (
+                  <label className="cursor-pointer self-end">
+                    <input type="file" multiple className="hidden" onChange={handleAttachmentSelect} />
+                    <Button type="button" variant="ghost" size="icon" asChild aria-label="Attach files">
+                      <span>
+                        <Paperclip className="h-4 w-4" />
+                      </span>
+                    </Button>
+                  </label>
+                )}
                 <Textarea
                   placeholder="Type your message..."
                   value={newMessage}
@@ -724,6 +1025,17 @@ export function MessagesPanel({
                   )}
                 </Button>
               </div>
+              {creatorEmail && (
+                <AttachmentChips
+                  files={attachments}
+                  onRemove={(i) => setAttachments((prev) => prev.filter((_, idx) => idx !== i))}
+                />
+              )}
+              {creatorEmail && emailSetup?.fullEmail && (
+                <p className="mt-1.5 text-[10px] text-muted-foreground">
+                  Delivered as email from {emailSetup.fullEmail}
+                </p>
+              )}
             </div>
           </>
         ) : (
@@ -745,6 +1057,36 @@ export function MessagesPanel({
         userName={selectedConversation?.otherUser.name || "Unknown User"}
         userImage={selectedConversation?.otherUser.image}
       />
+      {creatorEmail && (
+        <>
+          <EmailSetupDialog
+            open={setupOpen}
+            onOpenChange={setSetupOpen}
+            suggestedHandle={emailSetup?.suggestedHandle}
+            onComplete={(handle, fullEmail) =>
+              setEmailSetup((prev) =>
+                prev
+                  ? { ...prev, hasEmailSetup: true, emailHandle: handle, fullEmail }
+                  : { hasEmailSetup: true, emailHandle: handle, fullEmail, isCreator: true, suggestedHandle: handle }
+              )
+            }
+          />
+          <ComposeEmailDialog
+            open={composeOpen}
+            onOpenChange={setComposeOpen}
+            projectId={projectId}
+            onSent={() => setView("sent")}
+          />
+          <BackerSupportDialog open={supportOpen} onOpenChange={setSupportOpen} projectId={projectId} />
+          <ConfirmDialog
+            open={deleteConfirmOpen}
+            onOpenChange={setDeleteConfirmOpen}
+            title="Delete conversation?"
+            description="This permanently removes the conversation from your inbox. The other person keeps their copy of any emails already delivered."
+            onConfirm={handleDeleteThread}
+          />
+        </>
+      )}
     </div>
   );
 }

@@ -51,7 +51,8 @@ import { SocialHubTab } from "./components/SocialHubTab";
 import { IndieKitTab } from "./components/IndieKitTab";
 import { PrintingComicsTab } from "./indiekit/components/tabs/PrintingComicsTab";
 import { MarketplaceTab } from "./components/MarketplaceTab";
-import { EmailTab } from "./components/EmailTab";
+// The old Email tab UI was merged into Messages (unified inbox). The
+// EmailTab/InboxTab components stay in the repo but are no longer routed.
 import { LiveStreamTab } from "./components/LiveStreamTab";
 
 const SELECTED_PROJECT_KEY = "indiecrowdfund_selected_project";
@@ -70,6 +71,12 @@ export default function CreatorDashboard() {
   const [error, setError] = useState<string | null>(null);
   const [unreadEmailCount, setUnreadEmailCount] = useState(0);
   const [activeTab, setActiveTab] = useState("overview");
+
+  // The Email tab merged into Messages — send any stale "email" tab state
+  // (old links, saved UI state) to the unified inbox instead of a blank pane.
+  useEffect(() => {
+    if (activeTab === "email") setActiveTab("messages");
+  }, [activeTab]);
 
   const fetchDashboardData = useCallback(async () => {
     try {
@@ -406,7 +413,7 @@ export default function CreatorDashboard() {
                         key={value}
                         onClick={() => setActiveTab(value)}
                         className={cn(
-                          "inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-all",
+                          "relative inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-all",
                           activeTab === value
                             ? `bg-gradient-to-r ${gradient} text-white shadow-sm`
                             : "text-muted-foreground hover:text-foreground hover:bg-muted"
@@ -414,25 +421,15 @@ export default function CreatorDashboard() {
                       >
                         <Icon className="h-3.5 w-3.5" />
                         {label}
+                        {/* Unified inbox: the old Email tab's unread badge now
+                            lives on Messages (same underlying Message rows). */}
+                        {value === "messages" && unreadEmailCount > 0 && (
+                          <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white shadow-lg animate-pulse">
+                            {unreadEmailCount > 99 ? "99+" : unreadEmailCount}
+                          </span>
+                        )}
                       </button>
                     ))}
-                    <button
-                      onClick={() => setActiveTab("email")}
-                      className={cn(
-                        "relative inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-all",
-                        activeTab === "email"
-                          ? "bg-gradient-to-r from-rose-500 to-pink-500 text-white shadow-sm"
-                          : "text-muted-foreground hover:text-foreground hover:bg-muted"
-                      )}
-                    >
-                      <Mail className="h-3.5 w-3.5" />
-                      Email
-                      {unreadEmailCount > 0 && (
-                        <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white shadow-lg animate-pulse">
-                          {unreadEmailCount > 99 ? "99+" : unreadEmailCount}
-                        </span>
-                      )}
-                    </button>
                   </div>
                 </div>
 
@@ -523,15 +520,12 @@ export default function CreatorDashboard() {
                 />
               </TabsContent>
 
-              <TabsContent value="email" className="space-y-6">
-                <EmailTab projectId={selectedProjectId} onRefresh={fetchDashboardData} />
-              </TabsContent>
-
               <TabsContent value="messages">
                 {session?.user?.id ? (
                   <MessagesPanel
                     currentUserId={session.user.id}
                     projectId={selectedProjectId || undefined}
+                    creatorEmail
                   />
                 ) : (
                   <Card className="bg-card/50 backdrop-blur border-border/50">
