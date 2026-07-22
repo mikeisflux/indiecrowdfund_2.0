@@ -78,6 +78,7 @@ export async function POST(req: NextRequest) {
       select: {
         id: true,
         title: true,
+        grantAgreement: { select: { id: true } },
         creator: {
           select: {
             id: true,
@@ -109,6 +110,20 @@ export async function POST(req: NextRequest) {
     if (!bankAccount) {
       return NextResponse.json(
         { error: `Creator has not added a bank account for PayPal payouts. Ask them to add it in their campaign settings.` },
+        { status: 400 }
+      );
+    }
+
+    // Grant Program gate: funds are disbursed as grants, so a payout
+    // cannot be created until the creator has signed the grant agreement.
+    if (!project.grantAgreement) {
+      return NextResponse.json(
+        {
+          error: "Grant agreement not signed",
+          message:
+            "The creator has not signed the Grant Program agreement for this project. They'll see a signing prompt on their dashboard; the payout can be created once it's signed.",
+          code: "GRANT_AGREEMENT_REQUIRED",
+        },
         { status: 400 }
       );
     }

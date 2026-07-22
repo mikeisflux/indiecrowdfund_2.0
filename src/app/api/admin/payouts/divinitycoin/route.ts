@@ -591,6 +591,7 @@ export async function POST(request: NextRequest) {
     const project = await db.project.findFirst({
       where: { id: projectId , deletedAt: null },
       include: {
+        grantAgreement: { select: { id: true } },
         creator: {
           include: {
             divinityCoinBankAccount: true,
@@ -618,6 +619,20 @@ export async function POST(request: NextRequest) {
     if (!bankAccount) {
       return NextResponse.json(
         { error: "Creator has no bank account on file" },
+        { status: 400 }
+      );
+    }
+
+    // Grant Program gate: funds are disbursed as grants, so a settlement
+    // cannot be created until the creator has signed the grant agreement.
+    if (!project.grantAgreement) {
+      return NextResponse.json(
+        {
+          error: "Grant agreement not signed",
+          message:
+            "The creator has not signed the Grant Program agreement for this project. They'll see a signing prompt on their dashboard; the settlement can be created once it's signed.",
+          code: "GRANT_AGREEMENT_REQUIRED",
+        },
         { status: 400 }
       );
     }

@@ -44,7 +44,22 @@ export async function GET() {
           where: { status: "COMPLETED", deletedAt: null },
           select: { amount: true },
         },
-        grantAgreement: { select: { version: true, acceptedAt: true } },
+        grantAgreement: {
+          select: {
+            version: true,
+            acceptedAt: true,
+            taxLegalName: true,
+            taxBusinessName: true,
+            taxEntityType: true,
+            taxIdLast4: true,
+            taxAddressLine1: true,
+            taxAddressLine2: true,
+            taxCity: true,
+            taxState: true,
+            taxZip: true,
+            taxCountry: true,
+          },
+        },
         payouts: {
           where: { deletedAt: null },
           select: { amount: true, platformFees: true, processorFees: true, status: true, sentAt: true },
@@ -58,6 +73,9 @@ export async function GET() {
       "Contributions (gross)", "Program Costs Retained", "Processing Costs",
       "Grant Amount", "Payout Status", "Disbursed At",
       "Agreement Signed", "Agreement Version", "Agreement Signed At",
+      // Grantee tax info (TIN shown as last 4 only; full TIN stays encrypted)
+      "Tax Legal Name", "Tax Business Name", "Tax Entity Type", "TIN Last 4",
+      "Tax Address", "Tax City", "Tax State", "Tax ZIP", "Tax Country",
     ].join(",");
 
     const rows = projects.map((p) => {
@@ -77,6 +95,19 @@ export async function GET() {
         p.grantAgreement ? "YES" : "NO",
         csvCell(p.grantAgreement?.version),
         csvCell(p.grantAgreement?.acceptedAt ? p.grantAgreement.acceptedAt.toISOString() : ""),
+        csvCell(p.grantAgreement?.taxLegalName),
+        csvCell(p.grantAgreement?.taxBusinessName),
+        csvCell(p.grantAgreement?.taxEntityType),
+        csvCell(p.grantAgreement?.taxIdLast4 ? `****${p.grantAgreement.taxIdLast4}` : ""),
+        csvCell(
+          [p.grantAgreement?.taxAddressLine1, p.grantAgreement?.taxAddressLine2]
+            .filter(Boolean)
+            .join(", ")
+        ),
+        csvCell(p.grantAgreement?.taxCity),
+        csvCell(p.grantAgreement?.taxState),
+        csvCell(p.grantAgreement?.taxZip),
+        csvCell(p.grantAgreement?.taxCountry),
       ].join(",");
     });
 
