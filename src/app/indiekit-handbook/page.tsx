@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   LayoutDashboard,
   Users,
@@ -685,6 +685,15 @@ function CollapsibleSection({
 
 export default function IndieKitHandbookPage() {
   const [activeTab, setActiveTab] = useState('welcome');
+
+  // Deep-link support: ?tab=<id> selects a section on load (used by the
+  // dashboard tool-tips' "Show more" links). Read via window.location in an
+  // effect (not useSearchParams) so the page stays statically generated.
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const tab = new URLSearchParams(window.location.search).get('tab');
+    if (tab && tabContent[tab]) setActiveTab(tab);
+  }, []);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [openSections, setOpenSections] = useState<Set<string>>(() => {
     const initialOpen = new Set<string>();

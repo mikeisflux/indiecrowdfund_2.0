@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Search,
   Heart,
@@ -268,6 +268,15 @@ function StepCard({ step, number }: { step: Step; number: number }) {
 
 export default function BackerHandbookPage() {
   const [activeTab, setActiveTab] = useState('discover');
+
+  // Deep-link support: ?tab=<id> selects a section on load (used by the
+  // dashboard tool-tips' "Show more" links). Read via window.location in an
+  // effect (not useSearchParams) so the page stays statically generated.
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const tab = new URLSearchParams(window.location.search).get('tab');
+    if (tab && tabContent[tab]) setActiveTab(tab);
+  }, []);
   const currentTab = tabContent[activeTab];
 
   return (

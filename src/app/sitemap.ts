@@ -109,13 +109,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.6,
     },
     {
-      url: `${SITE_URL}/marketplace`,
+      url: `${SITE_URL}/shop`,
       lastModified: new Date(),
       changeFrequency: "daily",
       priority: 0.8,
     },
     {
-      url: `${SITE_URL}/marketplace/books`,
+      url: `${SITE_URL}/shop/books`,
       lastModified: new Date(),
       changeFrequency: "daily",
       priority: 0.7,
@@ -254,8 +254,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       },
     });
 
+    // The public /marketplace pages were removed — books live under /shop now.
     bookPages = books.map((book: { slug: string; updatedAt: Date }) => ({
-      url: `${SITE_URL}/marketplace/books/${book.slug}`,
+      url: `${SITE_URL}/shop/books/${book.slug}`,
       lastModified: book.updatedAt,
       changeFrequency: "weekly" as const,
       priority: 0.6,

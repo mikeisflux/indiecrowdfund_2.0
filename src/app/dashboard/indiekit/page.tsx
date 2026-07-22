@@ -134,6 +134,7 @@ import { DigitalDeliveryTab } from "./components/tabs/DigitalDeliveryTab";
 import { PhysicalDeliveryTab } from "./components/tabs/PhysicalDeliveryTab";
 import { ReportsTab } from "./components/tabs/ReportsTab";
 import { RefundRequestsTab } from "./components/tabs/RefundRequestsTab";
+import { HelpTipsProvider, HelpTipsToggle, HelpTooltip } from "@/components/help/help-tooltip";
 
 // Always-available tab config
 const ALWAYS_AVAILABLE_TABS: { id: AlwaysAvailableTab; label: string; icon: React.ElementType }[] = [
@@ -166,6 +167,31 @@ const POST_FULFILLMENT_TABS: { id: PhaseTab; label: string; icon: React.ElementT
   { id: "reports", label: "Reports", icon: BarChart3 },
   { id: "late-backers", label: "Late Backers", icon: TrendingUp },
 ];
+
+// Short hover blurbs per tab; "Show more" deep-links to the matching
+// IndieKit-handbook section (?tab=<id> — ids match the handbook's).
+const TAB_TIPS: Record<string, string> = {
+  "dashboard": "Your home base — stats, timeline, and the What's Next banner telling you the next step.",
+  "backers": "Every backer's pledge, survey status, add-ons, and shipping details in one list.",
+  "email-marketing": "Send marketing campaigns, manage your subscriber list, and build segments.",
+  "updates": "Post progress updates that notify all your backers.",
+  "refund-requests": "Review and approve or decline backer refund requests.",
+  "settings": "Shipping-carrier keys, integrations, and fulfillment preferences.",
+  "account": "Your creator account, email username, and payout details.",
+  "projects": "Switch between your projects and see which phase each one is in.",
+  "setup": "Configure items, SKUs, and shipping options before surveys go out.",
+  "surveys": "Build and send the backer survey that collects addresses and add-on picks.",
+  "order-lock": "Ask backers to confirm & lock their orders early so you can charge and ship sooner.",
+  "finalize": "Close out surveys and freeze the final order list for production.",
+  "teaser-pages": "Public coming-soon pages that collect interest for your next campaign.",
+  "payments": "Charge cards on file — survey balances, shipping differences, and extra items.",
+  "digital-delivery": "Upload digital files and distribute them to the backers entitled to them.",
+  "physical-delivery": "Push orders to shipping carriers, print labels, and track what's shipped.",
+  "printing-comics": "Order print runs and hard-copy proofs for your book.",
+  "reports": "Totals, item counts, and exports for production and accounting.",
+  "late-backers": "Accept late pledges after your campaign has ended.",
+};
+const tabHelpHref = (id: string) => `/indiekit-handbook?tab=${id}`;
 
 // Workflow steps that freeze backer data — these require an explicit
 // confirmation before running because reversing them isn't a single click.
@@ -520,6 +546,7 @@ export default function IndieKitPage() {
   }
 
   return (
+    <HelpTipsProvider surface="indiekit">
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-teal-500/5 relative overflow-hidden">
       {/* Floating Orbs */}
       <div className="floating-orb w-96 h-96 bg-teal-500/10 -top-48 -right-48" style={{ animationDelay: "0s" }} />
@@ -634,26 +661,28 @@ export default function IndieKitPage() {
             )}
 
             {/* Always Available Navigation Bar */}
-            <div className="mb-4 flex flex-wrap gap-1 p-2 rounded-xl bg-muted/50 border border-border">
+            <div className="mb-4 flex flex-wrap items-center gap-1 p-2 rounded-xl bg-muted/50 border border-border">
               {ALWAYS_AVAILABLE_TABS.map((tab) => {
                 const Icon = tab.icon;
                 const isActive = activeSection === "always" && activeAlwaysTab === tab.id;
                 return (
-                  <button
-                    key={tab.id}
-                    onClick={() => handleSelectAlwaysTab(tab.id)}
-                    className={cn(
-                      "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm transition-colors",
-                      isActive
-                        ? "bg-background shadow-sm font-medium text-foreground border border-foreground/20"
-                        : "text-muted-foreground hover:text-foreground hover:bg-background/50 border border-transparent"
-                    )}
-                  >
-                    <Icon className="h-4 w-4" />
-                    <span className="hidden sm:inline">{tab.label}</span>
-                  </button>
+                  <HelpTooltip key={tab.id} tip={TAB_TIPS[tab.id] || tab.label} href={tabHelpHref(tab.id)}>
+                    <button
+                      onClick={() => handleSelectAlwaysTab(tab.id)}
+                      className={cn(
+                        "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm transition-colors",
+                        isActive
+                          ? "bg-background shadow-sm font-medium text-foreground border border-foreground/20"
+                          : "text-muted-foreground hover:text-foreground hover:bg-background/50 border border-transparent"
+                      )}
+                    >
+                      <Icon className="h-4 w-4" />
+                      <span className="hidden sm:inline">{tab.label}</span>
+                    </button>
+                  </HelpTooltip>
                 );
               })}
+              <HelpTipsToggle className="ml-auto pl-2" />
             </div>
 
             {/* Phase Selector & Phase Tabs */}
@@ -666,19 +695,20 @@ export default function IndieKitPage() {
                   const Icon = tab.icon;
                   const isActive = activeSection === "phase" && activePhaseTab === tab.id;
                   return (
-                    <button
-                      key={tab.id}
-                      onClick={() => handleSelectPhaseTab(tab.id)}
-                      className={cn(
-                        "flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm transition-colors flex-1 justify-center",
-                        isActive
-                          ? "bg-background shadow-sm font-medium text-foreground"
-                          : "text-muted-foreground hover:text-foreground hover:bg-background/50"
-                      )}
-                    >
-                      <Icon className="h-4 w-4" />
-                      {tab.label}
-                    </button>
+                    <HelpTooltip key={tab.id} tip={TAB_TIPS[tab.id] || tab.label} href={tabHelpHref(tab.id)}>
+                      <button
+                        onClick={() => handleSelectPhaseTab(tab.id)}
+                        className={cn(
+                          "flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm transition-colors flex-1 justify-center",
+                          isActive
+                            ? "bg-background shadow-sm font-medium text-foreground"
+                            : "text-muted-foreground hover:text-foreground hover:bg-background/50"
+                        )}
+                      >
+                        <Icon className="h-4 w-4" />
+                        {tab.label}
+                      </button>
+                    </HelpTooltip>
                   );
                 })}
               </div>
@@ -1198,5 +1228,6 @@ export default function IndieKitPage() {
         </AlertDialogContent>
       </AlertDialog>
     </div>
+    </HelpTipsProvider>
   );
 }

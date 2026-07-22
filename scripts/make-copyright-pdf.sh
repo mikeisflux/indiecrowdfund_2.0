@@ -134,7 +134,7 @@ const HAS_AUTH = !!COOKIE || (!!EMAIL && !!PASSWORD);
 const PUBLIC_PATHS = [
   "/", "/discover", "/crowdfunds", "/how-we-stack-up", "/about-us",
   "/what-is-divinitycoin", "/fees", "/retailers", "/retailers/apply",
-  "/retailers/login", "/marketplace", "/marketplace/books", "/press",
+  "/retailers/login", "/press",
   "/success-stories", "/faq", "/help", "/help/whitelist", "/contact",
   "/bug-report", "/creator-handbook", "/backer-handbook", "/indiekit-handbook",
   "/shop-handbook/backers", "/shop-handbook/creators", "/content-guidelines",

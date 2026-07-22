@@ -60,6 +60,19 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { StarRating } from "@/components/ui/star-rating";
 import { UserProfileDropdown } from "@/components/user-profile-dropdown";
+import { HelpTipsProvider, HelpTipsToggle, HelpTooltip } from "@/components/help/help-tooltip";
+
+// Short hover blurbs per tab; "Show more" deep-links into the matching
+// backer-handbook section.
+const BACKER_NAV_TIPS: Record<string, { tip: string; href: string }> = {
+  "backed": { tip: "Every project you've backed, with each pledge's status and details.", href: "/backer-handbook?tab=dashboard" },
+  "saved": { tip: "Projects you've followed to come back to later.", href: "/backer-handbook?tab=discover" },
+  "collections": { tip: "Organize your saved projects into custom collections.", href: "/backer-handbook?tab=dashboard" },
+  "following": { tip: "Creators you follow — you'll hear about their new launches first.", href: "/backer-handbook?tab=discover" },
+  "addresses": { tip: "Saved shipping addresses used for surveys and order confirmations.", href: "/backer-handbook?tab=after" },
+  "downloads": { tip: "Digital files delivered to you from campaigns you backed.", href: "/backer-handbook?tab=after" },
+  "digital-library": { tip: "Your purchased Digital Shop items, readable in one library.", href: "/backer-handbook?tab=marketplace" },
+};
 import { cn, formatTimeRemaining } from "@/lib/utils";
 import {
   GlowingStatCard,
@@ -586,6 +599,7 @@ export default function BackerDashboard() {
   };
 
   return (
+    <HelpTipsProvider surface="backer-dashboard">
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5">
       {/* Background effects */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
@@ -734,7 +748,10 @@ export default function BackerDashboard() {
               <div className="rounded-xl border border-border/50 bg-card/50 backdrop-blur divide-y divide-border/30">
                 {/* My Projects */}
                 <div className="p-3">
-                  <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground mb-2 px-1">My Projects</p>
+                  <div className="mb-2 flex items-center justify-between px-1">
+                    <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">My Projects</p>
+                    <HelpTipsToggle />
+                  </div>
                   <div className="flex flex-wrap gap-1">
                     {([
                       { value: "backed", icon: Package, label: `Backed (${backedProjects.length})`, gradient: "from-primary to-purple-500" },
@@ -742,19 +759,20 @@ export default function BackerDashboard() {
                       { value: "collections", icon: FolderHeart, label: "Collections", gradient: "from-pink-500 to-rose-500" },
                       { value: "following", icon: Users, label: "Following", gradient: "from-cyan-500 to-teal-500" },
                     ] as const).map(({ value, icon: Icon, label, gradient }) => (
-                      <button
-                        key={value}
-                        onClick={() => setActiveTab(value)}
-                        className={cn(
-                          "inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-all",
-                          activeTab === value
-                            ? `bg-gradient-to-r ${gradient} text-white shadow-sm`
-                            : "text-muted-foreground hover:text-foreground hover:bg-muted"
-                        )}
-                      >
-                        <Icon className="h-3.5 w-3.5" />
-                        {label}
-                      </button>
+                      <HelpTooltip key={value} tip={BACKER_NAV_TIPS[value]?.tip || label} href={BACKER_NAV_TIPS[value]?.href}>
+                        <button
+                          onClick={() => setActiveTab(value)}
+                          className={cn(
+                            "inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-all",
+                            activeTab === value
+                              ? `bg-gradient-to-r ${gradient} text-white shadow-sm`
+                              : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                          )}
+                        >
+                          <Icon className="h-3.5 w-3.5" />
+                          {label}
+                        </button>
+                      </HelpTooltip>
                     ))}
                   </div>
                 </div>
@@ -821,19 +839,20 @@ export default function BackerDashboard() {
                       { value: "downloads", icon: Download, label: "Downloads", gradient: "from-emerald-500 to-cyan-500" },
                       { value: "digital-library", icon: Library, label: "Digital Library", gradient: "from-amber-500 to-orange-500" },
                     ] as const).map(({ value, icon: Icon, label, gradient }) => (
-                      <button
-                        key={value}
-                        onClick={() => setActiveTab(value)}
-                        className={cn(
-                          "inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-all",
-                          activeTab === value
-                            ? `bg-gradient-to-r ${gradient} text-white shadow-sm`
-                            : "text-muted-foreground hover:text-foreground hover:bg-muted"
-                        )}
-                      >
-                        <Icon className="h-3.5 w-3.5" />
-                        {label}
-                      </button>
+                      <HelpTooltip key={value} tip={BACKER_NAV_TIPS[value]?.tip || label} href={BACKER_NAV_TIPS[value]?.href}>
+                        <button
+                          onClick={() => setActiveTab(value)}
+                          className={cn(
+                            "inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-all",
+                            activeTab === value
+                              ? `bg-gradient-to-r ${gradient} text-white shadow-sm`
+                              : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                          )}
+                        >
+                          <Icon className="h-3.5 w-3.5" />
+                          {label}
+                        </button>
+                      </HelpTooltip>
                     ))}
                   </div>
                 </div>
@@ -1415,5 +1434,6 @@ export default function BackerDashboard() {
       </Dialog>
 
     </div>
+    </HelpTipsProvider>
   );
 }

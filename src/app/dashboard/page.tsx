@@ -32,6 +32,7 @@ import { UserProfileDropdown } from "@/components/user-profile-dropdown";
 import { NotificationsDropdown } from "@/components/notifications/notifications-dropdown";
 import { VanityUrlWarningBanner } from "@/components/vanity-url-warning-banner";
 import { GrantAgreementBanner } from "@/components/grant/grant-agreement-banner";
+import { HelpTipsProvider, HelpTipsToggle, HelpTooltip } from "@/components/help/help-tooltip";
 
 // Import types
 import type { DashboardData } from "./types";
@@ -57,6 +58,24 @@ import { MarketplaceTab } from "./components/MarketplaceTab";
 import { LiveStreamTab } from "./components/LiveStreamTab";
 
 const SELECTED_PROJECT_KEY = "indiecrowdfund_selected_project";
+
+// Short hover blurbs per dashboard tab; "Show more" deep-links into the
+// handbook section that covers that area (creator handbook, or the IndieKit
+// handbook for fulfillment tooling).
+const NAV_TIPS: Record<string, { tip: string; href: string }> = {
+  "overview": { tip: "Funding totals, charts, and recent backers for the selected project.", href: "/creator-handbook?tab=manage" },
+  "performance": { tip: "Traffic sources, referrers, and conversion stats for your campaign.", href: "/creator-handbook?tab=promotion" },
+  "backers": { tip: "Every transaction on your project — pledges, add-ons, and charges.", href: "/creator-handbook?tab=manage" },
+  "messages": { tip: "Your unified inbox — replies reach backers as real email from your creator address.", href: "/creator-handbook?tab=manage" },
+  "live-stream": { tip: "Go live for your backers right from the dashboard.", href: "/creator-handbook?tab=promotion" },
+  "updates": { tip: "Post progress updates that notify everyone who backed or follows you.", href: "/creator-handbook?tab=manage" },
+  "social": { tip: "Schedule and share campaign posts across your social accounts.", href: "/creator-handbook?tab=promotion" },
+  "marketplace": { tip: "Sell books, comics, music, and movies in your ongoing Digital Shop.", href: "/creator-handbook?tab=marketplace" },
+  "indiekit": { tip: "The fulfillment toolkit — surveys, payments, shipping, and delivery.", href: "/indiekit-handbook" },
+  "printing-comics": { tip: "Order print runs and hard-copy proofs for your book.", href: "/indiekit-handbook?tab=printing-comics" },
+  "production-order": { tip: "What to produce: per-item quantities, locked orders, and shipped counts.", href: "/indiekit-handbook?tab=reports" },
+  "collaborations": { tip: "Invite team members to help run your campaigns.", href: "/creator-handbook?tab=people" },
+};
 
 export default function CreatorDashboard() {
   const { data: session } = useSession();
@@ -292,6 +311,7 @@ export default function CreatorDashboard() {
     : 0;
 
   return (
+    <HelpTipsProvider surface="creator-dashboard">
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5">
       <VanityUrlWarningBanner />
       <GrantAgreementBanner />
@@ -379,25 +399,29 @@ export default function CreatorDashboard() {
               <div className="rounded-xl border border-border/50 bg-card/50 backdrop-blur divide-y divide-border/30">
                 {/* Overview */}
                 <div className="p-3">
-                  <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground mb-2 px-1">Overview</p>
+                  <div className="mb-2 flex items-center justify-between px-1">
+                    <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Overview</p>
+                    <HelpTipsToggle />
+                  </div>
                   <div className="flex flex-wrap gap-1">
                     {([
                       { value: "overview", icon: BarChart3, label: "Overview", gradient: "from-primary to-purple-500" },
                       { value: "performance", icon: BarChart3, label: "Performance", gradient: "from-violet-500 to-indigo-500" },
                     ] as const).map(({ value, icon: Icon, label, gradient }) => (
-                      <button
-                        key={value}
-                        onClick={() => setActiveTab(value)}
-                        className={cn(
-                          "inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-all",
-                          activeTab === value
-                            ? `bg-gradient-to-r ${gradient} text-white shadow-sm`
-                            : "text-muted-foreground hover:text-foreground hover:bg-muted"
-                        )}
-                      >
-                        <Icon className="h-3.5 w-3.5" />
-                        {label}
-                      </button>
+                      <HelpTooltip key={value} tip={NAV_TIPS[value]?.tip || label} href={NAV_TIPS[value]?.href}>
+                        <button
+                          onClick={() => setActiveTab(value)}
+                          className={cn(
+                            "inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-all",
+                            activeTab === value
+                              ? `bg-gradient-to-r ${gradient} text-white shadow-sm`
+                              : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                          )}
+                        >
+                          <Icon className="h-3.5 w-3.5" />
+                          {label}
+                        </button>
+                      </HelpTooltip>
                     ))}
                   </div>
                 </div>
@@ -411,26 +435,27 @@ export default function CreatorDashboard() {
                       { value: "messages", icon: MessageSquare, label: "Messages", gradient: "from-blue-500 to-cyan-500" },
                       { value: "live-stream", icon: Radio, label: "Live Stream", gradient: "from-red-600 to-rose-600" },
                     ] as const).map(({ value, icon: Icon, label, gradient }) => (
-                      <button
-                        key={value}
-                        onClick={() => setActiveTab(value)}
-                        className={cn(
-                          "relative inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-all",
-                          activeTab === value
-                            ? `bg-gradient-to-r ${gradient} text-white shadow-sm`
-                            : "text-muted-foreground hover:text-foreground hover:bg-muted"
-                        )}
-                      >
-                        <Icon className="h-3.5 w-3.5" />
-                        {label}
-                        {/* Unified inbox: the old Email tab's unread badge now
-                            lives on Messages (same underlying Message rows). */}
-                        {value === "messages" && unreadEmailCount > 0 && (
-                          <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white shadow-lg animate-pulse">
-                            {unreadEmailCount > 99 ? "99+" : unreadEmailCount}
-                          </span>
-                        )}
-                      </button>
+                      <HelpTooltip key={value} tip={NAV_TIPS[value]?.tip || label} href={NAV_TIPS[value]?.href}>
+                        <button
+                          onClick={() => setActiveTab(value)}
+                          className={cn(
+                            "relative inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-all",
+                            activeTab === value
+                              ? `bg-gradient-to-r ${gradient} text-white shadow-sm`
+                              : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                          )}
+                        >
+                          <Icon className="h-3.5 w-3.5" />
+                          {label}
+                          {/* Unified inbox: the old Email tab's unread badge now
+                              lives on Messages (same underlying Message rows). */}
+                          {value === "messages" && unreadEmailCount > 0 && (
+                            <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white shadow-lg animate-pulse">
+                              {unreadEmailCount > 99 ? "99+" : unreadEmailCount}
+                            </span>
+                          )}
+                        </button>
+                      </HelpTooltip>
                     ))}
                   </div>
                 </div>
@@ -444,19 +469,20 @@ export default function CreatorDashboard() {
                       { value: "social", icon: Sparkles, label: "Social Hub", gradient: "from-pink-500 to-rose-500" },
                       { value: "marketplace", icon: ShoppingCart, label: "Digital Shop", gradient: "from-purple-500 to-fuchsia-500" },
                     ] as const).map(({ value, icon: Icon, label, gradient }) => (
-                      <button
-                        key={value}
-                        onClick={() => setActiveTab(value)}
-                        className={cn(
-                          "inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-all",
-                          activeTab === value
-                            ? `bg-gradient-to-r ${gradient} text-white shadow-sm`
-                            : "text-muted-foreground hover:text-foreground hover:bg-muted"
-                        )}
-                      >
-                        <Icon className="h-3.5 w-3.5" />
-                        {label}
-                      </button>
+                      <HelpTooltip key={value} tip={NAV_TIPS[value]?.tip || label} href={NAV_TIPS[value]?.href}>
+                        <button
+                          onClick={() => setActiveTab(value)}
+                          className={cn(
+                            "inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-all",
+                            activeTab === value
+                              ? `bg-gradient-to-r ${gradient} text-white shadow-sm`
+                              : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                          )}
+                        >
+                          <Icon className="h-3.5 w-3.5" />
+                          {label}
+                        </button>
+                      </HelpTooltip>
                     ))}
                   </div>
                 </div>
@@ -471,19 +497,20 @@ export default function CreatorDashboard() {
                       { value: "production-order", icon: Truck, label: "Production Order", gradient: "from-blue-500 to-indigo-500" },
                       { value: "collaborations", icon: Handshake, label: "Collaborations", gradient: "from-slate-500 to-zinc-500" },
                     ] as const).map(({ value, icon: Icon, label, gradient }) => (
-                      <button
-                        key={value}
-                        onClick={() => setActiveTab(value)}
-                        className={cn(
-                          "inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-all",
-                          activeTab === value
-                            ? `bg-gradient-to-r ${gradient} text-white shadow-sm`
-                            : "text-muted-foreground hover:text-foreground hover:bg-muted"
-                        )}
-                      >
-                        <Icon className="h-3.5 w-3.5" />
-                        {label}
-                      </button>
+                      <HelpTooltip key={value} tip={NAV_TIPS[value]?.tip || label} href={NAV_TIPS[value]?.href}>
+                        <button
+                          onClick={() => setActiveTab(value)}
+                          className={cn(
+                            "inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-all",
+                            activeTab === value
+                              ? `bg-gradient-to-r ${gradient} text-white shadow-sm`
+                              : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                          )}
+                        >
+                          <Icon className="h-3.5 w-3.5" />
+                          {label}
+                        </button>
+                      </HelpTooltip>
                     ))}
                   </div>
                 </div>
@@ -581,5 +608,6 @@ export default function CreatorDashboard() {
         )}
       </div>
     </div>
+    </HelpTipsProvider>
   );
 }
