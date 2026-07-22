@@ -152,8 +152,8 @@ export async function POST(req: NextRequest) {
     // lock we also check for an existing non-failed payout and return
     // 409 instead of creating a second one.
     const feeNote = intlFees.isInternational
-      ? `PayPal fee: $${paypalFee.toFixed(2)}, Platform fee: $${platformFee.toFixed(2)}, Wire fee: $${intlFees.wireFee.toFixed(2)}, FX fee (1.5%): $${intlFees.currencyConversionFee.toFixed(2)}`
-      : `PayPal fee: $${paypalFee.toFixed(2)}, Platform fee: $${platformFee.toFixed(2)}`;
+      ? `PayPal fee: $${paypalFee.toFixed(2)}, Grant administration fee: $${platformFee.toFixed(2)}, Wire fee: $${intlFees.wireFee.toFixed(2)}, FX fee (1.5%): $${intlFees.currencyConversionFee.toFixed(2)}`
+      : `PayPal fee: $${paypalFee.toFixed(2)}, Grant administration fee: $${platformFee.toFixed(2)}`;
     let payout;
     try {
       payout = await db.$transaction(async (tx) => {

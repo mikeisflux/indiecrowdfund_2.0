@@ -228,9 +228,9 @@ export default function PaymentSettingsPage() {
           </CardHeader>
           <CardContent className="space-y-4 text-sm text-muted-foreground">
             <div className="space-y-2">
-              <p className="font-medium text-foreground">Platform Fee</p>
+              <p className="font-medium text-foreground">Grant Administration Fee</p>
               <p>
-                IndieCrowdfund charges a 5% platform fee on successful pledges.
+                IndieCrowdfund charges a 3% grant administration fee on successful pledges.
                 This fee is automatically deducted when processing payments.
               </p>
             </div>

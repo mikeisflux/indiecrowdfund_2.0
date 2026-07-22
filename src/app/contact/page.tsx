@@ -2,7 +2,7 @@
 
 import { apiFetch } from "@/lib/fetch-utils";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -31,6 +31,8 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { Footer } from "@/components/footer";
+import { Recaptcha } from "@/components/auth/recaptcha";
+import { fetchRecaptchaConfig } from "@/lib/recaptcha-client";
 
 const contactCategories = [
   { value: "general", label: "General Inquiry", icon: MessageSquare },
@@ -51,11 +53,39 @@ export default function ContactPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
 
+  // Anti-spam: honeypot field (hidden from humans), form-render timestamp,
+  // and reCAPTCHA when configured.
+  const [honeypot, setHoneypot] = useState("");
+  const [formLoadedAt] = useState(() => Date.now());
+  const [recaptchaToken, setRecaptchaToken] = useState<string | null>(null);
+  const [recaptchaEnabled, setRecaptchaEnabled] = useState(false);
+  const [recaptchaSiteKey, setRecaptchaSiteKey] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetchRecaptchaConfig().then(({ enabled, siteKey }) => {
+      setRecaptchaEnabled(enabled);
+      setRecaptchaSiteKey(siteKey);
+    });
+  }, []);
+
+  const handleRecaptchaVerify = useCallback((token: string) => {
+    setRecaptchaToken(token);
+  }, []);
+
+  const handleRecaptchaExpire = useCallback(() => {
+    setRecaptchaToken(null);
+  }, []);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!formData.name || !formData.email || !formData.category || !formData.subject || !formData.message) {
       toast.error("Please fill in all fields");
+      return;
+    }
+
+    if (recaptchaEnabled && !recaptchaToken) {
+      toast.error("Please complete the CAPTCHA");
       return;
     }
 
@@ -65,7 +95,12 @@ export default function ContactPage() {
       const response = await apiFetch("/api/contact", {
         method: "POST",
         headers: { "Content-Type": "application/json", },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          ...formData,
+          recaptchaToken,
+          website: honeypot,
+          formLoadedAt,
+        }),
       });
 
       const data = await response.json();
@@ -78,6 +113,11 @@ export default function ContactPage() {
       toast.success("Your message has been sent!");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to send message. Please try again.");
+      // Tokens are single-use; a failed submit needs a fresh solve.
+      setRecaptchaToken(null);
+      if (typeof window !== "undefined" && window.grecaptcha) {
+        try { window.grecaptcha.reset(); } catch { /* widget not rendered */ }
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -321,7 +361,30 @@ export default function ContactPage() {
                       />
                     </div>
 
-                    <Button type="submit" className="w-full btn-glow" disabled={isSubmitting}>
+                    {/* Honeypot — invisible to humans, bots auto-fill it.
+                        Submissions with this field set are silently dropped. */}
+                    <div aria-hidden="true" className="absolute -left-[9999px] top-auto h-px w-px overflow-hidden">
+                      <label htmlFor="website">Website</label>
+                      <input
+                        id="website"
+                        name="website"
+                        type="text"
+                        tabIndex={-1}
+                        autoComplete="off"
+                        value={honeypot}
+                        onChange={(e) => setHoneypot(e.target.value)}
+                      />
+                    </div>
+
+                    {recaptchaEnabled && recaptchaSiteKey && (
+                      <Recaptcha
+                        siteKey={recaptchaSiteKey}
+                        onVerify={handleRecaptchaVerify}
+                        onExpire={handleRecaptchaExpire}
+                      />
+                    )}
+
+                    <Button type="submit" className="w-full btn-glow" disabled={isSubmitting || (recaptchaEnabled && !recaptchaToken)}>
                       {isSubmitting ? (
                         "Sending..."
                       ) : (

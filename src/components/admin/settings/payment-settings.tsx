@@ -276,7 +276,7 @@ export function PaymentSettings({ settings, onSettingsChange, onSave }: PaymentS
             <p className="font-medium">Divinity Payments Fee Structure:</p>
             <ul className="list-disc list-inside text-muted-foreground dark:text-muted-foreground space-y-1">
               <li>3% partner fee (Divinity Payments processing)</li>
-              <li>Platform fee to creator: 3% (configurable) = ~6% total</li>
+              <li>Grant administration fee: 3% (configurable) = ~6% total</li>
               <li>Settlements processed via wire transfer to your bank</li>
             </ul>
             <a href="https://divinitycoin.com/" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
@@ -371,7 +371,7 @@ export function PaymentSettings({ settings, onSettingsChange, onSave }: PaymentS
               <li>Advanced Checkout: inline card fields + PayPal wallet button on pledge page</li>
               <li>Payouts API: creators add their PayPal email, platform pays out on campaign end</li>
               <li>Enable &quot;Payouts&quot; in your PayPal app permissions (Apps &amp; Credentials)</li>
-              <li>~2.9% + $0.30 processing fee + 3% platform fee</li>
+              <li>~2.9% + $0.30 processing fee + 3% grant administration fee</li>
             </ul>
           </div>
         </CardContent>
@@ -383,7 +383,7 @@ export function PaymentSettings({ settings, onSettingsChange, onSave }: PaymentS
           <div className="flex items-center justify-between">
             <div>
               <CardTitle>PayPal Connect Configuration</CardTitle>
-              <CardDescription>Marketplace (Complete Payments Platform). Pledges pay creators directly with an automatic platform fee. Uses a SEPARATE PayPal Platform app from standard PayPal above.</CardDescription>
+              <CardDescription>Marketplace (Complete Payments Platform). Pledges pay creators directly with an automatic grant administration fee. Uses a SEPARATE PayPal Platform app from standard PayPal above.</CardDescription>
             </div>
             <Badge variant={settings.paypalConnectEnabled ? "default" : "secondary"}>
               {settings.paypalConnectEnabled ? "Enabled" : "Disabled"}
@@ -489,7 +489,7 @@ export function PaymentSettings({ settings, onSettingsChange, onSave }: PaymentS
               <li>Requires a PayPal <strong>Platform</strong>-type REST app + partner approval (separate from standard PayPal)</li>
               <li>Enable &quot;Platform Fee&quot; + &quot;Delayed Disbursement&quot; features on the app (PayPal configures these)</li>
               <li>Sandbox works without approval; live requires an approved partner account</li>
-              <li>Creators connect their own PayPal from the campaign payment step; pledges pay them directly, platform fee auto-deducted</li>
+              <li>Creators connect their own PayPal from the campaign payment step; pledges pay them directly, grant administration fee auto-deducted</li>
             </ul>
           </div>
         </CardContent>

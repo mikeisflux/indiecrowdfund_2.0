@@ -623,7 +623,7 @@ export async function sendMarketplaceSaleEmail(
                 <td style="text-align: right; padding: 5px 0;">${formatAmount(saleAmount)}</td>
               </tr>
               <tr>
-                <td style="padding: 5px 0;">Platform Fee (3%):</td>
+                <td style="padding: 5px 0;">Grant Administration Fee (3%):</td>
                 <td style="text-align: right; padding: 5px 0;">-${formatAmount(platformFee)}</td>
               </tr>
               <tr style="border-top: 1px solid rgba(255,255,255,0.3);">
@@ -717,7 +717,7 @@ export async function sendPayoutCreatedEmail(
                 <td style="text-align: right; padding: 5px 0;">-${formatAmount(partnerFee)}</td>
               </tr>
               <tr>
-                <td style="padding: 5px 0;">Platform Fee (3%):</td>
+                <td style="padding: 5px 0;">Grant Administration Fee (3%):</td>
                 <td style="text-align: right; padding: 5px 0;">-${formatAmount(platformFee)}</td>
               </tr>
               <tr style="border-top: 1px solid rgba(255,255,255,0.3);">

@@ -278,7 +278,7 @@ export function ProjectDetailDialog({
                     );
                   })()}
                   <div className="flex justify-between text-muted-foreground">
-                    <span>Platform Fee (3%)</span>
+                    <span>Grant Administration Fee (3%)</span>
                     <span className="text-red-500">-{formatCurrency(selectedProject.platformFee)}</span>
                   </div>
                   {selectedProject.isInternational && (

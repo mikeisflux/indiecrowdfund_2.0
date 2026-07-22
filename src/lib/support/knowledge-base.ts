@@ -41,10 +41,10 @@ export const KNOWLEDGE_BASE: KbEntry[] = [
   },
   {
     id: "fees",
-    title: "Platform fees",
-    tags: ["fees", "platform fee", "processing fee", "payout"],
+    title: "Grant administration fee",
+    tags: ["fees", "grant administration fee", "platform fee", "processing fee", "payout"],
     content:
-      "IndieCrowdfund's platform fee is 3% of successfully funded projects. Total fees vary by processor: ~7.5% with Mentom Payments (4% + $0.38/txn + 3% platform), ~6.5% with PayPal (3.49% + $0.49/txn + 3% platform), ~6.5% with Divinity Payments, ~6.5% with Whop (3.5% + $0.37/txn + 3% platform).",
+      "IndieCrowdfund's grant administration fee is 3% of successfully funded projects. Total fees vary by processor: ~7.5% with Mentom Payments (4% + $0.38/txn + 3% grant administration), ~6.5% with PayPal (3.49% + $0.49/txn + 3% grant administration), ~6.5% with Divinity Payments, ~6.5% with Whop (3.5% + $0.37/txn + 3% grant administration).",
     link: "/fees",
   },
   {
@@ -170,7 +170,7 @@ export const KNOWLEDGE_BASE: KbEntry[] = [
     title: "Terms of Service",
     tags: ["terms", "tos", "legal", "agreement", "rules", "conditions"],
     content:
-      "IndieCrowdfund's full Terms of Service govern use of the platform — eligibility, prohibited content, creator responsibilities for fulfillment, refund handling, dispute resolution, intellectual property, payment terms (3% platform fee + processor fees), and the chargeback recoup policy. For the full legal text, point the user to /terms.",
+      "IndieCrowdfund's full Terms of Service govern use of the platform — eligibility, prohibited content, creator responsibilities for fulfillment, refund handling, dispute resolution, intellectual property, payment terms (3% grant administration fee + processor fees), and the chargeback recoup policy. For the full legal text, point the user to /terms.",
     link: "/terms",
   },
   {

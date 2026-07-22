@@ -336,7 +336,7 @@ export function WhopBankPayoutSection() {
                     Payouts to non-US bank accounts are sent by international
                     wire in your local currency. A <strong>$25 wire fee + 1.50% currency conversion fee</strong>{" "}
                     will be added on top of the standard Whop
-                    processing + platform fees.
+                    processing + grant administration fees.
                   </p>
                 </div>
               )}

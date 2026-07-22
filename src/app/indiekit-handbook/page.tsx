@@ -508,7 +508,7 @@ const tabContent: Record<string, TabContent> = {
     title: 'Reports Tab (Post-Fulfillment)',
     description: 'The full breakdown of everything that happened during fulfillment: revenue, refunds, fees, ship vs. unship rates, payment processor cuts, and the bottom-line "what did I actually clear" number. Use this for accounting and for planning your next campaign.',
     howTo: [
-      { step: 'Read the headline numbers', detail: 'Top of the page: Total Revenue (campaign + add-ons + late backers), Processing Fees (split per processor), Platform Fees, Refunds Issued, and Net Payout (what actually hit your bank).' },
+      { step: 'Read the headline numbers', detail: 'Top of the page: Total Revenue (campaign + add-ons + late backers), Processing Fees (split per processor), Grant Administration Fees, Refunds Issued, and Net Payout (what actually hit your bank).' },
       { step: 'Filter by date range', detail: 'Default is the entire fulfillment cycle. Use the date range picker to look at just a quarter or just one month — useful for tax reporting.' },
       { step: 'Per-tier and per-add-on breakdown', detail: 'Sales by reward tier and by add-on. Shows: units sold, revenue, average order value. Spot which add-ons converted best for next campaign\'s pricing.' },
       { step: 'Fulfillment metrics', detail: 'Survey response rate, charge success rate, ship rate, refund rate. Each compared to the platform median so you know if your numbers are normal.' },

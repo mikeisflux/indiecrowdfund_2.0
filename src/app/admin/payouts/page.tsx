@@ -293,7 +293,7 @@ export default function PayoutsPage() {
   // Export as CSV
   const exportCSV = () => {
     const csv = [
-      ["Project", "Creator", "Email", "Total Raised", "Total Refunded", "Effective Revenue", "DC Partner Fee (3%)", "Per-Transaction Fee ($0.30/txn)", "Platform Fee (3%)", "Bank Country", "Wire Fee", "FX Fee (1.5%)", "Total Fees", "Amount Owed", "Amount Settled", "Remaining", "Has Bank", "Status"].join(","),
+      ["Project", "Creator", "Email", "Total Raised", "Total Refunded", "Effective Revenue", "DC Partner Fee (3%)", "Per-Transaction Fee ($0.30/txn)", "Grant Administration Fee (3%)", "Bank Country", "Wire Fee", "FX Fee (1.5%)", "Total Fees", "Amount Owed", "Amount Settled", "Remaining", "Has Bank", "Status"].join(","),
       ...projects.map((p) =>
         [
           `"${p.title}"`,

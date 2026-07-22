@@ -58,7 +58,7 @@ export const SEO_PAGE_DEFAULTS: Record<string, SeoPageDefaults> = {
   "/fees": {
     title: "Fees & Pricing - Transparent Crowdfunding Costs",
     description:
-      "IndieCrowdfund offers transparent, competitive pricing for creators. Learn about our platform fees, processing rates, and why we beat Kickstarter.",
+      "IndieCrowdfund offers transparent, competitive pricing for creators. Learn about our grant administration fee, processing rates, and why we beat Kickstarter.",
     ogTitle: "IndieCrowdfund Fees - Lower Than Kickstarter",
     ogDescription:
       "Transparent, competitive pricing for creators. See why our fees beat Kickstarter and other platforms.",

@@ -131,7 +131,7 @@ const platformFeatures = [
       {
         title: "Transparent Fee Structure",
         description:
-          "Clear 3% platform fee plus payment processing. No hidden charges. See exactly what you'll receive with our fee calculator.",
+          "Clear 3% grant administration fee plus payment processing. No hidden charges. See exactly what you'll receive with our fee calculator.",
         icon: DollarSign,
       },
       {

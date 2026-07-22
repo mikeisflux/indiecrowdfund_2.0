@@ -70,7 +70,7 @@ export function StatsCards({ stats }: StatsCardsProps) {
         <CardContent className="pt-4 pb-3 px-4">
           <div className="flex items-center gap-2">
             <DollarSign className="h-4 w-4 text-emerald-600" />
-            <span className="text-xs text-muted-foreground">Platform Fees</span>
+            <span className="text-xs text-muted-foreground">Grant Administration Fees</span>
           </div>
           <p className="text-xl font-bold mt-1">{formatCurrency(stats.totalPlatformFees)}</p>
         </CardContent>

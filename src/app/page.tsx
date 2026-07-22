@@ -1017,7 +1017,7 @@ export default async function HomePage() {
           <div className="mt-12 flex flex-wrap justify-center gap-8 text-white/60 text-sm">
             <div className="flex items-center gap-2">
               <CheckCircle className="h-4 w-4 text-cyan-300" />
-              <span>No platform fees until funded</span>
+              <span>No grant administration fees until funded</span>
             </div>
             <div className="flex items-center gap-2">
               <CheckCircle className="h-4 w-4 text-cyan-300" />

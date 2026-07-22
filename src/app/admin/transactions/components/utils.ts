@@ -31,7 +31,7 @@ export const exportCSV = (transactions: UnifiedTransaction[]) => {
     "Amount",
     "Currency",
     "Processor",
-    "Platform Fees",
+    "Grant Administration Fees",
     "Stripe PI ID",
     "Stripe SI ID",
     "DC Payment ID",

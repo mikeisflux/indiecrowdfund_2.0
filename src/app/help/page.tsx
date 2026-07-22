@@ -125,7 +125,7 @@ const categories = [
 
 const popularArticles = [
   { title: "How do I start a campaign?", views: "12.4k", href: "/faq" },
-  { title: "What are the platform fees?", views: "9.8k", href: "/fees" },
+  { title: "What is the grant administration fee?", views: "9.8k", href: "/fees" },
   { title: "How do I back a project?", views: "8.2k", href: "/faq" },
   { title: "When will I receive my reward?", views: "7.5k", href: "/faq" },
   { title: "Can I cancel my pledge?", views: "6.1k", href: "/faq" },

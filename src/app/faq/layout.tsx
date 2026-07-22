@@ -38,7 +38,7 @@ export default function FaqLayout({ children }: { children: React.ReactNode }) {
         name: "What are the fees on IndieCrowdfund?",
         acceptedAnswer: {
           "@type": "Answer",
-          text: "IndieCrowdfund charges a platform fee only when your project is successfully funded, plus standard payment processing fees. Visit our fees page for detailed pricing.",
+          text: "IndieCrowdfund charges a grant administration fee only when your project is successfully funded, plus standard payment processing fees. Visit our fees page for detailed pricing.",
         },
       },
       {

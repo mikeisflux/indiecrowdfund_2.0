@@ -4,11 +4,11 @@ export type PaymentMethod = "stripe" | "paypal" | "divinitycoin" | "whop";
 
 export const stripeFeeBreakdown = [
   {
-    title: "Platform Fee",
+    title: "Grant Administration Fee",
     rate: "3%",
     description: "Charged on successfully funded campaigns only",
     details:
-      "Our platform fee covers hosting, tools, customer support, and payment processing infrastructure.",
+      "Our grant administration fee covers hosting, tools, customer support, and payment processing infrastructure.",
   },
   {
     title: "Stripe Processing",
@@ -28,9 +28,9 @@ export const divinityCoinFeeBreakdown = [
       "3% of total pledges plus $0.30 per individual transaction. Covers secure card processing and compliance infrastructure handled by Divinity Payments.",
   },
   {
-    title: "IndieCrowdfund Platform Fee",
+    title: "Grant Administration Fee",
     rate: "3%",
-    description: "Deducted from creator payouts",
+    description: "Deducted from grant payouts",
     details:
       "Applied on the remainder after Divinity Payments partner fees are deducted. Covers hosting, tools, and customer support.",
   },
@@ -45,11 +45,11 @@ export const paypalFeeBreakdown = [
       "PayPal Advanced Checkout processing fee. IndieCrowdfund collects all pledges into our PayPal account on your behalf, then pays out your net earnings directly to your bank account after deducting this fee at settlement time.",
   },
   {
-    title: "IndieCrowdfund Platform Fee",
+    title: "Grant Administration Fee",
     rate: "3%",
     description: "Charged on successfully funded campaigns only",
     details:
-      "Our platform fee covers hosting, tools, customer support, and payment infrastructure.",
+      "Our grant administration fee covers hosting, tools, customer support, and payment infrastructure.",
   },
 ];
 
@@ -62,11 +62,11 @@ export const whopFeeBreakdown = [
       "Whop's embedded checkout effective rate on domestic US cards: 2.7% payment processing + 0.8% orchestration + $0.30 fixed card + $0.07 Radar = 3.5% + $0.37 per transaction. International cards add ~1% currency conversion + $0.03 3D Secure; tax-collected jurisdictions add the Whop tax service fee. Supports all content types including adult/NSFW projects. IndieCrowdfund collects pledges through Whop and pays out your net earnings after deducting this fee at settlement.",
   },
   {
-    title: "IndieCrowdfund Platform Fee",
+    title: "Grant Administration Fee",
     rate: "3%",
     description: "Charged on successfully funded campaigns only",
     details:
-      "Our platform fee covers hosting, tools, customer support, and payment infrastructure.",
+      "Our grant administration fee covers hosting, tools, customer support, and payment infrastructure.",
   },
 ];
 

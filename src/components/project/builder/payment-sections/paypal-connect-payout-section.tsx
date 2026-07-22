@@ -79,7 +79,7 @@ export function PayPalConnectPayoutSection() {
         </CardTitle>
         <CardDescription>
           Link your PayPal account so pledges are paid directly to you, with the
-          platform fee taken automatically.
+          grant administration fee taken automatically.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">

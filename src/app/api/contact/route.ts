@@ -8,6 +8,7 @@ import { sendEmail } from "@/lib/email";
 import { db } from "@/lib/db";
 import { escapeHtml, escapeHtmlForEmail } from "@/lib/utils/api-params";
 import { rateLimiter } from "@/lib/rate-limiter";
+import { verifyRecaptcha } from "@/lib/auth/recaptcha";
 
 // Schema for contact form validation
 const contactSchema = z.object({
@@ -16,7 +17,29 @@ const contactSchema = z.object({
   category: z.enum(["general", "support", "billing", "project", "report"]),
   subject: z.string().min(1, "Subject is required").max(200).refine(s => !/[\r\n]/.test(s), "Subject cannot contain line breaks"),
   message: z.string().min(10, "Message must be at least 10 characters").max(5000),
+  recaptchaToken: z.string().nullish(),
+  // Anti-spam signals from the form: honeypot field (must stay empty) and
+  // the time the form was rendered (bots submit instantly).
+  website: z.string().optional(),
+  formLoadedAt: z.number().optional(),
 });
+
+// Random-string spam detector. The bot traffic we see fills name/subject/
+// message with single tokens of random mixed-case letters ("KODRWrFUSGbMGYmCec").
+// A lone alphabetic token with many lower→upper case flips is essentially
+// never a real name, subject, or message — real single-word values ("Hello",
+// "REFUND") flip case at most once or twice.
+function looksLikeRandomToken(value: string): boolean {
+  const s = value.trim();
+  if (s.length < 10 || /\s/.test(s) || !/^[A-Za-z]+$/.test(s)) return false;
+  let flips = 0;
+  for (let i = 1; i < s.length; i++) {
+    const prevUpper = s[i - 1] >= "A" && s[i - 1] <= "Z";
+    const curUpper = s[i] >= "A" && s[i] <= "Z";
+    if (prevUpper !== curUpper) flips++;
+  }
+  return flips >= 4;
+}
 
 const categoryLabels: Record<string, string> = {
   general: "General Inquiry",
@@ -42,6 +65,40 @@ export async function POST(req: NextRequest) {
 
     // Validate input
     const data = contactSchema.parse(body);
+
+    // reCAPTCHA — enforced when keys are configured (Admin > Settings), no-op
+    // otherwise. This is the hard gate against bots POSTing the API directly.
+    const recaptchaResult = await verifyRecaptcha(data.recaptchaToken ?? null, ip);
+    if (!recaptchaResult.valid) {
+      return NextResponse.json(
+        { error: recaptchaResult.error || "CAPTCHA verification failed" },
+        { status: 400 }
+      );
+    }
+
+    // Silent spam drops: respond with success so bots don't learn what
+    // tripped them, but never send the email or store the message.
+    // 1. Honeypot: the hidden "website" field is invisible to humans.
+    // 2. Timing: humans don't fill five fields in under 3 seconds.
+    // 3. Gibberish: two or more of name/subject/message are random tokens.
+    const gibberishFields = [data.name, data.subject, data.message].filter(looksLikeRandomToken).length;
+    const tooFast = typeof data.formLoadedAt === "number" && Date.now() - data.formLoadedAt < 3000;
+    if (data.website || tooFast || gibberishFields >= 2) {
+      contactLogger.warn(
+        {
+          ip,
+          honeypot: !!data.website,
+          tooFast,
+          gibberishFields,
+          email: data.email,
+        },
+        "Dropped spam contact form submission"
+      );
+      return NextResponse.json({
+        success: true,
+        message: "Your message has been sent successfully.",
+      });
+    }
 
     // Get support email from settings or use default
     let supportEmail = "support@indiecrowdfund.com";

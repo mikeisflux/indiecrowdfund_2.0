@@ -106,7 +106,7 @@ export function GeneralSettings({ settings, onSettingsChange, onSave }: GeneralS
               </Select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="platformFee">Platform Fee (%)</Label>
+              <Label htmlFor="platformFee">Grant Administration Fee (%)</Label>
               <Input
                 id="platformFee"
                 type="number"

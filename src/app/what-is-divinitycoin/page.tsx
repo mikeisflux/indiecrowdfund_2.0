@@ -424,7 +424,7 @@ export default function WhatIsDivinityCoinPage() {
           </div>
           <div className="mt-4 rounded-lg bg-purple-100 dark:bg-purple-900/30 p-3">
             <p className="text-sm text-purple-800 dark:text-purple-200">
-              <strong>Fees:</strong> 3% Divinity Payments partner fee + $0.30/txn + 3% IndieCrowdfund platform fee = ~6.5% total.
+              <strong>Fees:</strong> 3% Divinity Payments partner fee + $0.30/txn + 3% grant administration fee = ~6.5% total.
               Settlement to your bank account within 14 business days.
             </p>
           </div>

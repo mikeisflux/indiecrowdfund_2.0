@@ -199,7 +199,7 @@ export default function FeesPage() {
                         <li>Backer completes checkout via Whop&apos;s embedded form</li>
                         <li>Whop processes the $100 payment immediately</li>
                         <li>Whop fee (3.5% + $0.37 = $3.87) deducted at settlement</li>
-                        <li>Platform fee (3% of $96.13 = $2.88) deducted at settlement</li>
+                        <li>Grant administration fee (3% of $96.13 = $2.88) deducted at settlement</li>
                         <li>You receive <strong>$93.25</strong> deposited to your account</li>
                       </ol>
                       <p className="text-xs text-muted-foreground">Whop only supports <strong>Keep It All</strong> campaigns — payments are collected immediately regardless of funding goal.</p>
@@ -231,7 +231,7 @@ export default function FeesPage() {
                         <li>Full $100 collected into IndieCrowdfund&apos;s PayPal account</li>
                         <li>When your campaign funds, we calculate your settlement</li>
                         <li>PayPal processing fee ($3.98 for this pledge) deducted at settlement</li>
-                        <li>Platform fee (3% of $100 = $3.00) deducted at settlement</li>
+                        <li>Grant administration fee (3% of $100 = $3.00) deducted at settlement</li>
                         <li>You receive <strong>$93.02</strong> deposited directly to your bank account</li>
                       </ol>
                     </div>
@@ -263,7 +263,7 @@ export default function FeesPage() {
                         <li>When your project funds, payment is captured</li>
                         <li>Divinity Payments partner fee (3% = $3.00) deducted at settlement</li>
                         <li>Per-transaction fee ($0.30 × 1 txn = $0.30) deducted at settlement</li>
-                        <li>Platform fee (3% of $96.70 = $2.90) deducted at settlement</li>
+                        <li>Grant administration fee (3% of $96.70 = $2.90) deducted at settlement</li>
                         <li>You receive <strong>$93.80</strong> deposited to your account</li>
                       </ol>
                       <a
@@ -352,7 +352,7 @@ export default function FeesPage() {
                   {paymentMethod === "paypal" ? (
                     <>
                       <div className="flex justify-between py-2 border-b">
-                        <span className="text-zinc-600 dark:text-muted-foreground">Platform fee (3%)</span>
+                        <span className="text-zinc-600 dark:text-muted-foreground">Grant administration fee (3%)</span>
                         <span className="text-red-500">-${paypalFees.platformFee.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                       </div>
                       <div className="flex justify-between py-2 border-b">
@@ -367,7 +367,7 @@ export default function FeesPage() {
                         <span className="text-red-500">-${whopFees.whopFee.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                       </div>
                       <div className="flex justify-between py-2 border-b">
-                        <span className="text-zinc-600 dark:text-muted-foreground">Platform fee (3% of net)</span>
+                        <span className="text-zinc-600 dark:text-muted-foreground">Grant administration fee (3% of net)</span>
                         <span className="text-red-500">-${whopFees.platformFee.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                       </div>
                     </>
@@ -382,7 +382,7 @@ export default function FeesPage() {
                         <span className="text-red-500">-${divinityFees.perTransactionFee.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                       </div>
                       <div className="flex justify-between py-2 border-b">
-                        <span className="text-zinc-600 dark:text-muted-foreground">Platform fee (3% of net)</span>
+                        <span className="text-zinc-600 dark:text-muted-foreground">Grant administration fee (3% of net)</span>
                         <span className="text-red-500">-${divinityFees.platformFee.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                       </div>
                     </>

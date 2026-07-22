@@ -189,7 +189,7 @@ export function PaymentProcessorSection({
               </div>
               <div className="flex items-center gap-2">
                 <Check className="h-3 w-3 text-green-500" />
-                <span>Platform fee taken automatically at checkout</span>
+                <span>Grant administration fee taken automatically at checkout</span>
               </div>
               <div className="flex items-center gap-2">
                 <Check className="h-3 w-3 text-green-500" />
@@ -295,7 +295,7 @@ export function PaymentProcessorSection({
                 <span className="font-medium">{formatCurrency(goalAmount * 0.03)}</span>
               </div>
               <div className="flex justify-between">
-                <span>Platform fee (3%)</span>
+                <span>Grant administration fee (3%)</span>
                 <span className="font-medium">{formatCurrency((goalAmount - goalAmount * 0.03) * 0.03)}</span>
               </div>
               <Separator className="my-2" />
@@ -327,7 +327,7 @@ export function PaymentProcessorSection({
               <span className="font-medium">{formatCurrency(paypalFee)}</span>
             </div>
             <div className="flex justify-between">
-              <span>Platform fee (3%)</span>
+              <span>Grant administration fee (3%)</span>
               <span className="font-medium">{formatCurrency(platformFee)}</span>
             </div>
             <Separator className="my-2" />
@@ -354,7 +354,7 @@ export function PaymentProcessorSection({
               <span className="font-medium">{formatCurrency(whopFee)}</span>
             </div>
             <div className="flex justify-between">
-              <span>Platform fee (3%)</span>
+              <span>Grant administration fee (3%)</span>
               <span className="font-medium">{formatCurrency(platformFee)}</span>
             </div>
             <Separator className="my-2" />

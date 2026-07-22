@@ -302,7 +302,7 @@ export function TransactionDetailDialog({
                       <span className="text-red-600">-{formatCurrency(transactionDetail.record.processorFees)}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Platform Fees:</span>
+                      <span className="text-muted-foreground">Grant Administration Fees:</span>
                       <span className="text-red-600">-{formatCurrency(transactionDetail.record.platformFees)}</span>
                     </div>
                     <div className="flex justify-between font-medium border-t pt-1 mt-1">
@@ -327,7 +327,7 @@ export function TransactionDetailDialog({
                       <span>{formatCurrency(transactionDetail.record.amount)}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Platform Fee:</span>
+                      <span className="text-muted-foreground">Grant Administration Fee:</span>
                       <span className="text-red-600">-{formatCurrency(transactionDetail.record.platformFee)}</span>
                     </div>
                     <div className="flex justify-between font-medium border-t pt-1 mt-1">
