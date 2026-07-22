@@ -113,7 +113,6 @@ const navigation: NavSection[] = [
     items: [
       { name: "Projects", href: "/admin/projects", icon: FolderKanban, badgeKey: "projects" },
       { name: "Prelaunch", href: "/admin/prelaunch", icon: Rocket, badgeKey: "prelaunch" },
-      { name: "Digital Shop", href: "/admin/shop", icon: BookOpen },
       { name: "Moderation", href: "/admin/moderation", icon: Shield, badgeKey: "moderation" },
     ],
   },

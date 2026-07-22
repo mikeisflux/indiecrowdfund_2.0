@@ -8,7 +8,6 @@ import {
   Users,
   CreditCard,
   Megaphone,
-  ShoppingBag,
   ShieldCheck,
   Info,
   ArrowLeft,
@@ -33,7 +32,6 @@ const tabs = [
   { id: 'launch', label: 'Submit & Launch', icon: Rocket },
   { id: 'manage', label: 'During the Campaign', icon: Activity },
   { id: 'after-funding', label: 'After Funding', icon: Package },
-  { id: 'marketplace', label: 'Digital Shop', icon: ShoppingBag },
 ];
 
 interface FieldInfo {
@@ -192,21 +190,6 @@ const tabContent: Record<string, { title: string; description: string; fields: F
       { name: 'Post-Fulfillment (Phase 3)', required: false, description: 'IndieKit → Reports gives you full breakdown: revenue, fees, refunds, ship rate, net payout. IndieKit → Late Backers lets you keep selling to people who missed the campaign.', tips: 'Open late pledges for 30-60 days after fulfillment to add 10-30% to revenue. Run final reports to hand to your accountant for tax season.' },
       { name: 'Refund Requests', required: false, description: 'Backers can submit refund requests after the campaign ends from their backer dashboard. You review them in IndieKit → Refund Requests and approve, deny, or message the backer. Approved refunds flow through the original processor.', tips: 'Reply within 48 hours. A high refund rate (>5%) signals fulfillment communication is missing — review your update cadence.' },
       { name: 'Read the IndieKit Handbook', required: false, description: 'For step-by-step instructions on every IndieKit tab, open the IndieKit Handbook (button at the top of this page). It has plain-language how-to guides for each tab plus tips and gotchas.', tips: 'Bookmark both the handbook and /dashboard/indiekit. You\'ll bounce between them often during the first month of fulfillment.' },
-    ]
-  },
-  'marketplace': {
-    title: 'Digital Shop',
-    description: 'A separate storefront for selling completed digital works (ebooks, comics, art packs, music) directly to customers. No funding goal, no campaign — instant purchase and instant delivery. Different from crowdfunding.',
-    fields: [
-      { name: 'What is the Digital Shop?', required: false, description: 'A dedicated /shop storefront for selling already-finished digital works. No campaign, no funding goal, no surveys, no shipping. Customers buy a file, get the file. Useful for backlist titles, completed series, side projects, demos, free samples.', tips: 'The Digital Shop and crowdfunding can run in parallel. Use the shop for what\'s done; crowdfund what you\'re still making.' },
-      { name: 'Company Profile (Storefront)', required: true, description: 'Set up your storefront before listing items: logo, banner image, description, link to your social/website, content category (Comics, Books, Music, etc.).', tips: 'A complete profile builds trust. Customers checking out your first listing often click through to see who you are.' },
-      { name: 'Physical Media Link', required: false, description: 'Add a link to where customers can order physical copies (your own store, Amazon, Bookshop, etc.). Shows on each digital listing as "Want a physical copy?" callout.', tips: 'Even if you\'re selling digital, a physical-copy link captures customers who only buy print.' },
-      { name: 'Uploading Books / Files', required: true, description: 'For each item: upload a PDF (or audio/zip), set cover image, title, description, category, price. The file lives in encrypted storage. Customers get a download link after purchase.', tips: 'High-quality PDF optimized for digital reading: searchable text (not a flat scan), reasonable file size (compress to under 50MB if possible), bookmarks for chapter navigation.' },
-      { name: 'Setting Price', required: true, description: 'Set your own USD price per item. You can adjust anytime — changes take effect immediately on new sales (existing purchases keep their original price record).', tips: 'Research similar items. A 100-page comic at $3-5 vs a 400-page novel at $7-10 is in normal range. Don\'t undervalue — premium pricing works for premium content.' },
-      { name: 'Platform & Processor Fees', required: false, description: 'The Digital Shop uses PayPal by default: 3% platform fee + PayPal\'s ~3.49% + $0.49/txn. NSFW or restricted content uses Divinity Payments or Whop instead with similar combined effective rates.', tips: 'Example: $10 sale → you receive ~$9.30 after fees. Add your bank account in Dashboard → Settings → Payments to receive payouts directly.' },
-      { name: 'Review Process', required: false, description: 'New listings go through a brief content review (1-2 business days) to ensure they comply with content guidelines. Once approved, they go live on the storefront immediately.', tips: 'NSFW content must be declared and tagged. Hidden NSFW discovered post-listing results in removal and possibly account suspension.' },
-      { name: 'Sales Analytics', required: false, description: 'Open Dashboard → Shop → Analytics for per-item sales, revenue over time, conversion rate from page visit to purchase. Filter by date range and by item.', tips: 'Use analytics to inform pricing. If conversion is low at $10 but volume is 5x at $5, the lower price might be optimal revenue.' },
-      { name: 'Where Digital Shop Purchases Show Up for Backers', required: false, description: 'When a customer buys, the file appears in their backer dashboard at /dashboard/backer?tab=downloads (the unified Downloads tab) and /dashboard/backer?tab=digital-library (the in-browser reader). They can re-download as many times as they want — the link does not expire.', tips: 'No need to email a download link manually — the platform handles delivery. Customers also get an email receipt with a direct link.' },
     ]
   },
 };

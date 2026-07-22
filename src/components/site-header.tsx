@@ -217,7 +217,6 @@ export function SiteHeader() {
           <nav className="hidden md:flex items-center gap-6">
             <NavLink href="/projects/new">Start a Project</NavLink>
             <NavLink href="/crowdfunds">Crowdfunds</NavLink>
-            <NavLink href="/shop">Digital Shop</NavLink>
             <NavLink href="/retailers">Retailers</NavLink>
             <NavLink href="/how-we-stack-up">How We Stack Up</NavLink>
             <DropdownMenu>
@@ -289,9 +288,6 @@ export function SiteHeader() {
                 </Link>
                 <Link href="/crowdfunds" className="text-sm font-medium hover:text-primary py-2">
                   Crowdfunds
-                </Link>
-                <Link href="/shop" className="text-sm font-medium hover:text-primary py-2">
-                  Digital Shop
                 </Link>
                 <Link href="/retailers" className="text-sm font-medium hover:text-primary py-2">
                   Retailers

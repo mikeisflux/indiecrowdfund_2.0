@@ -136,9 +136,8 @@ export default function GrantProgramPage() {
           </div>
 
           <p className="mx-auto mt-8 max-w-4xl text-xs text-muted-foreground">
-            The Grant Program applies to crowdfunding campaigns on IndieCrowdfund. Purchases from
-            the Digital Shop and marketplace are ordinary purchases, not contributions to the
-            program. For full terms, see the{" "}
+            The Grant Program applies to crowdfunding campaigns on IndieCrowdfund. For full
+            terms, see the{" "}
             <Link href="/terms" className="underline underline-offset-2">Terms of Service</Link>{" "}
             and the{" "}
             <Link href="/terms?tab=grant" className="underline underline-offset-2">Grant Agreement</Link>.

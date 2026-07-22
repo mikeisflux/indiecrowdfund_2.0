@@ -21,7 +21,6 @@ import {
 
   Truck,
   FileText,
-  ShoppingCart,
   ArrowLeft,
   Handshake,
   Mail,
@@ -52,7 +51,6 @@ import { PostUpdatesTab } from "./components/PostUpdatesTab";
 import { SocialHubTab } from "./components/SocialHubTab";
 import { IndieKitTab } from "./components/IndieKitTab";
 import { PrintingComicsTab } from "./indiekit/components/tabs/PrintingComicsTab";
-import { MarketplaceTab } from "./components/MarketplaceTab";
 // The old Email tab UI was merged into Messages (unified inbox). The
 // EmailTab/InboxTab components stay in the repo but are no longer routed.
 import { LiveStreamTab } from "./components/LiveStreamTab";
@@ -70,7 +68,6 @@ const NAV_TIPS: Record<string, { tip: string; href: string }> = {
   "live-stream": { tip: "Go live for your backers right from the dashboard.", href: "/creator-handbook?tab=promotion" },
   "updates": { tip: "Post progress updates that notify everyone who backed or follows you.", href: "/creator-handbook?tab=manage" },
   "social": { tip: "Schedule and share campaign posts across your social accounts.", href: "/creator-handbook?tab=promotion" },
-  "marketplace": { tip: "Sell books, comics, music, and movies in your ongoing Digital Shop.", href: "/creator-handbook?tab=marketplace" },
   "indiekit": { tip: "The fulfillment toolkit — surveys, payments, shipping, and delivery.", href: "/indiekit-handbook" },
   "printing-comics": { tip: "Order print runs and hard-copy proofs for your book.", href: "/indiekit-handbook?tab=printing-comics" },
   "production-order": { tip: "What to produce: per-item quantities, locked orders, and shipped counts.", href: "/indiekit-handbook?tab=reports" },
@@ -467,7 +464,6 @@ export default function CreatorDashboard() {
                     {([
                       { value: "updates", icon: FileText, label: "Post Updates", gradient: "from-amber-500 to-orange-500" },
                       { value: "social", icon: Sparkles, label: "Social Hub", gradient: "from-pink-500 to-rose-500" },
-                      { value: "marketplace", icon: ShoppingCart, label: "Digital Shop", gradient: "from-purple-500 to-fuchsia-500" },
                     ] as const).map(({ value, icon: Icon, label, gradient }) => (
                       <HelpTooltip key={value} tip={NAV_TIPS[value]?.tip || label} href={NAV_TIPS[value]?.href}>
                         <button
@@ -587,10 +583,6 @@ export default function CreatorDashboard() {
 
               <TabsContent value="printing-comics" className="space-y-6">
                 <PrintingComicsTab projectId={selectedProjectId} />
-              </TabsContent>
-
-              <TabsContent value="marketplace" className="space-y-6">
-                <MarketplaceTab projectId={selectedProjectId} />
               </TabsContent>
 
               <TabsContent value="collaborations" className="space-y-6">

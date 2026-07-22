@@ -11,7 +11,7 @@ export const metadata: Metadata = {
   // this bare to avoid a doubled suffix.
   title: "How We Stack Up",
   description:
-    "See how IndieCrowdfund compares to Kickstarter, Indiegogo, and Fund My Comic — crowdfunding, built-in fulfillment, an ongoing store, and more, side by side.",
+    "See how IndieCrowdfund compares to Kickstarter, Indiegogo, and Fund My Comic — crowdfunding, built-in fulfillment, printing, and more, side by side.",
 };
 
 function Cell({ value }: { value: Support }) {
@@ -84,9 +84,9 @@ export default function HowWeStackUpPage() {
             How We <span className="gradient-text-brand">Stack Up</span>
           </h1>
           <p className="mt-4 text-lg text-muted-foreground max-w-2xl mx-auto">
-            IndieCrowdfund bundles the campaign, the pledge manager, the print run, and an
-            ongoing store into one platform. Here&apos;s how that compares to running your
-            project on Kickstarter, Indiegogo, or Fund My Comic.
+            IndieCrowdfund bundles the campaign, the pledge manager, and the print run into
+            one platform. Here&apos;s how that compares to running your project on Kickstarter,
+            Indiegogo, or Fund My Comic.
           </p>
           <div className="mt-6 flex flex-wrap items-center justify-center gap-x-6 gap-y-2">
             <LegendItem icon={<Check className="h-4 w-4 text-emerald-600 dark:text-emerald-400" strokeWidth={3} />}>
@@ -214,8 +214,8 @@ export default function HowWeStackUpPage() {
         <div className="mx-auto mt-12 max-w-3xl rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/5 to-cyan-500/5 p-8 text-center">
           <h2 className="text-2xl font-bold">Everything your project needs, in one place</h2>
           <p className="mt-2 text-muted-foreground">
-            Launch a campaign, survey and charge your backers, run your print, and keep selling
-            afterward — without stitching together five different tools.
+            Launch a campaign, survey and charge your backers, and run your print — without
+            stitching together five different tools.
           </p>
           <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
             <Button asChild size="lg">

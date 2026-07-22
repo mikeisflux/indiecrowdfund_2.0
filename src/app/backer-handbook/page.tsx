@@ -30,7 +30,6 @@ const tabs = [
   { id: 'rewards', label: 'Rewards & Add-ons', icon: Gift },
   { id: 'after', label: 'After You Pledge', icon: Package },
   { id: 'dashboard', label: 'Your Backer Dashboard', icon: LayoutDashboard },
-  { id: 'marketplace', label: 'Digital Shop', icon: BookOpen },
   { id: 'faq', label: 'FAQ', icon: HelpCircle },
 ];
 
@@ -63,7 +62,6 @@ const tabContent: Record<string, TabContent> = {
       { title: 'You contribute', description: 'Your pledge is a contribution to the Grant Program, processed through our payment processors.', tip: 'The campaign page always shows whether you\'re charged immediately (Keep It All) or only if the goal is reached (All or Nothing).' },
       { title: 'The program awards a grant', description: 'A small percentage covers the administrative and facilitation costs of running the program; the remainder is awarded to the creator as a grant under a signed grant agreement.', tip: 'Every campaign is reviewed before launch, and grants are awarded at the organization\'s discretion.' },
       { title: 'The creator takes it from there', description: 'After the grant is made, the creator is responsible for the project — including producing and fulfilling any rewards they chose to offer. Rewards come from the creator, not from the nonprofit.', tip: 'Check a creator\'s update history and fulfillment track record before backing — engaged creators fulfill more reliably.' },
-      { title: 'The Digital Shop is different', description: 'Purchases from the Digital Shop and marketplace are ordinary purchases, not contributions to the Grant Program. Grant framing applies to crowdfunding campaigns only.', tip: 'See the Grant Program page (linked in the site footer) for the full picture.' },
     ]
   },
   'discover': {
@@ -213,18 +211,6 @@ const tabContent: Record<string, TabContent> = {
         ],
       },
     ],
-  },
-  'marketplace': {
-    title: 'Digital Shop',
-    description: 'A store for finished digital books, comics, and other downloadable content. Different from pledging — when you buy here, you get the file right now.',
-    steps: [
-      { title: 'What is the Digital Shop?', description: 'A storefront for completed digital works that creators have published — books, comics, art packs, music. Unlike crowdfunding pledges (which can take months to deliver), Digital Shop purchases are delivered instantly to your account.', tip: 'Use the Digital Shop when you want something right now. Use crowdfunding when you want to support a creator making something new.' },
-      { title: 'Browsing the store', description: 'Open /shop to see Featured titles, Staff Picks, and the full catalog. Filter by category (Comics, Books, Art, Music) or use the search bar to look up a specific title.', tip: 'Staff Picks are hand-chosen by IndieCrowdfund — usually a great starting point.' },
-      { title: 'Understanding pricing', description: 'Each item has a fixed price in US dollars set by the creator. The price you see is the price you pay — no shipping, no extra fees.', tip: 'Digital usually costs less than physical because there\'s no printing or shipping cost.' },
-      { title: 'Making a purchase', description: 'Click "Purchase" → enter your card details → confirm. Your card is charged immediately. The processor used (Divinity Payments, PayPal, or Whop) depends on the creator\'s setup, but the experience is the same: a secure card form, then a confirmation page.', tip: 'You\'ll get an email receipt right away, plus an in-app notification.' },
-      { title: 'Where your purchase appears', description: 'Digital Shop purchases land in TWO places in your backer dashboard. (1) Downloads tab (/dashboard/backer?tab=downloads) shows them as cover-art tiles alongside any crowdfunding files you\'ve received — this is the easy "all my files in one spot" view. (2) Digital Library tab (/dashboard/backer?tab=digital-library) is the in-browser reader: open a book here to read with bookmarks, zoom, and reading-progress tracking.', tip: 'Use Downloads to see everything. Use Digital Library when you actually want to read.' },
-      { title: 'Reading and downloading', description: 'In the Digital Library, click a book cover to open the reader. To save the PDF locally, use the Download button — the file is yours forever, even if the creator removes the title later.', tip: 'Always download a backup copy of anything important. Cloud copies can vanish.' },
-    ]
   },
   'faq': {
     title: 'Frequently Asked Questions',

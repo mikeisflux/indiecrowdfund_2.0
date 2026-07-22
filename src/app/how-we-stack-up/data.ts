@@ -110,23 +110,6 @@ export const GROUPS: FeatureGroup[] = [
     ],
   },
   {
-    title: "Ongoing store",
-    rows: [
-      // BMB "yes": its ToS (§9.C) describes a Creator Storefront that sells
-      // "physical or digital products … outside of (or in addition to) a
-      // crowdfunding Project."
-      { label: "Digital storefront (sell after the campaign)", ic: "yes", ks: "partial", ig: "yes", fmc: "yes", bmb: "yes" },
-      { label: "Music streaming store", ic: "yes", ks: "no", ig: "no", fmc: "no", bmb: "no" },
-      { label: "Movie / video streaming store", ic: "yes", ks: "no", ig: "no", fmc: "no", bmb: "no" },
-      // FMC "partial": each creator's campaign can keep selling its own physical
-      // items after the campaign via Direct Purchase, but there's no dedicated
-      // global physical-media store. BMB "yes": a top-level "Shop" storefront
-      // plus a site-wide cart.
-      { label: "Physical-media store", ic: "yes", ks: "no", ig: "no", fmc: "partial", bmb: "yes" },
-      { label: "Discount & redeem codes", ic: "yes", ks: "partial", ig: "partial", fmc: "partial", bmb: "no" },
-    ],
-  },
-  {
     title: "Growth & community",
     rows: [
       { label: "AI-powered marketing campaigns", ic: "yes", ks: "no", ig: "no", fmc: "no", bmb: "no" },

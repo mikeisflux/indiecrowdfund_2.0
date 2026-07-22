@@ -71,7 +71,7 @@ const BACKER_NAV_TIPS: Record<string, { tip: string; href: string }> = {
   "following": { tip: "Creators you follow — you'll hear about their new launches first.", href: "/backer-handbook?tab=discover" },
   "addresses": { tip: "Saved shipping addresses used for surveys and order confirmations.", href: "/backer-handbook?tab=after" },
   "downloads": { tip: "Digital files delivered to you from campaigns you backed.", href: "/backer-handbook?tab=after" },
-  "digital-library": { tip: "Your purchased Digital Shop items, readable in one library.", href: "/backer-handbook?tab=marketplace" },
+  "digital-library": { tip: "Digital items you\u2019ve purchased, readable in one library.", href: "/backer-handbook?tab=after" },
 };
 import { cn, formatTimeRemaining } from "@/lib/utils";
 import {

@@ -496,13 +496,6 @@ export default function WhatIsDivinityCoinPage() {
               <Users className="h-5 w-5" />
               Discover Projects
             </Link>
-            <Link
-              href="/shop"
-              className="inline-flex items-center gap-2 rounded-lg border-2 border-white px-6 py-3 font-medium text-white hover:bg-white/10 transition-colors"
-            >
-              <ShoppingBag className="h-5 w-5" />
-              Browse Marketplace
-            </Link>
           </div>
         </div>
       </div>

@@ -13,7 +13,7 @@
 # rebuilds — then screenshots each page full-length and assembles one PDF.
 #
 # It captures in TWO passes:
-#   1. Public pages (logged out) — marketing, legal, shop, handbooks, etc.
+#   1. Public pages (logged out) — marketing, legal, handbooks, etc.
 #   2. Authenticated pages (logged in) — the whole /dashboard, /admin and
 #      /settings tree — but ONLY if you provide credentials (see below).
 # It also harvests real links off the index pages, so individual projects,
@@ -137,15 +137,9 @@ const PUBLIC_PATHS = [
   "/retailers/login", "/press",
   "/success-stories", "/faq", "/help", "/help/whitelist", "/contact",
   "/bug-report", "/creator-handbook", "/backer-handbook", "/indiekit-handbook",
-  "/shop-handbook/backers", "/shop-handbook/creators", "/content-guidelines",
-  "/trust-safety", "/terms", "/privacy", "/changelog", "/cart", "/projects/new",
+  "/content-guidelines",
+  "/trust-safety", "/terms", "/privacy", "/changelog", "/projects/new",
   "/survey/preview",
-  // Shop storefront
-  "/shop", "/shop/books", "/shop/books/featured", "/shop/books/staff-picks",
-  "/shop/comics", "/shop/comics/all", "/shop/comics/dollar-bin",
-  "/shop/comics/featured", "/shop/comics/staff-picks", "/shop/movies",
-  "/shop/music", "/shop/music/featured", "/shop/music/hot", "/shop/music/new",
-  "/shop/music/staff-picks", "/shop/physical-media",
   // Auth entry pages (rendered logged out)
   "/login", "/register", "/forgot-password",
 ];
@@ -155,9 +149,7 @@ const AUTH_PATHS = [
   "/dashboard", "/dashboard/activity", "/dashboard/backer", "/dashboard/following",
   "/dashboard/projects", "/dashboard/indiekit", "/dashboard/indiekit-v2",
   "/dashboard/messages", "/dashboard/notifications", "/dashboard/profile",
-  "/dashboard/settings", "/dashboard/shop", "/dashboard/shop/company",
-  "/dashboard/shop/books/new", "/dashboard/shop/movies/new",
-  "/dashboard/shop/music/new", "/dashboard/social", "/dashboard/updates",
+  "/dashboard/settings", "/dashboard/social", "/dashboard/updates",
   "/settings/payment", "/chat",
   // Admin (visible to SUPER_ADMIN)
   "/admin", "/admin/ai", "/admin/ai-marketing", "/admin/analytics",
@@ -169,7 +161,7 @@ const AUTH_PATHS = [
   "/admin/notifications", "/admin/page-builder", "/admin/payouts",
   "/admin/prelaunch", "/admin/press", "/admin/projects", "/admin/promo-popup",
   "/admin/reconcile", "/admin/retailers", "/admin/security", "/admin/seo",
-  "/admin/settings", "/admin/shop", "/admin/themes", "/admin/transactions",
+  "/admin/settings", "/admin/themes", "/admin/transactions",
   "/admin/users",
 ];
 
@@ -181,10 +173,6 @@ const DISCOVER = [
   { from: "/discover",         re: /^\/projects\/[^/]+\/[^/]+$|^\/[^/]+\/[^/]+$/ },
   { from: "/marketplace/books",re: /^\/marketplace\/books\/[^/]+$/ },
   { from: "/press",            re: /^\/press\/[^/]+$/ },
-  { from: "/shop/books",       re: /^\/shop\/books\/[^/]+$/ },
-  { from: "/shop/comics/all",  re: /^\/shop\/comics\/[^/]+$/ },
-  { from: "/shop/music",       re: /^\/shop\/music\/[^/]+$/ },
-  { from: "/shop/movies",      re: /^\/shop\/movies\/[^/]+$/ },
 ];
 
 const normPath = (p) => (p.replace(/\/+$/, "") || "/");

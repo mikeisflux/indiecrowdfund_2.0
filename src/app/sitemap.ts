@@ -109,18 +109,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.6,
     },
     {
-      url: `${SITE_URL}/shop`,
-      lastModified: new Date(),
-      changeFrequency: "daily",
-      priority: 0.8,
-    },
-    {
-      url: `${SITE_URL}/shop/books`,
-      lastModified: new Date(),
-      changeFrequency: "daily",
-      priority: 0.7,
-    },
-    {
       url: `${SITE_URL}/retailers`,
       lastModified: new Date(),
       changeFrequency: "monthly",
@@ -240,31 +228,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     console.error("Sitemap: Error fetching prelaunch projects:", error);
   }
 
-  // Marketplace book pages
-  let bookPages: MetadataRoute.Sitemap = [];
-  try {
-    const books = await db.marketplaceBook.findMany({
-      where: {
-        status: "APPROVED",
-        deletedAt: null,
-      },
-      select: {
-        slug: true,
-        updatedAt: true,
-      },
-    });
-
-    // The public /marketplace pages were removed — books live under /shop now.
-    bookPages = books.map((book: { slug: string; updatedAt: Date }) => ({
-      url: `${SITE_URL}/shop/books/${book.slug}`,
-      lastModified: book.updatedAt,
-      changeFrequency: "weekly" as const,
-      priority: 0.6,
-    }));
-  } catch (error) {
-    console.error("Sitemap: Error fetching marketplace books:", error);
-  }
-
   // Creator profile pages (users with a vanity URL).
   // Prisma 7 rejects `{ field: { not: null } }` on nullable string fields at
   // runtime — use `NOT: { field: null }` wrapper syntax instead.
@@ -294,5 +257,5 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     console.error("Sitemap: Error fetching creator profiles:", error);
   }
 
-  return [...staticPages, ...projectPages, ...prelaunchPages, ...bookPages, ...creatorPages];
+  return [...staticPages, ...projectPages, ...prelaunchPages, ...creatorPages];
 }
