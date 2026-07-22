@@ -97,8 +97,10 @@ export async function GET(
         billingCountryEncrypted: string | null;
       } | null;
       whopBankAccount: {
-        accountHolderFirstNameEncrypted: string | null;
-        accountHolderLastNameEncrypted: string | null;
+        // Whop stores the holder as a single field, like PayPal — NOT
+        // first/last like DivinityCoin (selecting first/last here made
+        // Prisma reject the whole query and 500 every unsigned check).
+        accountHolderEncrypted: string | null;
         billingLine1Encrypted: string | null;
         billingLine2Encrypted: string | null;
         billingCityEncrypted: string | null;
@@ -135,8 +137,7 @@ export async function GET(
         },
         whopBankAccount: {
           select: {
-            accountHolderFirstNameEncrypted: true,
-            accountHolderLastNameEncrypted: true,
+            accountHolderEncrypted: true,
             billingLine1Encrypted: true,
             billingLine2Encrypted: true,
             billingCityEncrypted: true,
@@ -167,7 +168,7 @@ export async function GET(
     }
 
     // Resolve holder name + billing address from the processor-matching bank
-    // account. Shapes differ: DC/Whop split first/last, PayPal is one field.
+    // account. Shapes differ: DC splits first/last, PayPal/Whop are one field.
     let bankName = "";
     let bank:
       | {
@@ -183,11 +184,11 @@ export async function GET(
     if (project.paymentProcessor === "PAYPAL") {
       bank = user?.paypalBankAccount;
       bankName = tryDecrypt(user?.paypalBankAccount?.accountHolderEncrypted);
+    } else if (project.paymentProcessor === "WHOP") {
+      bank = user?.whopBankAccount;
+      bankName = tryDecrypt(user?.whopBankAccount?.accountHolderEncrypted);
     } else {
-      const acct =
-        project.paymentProcessor === "WHOP"
-          ? user?.whopBankAccount
-          : user?.divinityCoinBankAccount;
+      const acct = user?.divinityCoinBankAccount;
       bank = acct;
       bankName = [
         tryDecrypt(acct?.accountHolderFirstNameEncrypted),
