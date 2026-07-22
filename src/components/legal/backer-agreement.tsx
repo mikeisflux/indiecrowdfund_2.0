@@ -16,7 +16,7 @@ export function BackerAgreementContent() {
         </div>
 
         <p className="mb-6">
-          Contributions go to Divinity Comics DBA IndieCrowdfund, a 501(c)(3) nonprofit, in
+          Contributions go to IndieCrowdfund (a DBA of Divinity Comics Inc.), a 501(c)(3) nonprofit, in
           support of its Grant Program. Funds are awarded as grants to support projects aligned
           with our mission of promoting western comics and art. You are backing the creation of
           the project, not purchasing a product; any rewards are offered by the creator, not by

@@ -2,7 +2,7 @@
 // before launching a campaign (and before funds are disbursed for campaigns
 // that ended without one on file). Bump GRANT_AGREEMENT_VERSION whenever the
 // text changes materially — acceptances record the version they signed.
-export const GRANT_AGREEMENT_VERSION = "2026-07-22.1";
+export const GRANT_AGREEMENT_VERSION = "2026-07-22.2";
 
 export function GrantAgreementContent() {
   return (
@@ -15,7 +15,7 @@ export function GrantAgreementContent() {
 
         <p className="mb-6">
           This Grant Agreement (the &ldquo;Agreement&rdquo;) is between the project creator
-          (&ldquo;you,&rdquo; the &ldquo;Grantee&rdquo;) and Divinity Comics DBA IndieCrowdfund, a
+          (&ldquo;you,&rdquo; the &ldquo;Grantee&rdquo;) and IndieCrowdfund (a DBA of Divinity Comics Inc.), a
           501(c)(3) nonprofit organization (the &ldquo;Organization&rdquo;), in connection with the
           Divinity Comics Grant Program (the &ldquo;Grant Program&rdquo;), whose purpose is to
           promote western comics and art.
@@ -86,7 +86,7 @@ export function GrantAgreementContent() {
 
         <p className="mb-2 font-medium">
           By accepting this Agreement you acknowledge that funds you receive are a grant from
-          Divinity Comics DBA IndieCrowdfund under the Grant Program, that you are solely
+          IndieCrowdfund (a DBA of Divinity Comics Inc.) under the Grant Program, that you are solely
           responsible for any rewards and their fulfillment, and that you will use the funds for
           the project described.
         </p>

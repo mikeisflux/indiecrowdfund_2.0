@@ -1,14 +1,14 @@
 # Divinity Comics Grant Program — Program Guidelines (Internal)
 
 > **Status: DRAFT for attorney review.** This is the internal policy document for the
-> grantmaking program operated by Divinity Comics DBA IndieCrowdfund, a 501(c)(3)
+> grantmaking program of IndieCrowdfund (a DBA of Divinity Comics Inc.), a 501(c)(3)
 > nonprofit. It is the primary reference for how the program operates and should be
 > reviewed and finalized with counsel before being adopted by the board.
 
 ## 1. Purpose
 
 The Divinity Comics Grant Program (the "Program") is a formal grantmaking program of
-Divinity Comics DBA IndieCrowdfund (the "Organization"). Its purpose is to further the
+IndieCrowdfund (a DBA of Divinity Comics Inc.) (the "Organization"). Its purpose is to further the
 Organization's charitable mission of **promoting western comics and art** by awarding
 grants that fund the creation and promotion of comics and related artistic projects by
 independent creators.

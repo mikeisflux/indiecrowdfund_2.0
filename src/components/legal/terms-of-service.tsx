@@ -12,7 +12,7 @@ export function TermsOfServiceContent() {
         </p>
 
         <p className="mb-6">
-          Welcome to IndieCrowdfund.com, a crowdfunding and project-launch platform operated by IndieCrowdfund, Inc. ("IndieCrowdfund," "we," "our," or "us"). These Terms of Service ("Terms") govern your access to and use of IndieCrowdfund.com, our services, applications, and related tools (collectively, the "Services").
+          Welcome to IndieCrowdfund.com, a crowdfunding and project-launch platform operated by IndieCrowdfund, a DBA of Divinity Comics Inc. ("IndieCrowdfund," "we," "our," or "us"). These Terms of Service ("Terms") govern your access to and use of IndieCrowdfund.com, our services, applications, and related tools (collectively, the "Services").
         </p>
 
         <p className="mb-8 font-medium">
@@ -21,7 +21,7 @@ export function TermsOfServiceContent() {
 
         <h3 className="text-xl font-semibold mt-8 mb-4">1. What IndieCrowdfund Is</h3>
         <p className="mb-4">
-          IndieCrowdfund is operated by Divinity Comics DBA IndieCrowdfund, a 501(c)(3) nonprofit
+          IndieCrowdfund is a DBA of Divinity Comics Inc., a 501(c)(3) nonprofit
           organization. Campaign funding on the platform is operated as the{" "}
           <strong>Divinity Comics Grant Program</strong> — a formal grantmaking program whose
           purpose is to promote western comics and art. Contributions made to campaigns are
@@ -76,7 +76,7 @@ export function TermsOfServiceContent() {
         <h3 className="text-xl font-semibold mt-8 mb-4">5. Backing Projects</h3>
         <p className="mb-4">When backers support a project:</p>
         <ul className="list-disc pl-6 mb-4 space-y-2">
-          <li>Their contribution goes to Divinity Comics DBA IndieCrowdfund in support of the Grant Program; funds are awarded as grants to support projects aligned with our mission</li>
+          <li>Their contribution goes to IndieCrowdfund (a DBA of Divinity Comics Inc.) in support of the Grant Program; funds are awarded as grants to support projects aligned with our mission</li>
           <li>They are backing the creation of the project, not purchasing a product — rewards are offered by creators and are not guaranteed</li>
           <li>They understand that delays, changes, or cancellations are possible</li>
           <li>They may be entitled to refunds only at the creator's discretion unless required by law</li>
@@ -111,7 +111,7 @@ export function TermsOfServiceContent() {
 
         <h3 className="text-xl font-semibold mt-8 mb-4">6. Program Costs, Payments, and Campaign Types</h3>
         <p className="mb-4">
-          Divinity Comics DBA IndieCrowdfund retains a portion of contributions to cover the
+          IndieCrowdfund (a DBA of Divinity Comics Inc.) retains a portion of contributions to cover the
           reasonable administrative and facilitation costs of operating the Grant Program, along
           with payment-processing costs charged by our payment processors. These amounts are
           disclosed during project setup and may vary by region.

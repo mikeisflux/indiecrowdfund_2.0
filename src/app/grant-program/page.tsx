@@ -23,7 +23,7 @@ const STEPS = [
   {
     icon: Wallet,
     title: "You contribute",
-    text: "Backers contribute to a project through our payment processors. Contributions go to Divinity Comics DBA IndieCrowdfund in support of the Grant Program.",
+    text: "Backers contribute to a project through our payment processors. Contributions go to IndieCrowdfund (a DBA of Divinity Comics Inc.) in support of the Grant Program.",
   },
   {
     icon: Landmark,
@@ -61,7 +61,7 @@ export default function GrantProgramPage() {
             Support Comic Projects <span className="gradient-text-brand">Through Our Grants</span>
           </h1>
           <p className="mt-4 text-lg text-muted-foreground max-w-2xl mx-auto">
-            IndieCrowdfund is operated by Divinity Comics DBA IndieCrowdfund, a 501(c)(3) nonprofit.
+            IndieCrowdfund is a DBA of Divinity Comics Inc., a 501(c)(3) nonprofit.
             When you back a project here, you&apos;re contributing to our Grant Program — a
             grantmaking program whose mission is to promote western comics and art.
           </p>
@@ -108,7 +108,7 @@ export default function GrantProgramPage() {
                 </li>
                 <li>Rewards are offered by creators and are not guaranteed.</li>
                 <li>
-                  Funds are awarded as grants by Divinity Comics DBA IndieCrowdfund to support
+                  Funds are awarded as grants by IndieCrowdfund (a DBA of Divinity Comics Inc.) to support
                   projects aligned with our mission.
                 </li>
               </ul>

@@ -198,7 +198,7 @@ export async function sendPledgeConfirmationEmail(
         </div>
 
         <div style="text-align: center; color: #999; font-size: 12px; margin-top: 30px;">
-          <p>Your contribution goes to Divinity Comics DBA IndieCrowdfund in support of its Grant Program. You are backing the creation of this project, not purchasing a product; rewards are offered by the creator and are not guaranteed.</p>
+          <p>Your contribution goes to IndieCrowdfund (a DBA of Divinity Comics Inc.) in support of its Grant Program. You are backing the creation of this project, not purchasing a product; rewards are offered by the creator and are not guaranteed.</p>
           <p>You received this email because you backed a project on ${APP_NAME}.</p>
           <p>&copy; ${new Date().getFullYear()} ${APP_NAME}. All rights reserved.</p>
         </div>

@@ -784,7 +784,7 @@ export default function ProjectPage() {
               </div>
               <p className="text-sm">
                 <strong>Support this project through our Grant Program.</strong> Funds are awarded as
-                grants by Divinity Comics DBA IndieCrowdfund to support projects aligned with our
+                grants by IndieCrowdfund (a DBA of Divinity Comics Inc.) to support projects aligned with our
                 mission.
               </p>
             </div>
