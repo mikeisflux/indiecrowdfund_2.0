@@ -1,5 +1,5 @@
 -- Migration: Add Whop payment processor support
--- Run with: PGPASSWORD='AH2hqkufqtrp9BmdRkAsdU83N9fW4Q6w' psql -h localhost -U indieuser -d indiecrowdfund -f prisma/migrations/add_whop_payment_processor.sql
+-- Run with (auth via ~/.pgpass — never put the password here): psql -h localhost -U indieuser -d indiecrowdfund -f prisma/migrations/add_whop_payment_processor.sql
 
 -- Add Whop fields to PlatformSettings
 ALTER TABLE "PlatformSettings"

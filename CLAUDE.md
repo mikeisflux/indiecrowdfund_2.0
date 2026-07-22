@@ -88,15 +88,17 @@
 - **DO NOT** create standalone scripts that use PrismaClient directly — they will fail without DATABASE_URL
 - All database operations must go through the Next.js API routes (which have access to the database at runtime)
 - For admin data fixes, build authenticated API endpoints at `src/app/api/admin/...` with UI buttons to trigger them
-- The database credentials in this file are for reference when the **user** runs commands on the production server — not for Claude to use
-
-### Database Credentials (for user reference only)
-- **ALWAYS** use the full connection string with credentials in every command:
+### Production Database Commands (for user reference only)
+- **NEVER write database passwords or any other secret into this repo** — no files, no code comments, no migration headers, no scripts, no commit messages, and no command examples in this file. This repo is PUBLIC on GitHub; anything committed here is compromised the moment it's pushed.
+- Commands for the user to run on the production server must use `~/.pgpass` (no password on the command line):
   ```
-  PGPASSWORD='AH2hqkufqtrp9BmdRkAsdU83N9fW4Q6w' psql -h localhost -U indieuser -d indiecrowdfund -c "..."
+  psql -h localhost -U indieuser -d indiecrowdfund -c "..."
   ```
-- Never use placeholder `DATABASE_URL` or `your_database_url_here` — always include the real credentials
-- When the user needs to run database queries or fixes, **ALWAYS** provide ready-to-run one-shot commands
+- One-time `.pgpass` setup on the server (pulls the password from the app's `.env`, never types or stores it in the repo):
+  ```
+  echo "localhost:5432:indiecrowdfund:indieuser:$(grep -m1 '^DATABASE_URL' .env | sed -E 's|.*://[^:]+:([^@]+)@.*|\1|')" >> ~/.pgpass && chmod 600 ~/.pgpass
+  ```
+- When the user needs to run database queries or fixes, **ALWAYS** provide ready-to-run one-shot commands (without embedded credentials)
 - Never give raw SQL without wrapping it in a runnable shell command
 - Never give multi-step instructions when a single command will do
 

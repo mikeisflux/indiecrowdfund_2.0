@@ -1,6 +1,6 @@
 -- Grant Program: creator's signed acceptance of the grant agreement per project.
--- Run on the production server:
---   PGPASSWORD='AH2hqkufqtrp9BmdRkAsdU83N9fW4Q6w' psql -h localhost -U indieuser -d indiecrowdfund -f prisma/migrations/add_grant_agreement.sql
+-- Run on the production server (auth via ~/.pgpass — never put the password here):
+--   psql -h localhost -U indieuser -d indiecrowdfund -f prisma/migrations/add_grant_agreement.sql
 CREATE TABLE IF NOT EXISTS "GrantAgreement" (
     "id" TEXT NOT NULL,
     "userId" TEXT NOT NULL,

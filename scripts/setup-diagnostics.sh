@@ -46,11 +46,14 @@ out=/var/log/ic-snapshots/$(date -u +%Y-%m-%d).log
   echo "--- sockets summary ---"
   ss -s 2>/dev/null
   echo "--- pg connection states ---"
-  PGPASSWORD='AH2hqkufqtrp9BmdRkAsdU83N9fW4Q6w' psql -h localhost -U indieuser -d indiecrowdfund -At -c \
+  # DB auth: password pulled from the app .env at runtime — never hardcoded
+  # in this script (public repo).
+  PGPW="$(grep -m1 '^DATABASE_URL' /root/indiecrowdfund_2.0/.env 2>/dev/null | sed -E 's|.*://[^:]+:([^@]+)@.*|\1|')"
+  PGPASSWORD="$PGPW" psql -h localhost -U indieuser -d indiecrowdfund -At -c \
     "SELECT state, COUNT(*) FROM pg_stat_activity GROUP BY state ORDER BY 2 DESC" 2>/dev/null \
     || echo "(pg unavailable)"
   echo "--- pg slow / waiting queries ---"
-  PGPASSWORD='AH2hqkufqtrp9BmdRkAsdU83N9fW4Q6w' psql -h localhost -U indieuser -d indiecrowdfund -At -c \
+  PGPASSWORD="$PGPW" psql -h localhost -U indieuser -d indiecrowdfund -At -c \
     "SELECT pid, state, wait_event_type, wait_event, query_start, LEFT(query,120) FROM pg_stat_activity WHERE state != 'idle' AND query_start < NOW() - INTERVAL '5 seconds' ORDER BY query_start" 2>/dev/null \
     || true
   # Per-worker fd counts: catches fd leaks before they hit ulimit

@@ -23,7 +23,12 @@ APPLY=0
 [ "${1:-}" = "--apply" ] && APPLY=1
 
 PGCONN=(-h localhost -U indieuser -d indiecrowdfund)
-export PGPASSWORD='AH2hqkufqtrp9BmdRkAsdU83N9fW4Q6w'
+# Auth: ~/.pgpass, a caller-provided PGPASSWORD, or the app .env next to this
+# repo — the password itself must NEVER be committed here (public repo).
+if [ -z "${PGPASSWORD:-}" ] && [ -f "$(dirname "$0")/../.env" ]; then
+  PGPASSWORD="$(grep -m1 '^DATABASE_URL' "$(dirname "$0")/../.env" | sed -E 's|.*://[^:]+:([^@]+)@.*|\1|')"
+  export PGPASSWORD
+fi
 psql_q() { psql "${PGCONN[@]}" -At -c "$1"; }
 
 # table | where-clause | human label

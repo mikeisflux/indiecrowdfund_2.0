@@ -44,8 +44,9 @@ export async function GET(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  let projectId = "";
   try {
-    const { id: projectId } = await params;
+    ({ id: projectId } = await params);
     const session = await auth();
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -80,7 +81,43 @@ export async function GET(
     // Prefill from campaign-creation data. Billing address comes from the
     // bank account matching the project's payment processor (all encrypted at
     // rest); name from the creator's account; entity type from the project.
-    const user = await db.user.findFirst({
+    // Best-effort: a failure here (bad bank rows, decrypt issues) must not
+    // 500 the whole status check — the caller only needs signed/currentVersion,
+    // prefill just saves typing.
+    let user: {
+      name: string | null;
+      divinityCoinBankAccount: {
+        accountHolderFirstNameEncrypted: string | null;
+        accountHolderLastNameEncrypted: string | null;
+        billingLine1Encrypted: string | null;
+        billingLine2Encrypted: string | null;
+        billingCityEncrypted: string | null;
+        billingStateEncrypted: string | null;
+        billingZipEncrypted: string | null;
+        billingCountryEncrypted: string | null;
+      } | null;
+      whopBankAccount: {
+        accountHolderFirstNameEncrypted: string | null;
+        accountHolderLastNameEncrypted: string | null;
+        billingLine1Encrypted: string | null;
+        billingLine2Encrypted: string | null;
+        billingCityEncrypted: string | null;
+        billingStateEncrypted: string | null;
+        billingZipEncrypted: string | null;
+        billingCountryEncrypted: string | null;
+      } | null;
+      paypalBankAccount: {
+        accountHolderEncrypted: string | null;
+        billingLine1Encrypted: string | null;
+        billingLine2Encrypted: string | null;
+        billingCityEncrypted: string | null;
+        billingStateEncrypted: string | null;
+        billingZipEncrypted: string | null;
+        billingCountryEncrypted: string | null;
+      } | null;
+    } | null = null;
+    try {
+      user = await db.user.findFirst({
       where: { id: session.user.id, deletedAt: null },
       select: {
         name: true,
@@ -121,7 +158,13 @@ export async function GET(
           },
         },
       },
-    });
+      });
+    } catch (prefillError) {
+      log.warn(
+        { err: formatError(prefillError), projectId, userId: session.user.id },
+        "Grant agreement prefill query failed; returning empty prefill"
+      );
+    }
 
     // Resolve holder name + billing address from the processor-matching bank
     // account. Shapes differ: DC/Whop split first/last, PayPal is one field.
@@ -170,7 +213,7 @@ export async function GET(
       },
     });
   } catch (error) {
-    log.error({ err: formatError(error) }, "Failed to read grant agreement status");
+    log.error({ err: formatError(error), projectId }, "Failed to read grant agreement status");
     return NextResponse.json({ error: "Failed to read agreement status" }, { status: 500 });
   }
 }
