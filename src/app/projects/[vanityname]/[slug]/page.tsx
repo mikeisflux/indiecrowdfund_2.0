@@ -21,6 +21,7 @@ import {
   ShieldCheck,
   Info,
   Loader2,
+  MessageSquare,
 } from "lucide-react";
 import {
   ProjectData,
@@ -456,11 +457,16 @@ export default function ProjectPage() {
         url = `https://bsky.app/intent/compose?text=${encodeURIComponent(shareText + " " + shareUrl)}`;
         break;
       case "email":
-        url = `mailto:?subject=${encodeURIComponent(project.title)}&body=${encodeURIComponent(shareText + "\n\n" + shareUrl)}`;
-        break;
+        // mailto: must navigate in the current tab — window.open() spawns a
+        // blank popup and hands the URL to whatever extension claims the
+        // protocol, which visibly fails for visitors with no mail handler
+        // (real backer report). location.href triggers the OS handler
+        // directly and is a silent no-op at worst.
+        window.location.href = `mailto:?subject=${encodeURIComponent(project.title)}&body=${encodeURIComponent(shareText + "\n\n" + shareUrl)}`;
+        return;
       case "copy":
         navigator.clipboard.writeText(shareUrl);
-        // Could add a toast notification here
+        toast.success("Link copied to clipboard");
         return;
     }
 
@@ -753,6 +759,24 @@ export default function ProjectPage() {
                   </Button>
                 </div>
               </div>
+
+              {/* In-app contact path: real backer report of someone clicking
+                  the share-by-email envelope trying to reach the creator,
+                  then dead-ending in their mail handler. Questions go through
+                  Messages (delivered to the creator's inbox + email), no mail
+                  client required. */}
+              {!isCreator && (
+                <Link href={`/dashboard/messages?projectId=${project.id}&recipientId=${project.creatorId}`} className="block">
+                  <Button
+                    variant="outline"
+                    className="w-full glass-card border-border/50 hover:border-primary/50"
+                    title="Ask the creator a question — no email client needed"
+                  >
+                    <MessageSquare className="mr-2 h-4 w-4" />
+                    Ask the Creator a Question
+                  </Button>
+                </Link>
+              )}
 
               {/* Campaign type note */}
               <p className="text-xs text-muted-foreground">

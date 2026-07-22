@@ -246,8 +246,10 @@ export default function PrelaunchPage() {
         url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(shareUrl)}`;
         break;
       case "email":
-        url = `mailto:?subject=${encodeURIComponent(project?.title || "")}&body=${encodeURIComponent(text + "\n\n" + shareUrl)}`;
-        break;
+        // mailto: must navigate in the current tab — window.open() spawns a
+        // blank popup that fails for visitors with no mail handler.
+        window.location.href = `mailto:?subject=${encodeURIComponent(project?.title || "")}&body=${encodeURIComponent(text + "\n\n" + shareUrl)}`;
+        return;
       case "copy":
         navigator.clipboard.writeText(shareUrl);
         toast.success("Link copied to clipboard!");
