@@ -350,6 +350,15 @@ export default function PayoutsPage() {
             <Download className="w-4 h-4 sm:mr-2" />
             <span className="hidden sm:inline">Export</span>
           </Button>
+          <Button
+            variant="outline"
+            onClick={() => { window.location.href = "/api/admin/grant-records"; }}
+            className="flex-1 sm:flex-none"
+            title="Grant Program record-keeping export: contributions, costs retained, grant amounts, agreement status"
+          >
+            <Download className="w-4 h-4 sm:mr-2" />
+            <span className="hidden sm:inline">Grant Records</span>
+          </Button>
         </div>
       </div>
 

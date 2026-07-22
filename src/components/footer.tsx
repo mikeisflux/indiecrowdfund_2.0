@@ -50,6 +50,7 @@ export function Footer() {
             <h4 className="mb-4 font-semibold">Support</h4>
             <ul className="space-y-2 text-sm text-muted-foreground">
               <li><Link href="/help" className="hover:text-foreground">Help Center</Link></li>
+              <li><Link href="/grant-program" className="hover:text-foreground">Grant Program</Link></li>
               <li><Link href="/faq" className="hover:text-foreground">FAQ</Link></li>
               <li><Link href="/contact" className="hover:text-foreground">Contact Us</Link></li>
               <li><Link href="/about-us" className="hover:text-foreground">About Us</Link></li>

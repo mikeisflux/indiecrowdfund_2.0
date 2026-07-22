@@ -83,6 +83,7 @@ model Project {
   analytics             AnalyticsEvent[]
   comments              Comment[]
   payouts               Payout[]
+  grantAgreement        GrantAgreement?
   behaviors             UserBehavior[]
   emailLogs             EmailLog[]
   projectSimilarities   ProjectSimilarity[] @relation("ProjectSimilarities")

@@ -11,6 +11,7 @@ import {
   PrivacyPolicyContent,
   RefundPolicyContent,
   CreatorAgreementContent,
+  GrantAgreementContent,
   BackerAgreementContent,
   ShippingPolicyContent,
   ChargebacksPolicyContent,
@@ -30,7 +31,7 @@ import {
 // instead of dumping users on the Terms tab and making them hunt for
 // the right sidebar entry.
 const VALID_TAB_VALUES = new Set([
-  "terms", "privacy", "refunds", "creator", "backer", "shipping",
+  "terms", "privacy", "refunds", "creator", "grant", "backer", "shipping",
   "chargebacks", "fraud", "cookies", "guidelines", "dmca", "ai",
   "gdpr", "data-deletion", "nsfw", "pci",
 ]);
@@ -149,6 +150,10 @@ export default function TermsPage() {
                     <TabsTrigger value="creator" className="flex items-center gap-3 w-full justify-start px-4 py-3 rounded-md data-[state=active]:bg-background data-[state=active]:shadow-sm transition-all">
                       <UserCheck className="h-4 w-4" />
                       <span>Creator Agreement</span>
+                    </TabsTrigger>
+                    <TabsTrigger value="grant" className="flex items-center gap-3 w-full justify-start px-4 py-3 rounded-md data-[state=active]:bg-background data-[state=active]:shadow-sm transition-all">
+                      <FileText className="h-4 w-4" />
+                      <span>Grant Agreement</span>
                     </TabsTrigger>
                     <TabsTrigger value="backer" className="flex items-center gap-3 w-full justify-start px-4 py-3 rounded-md data-[state=active]:bg-background data-[state=active]:shadow-sm transition-all">
                       <AlertTriangle className="h-4 w-4" />
@@ -313,6 +318,10 @@ export default function TermsPage() {
 
               <TabsContent value="creator">
                 <CreatorAgreementContent />
+              </TabsContent>
+
+              <TabsContent value="grant">
+                <GrantAgreementContent />
               </TabsContent>
 
               <TabsContent value="backer">

@@ -35,6 +35,7 @@ const categories = [
 
 const faqData: Record<string, { question: string; answer: string }[]> = {
   backers: [
+    { question: "What is the Grant Program?", answer: "IndieCrowdfund is operated by Divinity Comics DBA IndieCrowdfund, a 501(c)(3) nonprofit. When you back a campaign, your contribution goes to our Grant Program, whose mission is to promote western comics and art. A small percentage covers the program's administrative and facilitation costs, and the remainder is awarded to the creator as a grant to make the project. You are backing the creation of the project, not purchasing a product — rewards are offered by creators and are not guaranteed. Digital Shop and marketplace purchases are ordinary purchases and are not part of the Grant Program. Learn more at /grant-program." },
     { question: "How do I back a project?", answer: "Select a reward tier and complete the checkout process with your payment method. You can browse projects on our Discover page and click on any project to view its details and available rewards." },
     { question: "Can I cancel my pledge?", answer: "Yes, you can cancel your pledge anytime before the campaign ends. Go to your dashboard, find the backed project, and click 'Cancel Pledge'. No charges are made until a campaign successfully ends." },
     { question: "How do I track my backed projects?", answer: "Visit your backer dashboard to see all projects you've backed and their current status. You'll receive email updates from creators and can also view project updates directly on the project page." },

@@ -36,3 +36,24 @@ enum PayoutStatus {
   COMPLETED
   FAILED
 }
+
+// ============================================
+// Grant Program
+// ============================================
+// A creator's signed acceptance of the Divinity Comics Grant Program
+// agreement for a specific project. Funds are disbursed to creators as
+// grants; a payout cannot be created for a project without a signed
+// agreement. `version` records which revision of the agreement text was
+// accepted (see GRANT_AGREEMENT_VERSION in the legal component).
+model GrantAgreement {
+  id         String   @id @default(cuid())
+  userId     String
+  projectId  String   @unique
+  version    String
+  acceptedAt DateTime @default(now())
+
+  user    User    @relation("GrantAgreements", fields: [userId], references: [id])
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}

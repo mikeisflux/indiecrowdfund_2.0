@@ -1,4 +1,4 @@
- 
+import Link from "next/link";
 
 export function BackerAgreementContent() {
   return (
@@ -14,6 +14,15 @@ export function BackerAgreementContent() {
             Backing a project on IndieCrowdfund is not a purchase — it is support for a creative process with inherent risks.
           </p>
         </div>
+
+        <p className="mb-6">
+          Contributions go to Divinity Comics DBA IndieCrowdfund, a 501(c)(3) nonprofit, in
+          support of its Grant Program. Funds are awarded as grants to support projects aligned
+          with our mission of promoting western comics and art. You are backing the creation of
+          the project, not purchasing a product; any rewards are offered by the creator, not by
+          the nonprofit. Learn more on our{" "}
+          <Link href="/grant-program" className="underline">Grant Program</Link> page.
+        </p>
 
         <p className="mb-6 font-medium text-lg">By backing a project, you acknowledge:</p>
 
@@ -62,9 +71,9 @@ export function BackerAgreementContent() {
             <strong>not</strong> grounds for a chargeback &mdash; those
             risks are what you accepted under sections A&ndash;E above. See
             our full{" "}
-            <a href="/terms?tab=chargebacks" className="underline">
+            <Link href="/terms?tab=chargebacks" className="underline">
               Chargeback Handling Policy
-            </a>{" "}
+            </Link>{" "}
             for the complete terms.
           </p>
         </div>

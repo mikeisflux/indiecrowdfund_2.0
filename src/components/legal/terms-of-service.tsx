@@ -21,10 +21,20 @@ export function TermsOfServiceContent() {
 
         <h3 className="text-xl font-semibold mt-8 mb-4">1. What IndieCrowdfund Is</h3>
         <p className="mb-4">
+          IndieCrowdfund is operated by Divinity Comics DBA IndieCrowdfund, a 501(c)(3) nonprofit
+          organization. Campaign funding on the platform is operated as the{" "}
+          <strong>Divinity Comics Grant Program</strong> — a formal grantmaking program whose
+          purpose is to promote western comics and art. Contributions made to campaigns are
+          contributions to the Grant Program; funds are awarded to creators as grants to support
+          the projects described in their campaigns. See our{" "}
+          <Link href="/grant-program" className="underline">Grant Program</Link> page and the{" "}
+          <Link href="/terms?tab=grant" className="underline">Grant Agreement</Link>.
+        </p>
+        <p className="mb-4">
           IndieCrowdfund is a platform where creators can publish projects, raise funding, offer rewards, and communicate with supporters ("Backers"). IndieCrowdfund facilitates these interactions but does not itself run or guarantee the success of any project.
         </p>
         <p className="mb-4">
-          We are not a store, a bank, or an investment service. We provide tools; creators are responsible for their own projects and for fulfilling commitments made to backers.
+          We are not a store, a bank, or an investment service. We provide tools; creators are responsible for their own projects and for fulfilling commitments made to backers, including any rewards they choose to offer.
         </p>
         <p className="mb-6">
           IndieCrowdfund supports the full spectrum of sequential art created by independent creators — from traditional Western comics and graphic novels to manga-style works, OEL (Original English Language) manga, manhwa, manhua, webcomics, and hybrid traditions blending Eastern and Western storytelling. We formally recognize anime-influenced and manga-style sequential art as a legitimate and established part of Western comics culture, and such campaigns are fully eligible to launch on the platform.
@@ -66,12 +76,13 @@ export function TermsOfServiceContent() {
         <h3 className="text-xl font-semibold mt-8 mb-4">5. Backing Projects</h3>
         <p className="mb-4">When backers support a project:</p>
         <ul className="list-disc pl-6 mb-4 space-y-2">
-          <li>They are funding a creative process—not purchasing a guaranteed product</li>
+          <li>Their contribution goes to Divinity Comics DBA IndieCrowdfund in support of the Grant Program; funds are awarded as grants to support projects aligned with our mission</li>
+          <li>They are backing the creation of the project, not purchasing a product — rewards are offered by creators and are not guaranteed</li>
           <li>They understand that delays, changes, or cancellations are possible</li>
           <li>They may be entitled to refunds only at the creator's discretion unless required by law</li>
           <li>They agree to read the full project description and associated risks</li>
         </ul>
-        <p className="mb-6">IndieCrowdfund is not responsible for disputes between creators and backers.</p>
+        <p className="mb-6">IndieCrowdfund is not responsible for disputes between creators and backers. Rewards, and their fulfillment, are solely the responsibility of the creator.</p>
 
         <h3 className="text-xl font-semibold mt-8 mb-4">5a. Chargebacks &mdash; Immediate Permanent Ban</h3>
         <div className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900 rounded-lg p-4 mb-6">
@@ -91,16 +102,19 @@ export function TermsOfServiceContent() {
             for a chargeback. The only carve-outs are actual unauthorized-use
             fraud (your card was used by someone else) and regulator /
             law-enforcement directives. See the full{" "}
-            <a href="/terms?tab=chargebacks" className="underline">
+            <Link href="/terms?tab=chargebacks" className="underline">
               Chargeback Handling Policy
-            </a>
+            </Link>
             .
           </p>
         </div>
 
-        <h3 className="text-xl font-semibold mt-8 mb-4">6. Fees, Payments, and Campaign Types</h3>
+        <h3 className="text-xl font-semibold mt-8 mb-4">6. Program Costs, Payments, and Campaign Types</h3>
         <p className="mb-4">
-          IndieCrowdfund charges platform and processing fees for funded projects. Fees are disclosed during project setup and may vary by region.
+          Divinity Comics DBA IndieCrowdfund retains a portion of contributions to cover the
+          reasonable administrative and facilitation costs of operating the Grant Program, along
+          with payment-processing costs charged by our payment processors. These amounts are
+          disclosed during project setup and may vary by region.
         </p>
         <p className="mb-4">
           Creators may choose between two campaign funding models:
@@ -109,12 +123,12 @@ export function TermsOfServiceContent() {
           <li><strong>All or Nothing:</strong> Funds are only collected if the campaign reaches its stated funding goal by the deadline. If the goal is not reached, no money changes hands and backers are not charged.</li>
           <li><strong>Keep It All:</strong> The creator keeps all pledges regardless of whether the funding goal is reached. Backers are charged immediately at the time of their pledge.</li>
         </ul>
-        <p className="mb-4">Creators authorize IndieCrowdfund and its payment partners to:</p>
+        <p className="mb-4">Creators authorize IndieCrowdfund and its payment processors to:</p>
         <ul className="list-disc pl-6 mb-4 space-y-2">
-          <li>Collect funds from backers</li>
-          <li>Deduct platform and processing fees</li>
+          <li>Collect contributions from backers on behalf of the Grant Program</li>
+          <li>Deduct program administration and payment-processing costs</li>
           <li>Hold a rolling reserve where applicable (see below)</li>
-          <li>Transfer net funds to the creator</li>
+          <li>Disburse the remaining funds to the creator as a grant, under the Grant Agreement</li>
         </ul>
 
         <p className="mb-6">

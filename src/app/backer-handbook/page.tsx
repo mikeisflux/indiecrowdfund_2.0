@@ -15,12 +15,14 @@ import {
   HelpCircle,
   LayoutDashboard,
   ShoppingBag,
+  HeartHandshake,
 } from 'lucide-react';
 import Link from 'next/link';
 import { Footer } from "@/components/footer";
 
 const tabs = [
   { id: 'discover', label: 'Finding Projects', icon: Search },
+  { id: 'grant-program', label: 'Grant Program', icon: HeartHandshake },
   { id: 'backing', label: 'Making a Pledge', icon: Heart },
   { id: 'divinitycoin', label: 'Divinity Payments', icon: Coins },
   { id: 'paypal', label: 'Paying with PayPal', icon: CreditCard },
@@ -53,6 +55,17 @@ interface TabContent {
 }
 
 const tabContent: Record<string, TabContent> = {
+  'grant-program': {
+    title: 'The Grant Program — What Your Pledge Really Does',
+    description: 'IndieCrowdfund is operated by Divinity Comics DBA IndieCrowdfund, a 501(c)(3) nonprofit. When you back a campaign, you\'re contributing to our Grant Program, which supports the creation and promotion of western comics and art.',
+    alert: { icon: Shield, title: 'You are backing, not buying', text: 'Your contribution goes to Divinity Comics DBA IndieCrowdfund in support of its Grant Program. Funds are awarded to creators as grants to make the projects described in their campaigns. You are backing the creation of the project, not purchasing a product — rewards are offered by creators and are not guaranteed.', color: 'emerald' },
+    steps: [
+      { title: 'You contribute', description: 'Your pledge is a contribution to the Grant Program, processed through our payment processors.', tip: 'The campaign page always shows whether you\'re charged immediately (Keep It All) or only if the goal is reached (All or Nothing).' },
+      { title: 'The program awards a grant', description: 'A small percentage covers the administrative and facilitation costs of running the program; the remainder is awarded to the creator as a grant under a signed grant agreement.', tip: 'Every campaign is reviewed before launch, and grants are awarded at the organization\'s discretion.' },
+      { title: 'The creator takes it from there', description: 'After the grant is made, the creator is responsible for the project — including producing and fulfilling any rewards they chose to offer. Rewards come from the creator, not from the nonprofit.', tip: 'Check a creator\'s update history and fulfillment track record before backing — engaged creators fulfill more reliably.' },
+      { title: 'The Digital Shop is different', description: 'Purchases from the Digital Shop and marketplace are ordinary purchases, not contributions to the Grant Program. Grant framing applies to crowdfunding campaigns only.', tip: 'See the Grant Program page (linked in the site footer) for the full picture.' },
+    ]
+  },
   'discover': {
     title: 'Finding the Perfect Project',
     description: 'How to discover campaigns and figure out which ones to back.',

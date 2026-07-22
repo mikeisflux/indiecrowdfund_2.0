@@ -76,6 +76,7 @@ const sections: SectionGroup[] = [
     label: 'Getting Started',
     tabs: [
       { id: 'welcome', label: 'What is IndieKit?', icon: Sparkles },
+      { id: 'grant-program', label: 'Grant Program', icon: CreditCard },
       { id: 'first-steps', label: 'First Steps', icon: Rocket },
       { id: 'phases', label: 'The Three Phases', icon: CheckCircle2 },
     ],
@@ -137,6 +138,22 @@ const sections: SectionGroup[] = [
 
 const tabContent: Record<string, TabContent> = {
   // ---- Getting Started ----
+  'grant-program': {
+    title: 'Payouts & the Grant Program',
+    description: 'IndieCrowdfund is operated by Divinity Comics DBA IndieCrowdfund, a 501(c)(3) nonprofit. Campaign funds are disbursed to you as a grant through the Divinity Comics Grant Program — this section explains what that means for getting paid.',
+    howTo: [
+      { step: 'Sign the Grant Agreement', detail: 'New campaigns sign at launch (the builder prompts you automatically). If your campaign was already running or has ended without one on file, a banner on your dashboard prompts you to review and sign — payouts cannot be created until it\'s signed.' },
+      { step: 'Understand the flow', detail: 'Backer contributions go to the nonprofit\'s Grant Program. A small percentage covers the program\'s administrative and facilitation costs; the remainder is disbursed to your bank account as a grant for the project described in your campaign.' },
+      { step: 'Keep your bank details current', detail: 'Grants are disbursed to the bank account on file (Dashboard → Settings → Payments). Make sure it\'s verified before your campaign ends so your disbursement isn\'t delayed.' },
+      { step: 'Use funds for the stated project', detail: 'The agreement commits grant funds to the project described in your campaign. Keep simple records of project spending — the organization may reasonably request them.' },
+    ],
+    tips: [
+      'You can read the agreement anytime at Terms → Grant Agreement, and the program overview at /grant-program.',
+      'Rewards you offer backers are your responsibility — including fulfillment and any tax consequences. The nonprofit is not a party to reward commitments.',
+      'Sign as soon as the banner appears — it\'s the one piece of paperwork standing between your ended campaign and your money.',
+    ],
+  },
+
   'welcome': {
     title: 'What is IndieKit?',
     description: 'IndieKit is the toolkit creators use after a campaign funds. Think of it like the back office for your project — surveys, payments, shipping, emails, refunds, reports — all in one place. You only see it after you have a project that has been approved by the IndieCrowdfund admin team.',

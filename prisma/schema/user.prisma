@@ -65,6 +65,7 @@ model User {
 
   // Relations
   createdProjects   Project[] @relation("ProjectCreator")
+  grantAgreements   GrantAgreement[] @relation("GrantAgreements")
   collaborations    ProjectCollaborator[]
   pledges           Pledge[]
   printOrdersSubmitted ProjectPrintOrder[] @relation("PrintOrderSubmitter")

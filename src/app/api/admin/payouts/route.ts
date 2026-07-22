@@ -196,6 +196,27 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Grant Program gate: funds are disbursed as grants, so a payout cannot
+    // be created until the creator has signed the grant agreement. This is
+    // the enforcement point for campaigns that were already running when the
+    // Grant Program shipped — they sign after their campaign ends, before
+    // any money moves.
+    const grantAgreement = await db.grantAgreement.findUnique({
+      where: { projectId },
+      select: { id: true, acceptedAt: true },
+    });
+    if (!grantAgreement) {
+      return NextResponse.json(
+        {
+          error: "Grant agreement not signed",
+          message:
+            "The creator has not signed the Grant Program agreement for this project. They'll see a signing prompt on their dashboard; the payout can be created once it's signed.",
+          code: "GRANT_AGREEMENT_REQUIRED",
+        },
+        { status: 400 }
+      );
+    }
+
     // Calculate amounts
     const grossAmount = project.pledges.reduce((sum: number, p: { amount: number }) => sum + Number(p.amount), 0);
     const pledgeCount = project.pledges.length;

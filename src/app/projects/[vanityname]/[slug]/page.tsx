@@ -783,7 +783,9 @@ export default function ProjectPage() {
                 <Handshake className="h-5 w-5 text-black" />
               </div>
               <p className="text-sm">
-                <strong>IndieCrowdfund helps independent creators raise the funds</strong> to bring their projects to life.
+                <strong>Support this project through our Grant Program.</strong> Funds are awarded as
+                grants by Divinity Comics DBA IndieCrowdfund to support projects aligned with our
+                mission.
               </p>
             </div>
             <div className="flex items-start gap-3 glass-card rounded-xl p-4">
@@ -791,7 +793,8 @@ export default function ProjectPage() {
                 <AlertTriangle className="h-5 w-5 text-black" />
               </div>
               <p className="text-sm">
-                <strong>Backing a project isn&apos;t a pre-order.</strong> Plans and timelines can change, and creators are expected to keep their backers posted on progress.
+                <strong>You are backing the creation of the project, not purchasing a product.</strong>{" "}
+                Rewards are offered by the creator and are not guaranteed.
               </p>
             </div>
             <div className="flex items-start gap-3 glass-card rounded-xl p-4">

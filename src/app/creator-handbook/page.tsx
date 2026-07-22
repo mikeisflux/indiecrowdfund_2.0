@@ -16,11 +16,13 @@ import {
   Rocket,
   Activity,
   Package,
+  Handshake,
 } from 'lucide-react';
 import Link from 'next/link';
 import { Footer } from "@/components/footer";
 
 const tabs = [
+  { id: 'grant-program', label: 'Grant Program', icon: Handshake },
   { id: 'verification', label: 'Verification', icon: ShieldCheck },
   { id: 'basics', label: 'Project Basics', icon: Lightbulb },
   { id: 'rewards', label: 'Rewards & Add-ons', icon: Gift },
@@ -42,6 +44,17 @@ interface FieldInfo {
 }
 
 const tabContent: Record<string, { title: string; description: string; fields: FieldInfo[] }> = {
+  'grant-program': {
+    title: 'The Divinity Comics Grant Program',
+    description: 'IndieCrowdfund is operated by Divinity Comics DBA IndieCrowdfund, a 501(c)(3) nonprofit. Campaign funding runs through our Grant Program: backers contribute to the program, and funds are awarded to you as a grant to make your project. Here is what that means for you as a creator.',
+    fields: [
+      { name: 'How the money flows', required: false, description: 'Backers contribute through our payment processors; contributions go to Divinity Comics DBA IndieCrowdfund in support of the Grant Program. A small percentage is retained to cover the administrative and facilitation costs of running the program, and the remainder is awarded to you as a grant.', tips: 'The percentages are disclosed during project setup — nothing changes about how you build or price your campaign.' },
+      { name: 'The Grant Agreement', required: true, description: 'Before you can launch a campaign, you sign the Grant Agreement. It confirms the funds you receive are a grant for the project described, that you will use them for that project, and that any rewards you offer are your sole responsibility — including fulfillment and any tax consequences.', tips: 'You can read it anytime under Terms → Grant Agreement. Campaigns that were already running before the program launched sign when their campaign ends, before payout.' },
+      { name: 'Selection & discretion', required: false, description: 'Every campaign is reviewed before launch, and grants are awarded at the organization\'s discretion. Approval of your campaign admits your project to the program; disbursement of funds is the grant award.', tips: 'Projects must align with the program mission — promoting western comics and art — and comply with the Terms of Service and Content Guidelines.' },
+      { name: 'Rewards are yours', required: false, description: 'Rewards, perks, and add-ons are offered by you, not by the nonprofit. You produce them, fulfill them, and ship them. Backers are told clearly that they are backing the creation of the project, not purchasing a product.', tips: 'Keep backers updated on progress — clear communication is the single best protection against disputes.' },
+      { name: 'Record keeping', required: false, description: 'Use grant funds for the stated project and keep reasonable records of how they were used. The organization may request them.', tips: 'A simple spreadsheet of project spending is enough for most campaigns.' },
+    ]
+  },
   'verification': {
     title: 'Creator Verification & Due Diligence',
     description: 'Before your campaign can go live, our admin team reviews your account. This protects backers and keeps the platform trustworthy. Plan for 2-5 business days from submission to approval.',

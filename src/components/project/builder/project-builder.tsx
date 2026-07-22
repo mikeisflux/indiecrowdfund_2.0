@@ -11,6 +11,7 @@ import { PeopleStep } from "./people-step";
 import { PaymentStep } from "./payment-step";
 import { PromotionStep } from "./promotion-step";
 import { VanityUrlSetupDialog } from "./vanity-url-setup-dialog";
+import { GrantAgreementDialog } from "@/components/grant/grant-agreement-dialog";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
@@ -57,6 +58,10 @@ export function ProjectBuilder() {
   const [isSubFormOpen, setIsSubFormOpen] = useState(false);
   const [showReReviewWarning, setShowReReviewWarning] = useState(false);
   const [justSaved, setJustSaved] = useState(false);
+
+  // Grant Program: launch is blocked until the creator signs the grant
+  // agreement; the launch handler opens this dialog on that error code.
+  const [showGrantAgreement, setShowGrantAgreement] = useState(false);
 
   // A creator must claim a custom URL before building a campaign — without one,
   // their project links (/projects/[vanityname]/[slug]) collapse to a 2-segment
@@ -588,6 +593,13 @@ export function ProjectBuilder() {
       const result = await response.json();
 
       if (!response.ok) {
+        // Grant Program: launch requires a signed grant agreement. Open the
+        // signing dialog instead of surfacing a dead-end error; on accept we
+        // re-run the launch automatically.
+        if (result.code === "GRANT_AGREEMENT_REQUIRED") {
+          setShowGrantAgreement(true);
+          return;
+        }
         throw new Error(result.error || "Failed to launch project");
       }
 
@@ -660,6 +672,17 @@ export function ProjectBuilder() {
         open={needsVanityUrl}
         onComplete={() => setNeedsVanityUrl(false)}
       />
+
+      {/* Grant Program agreement — required to launch; re-launches on accept */}
+      {projectId && (
+        <GrantAgreementDialog
+          open={showGrantAgreement}
+          onOpenChange={setShowGrantAgreement}
+          projectId={projectId}
+          projectTitle={basics.title}
+          onAccepted={handleLaunchNow}
+        />
+      )}
 
       {/* Re-review Warning Dialog */}
       <AlertDialog open={showReReviewWarning} onOpenChange={setShowReReviewWarning}>

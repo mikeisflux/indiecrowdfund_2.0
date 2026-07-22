@@ -586,7 +586,10 @@ export function OrderSummary({
                 className="mt-0.5 h-5 w-5 border-2"
               />
               <Label htmlFor="terms" className="text-sm leading-relaxed cursor-pointer">
-                I understand that rewards or reimbursements aren&apos;t guaranteed by either IndieCrowdfund or the creator.
+                I understand my contribution goes to Divinity Comics DBA IndieCrowdfund in support
+                of its Grant Program, that I am backing the creation of this project rather than
+                purchasing a product, and that rewards or reimbursements aren&apos;t guaranteed by
+                either IndieCrowdfund or the creator.
               </Label>
             </div>
 

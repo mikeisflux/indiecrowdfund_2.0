@@ -267,6 +267,26 @@ export async function POST(
           );
         }
       }
+
+      // Grant Program: funds are disbursed to creators as grants, so the
+      // grant agreement must be signed before a campaign can launch.
+      // (Campaigns already running when this shipped are handled at the
+      // payout gate instead — they sign when their campaign ends.)
+      const grantAgreement = await db.grantAgreement.findUnique({
+        where: { projectId },
+        select: { id: true },
+      });
+      if (!grantAgreement) {
+        return NextResponse.json(
+          {
+            error: "Grant agreement required",
+            message:
+              "Before launching, you must accept the Divinity Comics Grant Program agreement. It covers how funds are awarded to you as a grant and your responsibility for rewards.",
+            code: "GRANT_AGREEMENT_REQUIRED",
+          },
+          { status: 400 }
+        );
+      }
     }
 
     // Calculate end date based on duration settings

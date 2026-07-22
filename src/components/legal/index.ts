@@ -2,6 +2,7 @@ export { TermsOfServiceContent } from "./terms-of-service";
 export { PrivacyPolicyContent } from "./privacy-policy";
 export { RefundPolicyContent } from "./refund-policy";
 export { CreatorAgreementContent } from "./creator-agreement";
+export { GrantAgreementContent, GRANT_AGREEMENT_VERSION } from "./grant-agreement";
 export { BackerAgreementContent } from "./backer-agreement";
 export { ShippingPolicyContent } from "./shipping-policy";
 export { ChargebacksPolicyContent } from "./chargebacks-policy";

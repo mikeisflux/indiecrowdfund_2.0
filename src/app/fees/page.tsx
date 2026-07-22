@@ -451,7 +451,10 @@ export default function FeesPage() {
           <div className="text-center animate-in fade-in slide-in-from-bottom-4 duration-500">
             <h2 className="text-xl sm:text-3xl md:text-4xl font-bold tracking-tight">What&apos;s Included</h2>
             <p className="mx-auto mt-4 max-w-2xl text-lg text-muted-foreground">
-              Your platform fee covers everything you need to run a successful campaign
+              The retained percentage covers the administrative and facilitation costs of running
+              the{" "}
+              <Link href="/grant-program" className="underline underline-offset-2">Grant Program</Link>
+              {" "}— and everything you need to run a successful campaign
             </p>
           </div>
           <div className="mt-12 grid gap-8 md:grid-cols-2 lg:grid-cols-4">
