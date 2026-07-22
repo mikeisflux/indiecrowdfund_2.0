@@ -57,9 +57,10 @@ export function RewardSelector({
         <CardContent className="p-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
-              <h3 className="font-semibold mb-1">Pledge without a reward</h3>
+              <h3 className="font-semibold mb-1">Donate</h3>
               <p className="text-sm text-muted-foreground">
-                Support the project for no reward, just because it speaks to you.
+                No reward, no strings — pure support. Your donation helps bring this project to
+                life and champions western comics and art through our Grant Program.
               </p>
             </div>
             <div className="flex items-center gap-3">

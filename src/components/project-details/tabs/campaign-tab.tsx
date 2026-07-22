@@ -195,9 +195,10 @@ export function CampaignTab({ project, tiers, projectPath, onViewCreator }: Camp
             </div>
 
             <div className="rounded-lg bg-[#028858] text-white p-4">
-              <h5 className="font-semibold mb-1">Back it because you believe in it.</h5>
+              <h5 className="font-semibold mb-1">Donate — because you believe in it.</h5>
               <p className="text-sm opacity-90">
-                Support the project for no reward, just because it speaks to you.
+                No reward, no strings — pure support. Help bring this project to life and champion
+                western comics and art through our Grant Program.
               </p>
             </div>
 
