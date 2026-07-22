@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Image from "next/image";
 import {
   ArrowLeft,
@@ -14,7 +15,12 @@ import {
   RotateCcw,
   DollarSign,
   Eye,
+  FileCheck,
+  FileClock,
+  Send,
 } from "lucide-react";
+import { toast } from "sonner";
+import { apiFetch } from "@/lib/fetch-utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -44,6 +50,35 @@ export function ProjectDetailDialog({
   onCreateSettlement,
   formatCurrency,
 }: ProjectDetailDialogProps) {
+  const [sendingRequest, setSendingRequest] = useState(false);
+  // projectId -> creator email the request was sent to (this admin session
+  // only). The dialog stays mounted across project selections, so track
+  // per-project rather than a single flag.
+  const [sentRequests, setSentRequests] = useState<Record<string, string>>({});
+
+  const sendAgreementRequest = async (projectId: string) => {
+    if (sendingRequest) return;
+    setSendingRequest(true);
+    try {
+      const res = await apiFetch("/api/admin/grant-agreement-request", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ projectId }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        toast.error(data?.error || "Failed to send the agreement request");
+        return;
+      }
+      setSentRequests((prev) => ({ ...prev, [projectId]: data?.to || "creator" }));
+      toast.success(`Grant agreement request emailed to ${data?.to || "the creator"}`);
+    } catch {
+      toast.error("Failed to send the agreement request");
+    } finally {
+      setSendingRequest(false);
+    }
+  };
+
   return (
     <Dialog open={!!selectedProject} onOpenChange={onClose}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -125,6 +160,68 @@ export function ProjectDetailDialog({
                   </AlertDescription>
                 </Alert>
               )}
+
+              {/* Grant Agreement */}
+              <div>
+                <h4 className="font-medium mb-3">Grant Agreement</h4>
+                {selectedProject.grantAgreement?.signed ? (
+                  <div className="p-4 rounded-lg border border-emerald-200 bg-emerald-50/50 dark:border-emerald-900 dark:bg-emerald-900/10">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-full bg-emerald-100 dark:bg-emerald-900/40 flex items-center justify-center shrink-0">
+                        <FileCheck className="w-4 h-4 text-emerald-600" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="font-medium text-sm">
+                          Signed
+                          {selectedProject.grantAgreement.acceptedAt &&
+                            ` on ${format(new Date(selectedProject.grantAgreement.acceptedAt), "MMM d, yyyy")}`}
+                          {selectedProject.grantAgreement.version &&
+                            ` (v${selectedProject.grantAgreement.version})`}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {selectedProject.grantAgreement.taxLegalName || "No legal name on file"}
+                          {selectedProject.grantAgreement.taxEntityType &&
+                            ` · ${selectedProject.grantAgreement.taxEntityType.charAt(0)}${selectedProject.grantAgreement.taxEntityType.slice(1).toLowerCase()}`}
+                          {selectedProject.grantAgreement.taxIdLast4 &&
+                            ` · TIN ****${selectedProject.grantAgreement.taxIdLast4}`}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="p-4 rounded-lg border border-amber-200 bg-amber-50/50 dark:border-amber-900 dark:bg-amber-900/10">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-8 h-8 rounded-full bg-amber-100 dark:bg-amber-900/40 flex items-center justify-center shrink-0">
+                          <FileClock className="w-4 h-4 text-amber-600" />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="font-medium text-sm">Not signed</p>
+                          <p className="text-xs text-muted-foreground">
+                            {sentRequests[selectedProject.id]
+                              ? `Request emailed to ${sentRequests[selectedProject.id]}`
+                              : "A signed agreement (with tax info) is required before a payout can be created."}
+                          </p>
+                        </div>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="shrink-0"
+                        disabled={sendingRequest}
+                        onClick={() => sendAgreementRequest(selectedProject.id)}
+                      >
+                        {sendingRequest ? (
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        ) : (
+                          <Send className="w-4 h-4 mr-2" />
+                        )}
+                        {sentRequests[selectedProject.id] ? "Resend request" : "Send agreement request"}
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
 
               {/* Fee Breakdown */}
               <div>
@@ -365,13 +462,21 @@ export function ProjectDetailDialog({
 
             <DialogFooter className="mt-6">
               {selectedProject.hasBank && selectedProject.remainingAmount > 0 && (
-                <Button
-                  onClick={() => onCreateSettlement(Number(selectedProject.remainingAmount).toFixed(2))}
-                  className="bg-teal-600 hover:bg-teal-700"
-                >
-                  <DollarSign className="w-4 h-4 mr-2" />
-                  Create Settlement
-                </Button>
+                <div className="flex flex-col items-end gap-1.5">
+                  <Button
+                    onClick={() => onCreateSettlement(Number(selectedProject.remainingAmount).toFixed(2))}
+                    className="bg-teal-600 hover:bg-teal-700"
+                    disabled={!selectedProject.grantAgreement?.signed}
+                  >
+                    <DollarSign className="w-4 h-4 mr-2" />
+                    Create Settlement
+                  </Button>
+                  {!selectedProject.grantAgreement?.signed && (
+                    <p className="text-xs text-muted-foreground">
+                      Blocked until the creator signs the Grant Agreement.
+                    </p>
+                  )}
+                </div>
               )}
             </DialogFooter>
           </>

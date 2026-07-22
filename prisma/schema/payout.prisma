@@ -52,6 +52,22 @@ model GrantAgreement {
   version    String
   acceptedAt DateTime @default(now())
 
+  // Grantee tax information, collected at signing time (prefilled from the
+  // campaign-creation data where available). The TIN is AES-256 encrypted at
+  // rest like bank/card data; only the last 4 digits are stored in the clear
+  // for admin display.
+  taxLegalName    String?
+  taxBusinessName String?
+  taxEntityType   String?  // INDIVIDUAL | BUSINESS | NONPROFIT
+  taxIdEncrypted  String?  @db.Text
+  taxIdLast4      String?
+  taxAddressLine1 String?
+  taxAddressLine2 String?
+  taxCity         String?
+  taxState        String?
+  taxZip          String?
+  taxCountry      String?
+
   user    User    @relation("GrantAgreements", fields: [userId], references: [id])
   project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
 

@@ -48,6 +48,15 @@ export interface CreatorProject {
   partialRefundCount: number;
   refunds: RefundEntry[];
   settlementStatus: "pending" | "processing" | "settled" | "overpaid";
+  // Grant Agreement status — payouts cannot be created until signed.
+  grantAgreement?: {
+    signed: boolean;
+    version?: string;
+    acceptedAt?: string | null;
+    taxLegalName?: string | null;
+    taxEntityType?: string | null;
+    taxIdLast4?: string | null;
+  };
   creator: {
     id: string;
     name: string | null;

@@ -80,6 +80,9 @@ export async function GET(request: NextRequest) {
     const projects = await db.project.findMany({
       where,
       include: {
+        grantAgreement: {
+          select: { version: true, acceptedAt: true, taxLegalName: true, taxEntityType: true, taxIdLast4: true },
+        },
         creator: {
           select: {
             id: true,
@@ -321,6 +324,16 @@ export async function GET(request: NextRequest) {
       return {
         id: project.id,
         title: project.title,
+        grantAgreement: project.grantAgreement
+          ? {
+              signed: true,
+              version: project.grantAgreement.version,
+              acceptedAt: project.grantAgreement.acceptedAt,
+              taxLegalName: project.grantAgreement.taxLegalName,
+              taxEntityType: project.grantAgreement.taxEntityType,
+              taxIdLast4: project.grantAgreement.taxIdLast4,
+            }
+          : { signed: false },
         slug: project.slug,
         imageUrl: project.imageUrl,
         status: project.status,

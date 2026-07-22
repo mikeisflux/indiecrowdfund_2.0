@@ -19,3 +19,18 @@ DO $$ BEGIN
   ALTER TABLE "GrantAgreement" ADD CONSTRAINT "GrantAgreement_projectId_fkey"
     FOREIGN KEY ("projectId") REFERENCES "Project"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+-- Tax information collected at signing time (added with the admin payouts
+-- agreement tooling). Guarded so this file stays safe to re-run whether or
+-- not the table was created before these columns existed.
+ALTER TABLE "GrantAgreement" ADD COLUMN IF NOT EXISTS "taxLegalName" TEXT;
+ALTER TABLE "GrantAgreement" ADD COLUMN IF NOT EXISTS "taxBusinessName" TEXT;
+ALTER TABLE "GrantAgreement" ADD COLUMN IF NOT EXISTS "taxEntityType" TEXT;
+ALTER TABLE "GrantAgreement" ADD COLUMN IF NOT EXISTS "taxIdEncrypted" TEXT;
+ALTER TABLE "GrantAgreement" ADD COLUMN IF NOT EXISTS "taxIdLast4" TEXT;
+ALTER TABLE "GrantAgreement" ADD COLUMN IF NOT EXISTS "taxAddressLine1" TEXT;
+ALTER TABLE "GrantAgreement" ADD COLUMN IF NOT EXISTS "taxAddressLine2" TEXT;
+ALTER TABLE "GrantAgreement" ADD COLUMN IF NOT EXISTS "taxCity" TEXT;
+ALTER TABLE "GrantAgreement" ADD COLUMN IF NOT EXISTS "taxState" TEXT;
+ALTER TABLE "GrantAgreement" ADD COLUMN IF NOT EXISTS "taxZip" TEXT;
+ALTER TABLE "GrantAgreement" ADD COLUMN IF NOT EXISTS "taxCountry" TEXT;

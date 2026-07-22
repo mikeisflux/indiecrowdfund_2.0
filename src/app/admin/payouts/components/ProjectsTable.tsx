@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { Loader2, Banknote, User, Building, XCircle, ChevronRight, Search } from "lucide-react";
+import { Loader2, Banknote, User, Building, XCircle, ChevronRight, Search, FileCheck, FileClock } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
   Table,
@@ -93,6 +93,19 @@ export function ProjectsTable({
       </Badge>
     );
 
+  const AgreementBadge = ({ project }: { project: CreatorProject }) =>
+    project.grantAgreement?.signed ? (
+      <Badge variant="outline" className="text-emerald-600 border-emerald-600">
+        <FileCheck className="w-3 h-3 mr-1" />
+        Signed
+      </Badge>
+    ) : (
+      <Badge variant="outline" className="text-amber-600 border-amber-600">
+        <FileClock className="w-3 h-3 mr-1" />
+        Not signed
+      </Badge>
+    );
+
   const ProcessorBadge = ({ project }: { project: CreatorProject }) => {
     if (project.paymentProcessor === "DIVINITYCOIN") {
       return (
@@ -177,6 +190,7 @@ export function ProjectsTable({
                       <TableHead>Project</TableHead>
                       <TableHead>Creator</TableHead>
                       <TableHead>Bank Status</TableHead>
+                      <TableHead>Agreement</TableHead>
                       <TableHead className="text-right">Total Raised</TableHead>
                       <TableHead className="text-right">Refunds</TableHead>
                       <TableHead className="text-right">Amount Owed</TableHead>
@@ -217,6 +231,9 @@ export function ProjectsTable({
                         </TableCell>
                         <TableCell>
                           <BankStatusBadge project={project} />
+                        </TableCell>
+                        <TableCell>
+                          <AgreementBadge project={project} />
                         </TableCell>
                         <TableCell className="text-right">
                           <span className="text-muted-foreground">{formatCurrency(project.totalRaised)}</span>
@@ -277,7 +294,10 @@ export function ProjectsTable({
                     {/* Settlement status */}
                     <div className="flex items-center justify-between">
                       <div>{getSettlementBadge(project.settlementStatus)}</div>
-                      <BankStatusBadge project={project} />
+                      <div className="flex items-center gap-1.5">
+                        <BankStatusBadge project={project} />
+                        <AgreementBadge project={project} />
+                      </div>
                     </div>
 
                     {/* Creator */}
