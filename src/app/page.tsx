@@ -24,6 +24,7 @@ import { Footer } from "@/components/footer";
 import { HeroSlider } from "@/components/hero-slider";
 import { JsonLd } from "@/components/json-ld";
 import { HomeStatsPoller } from "@/components/home-stats-poller";
+import { ShowMoreGrid } from "@/components/home/show-more-grid";
 import { getPlatformStats, getRetailerStats } from "@/lib/stats/actions";
 import { getBatchProjectStats } from "@/lib/stats";
 import { db } from "@/lib/db";
@@ -501,7 +502,7 @@ async function FeaturedProjectsSection({ userId }: { userId: string | undefined 
           </Link>
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <ShowMoreGrid className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3" label="Show more featured projects">
           {featuredProjects.map((project, index) => (
             <Link key={project.id} href={project.projectUrl} className="animate-fade-in-up" style={{ animationDelay: `${index * 0.1}s` }}>
               <Card className="project-card overflow-hidden h-full glass-card glass-card-hover rounded-2xl border-border/50">
@@ -576,7 +577,7 @@ async function FeaturedProjectsSection({ userId }: { userId: string | undefined 
               </Card>
             </Link>
           ))}
-        </div>
+        </ShowMoreGrid>
       </div>
     </section>
   );
@@ -613,7 +614,7 @@ async function PrelaunchProjectsSection({ userId }: { userId: string | undefined
           </Link>
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <ShowMoreGrid className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3" label="Show more prelaunch projects">
           {prelaunchProjects.map((project, index) => (
             <Link key={project.id} href={project.projectUrl} className="animate-fade-in-up" style={{ animationDelay: `${index * 0.1}s` }}>
               <Card className="project-card overflow-hidden h-full glass-card glass-card-hover rounded-2xl border-amber-500/20">
@@ -670,7 +671,7 @@ async function PrelaunchProjectsSection({ userId }: { userId: string | undefined
               </Card>
             </Link>
           ))}
-        </div>
+        </ShowMoreGrid>
       </div>
     </section>
   );
@@ -704,7 +705,7 @@ async function PastCampaignsSection() {
           </Link>
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <ShowMoreGrid className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3" label="Show more past projects">
           {pastCampaigns.map((project, index) => (
             <Link key={project.id} href={project.projectUrl} className="animate-fade-in-up" style={{ animationDelay: `${index * 0.1}s` }}>
               <Card className="project-card overflow-hidden h-full glass-card glass-card-hover rounded-2xl border-border/50">
@@ -769,7 +770,7 @@ async function PastCampaignsSection() {
               </Card>
             </Link>
           ))}
-        </div>
+        </ShowMoreGrid>
       </div>
     </section>
   );
