@@ -7,6 +7,26 @@ import { Project, ReviewHistory, Stats, getFlags } from "../components";
 
 const PROJECTS_PER_PAGE = 20;
 
+// The review API caps `limit` at 100 and defaults to 20 (oldest-first), so a
+// single un-paginated fetch silently truncates any list past the cap — that's
+// how funded campaigns went missing from the Closed Campaigns tab. Walk every
+// page and return the full set.
+async function fetchAllProjectPages(baseParams: Record<string, string>): Promise<Project[]> {
+  const all: Project[] = [];
+  let page = 1;
+  let totalPages = 1;
+  do {
+    const params = new URLSearchParams({ ...baseParams, limit: "100", page: String(page) });
+    const response = await fetchWithRetry(`/api/admin/projects/review?${params}`);
+    if (!response.ok) break;
+    const data = await response.json();
+    all.push(...(data.projects || []));
+    totalPages = data.pagination?.totalPages || 1;
+    page++;
+  } while (page <= totalPages);
+  return all;
+}
+
 export function useProjectsData() {
   const [activeTab, setActiveTab] = useState("pending");
   const [projects, setProjects] = useState<Project[]>([]);
@@ -75,50 +95,20 @@ export function useProjectsData() {
 
   const fetchActiveProjects = useCallback(async () => {
     try {
-      const liveParams = new URLSearchParams({
-        status: "LIVE",
-        ...(categoryFilter !== "all" && { category: categoryFilter }),
-      });
-      const approvedParams = new URLSearchParams({
-        status: "APPROVED",
-        ...(categoryFilter !== "all" && { category: categoryFilter }),
-      });
-      const fundedParams = new URLSearchParams({
-        status: "FUNDED",
-        ...(categoryFilter !== "all" && { category: categoryFilter }),
-      });
-      const failedParams = new URLSearchParams({
-        status: "FAILED",
-        ...(categoryFilter !== "all" && { category: categoryFilter }),
-      });
+      const categoryParams: Record<string, string> =
+        categoryFilter !== "all" ? { category: categoryFilter } : {};
 
-      const [liveResponse, approvedResponse, fundedResponse, failedResponse] = await Promise.all([
-        fetchWithRetry(`/api/admin/projects/review?${liveParams}`),
-        fetchWithRetry(`/api/admin/projects/review?${approvedParams}`),
-        fetchWithRetry(`/api/admin/projects/review?${fundedParams}`),
-        fetchWithRetry(`/api/admin/projects/review?${failedParams}`),
+      const [liveProjects, approvedProjects, fundedProjects, failedProjects] = await Promise.all([
+        fetchAllProjectPages({ status: "LIVE", ...categoryParams }),
+        fetchAllProjectPages({ status: "APPROVED", ...categoryParams }),
+        fetchAllProjectPages({ status: "FUNDED", ...categoryParams }),
+        fetchAllProjectPages({ status: "FAILED", ...categoryParams }),
       ]);
 
-      const allProjects: Project[] = [];
-      if (liveResponse.ok) {
-        const liveData = await liveResponse.json();
-        allProjects.push(...(liveData.projects || []));
-      }
-      if (approvedResponse.ok) {
-        const approvedData = await approvedResponse.json();
-        allProjects.push(...(approvedData.projects || []));
-      }
+      const allProjects: Project[] = [...liveProjects, ...approvedProjects];
 
       // Closed campaigns: FUNDED and FAILED status projects
-      const closedCampaigns: Project[] = [];
-      if (fundedResponse.ok) {
-        const fundedData = await fundedResponse.json();
-        closedCampaigns.push(...(fundedData.projects || []));
-      }
-      if (failedResponse.ok) {
-        const failedData = await failedResponse.json();
-        closedCampaigns.push(...(failedData.projects || []));
-      }
+      const closedCampaigns: Project[] = [...fundedProjects, ...failedProjects];
 
       // Also check LIVE/APPROVED projects whose endDate has passed
       const now = new Date();
@@ -147,19 +137,15 @@ export function useProjectsData() {
 
   const fetchPrelaunchProjects = useCallback(async () => {
     try {
-      const params = new URLSearchParams({
+      const prelaunch = await fetchAllProjectPages({
         prelaunchActive: "true",
         ...(categoryFilter !== "all" && { category: categoryFilter }),
       });
-      const response = await fetchWithRetry(`/api/admin/projects/review?${params}`);
-      if (response.ok) {
-        const data = await response.json();
-        setPrelaunchProjects(data.projects || []);
-        setStats((prev) => ({
-          ...prev,
-          prelaunchActive: data.projects?.length || 0,
-        }));
-      }
+      setPrelaunchProjects(prelaunch);
+      setStats((prev) => ({
+        ...prev,
+        prelaunchActive: prelaunch.length,
+      }));
     } catch (error) {
       console.error("Error fetching prelaunch projects after retries:", error);
     }
@@ -167,19 +153,15 @@ export function useProjectsData() {
 
   const fetchPrelaunchReviewProjects = useCallback(async () => {
     try {
-      const params = new URLSearchParams({
+      const prelaunchReviewList = await fetchAllProjectPages({
         prelaunchReview: "true",
         ...(categoryFilter !== "all" && { category: categoryFilter }),
       });
-      const response = await fetchWithRetry(`/api/admin/projects/review?${params}`);
-      if (response.ok) {
-        const data = await response.json();
-        setPrelaunchReviewProjects(data.projects || []);
-        setStats((prev) => ({
-          ...prev,
-          prelaunchReview: data.projects?.length || 0,
-        }));
-      }
+      setPrelaunchReviewProjects(prelaunchReviewList);
+      setStats((prev) => ({
+        ...prev,
+        prelaunchReview: prelaunchReviewList.length,
+      }));
     } catch (error) {
       console.error("Error fetching prelaunch review projects after retries:", error);
     }
@@ -187,16 +169,11 @@ export function useProjectsData() {
 
   const fetchUnsubmittedProjects = useCallback(async () => {
     try {
-      const params = new URLSearchParams({
+      const drafts = await fetchAllProjectPages({
         status: "DRAFT",
         ...(categoryFilter !== "all" && { category: categoryFilter }),
-        limit: "100",
       });
-      const response = await fetchWithRetry(`/api/admin/projects/review?${params}`);
-      if (response.ok) {
-        const data = await response.json();
-        setUnsubmittedProjects(data.projects || []);
-      }
+      setUnsubmittedProjects(drafts);
     } catch (error) {
       console.error("Error fetching unsubmitted projects:", error);
     }
