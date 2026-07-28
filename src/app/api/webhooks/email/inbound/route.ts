@@ -70,9 +70,20 @@ interface ParsedEmail {
   cc?: string;
   attachmentCount?: number;
   attachmentFiles?: AttachmentFile[];
-  envelope?: EmailEnvelope;
+  envelope?: EnvelopeType;
   messageIdHeader?: string;
+  spamFlag?: boolean;
+  spamScore?: number;
 }
+
+type EnvelopeType = EmailEnvelope;
+
+// R2 abuse guards: spam blasts and marketing footers were filling the bucket
+// with images we never asked for. Hard-cap what a single inbound email may
+// store.
+const MAX_ATTACHMENTS_PER_EMAIL = 10;
+const MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024; // 10 MB per file
+const MAX_TOTAL_ATTACHMENT_BYTES = 25 * 1024 * 1024; // 25 MB per email
 
 // Extract name and email from "Name <email@example.com>" format
 function parseEmailAddress(address: string): { email: string; name?: string } {
@@ -218,34 +229,6 @@ export async function POST(request: NextRequest) {
       const attachmentCount = (formData.get("attachment-count") as string) ||
                               (formData.get("attachments") as string) || "0";
 
-      // Extract actual attachment files
-      const attachmentFiles: AttachmentFile[] = [];
-      const attachmentCountNum = Math.min(Math.max(parseInt(attachmentCount, 10) || 0, 0), 50);
-
-      // Mailgun sends attachments as attachment-1, attachment-2, etc.
-      // SendGrid sends them as attachment1, attachment2, etc. or just numbered
-      for (let i = 1; i <= Math.max(attachmentCountNum, 10); i++) {
-        // Try different naming conventions
-        const attachment = (formData.get(`attachment-${i}`) as File) ||
-                          (formData.get(`attachment${i}`) as File) ||
-                          (formData.get(`${i}`) as File);
-
-        if (attachment && attachment instanceof File && attachment.size > 0) {
-          try {
-            const arrayBuffer = await attachment.arrayBuffer();
-            attachmentFiles.push({
-              filename: attachment.name || `attachment-${i}`,
-              contentType: attachment.type || "application/octet-stream",
-              size: attachment.size,
-              data: Buffer.from(arrayBuffer),
-            });
-            webhooksEmailInboundLogger.info(`[Inbound Email] Found attachment: ${attachment.name} (${attachment.size} bytes)`);
-          } catch (err) {
-            webhooksEmailInboundLogger.error({ err: err }, `[Inbound Email] Failed to read attachment ${i}:`);
-          }
-        }
-      }
-
       // Extract RFC-5322 Message-Id header from the parsed email. Mailgun
       // exposes it in the "Message-Id" field (no angle brackets), SendGrid
       // in "headers" as raw text. We use this as the idempotency key so
@@ -254,6 +237,70 @@ export async function POST(request: NextRequest) {
         (formData.get("Message-Id") as string) ||
         (formData.get("message-id") as string) ||
         undefined;
+
+      // Mailgun runs SpamAssassin and passes the verdict through when spam
+      // filtering is on for the domain: X-Mailgun-Sflag ("Yes"/"No") plus a
+      // numeric X-Mailgun-Sscore. We use it to divert junk to the SPAM
+      // folder and to skip storing its attachments in R2.
+      const sflag = (formData.get("X-Mailgun-Sflag") as string) || "";
+      const sscoreRaw = (formData.get("X-Mailgun-Sscore") as string) || "";
+      const sscore = parseFloat(sscoreRaw);
+      const spamScore = Number.isFinite(sscore) ? sscore : undefined;
+      const spamFlag = sflag.toLowerCase() === "yes" || (spamScore !== undefined && spamScore >= 5);
+
+      // Extract actual attachment files
+      const attachmentFiles: AttachmentFile[] = [];
+      const attachmentCountNum = Math.min(Math.max(parseInt(attachmentCount, 10) || 0, 0), 50);
+
+      // Spam never gets its attachments read or stored — marketing blasts
+      // were filling the R2 bucket with banner images nobody asked for.
+      if (spamFlag) {
+        webhooksEmailInboundLogger.warn(
+          { from: fromRaw, to: toRaw, spamScore, attachmentCount: attachmentCountNum },
+          "[Inbound Email] Spam-flagged — skipping attachment storage"
+        );
+      } else {
+        let totalBytes = 0;
+        // Mailgun sends attachments as attachment-1, attachment-2, etc.
+        // SendGrid sends them as attachment1, attachment2, etc. or just numbered
+        const maxIndex = Math.min(Math.max(attachmentCountNum, 10), MAX_ATTACHMENTS_PER_EMAIL);
+        for (let i = 1; i <= maxIndex; i++) {
+          // Try different naming conventions
+          const attachment = (formData.get(`attachment-${i}`) as File) ||
+                            (formData.get(`attachment${i}`) as File) ||
+                            (formData.get(`${i}`) as File);
+
+          if (attachment && attachment instanceof File && attachment.size > 0) {
+            if (attachment.size > MAX_ATTACHMENT_BYTES) {
+              webhooksEmailInboundLogger.warn(
+                { filename: attachment.name, size: attachment.size, from: fromRaw },
+                "[Inbound Email] Attachment over per-file cap — skipped"
+              );
+              continue;
+            }
+            if (totalBytes + attachment.size > MAX_TOTAL_ATTACHMENT_BYTES) {
+              webhooksEmailInboundLogger.warn(
+                { from: fromRaw, totalBytes },
+                "[Inbound Email] Email over total attachment cap — remaining attachments skipped"
+              );
+              break;
+            }
+            try {
+              const arrayBuffer = await attachment.arrayBuffer();
+              totalBytes += attachment.size;
+              attachmentFiles.push({
+                filename: attachment.name || `attachment-${i}`,
+                contentType: attachment.type || "application/octet-stream",
+                size: attachment.size,
+                data: Buffer.from(arrayBuffer),
+              });
+              webhooksEmailInboundLogger.info(`[Inbound Email] Found attachment: ${attachment.name} (${attachment.size} bytes)`);
+            } catch (err) {
+              webhooksEmailInboundLogger.error({ err: err }, `[Inbound Email] Failed to read attachment ${i}:`);
+            }
+          }
+        }
+      }
 
       emailData = {
         to: toRaw,
@@ -266,6 +313,8 @@ export async function POST(request: NextRequest) {
         attachmentFiles: attachmentFiles.length > 0 ? attachmentFiles : undefined,
         envelope,
         messageIdHeader,
+        spamFlag,
+        spamScore,
       };
     } else if (contentType.includes("application/json")) {
       // Parse JSON
@@ -445,7 +494,8 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Store the email in admin mailbox
+    // Store the email in admin mailbox. Spam-flagged mail lands in SPAM so
+    // it never clutters the inbox (and, above, never stores attachments).
     const email = await db.adminEmail.create({
       data: {
         id: emailId,
@@ -459,7 +509,7 @@ export async function POST(request: NextRequest) {
         subject: emailData.subject,
         bodyHtml: finalBodyHtml,
         bodyText: finalBodyText || null,
-        folder: "INBOX",
+        folder: emailData.spamFlag ? "SPAM" : "INBOX",
         status: "DELIVERED",
         isRead: false,
         isStarred: false,
