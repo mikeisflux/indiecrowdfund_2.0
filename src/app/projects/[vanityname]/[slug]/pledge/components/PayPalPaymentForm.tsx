@@ -57,6 +57,13 @@ export function PayPalPaymentForm({
   const initializedRef = useRef(false);
   const agreedToTermsRef = useRef(agreedToTerms);
   const containerRef = useRef<HTMLDivElement>(null);
+  // Set once the flow reaches a terminal state (approved / cancelled /
+  // errored). Used to tell "PayPal is genuinely working on it" apart from
+  // "the popup went away and PayPal never told us", which otherwise left the
+  // button disabled behind a permanent "Processing payment..." overlay —
+  // reported by a backer as "stuck processing with no ability to pay".
+  const reachedTerminalRef = useRef(false);
+  const [stuck, setStuck] = useState(false);
 
   // Keep ref in sync so click handler doesn't capture stale closure
   useEffect(() => {
@@ -142,6 +149,7 @@ export function PayPalPaymentForm({
         // Create payment session with callbacks
         const paypalSession = sdkInstance.createPayPalOneTimePaymentSession({
           async onApprove(data: { orderId: string }) {
+            reachedTerminalRef.current = true;
             setIsProcessing(true);
             try {
               if (upchargeConfirmUrl) {
@@ -165,9 +173,11 @@ export function PayPalPaymentForm({
             }
           },
           onCancel() {
+            reachedTerminalRef.current = true;
             setIsProcessing(false);
           },
           onError(err: { message?: string }) {
+            reachedTerminalRef.current = true;
             onError(err?.message || "PayPal payment failed. Please try again.");
             setIsProcessing(false);
           },
@@ -184,6 +194,8 @@ export function PayPalPaymentForm({
             onError("Please agree to the terms and conditions before completing your pledge.");
             return;
           }
+          reachedTerminalRef.current = false;
+          setStuck(false);
           setIsProcessing(true);
           try {
             // Per PayPal sample: pass promise reference, do NOT await before passing
@@ -193,7 +205,16 @@ export function PayPalPaymentForm({
               { presentationMode: "auto" },
               createOrderPromise
             );
+            // start() resolves once PayPal hands control to its popup/modal.
+            // If the buyer dismisses that window in a way the SDK doesn't
+            // report (OS-level close, blocked popup, backgrounded tab), no
+            // terminal callback ever fires. Offer a way out instead of
+            // spinning forever.
+            window.setTimeout(() => {
+              if (!reachedTerminalRef.current) setStuck(true);
+            }, 20000);
           } catch (err) {
+            reachedTerminalRef.current = true;
             onError(err instanceof Error ? err.message : "Failed to start PayPal payment.");
             setIsProcessing(false);
           }
@@ -240,6 +261,25 @@ export function PayPalPaymentForm({
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <Loader2 className="h-4 w-4 animate-spin" />
           Processing payment...
+        </div>
+      )}
+      {stuck && isProcessing && (
+        <div className="rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 p-3 text-sm">
+          <p className="text-amber-800 dark:text-amber-300">
+            Still waiting on PayPal. If the PayPal window closed or never opened
+            (a pop-up blocker will do this), you can start over.
+          </p>
+          <button
+            type="button"
+            className="mt-2 font-medium text-amber-900 dark:text-amber-200 underline underline-offset-2"
+            onClick={() => {
+              reachedTerminalRef.current = true;
+              setStuck(false);
+              setIsProcessing(false);
+            }}
+          >
+            Try payment again
+          </button>
         </div>
       )}
     </div>
