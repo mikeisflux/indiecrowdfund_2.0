@@ -178,6 +178,20 @@ export function ErrorReporter() {
       // user wifi or a backgrounded tab. Same class as AbortError +
       // "The operation was aborted" above — user-side, not actionable.
       /TimeoutError.*operation timed out/i,
+      // An extension patches Node.appendChild and JSON.stringify()s the node
+      // it was handed. DOM nodes carry React's __reactFiber$* back-reference,
+      // which is circular, so their own wrapper throws. Stack frames are
+      // "<anonymous>" (injected script), never our bundle. We never
+      // stringify DOM nodes.
+      /Converting circular structure to JSON[\s\S]*__reactFiber\$/,
+      /starting at object with constructor 'HTML\w*Element'/,
+      // Storage access blocked entirely: Safari private mode, embedded
+      // webviews, and "block all cookies" make even reading
+      // window.localStorage throw SecurityError. Our storage reads are
+      // guarded and degrade gracefully; third-party scripts' aren't.
+      /Failed to read the 'localStorage' property from 'Window'/,
+      /Failed to read the 'sessionStorage' property from 'Window'/,
+      /Access is denied for this document/,
     ];
 
     // Paths that automated scanners / ad networks / browser feature-detection

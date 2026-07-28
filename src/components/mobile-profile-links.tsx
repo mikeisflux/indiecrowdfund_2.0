@@ -24,11 +24,20 @@ export function MobileProfileLinks() {
   const handleLogout = async () => {
     try {
       await apiFetch("/api/auth/logout", { method: "POST" });
-      // Clear login-session dismiss flags so popups/banners show again on next login
-      localStorage.removeItem("promo_popup_login_dismissed");
-      localStorage.removeItem("consent_banner_login_dismissed");
-      // Clear consent preferences so user re-consents on next login
-      localStorage.removeItem("consent_preferences");
+      // Clearing these is best-effort: reading/writing localStorage throws
+      // SecurityError when storage is blocked (Safari private mode, embedded
+      // webviews, "block third-party cookies"). Previously that threw out of
+      // the try and skipped the redirect below, so logout looked like it did
+      // nothing. The sign-out itself already succeeded server-side.
+      try {
+        // Clear login-session dismiss flags so popups/banners show again on next login
+        localStorage.removeItem("promo_popup_login_dismissed");
+        localStorage.removeItem("consent_banner_login_dismissed");
+        // Clear consent preferences so user re-consents on next login
+        localStorage.removeItem("consent_preferences");
+      } catch {
+        // Storage unavailable — nothing to clear.
+      }
       window.location.href = "/";
     } catch (error) {
       console.error("Logout failed:", error);

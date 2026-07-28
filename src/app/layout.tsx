@@ -115,6 +115,11 @@ export const metadata: Metadata = {
   },
   alternates: {
     canonical: SITE_URL,
+    // Lets feed readers and browser extensions auto-discover /feed.xml from
+    // any page (requested by a backer who wanted to follow new campaigns).
+    types: {
+      "application/rss+xml": [{ url: `${SITE_URL}/feed.xml`, title: "IndieCrowdfund — Crowdfunds" }],
+    },
   },
 };
 

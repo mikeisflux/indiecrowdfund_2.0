@@ -9,7 +9,7 @@ import { getBatchProjectStats } from "@/lib/stats";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "GET, POST, DELETE, OPTIONS",
+  "Access-Control-Allow-Methods": "GET, POST, PATCH, DELETE, OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type, Authorization",
 };
 
@@ -277,6 +277,14 @@ export async function POST(request: NextRequest) {
       { status: 500, headers: corsHeaders }
     );
   }
+}
+
+// PATCH: same body contract as POST. The backer notifications tab sends
+// PATCH for { action: "updatePreferences" }, which 405'd because only
+// GET/POST/DELETE were exported — every per-creator notification toggle
+// silently failed to save.
+export async function PATCH(request: NextRequest) {
+  return POST(request);
 }
 
 // DELETE: Unfollow a creator

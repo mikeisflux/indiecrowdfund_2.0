@@ -567,7 +567,12 @@ async function FeaturedProjectsSection({ userId }: { userId: string | undefined 
                         <Users className="h-3 w-3" />
                         {project.backerCount}
                       </span>
-                      <span className="flex items-center gap-1">
+                      {/* Time-dependent text: the page is ISR-cached for 60s,
+                          so the server string ("3d 4h") is computed at cache
+                          time and the client recomputes a different one at
+                          hydration — React error #418. The value is correct
+                          in both; suppress the text-mismatch warning. */}
+                      <span className="flex items-center gap-1" suppressHydrationWarning>
                         <Clock className="h-3 w-3" />
                         {project.endDate ? formatTimeRemaining(new Date(project.endDate)) : `${project.daysRemaining}d`}
                       </span>
