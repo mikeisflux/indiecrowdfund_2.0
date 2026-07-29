@@ -197,16 +197,14 @@ export function PackagesTab({
 
     setIsRefreshing(true);
     try {
-      const res = await fetch(`/api/creator/indiekit/fulfillment?projectId=${projectId}&action=refresh_groups`);
-
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || "Refresh failed");
-      }
-
+      // Package groups are derived server-side and handed down as props, so
+      // refreshing just means re-running the parent's fetch. This used to GET
+      // /api/creator/indiekit/fulfillment?action=refresh_groups — a route that
+      // only exports POST and has no refresh_groups action, so every click
+      // 405'd and showed "Refresh failed" while the data was in fact fine.
+      await onRefresh?.();
       setLastRefreshed(new Date().toLocaleString());
       toast.success("Package groups refreshed");
-      onRefresh?.();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Refresh failed");
     } finally {
