@@ -407,14 +407,15 @@ export interface PCQuoteResponse {
   // Live-rate metadata (PC 2026-07-27). Quantity now affects shipping cost,
   // so a quote is only good for the parcel it was priced against — re-quote
   // close to order time. PC re-rates server-side at order creation anyway.
+  //
+  // NOTE: as of printingcomics @ claude/merge-crowdfunding-admin-0r4pi these
+  // are returned by their STOREFRONT checkout; the partner /pricing/quote
+  // still serves flat shippingZone/shippingRate rows and omits them. Optional
+  // here so we light up automatically if/when the partner route adopts
+  // lib/shipping-quote.ts.
   shipmentWeightOz?: number;
-  boxes?: Array<{
-    weightOz?: number;
-    lengthIn?: number;
-    widthIn?: number;
-    heightIn?: number;
-    [k: string]: unknown;
-  }>;
+  /** Number of boxes the shipment packs into — a count, not a list. */
+  boxes?: number;
 }
 export async function quotePricing(
   config: PrintingComicsConfig,

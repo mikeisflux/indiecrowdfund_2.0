@@ -281,7 +281,8 @@ export function PrintingComicsTab({ projectId }: PrintingComicsTabProps) {
     totalCents: number;
     currency: string;
     shipmentWeightOz?: number;
-    boxes?: Array<Record<string, unknown>>;
+    /** Box count, not a list. */
+    boxes?: number;
   }
   const [pricingQuote, setPricingQuote] = useState<PricingQuote | null>(null);
   const [pricingLoading, setPricingLoading] = useState(false);
@@ -1578,7 +1579,7 @@ export function PrintingComicsTab({ projectId }: PrintingComicsTabProps) {
                       {pricingQuote.shipmentWeightOz != null && (
                         <p className="text-xs text-muted-foreground">
                           Parcel: {(pricingQuote.shipmentWeightOz / 16).toFixed(2)} lb
-                          {pricingQuote.boxes?.length ? ` in ${pricingQuote.boxes.length} box${pricingQuote.boxes.length > 1 ? "es" : ""}` : ""}.
+                          {pricingQuote.boxes ? ` in ${pricingQuote.boxes} box${pricingQuote.boxes > 1 ? "es" : ""}` : ""}.
                           Shipping is re-rated at order time.
                         </p>
                       )}
