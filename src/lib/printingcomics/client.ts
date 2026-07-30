@@ -91,6 +91,33 @@ export async function pcFetch<T = unknown>(
   }
 }
 
+// File URLs from PC (proofs, artwork) are opaque and come in three shapes
+// (docs § Files, 2026-07-29): an absolute CDN URL, "/api/files/…" (302s to a
+// short-lived signed link), or "/uploads/…?t=…". The two relative shapes are
+// relative to PC's ORIGIN — rendering them as-is in our UI resolved them
+// against indiecrowdfund.com and 404'd. Prefix the origin, change nothing
+// else, and never construct a file path ourselves.
+//
+// Only the opaque URL is safe to persist: the signed destination behind a
+// /api/files/ redirect expires, so store what PC gave us and let the browser
+// follow the 302 each time.
+export function resolveFileUrl(
+  config: PrintingComicsConfig,
+  url: string | null | undefined
+): string | undefined {
+  if (!url) return undefined;
+  if (/^https?:\/\//i.test(url)) return url;
+  const origin = config.baseUrl.replace(/\/api\/v\d+\/?$/, "");
+  return `${origin}${url.startsWith("/") ? "" : "/"}${url}`;
+}
+
+// PC returns 410 Gone (not 404) once a file's contents have been removed —
+// artwork and proofs are deleted when an order reaches SHIPPED. The creator
+// needs to re-upload; retrying the same fetch will never succeed.
+export function isFileGone(err: unknown): boolean {
+  return err instanceof PrintingComicsApiError && err.status === 410;
+}
+
 // ──────────────────────────────────────────────────────────────────
 // Typed wrappers around the most-used endpoints.
 // ──────────────────────────────────────────────────────────────────
@@ -338,10 +365,20 @@ export interface PCQuoteInput {
   couponCode?: string;
 }
 export interface PCQuoteShippingOption {
+  // Opaque since PC's 2026-07-27 switch to live carrier rates (e.g.
+  // "ep:UPS:Ground"). Never parse or construct it — pass it back verbatim as
+  // shippingRateId.
   id: string;
   name: string;
   rateCents: number;
   estimatedDays?: string;
+  // "live" = real carrier rate for the actual parcel; "table" = fallback flat
+  // rate, which is what you get when the shippingAddress is incomplete (no
+  // postal code). Surface the difference so creators don't budget off a
+  // fallback number.
+  source?: "live" | "table";
+  carrier?: string;
+  service?: string;
 }
 export interface PCQuoteLine {
   productSlug: string;
@@ -367,6 +404,17 @@ export interface PCQuoteResponse {
   taxCents: number;
   totalCents: number;
   currency: string;
+  // Live-rate metadata (PC 2026-07-27). Quantity now affects shipping cost,
+  // so a quote is only good for the parcel it was priced against — re-quote
+  // close to order time. PC re-rates server-side at order creation anyway.
+  shipmentWeightOz?: number;
+  boxes?: Array<{
+    weightOz?: number;
+    lengthIn?: number;
+    widthIn?: number;
+    heightIn?: number;
+    [k: string]: unknown;
+  }>;
 }
 export async function quotePricing(
   config: PrintingComicsConfig,

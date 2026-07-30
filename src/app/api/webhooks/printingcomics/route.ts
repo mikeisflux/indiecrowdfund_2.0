@@ -6,6 +6,7 @@ import {
   verifyPrintingComicsWebhook,
   type PCWebhookEvent,
 } from "@/lib/printingcomics/webhook";
+import { resolveFileUrl } from "@/lib/printingcomics/client";
 
 const log = logger.child({ module: "printingcomics-webhook" });
 
@@ -67,6 +68,14 @@ interface PCWebhookPayload {
     fileUrl?: string;
     approvedName?: string;
     note?: string;
+    // Per-line-item proofs (PC 2026-07-27). `status` above is this single
+    // proof's status; `orderProofStatus` is the aggregate across every proof
+    // on the order after this event — it only reads "approved" once all of
+    // them are. Identifies which item/slot this proof belongs to.
+    orderProofStatus?: string;
+    orderItemId?: string;
+    itemName?: string;
+    kind?: string; // "cover" | "interior" | "artwork"
   };
 }
 
@@ -168,12 +177,24 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: true, ignored: true });
     }
 
+    // Proofs went per-line-item on 2026-07-27: a comic/graphic novel has two
+    // (cover + interior), a print has one. `d.status` is now THIS proof's
+    // status, so writing it to our order-level proofStatus would mark the
+    // whole order approved the moment the cover was approved — with the
+    // interior still unreviewed. PC sends `orderProofStatus`, the aggregate
+    // after this event, precisely for the order-level field; only fall back
+    // to d.status for pre-7/27 single-proof payloads that omit it.
+    const aggregateStatus = d.orderProofStatus ?? d.status;
     await db.projectPrintOrder.update({
       where: { id: existing.id },
       data: {
-        proofStatus: d.status ?? undefined,
-        proofUrl: d.fileUrl ?? undefined,
-        proofReviewUrl: d.reviewUrl ?? undefined,
+        proofStatus: aggregateStatus ?? undefined,
+        // fileUrl/reviewUrl may be origin-relative ("/api/files/…",
+        // "/uploads/…?t=…"); stored raw they resolved against our own domain
+        // and 404'd in the dashboard. Persist the opaque PC URL, never a
+        // followed/signed destination — those expire.
+        proofUrl: resolveFileUrl(config, d.fileUrl),
+        proofReviewUrl: resolveFileUrl(config, d.reviewUrl),
         proofVersion: d.proofVersion ?? undefined,
         proofUpdatedAt: new Date(),
         lastSyncedAt: new Date(),
@@ -192,14 +213,21 @@ export async function POST(req: NextRequest) {
       d.proofVersion != null &&
       (existing.proofVersion == null || d.proofVersion > existing.proofVersion);
     if (evtStr === "proof.ready" && (isFirstReady || isNewerVersion) && existing.submittedById) {
+      // Name the slot when PC tells us which one it is. Comics carry two
+      // proofs (cover + interior) and production doesn't start until BOTH
+      // are approved, so say so — otherwise a creator approves the cover and
+      // assumes they're done.
+      const slot = [d.itemName, d.kind].filter(Boolean).join(" — ");
       await db.notification
         .create({
           data: {
             userId: existing.submittedById,
             type: "SYSTEM",
-            title: "Your print proof is ready to review",
+            title: slot
+              ? `Print proof ready to review: ${slot}`
+              : "Your print proof is ready to review",
             message:
-              "Printing Comics uploaded a proof of your print order. Review it and approve (or request changes) to start production.",
+              "Printing Comics uploaded a proof of your print order. Review it and approve (or request changes) to start production. Comics have a separate cover and interior proof — production starts only once every proof on the order is approved.",
             actionUrl: d.reviewUrl || "/dashboard/indiekit",
             projectId: existing.projectId,
           },

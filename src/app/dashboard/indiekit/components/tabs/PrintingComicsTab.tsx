@@ -265,6 +265,11 @@ export function PrintingComicsTab({ projectId }: PrintingComicsTabProps) {
     name: string;
     rateCents: number;
     estimatedDays?: string;
+    // PC 2026-07-27: live carrier rates. "table" means we got fallback flat
+    // rates because the address was incomplete (usually a missing postal code).
+    source?: "live" | "table";
+    carrier?: string;
+    service?: string;
   }
   interface PricingQuote {
     items: PricingQuoteLine[];
@@ -275,6 +280,8 @@ export function PrintingComicsTab({ projectId }: PrintingComicsTabProps) {
     taxCents: number;
     totalCents: number;
     currency: string;
+    shipmentWeightOz?: number;
+    boxes?: Array<Record<string, unknown>>;
   }
   const [pricingQuote, setPricingQuote] = useState<PricingQuote | null>(null);
   const [pricingLoading, setPricingLoading] = useState(false);
@@ -1555,12 +1562,26 @@ export function PrintingComicsTab({ projectId }: PrintingComicsTabProps) {
                         <SelectContent>
                           {pricingQuote.shippingOptions.map((opt) => (
                             <SelectItem key={opt.id} value={opt.id}>
-                              {opt.name} — ${(opt.rateCents / 100).toFixed(2)}
+                              {opt.carrier ? `${opt.carrier} ` : ""}{opt.name} — ${(opt.rateCents / 100).toFixed(2)}
                               {opt.estimatedDays ? ` (${opt.estimatedDays} days)` : ""}
                             </SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
+                      {/* Fallback flat rates mean the address wasn't complete
+                          enough for the carriers to quote the real parcel. */}
+                      {pricingQuote.shippingOptions.some((o) => o.source === "table") && (
+                        <p className="text-xs text-amber-600 dark:text-amber-400">
+                          Estimated flat rates — add a full address with postal code for live carrier pricing.
+                        </p>
+                      )}
+                      {pricingQuote.shipmentWeightOz != null && (
+                        <p className="text-xs text-muted-foreground">
+                          Parcel: {(pricingQuote.shipmentWeightOz / 16).toFixed(2)} lb
+                          {pricingQuote.boxes?.length ? ` in ${pricingQuote.boxes.length} box${pricingQuote.boxes.length > 1 ? "es" : ""}` : ""}.
+                          Shipping is re-rated at order time.
+                        </p>
+                      )}
                     </div>
                   )}
 
