@@ -76,17 +76,23 @@ export async function GET(req: NextRequest) {
           kind?: string;
           token?: string;
         };
-        // Every proof on the order, one entry per item/slot. Order-level
-        // proofStatus only reads "approved" once all of these are.
+        // Every proof version on the order, newest first, one per item/slot.
+        // Each carries its own token — the creator approves each slot
+        // separately, and order-level proofStatus only reads "approved" once
+        // every required slot is.
         proofs?: Array<{
-          orderItemId?: string;
-          itemName?: string;
-          kind?: string;
+          orderItemId?: string | null;
+          itemName?: string | null;
+          kind?: string | null;
           status?: string;
           version?: number;
           fileUrl?: string;
-          reviewUrl?: string;
+          reviewUrl?: string | null;
           token?: string;
+          approvedName?: string | null;
+          decidedAt?: string | null;
+          decisionNote?: string | null;
+          createdAt?: string;
         }>;
       };
 
