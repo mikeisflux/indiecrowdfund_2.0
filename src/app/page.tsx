@@ -833,7 +833,9 @@ export default async function HomePage() {
 
   return (
     <main className="min-h-screen relative">
-      <h1 className="sr-only">IndieCrowdfund - The Best Kickstarter Alternative for Crowdfunding Creative Projects</h1>
+      {/* The page's real H1. The hero slider's heading is decorative and
+          rotates per slide, so this carries the ranking target. */}
+      <h1 className="sr-only">Comic Book Crowdfunding — Fund Indie Comics and Graphic Novels on IndieCrowdfund</h1>
       <JsonLd
         data={{
           "@context": "https://schema.org",

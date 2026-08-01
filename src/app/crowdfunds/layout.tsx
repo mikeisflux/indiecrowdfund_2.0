@@ -1,19 +1,26 @@
 import type { Metadata } from "next";
 
-const SITE_URL = process.env.NEXT_PUBLIC_APP_URL || "https://www.indiecrowdfund.com";
+// Must match the origin used everywhere else (no "www"): a canonical on a
+// different host splits ranking signals between two URLs Google treats as
+// separate pages.
+const SITE_URL = process.env.NEXT_PUBLIC_APP_URL || "https://indiecrowdfund.com";
 
 export const metadata: Metadata = {
-  title: "Discover Crowdfunding Projects - Browse Campaigns",
+  title: "Comic Book Crowdfunding Campaigns — Browse Indie Comics",
   description:
-    "Explore and discover crowdfunding projects on IndieCrowdfund. Browse creative campaigns, back innovative ideas, and find the next big thing. The best Kickstarter alternative for discovering indie projects.",
+    "Browse comic book crowdfunding campaigns from independent creators. Back indie comics, graphic novels, and art books, or launch your own comic crowdfunding campaign with lower fees than Kickstarter.",
   alternates: {
-    canonical: `${SITE_URL}/discover`,
+    // Self-canonical. This previously pointed at /discover — a page that does
+    // not exist on this site — which told Google to drop /crowdfunds from the
+    // index in favour of a URL that 404s. That single line was enough to keep
+    // the main browse page out of search results entirely.
+    canonical: `${SITE_URL}/crowdfunds`,
   },
   openGraph: {
-    title: "Discover Projects on IndieCrowdfund",
+    title: "Comic Book Crowdfunding Campaigns on IndieCrowdfund",
     description:
-      "Browse hundreds of crowdfunding campaigns from independent creators. Find and back projects you believe in.",
-    url: `${SITE_URL}/discover`,
+      "Browse indie comic and graphic novel crowdfunding campaigns. Find and back projects you believe in.",
+    url: `${SITE_URL}/crowdfunds`,
     images: [
       {
         url: "/api/og",
@@ -25,9 +32,9 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Discover Projects on IndieCrowdfund",
+    title: "Comic Book Crowdfunding Campaigns on IndieCrowdfund",
     description:
-      "Browse hundreds of crowdfunding campaigns from independent creators. Find and back projects you believe in.",
+      "Browse indie comic and graphic novel crowdfunding campaigns. Find and back projects you believe in.",
     images: ["/api/og"],
   },
 };

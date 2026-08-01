@@ -16,24 +16,24 @@ const DEFAULT_OG_IMAGE = "/api/og";
 
 export const SEO_PAGE_DEFAULTS: Record<string, SeoPageDefaults> = {
   "/": {
-    title: "IndieCrowdfund - The Best Kickstarter Alternative for Independent Creators",
+    title: "Comic Book Crowdfunding Platform — Fund Indie Comics | IndieCrowdfund",
     description:
-      "IndieCrowdfund is the top crowdfunding platform for creative projects. Launch your campaign, fund bold ideas, and join a thriving community of creators.",
-    ogTitle: "IndieCrowdfund - Crowdfunding for Independent Creators",
+      "IndieCrowdfund is the comic crowdfunding platform for independent creators. Launch a comic book crowdfunding campaign or back indie comics and graphic novels.",
+    ogTitle: "Comic Book Crowdfunding for Independent Creators",
     ogDescription:
-      "The best Kickstarter alternative with lower fees and more flexibility. Launch your project today.",
+      "A Kickstarter alternative built for comics, with lower fees. Launch your comic campaign today.",
     ogImage: DEFAULT_OG_IMAGE,
-    keywords: ["crowdfunding", "kickstarter alternative", "independent creators", "fund projects", "creative campaigns"],
+    keywords: ["comic crowdfunding", "comic book crowdfunding", "crowdfunding comics", "indie comics funding", "graphic novel crowdfunding", "kickstarter alternative"],
   },
   "/crowdfunds": {
-    title: "Discover Projects - Browse Creative Campaigns",
+    title: "Comic Book Crowdfunding Campaigns — Browse Indie Comics",
     description:
-      "Explore crowdfunding campaigns across categories like games, art, music, film, and technology. Find and back the next big idea on IndieCrowdfund.",
-    ogTitle: "Discover Amazing Projects on IndieCrowdfund",
+      "Browse comic book crowdfunding campaigns from independent creators — indie comics, graphic novels, and art books. Back a campaign or launch your own.",
+    ogTitle: "Comic Book Crowdfunding Campaigns on IndieCrowdfund",
     ogDescription:
-      "Browse creative crowdfunding campaigns and back projects you believe in. New projects added daily.",
+      "Browse indie comic and graphic novel crowdfunding campaigns. New projects added regularly.",
     ogImage: DEFAULT_OG_IMAGE,
-    keywords: ["discover projects", "crowdfunding campaigns", "browse projects", "back a project", "creative ideas"],
+    keywords: ["comic crowdfunding campaigns", "indie comics", "graphic novel crowdfunding", "browse comic projects", "back a comic"],
   },
   "/about-us": {
     title: "About Us - Our Mission to Empower Creators",

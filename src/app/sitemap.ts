@@ -12,12 +12,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: "daily",
       priority: 1.0,
     },
-    {
-      url: `${SITE_URL}/discover`,
-      lastModified: new Date(),
-      changeFrequency: "daily",
-      priority: 0.9,
-    },
+    // NOTE: /discover used to be listed here, but no such route exists — we
+    // were feeding Google a 404 as a priority-0.9 URL. The real browse page is
+    // /crowdfunds, listed below.
     {
       url: `${SITE_URL}/about-us`,
       lastModified: new Date(),

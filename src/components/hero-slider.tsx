@@ -351,7 +351,11 @@ export function HeroSlider({ initialSlides = [], autoPlayInterval = 6000 }: Hero
               {currentSlide.subtitle}
             </p>
           )}
-          <h1
+          {/* h2, not h1: the slide title changes every few seconds and is
+              admin-editable marketing copy, so it can't be the page's ranking
+              heading. The stable H1 lives on the page itself. Two H1s also
+              split the signal. Styling is unchanged. */}
+          <h2
             className={cn(
               "mb-2 text-2xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl animate-fade-in-up font-bold tracking-tight",
               isTransitioning && "opacity-0",
@@ -361,7 +365,7 @@ export function HeroSlider({ initialSlides = [], autoPlayInterval = 6000 }: Hero
             key={`title-${currentIndex}`}
           >
             {renderTitle(currentSlide.title)}
-          </h1>
+          </h2>
           {currentSlide.description && currentSlide.showDescription !== false && (
             <p
               className={cn(
