@@ -50,7 +50,9 @@ import {
   Maximize2,
   Minimize2,
   ArrowLeft,
+  ShieldBan,
 } from "lucide-react";
+import { toast } from "sonner";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import {
   ComposeEmailDialog,
@@ -103,6 +105,8 @@ export default function EmailPage() {
   const [deleteEmailConfirm, setDeleteEmailConfirm] = useState(false);
   const [isDeletingMailbox, setIsDeletingMailbox] = useState(false);
   const [isDeletingEmail, setIsDeletingEmail] = useState(false);
+  const [reportSpamConfirm, setReportSpamConfirm] = useState(false);
+  const [isReportingSpam, setIsReportingSpam] = useState(false);
 
   // Empty folder confirmation
   const [emptyFolderConfirm, setEmptyFolderConfirm] = useState(false);
@@ -418,6 +422,46 @@ export default function EmailPage() {
       console.error("Error deleting email:", error);
     } finally {
       setIsDeletingEmail(false);
+    }
+  };
+
+  // Report spam: files the sender's mail under SPAM, blocklists them so our
+  // inbound webhook drops future messages, and asks Mailgun to discard them
+  // at the provider. `scope: "domain"` blocks every address at that domain,
+  // which is the right call when a spammer rotates the local part.
+  const handleReportSpam = async (scope: "email" | "domain") => {
+    if (!selectedMailbox || !selectedEmail) return;
+
+    setIsReportingSpam(true);
+    try {
+      const response = await apiFetch(
+        `/api/admin/mailboxes/${selectedMailbox.id}/emails/${selectedEmail.id}/spam`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ scope }),
+        }
+      );
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Failed to report spam");
+
+      toast.success(
+        `Blocked ${data.blocked}${data.movedToSpam > 1 ? ` — ${data.movedToSpam} messages moved to Spam` : ""}`
+      );
+      if (!data.providerBlocked) {
+        // Local block still applies; the admin should know it isn't enforced
+        // upstream so they can fix Mailgun credentials.
+        toast.warning(
+          `Blocked here, but not at Mailgun: ${data.providerError || "provider unavailable"}`
+        );
+      }
+      setEmails((prev) => prev.filter((e) => e.id !== selectedEmail.id));
+      setSelectedEmail(null);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to report spam");
+    } finally {
+      setIsReportingSpam(false);
+      setReportSpamConfirm(false);
     }
   };
 
@@ -904,6 +948,20 @@ export default function EmailPage() {
                   <Button
                     variant="outline"
                     size="icon"
+                    className="h-8 w-8 text-amber-600 hover:text-amber-700 hover:bg-amber-50"
+                    title="Report as spam and block this sender"
+                    onClick={() => setReportSpamConfirm(true)}
+                    disabled={isReportingSpam}
+                  >
+                    {isReportingSpam ? (
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                    ) : (
+                      <ShieldBan className="h-3 w-3" />
+                    )}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="icon"
                     className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50"
                     onClick={() => setDeleteEmailConfirm(true)}
                   >
@@ -1209,6 +1267,22 @@ export default function EmailPage() {
         variant="destructive"
         onConfirm={handleDeleteSelectedEmail}
         loading={isDeletingEmail}
+      />
+
+      {/* Report Spam Confirmation */}
+      <ConfirmDialog
+        open={reportSpamConfirm}
+        onOpenChange={setReportSpamConfirm}
+        title="Report as spam and block sender?"
+        description={
+          selectedEmail
+            ? `Blocks ${selectedEmail.fromEmail} at Mailgun so their mail is dropped before it reaches us, and files everything already in the inbox from them under Spam. Lift it any time from the email blocklist.`
+            : ""
+        }
+        confirmText="Block sender"
+        variant="destructive"
+        onConfirm={() => handleReportSpam("email")}
+        loading={isReportingSpam}
       />
 
       {/* Empty Folder Confirmation */}

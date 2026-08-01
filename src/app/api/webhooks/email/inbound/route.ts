@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getR2Storage, generateEmailAttachmentKey } from "@/lib/r2";
+import { isSenderBlocked, recordBlockHit } from "@/lib/email/inbound-blocklist";
 import crypto from "crypto";
 
 import { logger } from "@/lib/logger";
@@ -330,6 +331,22 @@ export async function POST(request: NextRequest) {
     // Parse sender and recipient
     const fromParsed = parseEmailAddress(emailData.from);
     const toParsed = parseEmailAddress(emailData.to);
+
+    // Blocklist check before ANY storage. The matching Mailgun route should
+    // have dropped this at the provider already, but that route can be
+    // missing (Mailgun creds absent when the block was created), still
+    // propagating, or bypassed by a different inbound path — so enforce here
+    // too. Costs one indexed query and saves a DB row plus any R2 uploads.
+    const blockDecision = await isSenderBlocked(fromParsed.email);
+    if (blockDecision.blocked) {
+      if (blockDecision.matchedId) await recordBlockHit(blockDecision.matchedId);
+      webhooksEmailInboundLogger.info(
+        { from: fromParsed.email, matched: blockDecision.matchedValue },
+        "[Inbound Email] Dropped — sender is blocklisted"
+      );
+      // 200 so the provider doesn't retry a message we deliberately discarded.
+      return NextResponse.json({ received: true, blocked: true });
+    }
 
     // Get the actual recipient email (prefer envelope for accuracy)
     const recipientEmail = emailData.envelope?.to?.[0] || toParsed.email;

@@ -348,6 +348,12 @@ model EmailBlocklist {
   blockedCount  Int                 @default(0)  // How many emails were blocked
   lastBlockedAt DateTime?
 
+  // Mailgun route id when this block is also enforced at the provider (mail
+  // is dropped before it ever reaches our webhook). Null means local-only —
+  // still effective, but we pay for the inbound request. Kept so lifting a
+  // block can delete the route instead of orphaning it.
+  providerRouteId String?
+
   // Status
   isActive      Boolean             @default(true)
   expiresAt     DateTime?           // Optional expiration for temporary blocks
