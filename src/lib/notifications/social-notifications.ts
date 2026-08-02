@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import { createNotification } from "./core";
+import { createNotification, notifyProjectTeam } from "./core";
 import { sendCommentReplyEmail } from "./email-templates";
 
 import { logger } from "@/lib/logger";
@@ -103,8 +103,8 @@ export async function notifyNewComment(
     ? `${projectUrlPath}?tab=comments`
     : `/projects/${projectSlug}?tab=comments`;
 
-  await createNotification({
-    userId: creatorId,
+  await notifyProjectTeam(projectId, {
+    excludeUserId: commenterId,
     type: "COMMENT_NEW",
     title: "New Comment",
     message: `${commenterName} commented on "${projectTitle}"`,

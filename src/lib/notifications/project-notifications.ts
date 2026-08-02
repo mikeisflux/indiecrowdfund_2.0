@@ -1,6 +1,6 @@
 import { db } from "@/lib/db";
 import { isEmailTypeEnabled } from "@/lib/email";
-import { createNotification } from "./core";
+import { createNotification, notifyProjectTeam } from "./core";
 import {
   sendNewCommentEmail,
   sendProjectFundedEmail,
@@ -153,9 +153,8 @@ export async function notifyProjectLaunched(projectId: string) {
     await db.notification.createMany({ data: notifications });
   }
 
-  // Notify the creator
-  await createNotification({
-    userId: project.creatorId,
+  // Notify the creator and every accepted collaborator
+  await notifyProjectTeam(projectId, {
     type: "PROJECT_LAUNCHED",
     title: "Your project is live!",
     message: `"${project.title}" has been launched successfully.`,
@@ -498,9 +497,8 @@ export async function notifyProjectEnded(projectId: string) {
     await db.notification.createMany({ data: notifications });
   }
 
-  // Notify creator
-  await createNotification({
-    userId: project.creatorId,
+  // Notify creator and every accepted collaborator
+  await notifyProjectTeam(projectId, {
     type: "PROJECT_ENDED",
     title: funded ? "Your Campaign Succeeded!" : "Your Campaign Has Ended",
     message: funded

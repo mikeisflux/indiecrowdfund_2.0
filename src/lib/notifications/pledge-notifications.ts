@@ -2,7 +2,7 @@ import { db } from "@/lib/db";
 import { sendPledgeConfirmationEmail, sendPledgeModificationEmail, sendPledgeCancellationEmail } from "@/lib/email";
 import { sendRefundRequestDecisionEmail } from "@/lib/email/email-templates-pledge";
 import { sendPledgeChargeFailedEmail } from "./email-templates";
-import { createNotification } from "./core";
+import { createNotification, notifyProjectTeam } from "./core";
 import type { NotificationType } from "./types";
 
 import { logger } from "@/lib/logger";
@@ -35,8 +35,9 @@ export async function notifyPledgeReceived(
     ? `/projects/${project.creator.vanityUrl}/${project.slug}`
     : `/projects/${project.slug}`;
 
-  await createNotification({
-    userId: creatorId,
+  // Creator + accepted collaborators. creatorId stays in the signature for
+  // callers, but the team helper resolves the full recipient list.
+  await notifyProjectTeam(projectId, {
     type: "PLEDGE_RECEIVED",
     title: "New Pledge!",
     message: `${backerName} backed "${project.title}" for $${Number(amount).toFixed(2)}`,
