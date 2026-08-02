@@ -61,6 +61,9 @@ const rewardSchema = z.object({
     z.number().transform((n) => ({ default: n })),
   ]).optional().default({}),
   quantityAvailable: z.number().int().min(1).optional().nullable(),
+  // Shared stock pool: id of another reward on this project whose quantity
+  // this one draws from. Validated below against the same project.
+  sharedStockWithId: z.string().optional().nullable(),
   visibility: z.enum(["PUBLIC", "SECRET"]).optional().default("PUBLIC"),
   secretToken: z.string().optional().nullable(),
   isEnded: z.boolean().optional().default(false),
@@ -148,6 +151,7 @@ async function saveReward(projectId: string, reward: RewardData) {
           shippingCountries: reward.shippingCountries,
           shippingCost: reward.shippingCost,
           quantityAvailable: reward.quantityAvailable,
+          sharedStockWithId: reward.sharedStockWithId || null,
           visibility: reward.visibility,
           secretToken,
           isEnded: reward.isEnded,
@@ -186,6 +190,7 @@ async function saveReward(projectId: string, reward: RewardData) {
       shippingCountries: reward.shippingCountries,
       shippingCost: reward.shippingCost,
       quantityAvailable: reward.quantityAvailable,
+      sharedStockWithId: reward.sharedStockWithId || null,
       visibility: reward.visibility,
       secretToken,
       isEnded: reward.isEnded,
@@ -440,6 +445,7 @@ export async function PATCH(
           shippingCountries: reward.shippingCountries,
           shippingCost: reward.shippingCost,
           quantityAvailable: reward.quantityAvailable,
+          sharedStockWithId: reward.sharedStockWithId || null,
           visibility: reward.visibility,
           secretToken,
           isEnded: reward.isEnded,

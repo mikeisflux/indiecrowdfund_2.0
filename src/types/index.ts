@@ -579,6 +579,9 @@ export interface RewardData {
   shippingCost: Record<string, number>;  // Per-country rates: { "US": 5, "CA": 8 }
   quantityAvailable?: number;
   quantityClaimed?: number;
+  // Shared stock: when set, this reward draws from the linked reward's
+  // quantity pool rather than counting on its own.
+  sharedStockWithId?: string;
   visibility: Visibility;
   secretToken?: string;  // For secret rewards - only accessible via this token
   availableFrom?: Date;

@@ -801,6 +801,7 @@ export function RewardsStep({ onFormOpenChange }: RewardsStepProps) {
         <RewardForm
           currentReward={currentReward}
           onRewardChange={setCurrentReward}
+          allRewards={rewards}
           selectedItemIds={selectedItemIds}
           onToggleItemSelection={toggleItemSelection}
           items={items}

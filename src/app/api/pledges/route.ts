@@ -7,6 +7,7 @@ import {
   getDivinityCoinConfig,
   isHostedCheckoutEnabled,
 } from "@/lib/payments/divinitycoin";
+import { isPoolSoldOut } from "@/lib/payments/rewards";
 import { createPayPalPayment } from "@/lib/payments/paypal";
 import { createPayPalConnectPayment } from "@/lib/payments/paypal-connect";
 import { createWhopPayment } from "@/lib/payments/whop";
@@ -116,9 +117,11 @@ export async function POST(req: NextRequest) {
           return NextResponse.json({ error: "Invalid reward" }, { status: 400 });
         }
 
-        // Quick pre-check for sold out (actual atomic check happens during pledge creation)
-        if (reward.quantityAvailable !== null &&
-            reward.quantityClaimed >= reward.quantityAvailable) {
+        // Quick pre-check for sold out (actual atomic check happens during
+        // pledge creation). Counts the whole shared-stock pool, so a tier
+        // linked to an add-on reports sold out once their combined claims
+        // reach the limit.
+        if (await isPoolSoldOut(reward.id)) {
           return NextResponse.json({ error: "Reward sold out" }, { status: 400 });
         }
       }

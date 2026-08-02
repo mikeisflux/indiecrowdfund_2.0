@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useMemo } from "react";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -61,6 +61,27 @@ interface RewardFormProps {
   onSave: () => void;
   onCancel: () => void;
   onCreateItem: () => void;
+  // Every other reward on the project, for the shared-stock picker below.
+  allRewards?: RewardData[];
+}
+
+// Rewards whose title looks like the same product, so the shared-stock picker
+// shows a handful of plausible matches instead of all 110 rewards. Matches on
+// the leading SKU-ish token ("PG1-02" out of "PG1-02 LTD to 50"), falling back
+// to either title containing the other.
+function findStockCandidates(current: RewardData, all: RewardData[]): RewardData[] {
+  const norm = (s: string) => s.trim().toLowerCase();
+  const title = norm(current.title || "");
+  if (!title) return [];
+  const code = title.split(/[\s—–-]+/)[0];
+
+  return all.filter((r) => {
+    if (!r.id || r.id === current.id) return false;
+    const other = norm(r.title || "");
+    if (!other) return false;
+    if (code && code.length >= 3 && other.startsWith(code)) return true;
+    return other.includes(title) || title.includes(other);
+  });
 }
 
 export function RewardForm({
@@ -88,7 +109,12 @@ export function RewardForm({
   onSave,
   onCancel,
   onCreateItem,
+  allRewards = [],
 }: RewardFormProps) {
+  const stockCandidates = useMemo(
+    () => findStockCandidates(currentReward, allRewards),
+    [currentReward, allRewards]
+  );
   const [isCopied, setIsCopied] = React.useState(false);
   const [isEmailing, setIsEmailing] = React.useState(false);
 
@@ -289,7 +315,7 @@ export function RewardForm({
                   </div>
                 </RadioGroup>
                 {quantityType === "limited" && (
-                  <div className="ml-8">
+                  <div className="ml-8 space-y-3">
                     <Input
                       type="number"
                       placeholder="Enter quantity"
@@ -302,6 +328,40 @@ export function RewardForm({
                         })
                       }
                     />
+
+                    {/* Shared stock. Only offered when another reward looks
+                        like the same product, so this stays a short list. */}
+                    {stockCandidates.length > 0 && (
+                      <div className="space-y-1.5 max-w-md">
+                        <Label className="text-sm font-medium">Share this quantity with</Label>
+                        <Select
+                          value={currentReward.sharedStockWithId || "none"}
+                          onValueChange={(v) =>
+                            onRewardChange({
+                              ...currentReward,
+                              sharedStockWithId: v === "none" ? undefined : v,
+                            })
+                          }
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Keep its own separate count" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">Keep its own separate count</SelectItem>
+                            {stockCandidates.map((r) => (
+                              <SelectItem key={r.id} value={r.id as string}>
+                                {r.title}
+                                {r.type === "ADDON" ? " (add-on)" : " (reward tier)"}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <p className="text-xs text-muted-foreground">
+                          Linked rewards sell from one pool. Limit 10 with 4 sold here and 6
+                          sold there means both are sold out.
+                        </p>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

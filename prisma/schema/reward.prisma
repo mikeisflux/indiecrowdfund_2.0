@@ -42,6 +42,13 @@ model Reward {
   // type (TIER / ADDON) since those render as separate lists.
   displayOrder      Int?
 
+  // Shared stock. When an add-on is the same physical thing as a tier (or as
+  // another add-on), point it at that reward and the two draw from ONE pool:
+  // the target's quantityAvailable is the cap, and claims from either side
+  // count against it. "LTD to 10" with 4 tiers and 6 add-ons sold = sold out.
+  // Null means this reward keeps its own independent count.
+  sharedStockWithId String?
+
   // Tracking if copied
   copiedFromId      String?
 
@@ -51,6 +58,8 @@ model Reward {
   items             RewardItem[]
   copiedFrom        Reward?      @relation("RewardCopies", fields: [copiedFromId], references: [id])
   copies            Reward[]     @relation("RewardCopies")
+  sharedStockWith   Reward?      @relation("SharedStock", fields: [sharedStockWithId], references: [id])
+  sharedStockPeers  Reward[]     @relation("SharedStock")
   selectedAddons    PledgeAddon[]
 
   createdAt         DateTime     @default(now())
