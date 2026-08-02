@@ -294,6 +294,11 @@ export async function POST(req: NextRequest) {
             id: true,
             confirmationEmailSent: true,
             divinityCoinPaymentMethodId: true,
+            // Processor payment references. Their presence means a charge or
+            // authorization exists at DivinityCoin for this pledge.
+            divinityCoinPaymentId: true,
+            divinityCoinSetupIntentId: true,
+            stripePaymentIntentId: true,
           },
           orderBy: { createdAt: "desc" },
         });
@@ -305,8 +310,21 @@ export async function POST(req: NextRequest) {
         // over-counted, which is how an AoN campaign ends up showing
         // $0 / 0 backers despite real pledges. The backer has
         // effectively already pledged; treat it like a completed one.
+        //
+        // A payment reference (divinityCoinPaymentId / setup intent / Stripe
+        // intent) is the strongest signal of all and was missing here: on an
+        // all-or-nothing campaign the card is charged at pledge time while the
+        // pledge stays PENDING until the project funds, so a backer who came
+        // back minutes later — reasonably thinking "pending" meant it hadn't
+        // worked — fell straight through this check and was charged a second
+        // time. Two succeeded $40 charges, seven minutes apart, same card.
         const committedPending = pendingPledges.find(
-          p => p.confirmationEmailSent || p.divinityCoinPaymentMethodId
+          p =>
+            p.confirmationEmailSent ||
+            p.divinityCoinPaymentMethodId ||
+            p.divinityCoinPaymentId ||
+            p.divinityCoinSetupIntentId ||
+            p.stripePaymentIntentId
         );
         if (committedPending) {
           return NextResponse.json(
@@ -321,7 +339,19 @@ export async function POST(req: NextRequest) {
         let reusablePledgeId: string | null = null;
         if (pendingPledges.length > 0) {
           reusablePledgeId = pendingPledges[0].id;
-          const staleIds = pendingPledges.slice(1).map(p => p.id);
+          // Defensive: the guard above should already have returned, but never
+          // hard-delete a pledge holding a processor payment reference —
+          // that strands a real charge with no record on our side.
+          const staleIds = pendingPledges
+            .slice(1)
+            .filter(
+              p =>
+                !p.divinityCoinPaymentId &&
+                !p.divinityCoinSetupIntentId &&
+                !p.stripePaymentIntentId &&
+                !p.divinityCoinPaymentMethodId
+            )
+            .map(p => p.id);
           if (staleIds.length > 0) {
             pledgeLogger.info({ correlationId, staleIds }, "Cleaning up duplicate PENDING DivinityCoin pledges");
             await db.pledgeAddon.deleteMany({ where: { pledgeId: { in: staleIds } } });
