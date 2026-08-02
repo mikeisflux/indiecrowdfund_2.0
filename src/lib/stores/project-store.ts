@@ -65,6 +65,12 @@ interface ProjectBuilderState {
   endReward: (index: number) => void;
 }
 
+// Largest story description we keep in localStorage. Raised from 50 KB, which
+// an image-heavy campaign story clears easily. localStorage allows roughly
+// 5 MB per origin; 2 MB leaves ample headroom for the rest of the builder
+// state persisted alongside it.
+const STORY_PERSIST_LIMIT = 2_000_000;
+
 const initialState = {
   currentStep: 0,
   basics: {
@@ -259,12 +265,23 @@ export const useProjectStore = create<ProjectBuilderState>()(
               imageUrl: stripBase64(item.imageUrl),
             })),
           })),
-          // For story, don't persist the full description if it's too large
+          // Story descriptions are HTML with embedded images and routinely run
+          // past the old 50 KB ceiling, which silently dropped them from the
+          // persisted state. 2 MB fits comfortably inside the ~5 MB
+          // localStorage budget alongside everything else here, so real
+          // stories now survive a reload.
+          //
+          // The description is still omitted above that, because a quota
+          // overflow makes the whole persist call throw and costs the entire
+          // builder state. Losing it from localStorage is no longer dangerous
+          // on its own: the save path omits an absent description from the
+          // request rather than posting "" over the stored copy.
           story: {
             ...state.story,
-            description: state.story.description && state.story.description.length > 50000
-              ? undefined // Don't persist if over 50KB
-              : state.story.description,
+            description:
+              state.story.description && state.story.description.length > STORY_PERSIST_LIMIT
+                ? undefined
+                : state.story.description,
           },
           people: {
             ...state.people,

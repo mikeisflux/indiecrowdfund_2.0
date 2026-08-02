@@ -431,17 +431,31 @@ export function ProjectBuilder() {
         })
       );
 
-      // Save story
+      // Save story.
+      //
+      // description and risks are omitted from the payload when we don't have
+      // content for them, because the endpoint only writes fields that are
+      // present. Sending `|| ""` instead — as this used to — turned "the
+      // browser doesn't currently hold the story" into "blank the story", and
+      // that is exactly how a launched campaign lost its write-up: an
+      // image-heavy description exceeds the localStorage budget, is dropped
+      // from the persisted state, rehydrates as undefined, and the next save
+      // (launching counts) posted "" straight over the real thing.
+      const storyPayload: Record<string, unknown> = {
+        usesAI: story.usesAI || false,
+        faqs: story.faqs || [],
+      };
+      if (typeof story.description === "string" && story.description.trim() !== "") {
+        storyPayload.description = story.description;
+      }
+      if (typeof story.risks === "string" && story.risks.trim() !== "") {
+        storyPayload.risks = story.risks;
+      }
       savePromises.push(
         apiFetch(`/api/projects/${projectId}/story`, {
           method: "POST",
           headers: { "Content-Type": "application/json", },
-          body: JSON.stringify({
-            description: story.description || "",
-            risks: story.risks || "",
-            usesAI: story.usesAI || false,
-            faqs: story.faqs || [],
-          }),
+          body: JSON.stringify(storyPayload),
         })
       );
 
