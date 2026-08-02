@@ -241,7 +241,7 @@ export async function GET(
 
     const items = await db.projectItem.findMany({
       where: { projectId },
-      orderBy: { createdAt: "asc" },
+      orderBy: [{ displayOrder: { sort: "asc", nulls: "last" } }, { createdAt: "asc" }],
     });
 
     // Map items to include isEnded boolean for frontend

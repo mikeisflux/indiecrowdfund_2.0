@@ -346,14 +346,23 @@ export function ItemsTab({
     const { active, over } = event;
 
     if (over && active.id !== over.id) {
-      const oldIndex = manualOrder.findIndex((item) => item.id === active.id);
-      const newIndex = manualOrder.findIndex((item) => item.id === over.id);
-      const newOrder = arrayMove(manualOrder, oldIndex, newIndex);
+      // Drag against the visible list — see the tiers tab for why.
+      const baseline = sortOption === "manual" ? manualOrder : sortedItems;
+      const oldIndex = baseline.findIndex((item) => item.id === active.id);
+      const newIndex = baseline.findIndex((item) => item.id === over.id);
+      const newOrder = arrayMove(baseline, oldIndex, newIndex);
       setManualOrder(newOrder);
       setSortOption("manual"); // Switch to manual when dragging
       onReorderItems(newOrder);
     }
   };
+
+  // Persist the chosen sort as the real item order (see tiers tab).
+  useEffect(() => {
+    if (sortOption === "manual") return;
+    onReorderItems(sortedItems);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sortOption]);
 
   const itemIds = sortedItems.map(item => item.id || "").filter(Boolean);
 

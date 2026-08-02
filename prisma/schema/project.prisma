@@ -199,6 +199,9 @@ model ProjectItem {
   description String? @db.Text
   imageUrl    String?
   endedAt     DateTime? // If set, item is no longer available for new pledges
+  // Creator-chosen order from the builder's Items tab (drag, or a chosen
+  // sort written through). Null = never ordered -> fall back to createdAt.
+  displayOrder Int?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 

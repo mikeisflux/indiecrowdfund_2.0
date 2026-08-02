@@ -352,9 +352,13 @@ export function TiersTab({
     const { active, over } = event;
 
     if (over && active.id !== over.id) {
-      const oldIndex = manualOrder.findIndex((tier) => (tier.id || `tier-${rewards.indexOf(tier)}`) === active.id);
-      const newIndex = manualOrder.findIndex((tier) => (tier.id || `tier-${rewards.indexOf(tier)}`) === over.id);
-      const newOrder = arrayMove(manualOrder, oldIndex, newIndex);
+      // Drag against what's on screen. When a sort is active the visible list
+      // is sortedTiers, not manualOrder — using manualOrder's indices moved a
+      // different row than the one the creator grabbed.
+      const baseline = sortOption === "manual" ? manualOrder : sortedTiers;
+      const oldIndex = baseline.findIndex((tier) => (tier.id || `tier-${rewards.indexOf(tier)}`) === active.id);
+      const newIndex = baseline.findIndex((tier) => (tier.id || `tier-${rewards.indexOf(tier)}`) === over.id);
+      const newOrder = arrayMove(baseline, oldIndex, newIndex);
       setManualOrder(newOrder);
       setSortOption("manual");
 
@@ -363,6 +367,18 @@ export function TiersTab({
       onReorderRewards([...newOrder, ...addons]);
     }
   };
+
+  // Picking a sort writes it through as the project's display order, so the
+  // public page matches what the creator arranged here. Without this the sort
+  // box was preview-only and backers still saw the old order.
+  useEffect(() => {
+    if (sortOption === "manual") return;
+    const addonsList = rewards.filter(r => r.type === "ADDON");
+    onReorderRewards([...sortedTiers, ...addonsList]);
+    // Runs on the creator's choice only — re-running on sortedTiers would
+    // loop, since persisting updates the store the list derives from.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sortOption]);
 
   const tierIds = sortedTiers.map(tier => tier.id || `tier-${rewards.indexOf(tier)}`);
 

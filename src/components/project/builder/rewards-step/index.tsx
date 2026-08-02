@@ -64,6 +64,25 @@ export function RewardsStep({ onFormOpenChange }: RewardsStepProps) {
     }
   };
 
+  // Persist item order the same way rewards do. reorderItems alone only
+  // updates the store, so a drag (or a chosen sort written through) was lost
+  // on reload.
+  const handleReorderItems = async (newItems: RewardItemData[]) => {
+    reorderItems(newItems);
+    if (!projectId) return;
+    const orderedIds = newItems.map((i) => i.id).filter((id): id is string => !!id);
+    if (orderedIds.length === 0) return;
+    try {
+      await apiFetch(`/api/projects/${projectId}/items/reorder`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ itemIds: orderedIds }),
+      });
+    } catch {
+      // Non-fatal — local order already applied; re-syncs on next save.
+    }
+  };
+
   const [activeTab, setActiveTab] = useState<"items" | "tiers" | "addons">("items");
   const [isSaving, setIsSaving] = useState(false);
 
@@ -882,7 +901,7 @@ export function RewardsStep({ onFormOpenChange }: RewardsStepProps) {
               onDeleteItem={handleDeleteItem}
               onEndItem={handleEndItem}
               onItemImageChange={handleItemImageChange}
-              onReorderItems={reorderItems}
+              onReorderItems={handleReorderItems}
             />
           </TabsContent>
 

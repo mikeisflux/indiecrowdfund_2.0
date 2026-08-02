@@ -348,9 +348,11 @@ export function AddonsTab({
     const { active, over } = event;
 
     if (over && active.id !== over.id) {
-      const oldIndex = manualOrder.findIndex((addon) => (addon.id || `addon-${rewards.indexOf(addon)}`) === active.id);
-      const newIndex = manualOrder.findIndex((addon) => (addon.id || `addon-${rewards.indexOf(addon)}`) === over.id);
-      const newOrder = arrayMove(manualOrder, oldIndex, newIndex);
+      // Drag against the visible list — see the tiers tab for why.
+      const baseline = sortOption === "manual" ? manualOrder : sortedAddons;
+      const oldIndex = baseline.findIndex((addon) => (addon.id || `addon-${rewards.indexOf(addon)}`) === active.id);
+      const newIndex = baseline.findIndex((addon) => (addon.id || `addon-${rewards.indexOf(addon)}`) === over.id);
+      const newOrder = arrayMove(baseline, oldIndex, newIndex);
       setManualOrder(newOrder);
       setSortOption("manual");
 
@@ -359,6 +361,14 @@ export function AddonsTab({
       onReorderRewards([...tiers, ...newOrder]);
     }
   };
+
+  // Persist the chosen sort as the real display order (see tiers tab).
+  useEffect(() => {
+    if (sortOption === "manual") return;
+    const tiersList = rewards.filter(r => r.type === "TIER");
+    onReorderRewards([...tiersList, ...sortedAddons]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sortOption]);
 
   const addonIds = sortedAddons.map(addon => addon.id || `addon-${rewards.indexOf(addon)}`);
 
