@@ -51,6 +51,7 @@ export async function GET(req: NextRequest) {
     const search = searchParams.get("search") || "";
     const allowedRoles = ["all", "USER", "CREATOR", "COOL_KIDS", "ADMIN", "SUPER_ADMIN"];
     const requestedRole = searchParams.get("role") || "all";
+    const status = searchParams.get("status") || "all";
     const role = allowedRoles.includes(requestedRole) ? requestedRole : "all";
 
     // Whitelist allowed sort fields to prevent information disclosure
@@ -76,6 +77,15 @@ export async function GET(req: NextRequest) {
 
     if (role !== "all") {
       where.role = role;
+    }
+
+    // Account status. There is no suspension field on User (only retailers
+    // have one), so "suspended" is not offered here — see the admin UI, which
+    // no longer lists it. Active/pending map to email verification.
+    if (status === "active") {
+      where.emailVerified = { not: null };
+    } else if (status === "pending") {
+      where.emailVerified = null;
     }
 
     // Get users with stats (exclude deleted)

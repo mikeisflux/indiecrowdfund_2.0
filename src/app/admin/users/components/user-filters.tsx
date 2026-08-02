@@ -57,10 +57,13 @@ export function UserFilters({
             <SelectValue placeholder="Status" />
           </SelectTrigger>
           <SelectContent>
+            {/* "Suspended" was offered here but User has no suspension
+                field — only retailers do — so selecting it could never
+                filter anything. Active/Pending reflect email verification,
+                which the API does support. */}
             <SelectItem value="all">All Status</SelectItem>
-            <SelectItem value="active">Active</SelectItem>
-            <SelectItem value="suspended">Suspended</SelectItem>
-            <SelectItem value="pending">Pending</SelectItem>
+            <SelectItem value="active">Verified</SelectItem>
+            <SelectItem value="pending">Unverified</SelectItem>
           </SelectContent>
         </Select>
       </div>

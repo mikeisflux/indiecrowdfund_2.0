@@ -10,6 +10,7 @@ export function useUserData(
   searchQuery: string,
   roleFilter: string,
   retailerStatusFilter: string,
+  statusFilter: string = "all",
 ) {
   const [users, setUsers] = useState<User[]>([]);
   const [userStats, setUserStats] = useState<UserStats>({ total: 0, users: 0, admins: 0, superAdmins: 0 });
@@ -37,6 +38,9 @@ export function useUserData(
       if (roleFilter !== "all") {
         params.append("role", roleFilter);
       }
+      if (statusFilter !== "all") {
+        params.append("status", statusFilter);
+      }
 
       const response = await fetch(`/api/admin/users?${params}`);
       if (response.ok) {
@@ -50,7 +54,7 @@ export function useUserData(
     } finally {
       setIsLoading(false);
     }
-  }, [currentPage, searchQuery, roleFilter]);
+  }, [currentPage, searchQuery, roleFilter, statusFilter]);
 
   const checkDuplicates = useCallback(async () => {
     try {

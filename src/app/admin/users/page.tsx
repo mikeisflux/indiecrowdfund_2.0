@@ -75,7 +75,7 @@ export default function UsersPage() {
     mergeDuplicates,
     fetchRetailers,
     exportUsers,
-  } = useUserData(currentPage, searchQuery, roleFilter, retailerStatusFilter);
+  } = useUserData(currentPage, searchQuery, roleFilter, retailerStatusFilter, statusFilter);
 
   // Retailer actions hook
   const {
