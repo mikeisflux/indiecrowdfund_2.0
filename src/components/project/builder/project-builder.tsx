@@ -89,11 +89,20 @@ export function ProjectBuilder() {
   // builder holds edits that haven't been pushed to the server yet.
   const isDirtyRef = useRef(false);
   const hydratedRef = useRef(false);
+  // ProjectItem ids known to exist server-side: seeded from what the edit page
+  // loaded, then extended as we create items. Anything not in here is a
+  // client-side placeholder that needs POSTing rather than PATCHing.
+  const savedItemIdsRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     // The first run is the post-hydration baseline, not a user edit.
     if (!hydratedRef.current) {
       hydratedRef.current = true;
+      // Everything present at hydration came from the server, so it already
+      // exists as a ProjectItem row and must be PATCHed, never re-POSTed.
+      items.forEach((item) => {
+        if (item.id) savedItemIdsRef.current.add(item.id);
+      });
       return;
     }
     isDirtyRef.current = true;
@@ -141,7 +150,7 @@ export function ProjectBuilder() {
       }
 
       // Transform rewards to include items from the items store
-      const transformedRewards = rewards.map((reward) => ({
+      let transformedRewards = rewards.map((reward) => ({
         id: reward.id,
         type: reward.type || "TIER",
         title: reward.title,
@@ -325,6 +334,68 @@ export function ProjectBuilder() {
         toast.success("Project created successfully");
         return true;
       }
+
+      // Save items BEFORE anything else, exactly as the create path does.
+      //
+      // This step used to be missing entirely on the existing-project path:
+      // /basics, /story, /payment, /promotion and /rewards were all saved, but
+      // items were only ever GET'd on load and never written back. Items added
+      // or CSV-imported while editing a live project lived in React state
+      // alone, looked fine until reload, then vanished — and because rewards
+      // reference items by projectItemId, any reward built on an unsaved item
+      // was silently dropped by the rewards endpoint on a FK error.
+      const editItemIdMap: Record<string, string> = {};
+      const editItemsToSave = items.filter((item) => item.title);
+      if (editItemsToSave.length > 0) {
+        const results = await Promise.allSettled(
+          editItemsToSave.map(async (item) => {
+            // Items already persisted carry a server id; everything else is a
+            // client-generated placeholder that needs creating.
+            const isPersisted = !!item.id && savedItemIdsRef.current.has(item.id);
+            const res = await apiFetch(`/api/projects/${projectId}/items`, {
+              method: isPersisted ? "PATCH" : "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                ...(isPersisted ? { id: item.id } : {}),
+                title: item.title,
+                description: item.description || "",
+                imageUrl: item.imageUrl || undefined,
+              }),
+            });
+            if (!res.ok) throw new Error(`Failed to save item "${item.title}" (${res.status})`);
+            return { oldId: item.id, result: await res.json() };
+          })
+        );
+        const failedItems: string[] = [];
+        results.forEach((res) => {
+          if (res.status === "fulfilled") {
+            const { oldId, result } = res.value;
+            if (result.item?.id) {
+              if (oldId) editItemIdMap[oldId] = result.item.id;
+              savedItemIdsRef.current.add(result.item.id);
+            }
+          } else {
+            failedItems.push(String(res.reason));
+          }
+        });
+        if (failedItems.length > 0) {
+          console.error("Failed to save items:", failedItems);
+          toast.error(
+            `${failedItems.length} item${failedItems.length > 1 ? "s" : ""} couldn't be saved`
+          );
+        }
+      }
+
+      // Point rewards at the real ProjectItem ids created just above, so the
+      // batch rewards save doesn't fail its foreign key.
+      transformedRewards = transformedRewards.map((reward) => ({
+        ...reward,
+        items: (reward.items ?? []).map((item) => {
+          const oldId = item.id || item.projectItemId || "";
+          const newId = editItemIdMap[oldId];
+          return newId ? { ...item, id: newId, projectItemId: newId } : item;
+        }),
+      }));
 
       // For existing projects, use dedicated endpoints in parallel for reliability
       const savePromises: Promise<Response>[] = [];
