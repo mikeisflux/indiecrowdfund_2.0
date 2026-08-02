@@ -231,3 +231,127 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Failed to initiate payout" }, { status: 500 });
   }
 }
+
+// PATCH - advance a PayPal payout through its lifecycle.
+//
+// Same gap Whop had (18f766d6): POST created the payout as PENDING and no
+// handler existed to move it, so a recorded ACH transfer could never be marked
+// paid and the payout sat pending forever. PayPalPayoutStatus has no INITIATED
+// state, so the ladder is PENDING -> PROCESSING -> COMPLETED, with FAIL and
+// CANCEL available from any non-final state.
+export async function PATCH(req: NextRequest) {
+  try {
+    const session = await auth();
+    if (session?.user?.role !== "SUPER_ADMIN") {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+    }
+
+    const body = await req.json();
+    const { payoutId, action, adminNotes } = body;
+
+    if (!payoutId || !action) {
+      return NextResponse.json(
+        { error: "Payout ID and action are required" },
+        { status: 400 }
+      );
+    }
+
+    const payout = await db.payPalPayout.findUnique({ where: { id: payoutId } });
+    if (!payout) {
+      return NextResponse.json({ error: "Payout not found" }, { status: 404 });
+    }
+
+    // allowedFromStatuses is applied as a CAS filter on the update, so two
+    // admins acting at once can't both apply the same transition.
+    let updateData: Record<string, unknown> = {};
+    let allowedFromStatuses: string[] = [];
+
+    switch (action) {
+      case "PROCESS":
+        if (payout.status !== "PENDING") {
+          return NextResponse.json(
+            { error: "Only pending payouts can be marked processing" },
+            { status: 400 }
+          );
+        }
+        allowedFromStatuses = ["PENDING"];
+        updateData = {
+          status: "PROCESSING",
+          processedBy: session.user.id,
+          adminNotes: adminNotes || payout.adminNotes,
+        };
+        break;
+
+      case "COMPLETE":
+        // Completing straight from PENDING is allowed: these are manual ACH
+        // transfers made out of band, and payouts recorded before this handler
+        // existed never passed through PROCESSING.
+        if (payout.status === "COMPLETED" || payout.status === "CANCELLED") {
+          return NextResponse.json(
+            { error: "Payout is already finalised" },
+            { status: 400 }
+          );
+        }
+        allowedFromStatuses = ["PENDING", "PROCESSING", "FAILED"];
+        updateData = {
+          status: "COMPLETED",
+          completedAt: new Date(),
+          processedBy: session.user.id,
+          adminNotes: adminNotes || payout.adminNotes,
+        };
+        break;
+
+      case "FAIL":
+        if (payout.status === "COMPLETED" || payout.status === "CANCELLED") {
+          return NextResponse.json(
+            { error: "Cannot fail completed or cancelled payouts" },
+            { status: 400 }
+          );
+        }
+        allowedFromStatuses = ["PENDING", "PROCESSING", "FAILED"];
+        updateData = {
+          status: "FAILED",
+          failedAt: new Date(),
+          failureReason: adminNotes || "Payout failed",
+          adminNotes: adminNotes || payout.adminNotes,
+        };
+        break;
+
+      case "CANCEL":
+        if (payout.status === "COMPLETED") {
+          return NextResponse.json(
+            { error: "Cannot cancel completed payouts" },
+            { status: 400 }
+          );
+        }
+        allowedFromStatuses = ["PENDING", "PROCESSING", "FAILED", "CANCELLED"];
+        updateData = {
+          status: "CANCELLED",
+          adminNotes: adminNotes || payout.adminNotes,
+        };
+        break;
+
+      default:
+        return NextResponse.json({ error: "Invalid action" }, { status: 400 });
+    }
+
+    const cas = await db.payPalPayout.updateMany({
+      where: { id: payoutId, status: { in: allowedFromStatuses } },
+      data: updateData,
+    });
+    if (cas.count === 0) {
+      return NextResponse.json(
+        { error: "Payout status changed concurrently. Please refresh and retry." },
+        { status: 409 }
+      );
+    }
+
+    const updated = await db.payPalPayout.findUnique({ where: { id: payoutId } });
+    paypalPayoutsLogger.info({ payoutId, action }, "PayPal payout updated");
+
+    return NextResponse.json({ success: true, payout: updated });
+  } catch (error) {
+    paypalPayoutsLogger.error({ err: formatError(error) }, "Error updating PayPal payout:");
+    return NextResponse.json({ error: "Failed to update payout" }, { status: 500 });
+  }
+}
