@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
+import { usePersistentSort } from "./use-persistent-sort";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -44,6 +45,9 @@ import { CSS } from "@dnd-kit/utilities";
 import { cn } from "@/lib/utils";
 
 type SortOption = "manual" | "name-asc" | "name-desc";
+
+const SORT_OPTIONS: SortOption[] = ["manual", "name-asc", "name-desc"];
+const isSortOption = (v: string): v is SortOption => (SORT_OPTIONS as string[]).includes(v);
 
 interface ItemsTabProps {
   items: RewardItemData[];
@@ -235,7 +239,11 @@ export function ItemsTab({
   onItemImageChange,
   onReorderItems,
 }: ItemsTabProps) {
-  const [sortOption, setSortOption] = useState<SortOption>("manual");
+  const [sortOption, setSortOption] = usePersistentSort<SortOption>(
+    "icf.builder.sort.items",
+    "manual",
+    isSortOption
+  );
   const [manualOrder, setManualOrder] = useState<RewardItemData[]>(items);
 
   // Sync manual order with items when items change (including property updates)

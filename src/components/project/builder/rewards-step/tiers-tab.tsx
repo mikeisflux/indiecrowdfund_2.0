@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
+import { usePersistentSort } from "./use-persistent-sort";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -44,6 +45,9 @@ import { CSS } from "@dnd-kit/utilities";
 import { cn } from "@/lib/utils";
 
 type SortOption = "manual" | "name-asc" | "name-desc" | "price-asc" | "price-desc";
+
+const SORT_OPTIONS: SortOption[] = ["manual", "name-asc", "name-desc", "price-asc", "price-desc"];
+const isSortOption = (v: string): v is SortOption => (SORT_OPTIONS as string[]).includes(v);
 
 interface TiersTabProps {
   tiers: RewardData[];
@@ -287,7 +291,11 @@ export function TiersTab({
   onOpenImportDialog,
   onReorderRewards,
 }: TiersTabProps) {
-  const [sortOption, setSortOption] = useState<SortOption>("manual");
+  const [sortOption, setSortOption] = usePersistentSort<SortOption>(
+    "icf.builder.sort.tiers",
+    "manual",
+    isSortOption
+  );
   const [manualOrder, setManualOrder] = useState<RewardData[]>(tiers);
 
   // Sync manual order with tiers when tiers change

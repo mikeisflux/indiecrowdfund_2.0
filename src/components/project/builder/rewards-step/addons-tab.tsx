@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
+import { usePersistentSort } from "./use-persistent-sort";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -44,6 +45,9 @@ import { CSS } from "@dnd-kit/utilities";
 import { cn } from "@/lib/utils";
 
 type SortOption = "manual" | "name-asc" | "name-desc" | "price-asc" | "price-desc";
+
+const SORT_OPTIONS: SortOption[] = ["manual", "name-asc", "name-desc", "price-asc", "price-desc"];
+const isSortOption = (v: string): v is SortOption => (SORT_OPTIONS as string[]).includes(v);
 
 interface AddonsTabProps {
   addons: RewardData[];
@@ -283,7 +287,11 @@ export function AddonsTab({
   onOpenImportDialog,
   onReorderRewards,
 }: AddonsTabProps) {
-  const [sortOption, setSortOption] = useState<SortOption>("manual");
+  const [sortOption, setSortOption] = usePersistentSort<SortOption>(
+    "icf.builder.sort.addons",
+    "manual",
+    isSortOption
+  );
   const [manualOrder, setManualOrder] = useState<RewardData[]>(addons);
 
   // Sync manual order with addons when addons change
