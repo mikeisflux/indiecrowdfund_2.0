@@ -345,7 +345,16 @@ export async function GET(
       estimatedDelivery: r.estimatedDelivery,
       shippingType: r.shippingType,
       shippingCountries: r.shippingCountries || [],
-      shippingLocation: r.shippingCountries.length > 0 ? r.shippingCountries.join(", ") : "Worldwide",
+      // Digital rewards have nothing to ship, so a leftover country list
+      // (importers and the builder both default it to ["US"]) must not be
+      // rendered as "Ships to: US" — backers read that as US-only and
+      // stopped pledging from abroad. Nothing gates on this field.
+      shippingLocation:
+        r.shippingType === "NO_SHIPPING"
+          ? null
+          : r.shippingCountries.length > 0
+            ? r.shippingCountries.join(", ")
+            : "Worldwide",
       shippingCost: (r.shippingCost as Record<string, number>) || {},
       quantityAvailable: r.quantityAvailable,
       quantityClaimed: r.quantityClaimed || 0,
