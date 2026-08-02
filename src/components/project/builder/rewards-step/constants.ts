@@ -12,7 +12,12 @@ export const defaultReward: RewardData = {
   description: "",
   amount: 1,
   shippingType: "NO_SHIPPING",
-  shippingCountries: ["US"],
+  // Empty, not ["US"]. Every new reward starts as NO_SHIPPING, so seeding a
+  // country list here stamped {US} onto every digital reward ever created —
+  // which the project page then rendered as "Ships to: US" and backers read
+  // as US-only. Countries are chosen by the creator when they pick a physical
+  // shipping type; a digital reward has none.
+  shippingCountries: [],
   shippingCost: {},
   visibility: "PUBLIC",
   items: [],

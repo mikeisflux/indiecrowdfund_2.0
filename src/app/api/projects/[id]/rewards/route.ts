@@ -77,6 +77,20 @@ const rewardSchema = z.object({
 });
 
 // Batch schema - accepts array of rewards
+// A digital reward ships nothing, so it must never carry a country list.
+// Clients have seeded one repeatedly — the builder's defaultReward used to be
+// ["US"], and the CSV importer fell back to ["US"] for rows with no per-country
+// rates — and the project page then rendered "Ships to: US", which backers
+// read as US-only. Both client paths are fixed; this makes it impossible to
+// reintroduce from any caller.
+function normalizeShippingCountries(reward: {
+  shippingType?: string;
+  shippingCountries?: string[] | null;
+}): string[] {
+  if (reward.shippingType === "NO_SHIPPING") return [];
+  return reward.shippingCountries ?? [];
+}
+
 const batchRewardsSchema = z.object({
   rewards: z.array(rewardSchema),
 });
@@ -148,7 +162,7 @@ async function saveReward(projectId: string, reward: RewardData) {
           imageUrl: reward.imageUrl || null,
           estimatedDelivery: reward.estimatedDelivery ? new Date(reward.estimatedDelivery) : null,
           shippingType: reward.shippingType,
-          shippingCountries: reward.shippingCountries,
+          shippingCountries: normalizeShippingCountries(reward),
           shippingCost: reward.shippingCost,
           quantityAvailable: reward.quantityAvailable,
           sharedStockWithId: reward.sharedStockWithId || null,
@@ -187,7 +201,7 @@ async function saveReward(projectId: string, reward: RewardData) {
       imageUrl: reward.imageUrl || null,
       estimatedDelivery: reward.estimatedDelivery ? new Date(reward.estimatedDelivery) : null,
       shippingType: reward.shippingType,
-      shippingCountries: reward.shippingCountries,
+      shippingCountries: normalizeShippingCountries(reward),
       shippingCost: reward.shippingCost,
       quantityAvailable: reward.quantityAvailable,
       sharedStockWithId: reward.sharedStockWithId || null,
@@ -312,7 +326,7 @@ export async function POST(
     projectsRewardsLogger.info({ data: {
       shippingType: reward.shippingType,
       shippingCost: reward.shippingCost,
-      shippingCountries: reward.shippingCountries,
+      shippingCountries: normalizeShippingCountries(reward),
     } }, "[Rewards API] Parsed shipping data:");
     const savedReward = await saveReward(projectId, reward);
     projectsRewardsLogger.info(`Reward ${reward.id ? 'updated' : 'created'}: ${savedReward.id} for project ${projectId}`);
@@ -397,7 +411,7 @@ export async function PATCH(
       rewardId: reward.id,
       shippingType: reward.shippingType,
       shippingCost: reward.shippingCost,
-      shippingCountries: reward.shippingCountries,
+      shippingCountries: normalizeShippingCountries(reward),
     } }, "[Rewards API PATCH] Parsed shipping data:");
 
     if (!reward.id) {
@@ -442,7 +456,7 @@ export async function PATCH(
           imageUrl: reward.imageUrl || null,
           estimatedDelivery: reward.estimatedDelivery ? new Date(reward.estimatedDelivery) : null,
           shippingType: reward.shippingType,
-          shippingCountries: reward.shippingCountries,
+          shippingCountries: normalizeShippingCountries(reward),
           shippingCost: reward.shippingCost,
           quantityAvailable: reward.quantityAvailable,
           sharedStockWithId: reward.sharedStockWithId || null,

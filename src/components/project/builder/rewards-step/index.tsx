@@ -732,7 +732,14 @@ export function RewardsStep({ onFormOpenChange }: RewardsStepProps) {
           amount: parseFloat(row.amount) || 1,
           shippingType: (row.shippingType as ShippingType) || "NO_SHIPPING",
           shippingCost,
-          shippingCountries: countryKeys.length > 0 ? countryKeys : ["US"],
+          // Digital rows get no country list at all — falling back to ["US"]
+          // here is what labelled imported digital rewards "Ships to: US".
+          shippingCountries:
+            (row.shippingType as ShippingType) === "NO_SHIPPING"
+              ? []
+              : countryKeys.length > 0
+                ? countryKeys
+                : ["US"],
           quantityAvailable: row.quantityAvailable ? parseInt(row.quantityAvailable) : undefined,
           visibility: row.visibility === "SECRET" ? "SECRET" : "PUBLIC",
           estimatedDelivery,
