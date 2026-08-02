@@ -679,6 +679,16 @@ export function RewardsStep({ onFormOpenChange }: RewardsStepProps) {
           }
         }
 
+        // Derive the country list from the rate map the creator actually
+        // supplied. This was hardcoded to ["US"], so importing a
+        // SELECTED_COUNTRIES reward priced for, say, US + CA + rest-of-world
+        // came in claiming it only ships to the US. "WW" is the
+        // rest-of-world fallback key getShippingCost() looks for, not a
+        // country, so it's excluded from the list.
+        const countryKeys = Object.keys(shippingCost).filter(
+          (k) => k !== "WW" && k !== "WORLDWIDE"
+        );
+
         // Ensure items have projectItemId set for checkbox persistence
         const itemsWithProjectItemId = matchedItems.map(item => ({
           ...item,
@@ -692,7 +702,7 @@ export function RewardsStep({ onFormOpenChange }: RewardsStepProps) {
           amount: parseFloat(row.amount) || 1,
           shippingType: (row.shippingType as ShippingType) || "NO_SHIPPING",
           shippingCost,
-          shippingCountries: ["US"],
+          shippingCountries: countryKeys.length > 0 ? countryKeys : ["US"],
           quantityAvailable: row.quantityAvailable ? parseInt(row.quantityAvailable) : undefined,
           visibility: row.visibility === "SECRET" ? "SECRET" : "PUBLIC",
           estimatedDelivery,
