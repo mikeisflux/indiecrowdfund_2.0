@@ -67,7 +67,7 @@ export default function PayoutsPage() {
   });
   const [selectedCreator, setSelectedCreator] = useState<CreatorBalance | null>(null);
   const [showCreatorBalanceDialog, setShowCreatorBalanceDialog] = useState(false);
-  const [activeTab, setActiveTab] = useState<"projects" | "whop" | "balances">("projects");
+  const [activeTab, setActiveTab] = useState<"projects" | "balances">("projects");
 
   // Whop projects state
   const [whopProjects, setWhopProjects] = useState<CreatorProject[]>([]);
@@ -76,7 +76,14 @@ export default function PayoutsPage() {
     overpaidPayouts: 0, totalAmountOwed: 0, totalAmountSettled: 0, totalRemaining: 0,
     totalRefunded: 0, totalOverpaid: 0, projectsWithoutBank: 0,
   });
-  const [selectedWhopProject, setSelectedWhopProject] = useState<CreatorProject | null>(null);
+
+  // One list across every processor. The two sources stay separate because
+  // they come from separate endpoints and settlement tables, but the admin
+  // shouldn't have to know that — a payout is a payout.
+  const allPayoutProjects = [...projects, ...whopProjects];
+
+  // Which settlement API the selected row belongs to.
+  const selectedIsWhop = selectedProject?.paymentProcessor === "WHOP";
 
   // Fetch Whop projects
   const fetchWhopProjects = useCallback(async () => {
@@ -223,14 +230,14 @@ export default function PayoutsPage() {
 
   // Create Whop settlement
   const createWhopSettlement = async () => {
-    if (!selectedWhopProject || !settlementAmount) return;
+    if (!selectedProject || !settlementAmount) return;
     setProcessing(true);
     try {
       const response = await apiFetch("/api/admin/payouts/whop", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          projectId: selectedWhopProject.id,
+          projectId: selectedProject.id,
           amount: parseFloat(settlementAmount),
           adminNotes,
         }),
@@ -243,7 +250,7 @@ export default function PayoutsPage() {
       setShowCreateSettlement(false);
       setSettlementAmount("");
       setAdminNotes("");
-      setSelectedWhopProject(null);
+      setSelectedProject(null);
       fetchWhopProjects();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to create Whop settlement");
@@ -403,17 +410,7 @@ export default function PayoutsPage() {
               : "border-transparent text-muted-foreground hover:text-foreground"
           }`}
         >
-          Campaign Payouts ({stats.totalProjects})
-        </button>
-        <button
-          onClick={() => setActiveTab("whop")}
-          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
-            activeTab === "whop"
-              ? "border-teal-600 text-teal-600"
-              : "border-transparent text-muted-foreground hover:text-foreground"
-          }`}
-        >
-          Whop Campaigns ({whopStats.totalProjects})
+          Campaign Payouts ({allPayoutProjects.length})
         </button>
         <button
           onClick={() => setActiveTab("balances")}
@@ -427,30 +424,20 @@ export default function PayoutsPage() {
         </button>
       </div>
 
-      {/* Projects Tab Content */}
+      {/* Projects Tab Content — every processor in one list.
+          Whop used to live on its own tab, which is how its settlements sat
+          unnoticed with no way to complete them. The table already badges each
+          row by processor, and the row's paymentProcessor drives which
+          endpoint the detail dialog talks to. */}
       {activeTab === "projects" && (
         <ProjectsTable
-          projects={projects}
+          projects={allPayoutProjects}
           loading={loading}
           searchQuery={searchQuery}
           statusFilter={statusFilter}
           setSearchQuery={setSearchQuery}
           setStatusFilter={setStatusFilter}
           onSelectProject={setSelectedProject}
-          formatCurrency={formatCurrency}
-        />
-      )}
-
-      {/* Whop Campaigns Tab Content */}
-      {activeTab === "whop" && (
-        <ProjectsTable
-          projects={whopProjects}
-          loading={false}
-          searchQuery={searchQuery}
-          statusFilter={statusFilter}
-          setSearchQuery={setSearchQuery}
-          setStatusFilter={setStatusFilter}
-          onSelectProject={setSelectedWhopProject}
           formatCurrency={formatCurrency}
         />
       )}
@@ -483,23 +470,14 @@ export default function PayoutsPage() {
         formatCurrency={formatCurrency}
       />
 
-      {/* Project Detail Dialog (DivinityCoin) */}
+      {/* One detail dialog for every processor; the bank-details lookup
+          follows the selected project's processor. */}
       <ProjectDetailDialog
         selectedProject={selectedProject}
         onClose={() => setSelectedProject(null)}
-        onViewBankDetails={viewBankDetails}
-        onCreateSettlement={(amount) => {
-          setSettlementAmount(amount);
-          setShowCreateSettlement(true);
-        }}
-        formatCurrency={formatCurrency}
-      />
-
-      {/* Whop Project Detail Dialog */}
-      <ProjectDetailDialog
-        selectedProject={selectedWhopProject}
-        onClose={() => setSelectedWhopProject(null)}
-        onViewBankDetails={(id) => viewBankDetails(id, "whop")}
+        onViewBankDetails={(id) =>
+          viewBankDetails(id, selectedIsWhop ? "whop" : undefined)
+        }
         onCreateSettlement={(amount) => {
           setSettlementAmount(amount);
           setShowCreateSettlement(true);
@@ -521,13 +499,13 @@ export default function PayoutsPage() {
       <CreateSettlementDialog
         open={showCreateSettlement}
         onOpenChange={setShowCreateSettlement}
-        selectedProject={selectedProject || selectedWhopProject}
+        selectedProject={selectedProject}
         settlementAmount={settlementAmount}
         setSettlementAmount={setSettlementAmount}
         adminNotes={adminNotes}
         setAdminNotes={setAdminNotes}
         processing={processing}
-        onCreateSettlement={selectedWhopProject ? createWhopSettlement : createSettlement}
+        onCreateSettlement={selectedIsWhop ? createWhopSettlement : createSettlement}
         formatCurrency={formatCurrency}
       />
     </div>
