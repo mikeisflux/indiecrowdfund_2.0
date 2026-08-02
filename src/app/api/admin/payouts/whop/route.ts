@@ -407,3 +407,143 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Failed to create settlement" }, { status: 500 });
   }
 }
+
+// PATCH - advance a Whop settlement through its lifecycle.
+//
+// This handler did not exist. A Whop settlement was created as PENDING by the
+// POST above and then had no way to move: the admin UI renders PENDING /
+// INITIATED / PROCESSING as one "Processing" badge, so a freshly created
+// settlement appeared to spin forever with the creator's money never marked
+// paid. Mirrors the DivinityCoin payouts state machine.
+export async function PATCH(request: NextRequest) {
+  try {
+    const authResult = await requireAdmin();
+    if ('error' in authResult) {
+      return NextResponse.json({ error: authResult.error }, { status: authResult.status });
+    }
+
+    const body = await request.json();
+    const { settlementId, action, adminNotes } = body;
+
+    if (!settlementId || !action) {
+      return NextResponse.json(
+        { error: "Settlement ID and action are required" },
+        { status: 400 }
+      );
+    }
+
+    const settlement = await db.whopSettlement.findUnique({ where: { id: settlementId } });
+    if (!settlement) {
+      return NextResponse.json({ error: "Settlement not found" }, { status: 404 });
+    }
+
+    // Each transition carries the statuses it may run from, applied as a CAS
+    // filter below so two admins (or a double-click) can't both apply it.
+    let updateData: Record<string, unknown> = {};
+    let allowedFromStatuses: string[] = [];
+
+    switch (action) {
+      case "INITIATE":
+        if (settlement.status !== "PENDING") {
+          return NextResponse.json(
+            { error: "Only pending settlements can be initiated" },
+            { status: 400 }
+          );
+        }
+        allowedFromStatuses = ["PENDING"];
+        updateData = {
+          status: "INITIATED",
+          initiatedAt: new Date(),
+          processedBy: authResult.user.id,
+          adminNotes: adminNotes || settlement.adminNotes,
+        };
+        break;
+
+      case "PROCESS":
+        if (settlement.status !== "PENDING" && settlement.status !== "INITIATED") {
+          return NextResponse.json(
+            { error: "Only pending or initiated settlements can be processed" },
+            { status: 400 }
+          );
+        }
+        allowedFromStatuses = ["PENDING", "INITIATED"];
+        updateData = {
+          status: "PROCESSING",
+          processedAt: new Date(),
+          processedBy: authResult.user.id,
+          adminNotes: adminNotes || settlement.adminNotes,
+        };
+        break;
+
+      case "COMPLETE":
+        // Allow completing straight from PENDING/INITIATED too: wires are sent
+        // out of band, and existing stuck rows never got an intermediate state.
+        if (settlement.status === "COMPLETED" || settlement.status === "CANCELLED") {
+          return NextResponse.json(
+            { error: "Settlement is already finalised" },
+            { status: 400 }
+          );
+        }
+        allowedFromStatuses = ["PENDING", "INITIATED", "PROCESSING", "FAILED"];
+        updateData = {
+          status: "COMPLETED",
+          completedAt: new Date(),
+          processedBy: authResult.user.id,
+          adminNotes: adminNotes || settlement.adminNotes,
+        };
+        break;
+
+      case "FAIL":
+        if (settlement.status === "COMPLETED" || settlement.status === "CANCELLED") {
+          return NextResponse.json(
+            { error: "Cannot fail completed or cancelled settlements" },
+            { status: 400 }
+          );
+        }
+        allowedFromStatuses = ["PENDING", "INITIATED", "PROCESSING", "FAILED"];
+        updateData = {
+          status: "FAILED",
+          failedAt: new Date(),
+          failureReason: adminNotes || "Settlement failed",
+          adminNotes: adminNotes || settlement.adminNotes,
+        };
+        break;
+
+      case "CANCEL":
+        if (settlement.status === "COMPLETED") {
+          return NextResponse.json(
+            { error: "Cannot cancel completed settlements" },
+            { status: 400 }
+          );
+        }
+        allowedFromStatuses = ["PENDING", "INITIATED", "PROCESSING", "FAILED", "CANCELLED"];
+        updateData = {
+          status: "CANCELLED",
+          adminNotes: adminNotes || settlement.adminNotes,
+        };
+        break;
+
+      default:
+        return NextResponse.json({ error: "Invalid action" }, { status: 400 });
+    }
+
+    const cas = await db.whopSettlement.updateMany({
+      where: { id: settlementId, status: { in: allowedFromStatuses } },
+      data: updateData,
+    });
+    if (cas.count === 0) {
+      return NextResponse.json(
+        { error: "Settlement status changed concurrently. Please refresh and retry." },
+        { status: 409 }
+      );
+    }
+
+    const updatedSettlement = await db.whopSettlement.findUnique({ where: { id: settlementId } });
+    adminPayoutsWhopLogger.info({ settlementId, action }, "Whop settlement updated");
+
+    return NextResponse.json({ success: true, settlement: updatedSettlement });
+  } catch (error) {
+    adminPayoutsWhopLogger.error({ err: formatError(error) }, "Error updating Whop settlement:");
+    return NextResponse.json({ error: "Failed to update settlement" }, { status: 500 });
+  }
+}
