@@ -347,16 +347,43 @@ export function ProjectBuilder() {
       const editItemIdMap: Record<string, string> = {};
       const editItemsToSave = items.filter((item) => item.title);
       if (editItemsToSave.length > 0) {
+        // Ask the server what already exists rather than trusting a
+        // client-side "already saved" set. That set was seeded only at
+        // hydration, so an item created mid-session — notably via the Add
+        // Item dialog inside the reward form, which persists immediately —
+        // was absent from it and got POSTed again on every subsequent save,
+        // minting a fresh duplicate each time.
+        const serverIds = new Set<string>();
+        const serverIdByTitle = new Map<string, string>();
+        try {
+          const existingRes = await apiFetch(`/api/projects/${projectId}/items`);
+          if (existingRes.ok) {
+            const existingData = await existingRes.json();
+            for (const it of (existingData.items || []) as Array<{ id: string; title: string }>) {
+              serverIds.add(it.id);
+              const key = (it.title || "").trim().toLowerCase();
+              if (key && !serverIdByTitle.has(key)) serverIdByTitle.set(key, it.id);
+            }
+          }
+        } catch {
+          // If the lookup fails, fall back to the hydration-seeded set below.
+        }
+
         const results = await Promise.allSettled(
           editItemsToSave.map(async (item) => {
-            // Items already persisted carry a server id; everything else is a
-            // client-generated placeholder that needs creating.
-            const isPersisted = !!item.id && savedItemIdsRef.current.has(item.id);
+            // Prefer the server's own view of what exists. Title is the
+            // fallback key so an item created by some other path still
+            // updates in place instead of duplicating.
+            const titleKey = (item.title || "").trim().toLowerCase();
+            const persistedId =
+              (item.id && (serverIds.has(item.id) || savedItemIdsRef.current.has(item.id))
+                ? item.id
+                : undefined) ?? serverIdByTitle.get(titleKey);
             const res = await apiFetch(`/api/projects/${projectId}/items`, {
-              method: isPersisted ? "PATCH" : "POST",
+              method: persistedId ? "PATCH" : "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
-                ...(isPersisted ? { id: item.id } : {}),
+                ...(persistedId ? { id: persistedId } : {}),
                 title: item.title,
                 description: item.description || "",
                 imageUrl: item.imageUrl || undefined,
