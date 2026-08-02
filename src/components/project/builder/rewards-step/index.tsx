@@ -627,26 +627,55 @@ export function RewardsStep({ onFormOpenChange }: RewardsStepProps) {
     return rows;
   };
 
+  // Re-importing the same sheet updates the rows it already knows instead of
+  // appending duplicates. Title is the natural key (it's the SKU-style code
+  // creators use: PG1-01, PG1-GIA…), matched case-insensitively.
+  //
+  // Images are deliberately NOT part of the import: they're uploaded by hand
+  // after the fact and the CSV has no image column, so an update must leave
+  // the existing imageUrl alone. Otherwise re-importing to fix a price would
+  // wipe every image the creator attached.
   const handleImportItems = (rows: Record<string, string>[]): number => {
-    let importedCount = 0;
+    let created = 0;
+    let updated = 0;
     for (const row of rows) {
-      if (row.title?.trim()) {
+      const title = row.title?.trim();
+      if (!title) continue;
+
+      const existingIndex = items.findIndex(
+        (i) => i.title.trim().toLowerCase() === title.toLowerCase()
+      );
+
+      if (existingIndex >= 0 && items[existingIndex].id) {
+        const existing = items[existingIndex];
+        updateItem(existing.id as string, {
+          ...existing,
+          title,
+          description: row.description?.trim() || existing.description || "",
+          // Keep whatever image is already attached.
+          imageUrl: existing.imageUrl,
+        });
+        updated++;
+      } else {
         addItem({
-          title: row.title.trim(),
+          title,
           description: row.description?.trim() || "",
           imageUrl: "",
         });
-        importedCount++;
+        created++;
       }
     }
-    if (importedCount > 0) {
-      toast.success(`Imported ${importedCount} items`);
+    if (created || updated) {
+      toast.success(
+        `Items: ${created} added, ${updated} updated${updated ? " (images kept)" : ""}`
+      );
     }
-    return importedCount;
+    return created + updated;
   };
 
   const handleImportRewards = (rows: Record<string, string>[], rewardType: "TIER" | "ADDON"): number => {
     let importedCount = 0;
+    let updatedCount = 0;
 
     for (const row of rows) {
       if (row.title?.trim() && row.amount) {
@@ -695,9 +724,10 @@ export function RewardsStep({ onFormOpenChange }: RewardsStepProps) {
           projectItemId: item.id,
         }));
 
-        addReward({
+        const title = row.title.trim();
+        const payload: Omit<RewardData, "id"> = {
           type: rewardType,
-          title: row.title.trim(),
+          title,
           description: row.description?.trim() || "",
           amount: parseFloat(row.amount) || 1,
           shippingType: (row.shippingType as ShippingType) || "NO_SHIPPING",
@@ -707,14 +737,44 @@ export function RewardsStep({ onFormOpenChange }: RewardsStepProps) {
           visibility: row.visibility === "SECRET" ? "SECRET" : "PUBLIC",
           estimatedDelivery,
           items: itemsWithProjectItemId,
-        });
-        importedCount++;
+        };
+
+        // Re-import updates in place rather than duplicating. Matched on
+        // title within the same type, so a TIER and an ADDON may share a
+        // title without colliding.
+        const existingIndex = rewards.findIndex(
+          (r) =>
+            (r.type || "TIER") === rewardType &&
+            r.title.trim().toLowerCase() === title.toLowerCase()
+        );
+
+        if (existingIndex >= 0) {
+          const existing = rewards[existingIndex];
+          updateReward(existingIndex, {
+            ...existing,
+            ...payload,
+            // Keep the database id so this updates the row instead of
+            // creating a second one on save...
+            id: existing.id,
+            // ...and keep the artwork, which is uploaded by hand and has no
+            // column in the CSV. Without this, re-importing to correct a
+            // price would clear every reward image.
+            imageUrl: existing.imageUrl,
+          });
+          updatedCount++;
+        } else {
+          addReward(payload);
+          importedCount++;
+        }
       }
     }
-    if (importedCount > 0) {
-      toast.success(`Imported ${importedCount} ${rewardType === "TIER" ? "rewards" : "addons"}`);
+    if (importedCount || updatedCount) {
+      const label = rewardType === "TIER" ? "rewards" : "add-ons";
+      toast.success(
+        `${label}: ${importedCount} added, ${updatedCount} updated${updatedCount ? " (images kept)" : ""}`
+      );
     }
-    return importedCount;
+    return importedCount + updatedCount;
   };
 
   // Determine which main content to render
