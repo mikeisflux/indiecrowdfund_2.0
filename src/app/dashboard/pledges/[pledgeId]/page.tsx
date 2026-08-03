@@ -318,6 +318,36 @@ export default function ManagePledgePage() {
         throw new Error(data.error || "Failed to increase pledge");
       }
 
+      // Charged pledges can't be topped up by editing the amount — the extra
+      // has to be collected. The API hands back a top-up route; run it through
+      // the same add-items payment flow "Change Reward or Add-ons" uses, but
+      // with no add-ons, so a backer can simply give more.
+      if (data.requiresPayment && data.topUpUrl) {
+        const topUp = await apiFetch(data.topUpUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ addons: [], amount: data.amount ?? amount }),
+        });
+        const topUpData = await topUp.json();
+        if (!topUp.ok) {
+          throw new Error(topUpData.error || "Couldn't start the additional payment");
+        }
+        // Send the backer to the pledge page to complete payment, the same
+        // destination the add-ons upcharge uses.
+        if (topUpData.checkoutUrl) {
+          window.location.href = topUpData.checkoutUrl;
+          return;
+        }
+        toast.success("Additional support added");
+        setAdditionalAmount("");
+        const refreshTopUp = await fetch(`/api/pledges/${pledgeId}`);
+        if (refreshTopUp.ok) {
+          const refreshed = await refreshTopUp.json();
+          setPledge(refreshed.pledge);
+        }
+        return;
+      }
+
       toast.success(data.message);
       setAdditionalAmount("");
       // Refresh pledge data

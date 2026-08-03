@@ -29,12 +29,13 @@ export async function POST(
     const addonsWithQuantity: { id: string; quantity: number }[] = addons ||
       (addonIds ? addonIds.map((id: string) => ({ id, quantity: 1 })) : []);
 
-    if (addonsWithQuantity.length === 0) {
-      return NextResponse.json(
-        { error: "At least one addon is required" },
-        { status: 400 }
-      );
-    }
+    // An empty add-on list with a positive amount is a bare top-up: the
+    // backer just wants to give more, without picking anything. That used to
+    // be rejected here, which left "Add Additional Support" with nowhere to
+    // go — the pledge PATCH refused charged pledges and sent people to
+    // "Change Reward or Add-ons", which in turn insists on choosing a reward
+    // or add-on. Backers who only wanted to add money hit a loop.
+    const isDonationTopUp = addonsWithQuantity.length === 0;
 
     const addonIdList = addonsWithQuantity.map(a => a.id);
 
@@ -182,7 +183,10 @@ export async function POST(
         { status: 400 }
       );
     }
-    if (amount > calculatedAmount + 500) {
+    // The $500 ceiling exists to stop an overcharge slipping past the addon
+    // total via the shipping allowance. It doesn't apply to a bare top-up,
+    // where the whole amount IS the intended contribution.
+    if (!isDonationTopUp && amount > calculatedAmount + 500) {
       return NextResponse.json(
         { error: "Amount exceeds addon total by more than the allowed shipping allowance" },
         { status: 400 }

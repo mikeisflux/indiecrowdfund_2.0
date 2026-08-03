@@ -1030,14 +1030,20 @@ export async function PATCH(
       const newTotal = Number(pledge.amount) + additionalAmount;
       const isCharged = pledge.status === "COMPLETED";
 
-      // If pledge is already charged, direct user to the modify flow
+      // A charged pledge can't just have its amount edited — the extra has to
+      // be collected. This used to return an error pointing at "Change Reward
+      // or Add-ons", but that flow requires picking a reward or add-on, so a
+      // backer who only wanted to give more had nowhere to go. Hand the client
+      // the top-up route instead; /add-items now accepts an amount with no
+      // add-ons and runs it through the normal payment flow.
       if (isCharged) {
-        // Upcharges for completed pledges (DC and other processors) go through
-        // "Change Reward or Add-ons" which has full payment support.
-        return NextResponse.json(
-          { error: "To increase your pledge amount, please use 'Change Reward or Add-ons' from your pledge dashboard." },
-          { status: 400 }
-        );
+        return NextResponse.json({
+          success: false,
+          requiresPayment: true,
+          topUpUrl: `/api/pledges/${pledgeId}/add-items`,
+          amount: additionalAmount,
+          message: "Additional support requires a payment step.",
+        });
       }
 
       // Not yet charged (PENDING) - just update the pledge amount
