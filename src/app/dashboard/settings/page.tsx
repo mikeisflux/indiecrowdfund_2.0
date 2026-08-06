@@ -9,7 +9,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { AlertCircle } from "lucide-react";
 import { useSession } from "@/components/providers/auth-provider";
 
-import { UserSettings, EmailChangeState, PasswordChangeState } from "./components/types";
+import { UserSettings, EmailChangeState, PasswordChangeState, DeleteAccountState } from "./components/types";
 import { LoadingState } from "./components/LoadingState";
 import { SettingsHeader } from "./components/SettingsHeader";
 import { ProfileCard } from "./components/ProfileCard";
@@ -20,6 +20,7 @@ import { PaypalCard } from "./components/PaypalCard";
 import { ConnectedServicesCard } from "./components/ConnectedServicesCard";
 import { EmailChangeDialog } from "./components/EmailChangeDialog";
 import { PasswordChangeDialog } from "./components/PasswordChangeDialog";
+import { DeleteAccountDialog } from "./components/DeleteAccountDialog";
 
 export default function SettingsPage() {
   const { data: session } = useSession();
@@ -45,6 +46,15 @@ export default function SettingsPage() {
     newPassword: "",
     confirmPassword: "",
     isChanging: false,
+    error: null,
+    success: false,
+  });
+  const [showDeleteAccountDialog, setShowDeleteAccountDialog] = useState(false);
+  const [deleteAccount, setDeleteAccount] = useState<DeleteAccountState>({
+    password: "",
+    confirmText: "",
+    acknowledged: false,
+    isDeleting: false,
     error: null,
     success: false,
   });
@@ -362,6 +372,67 @@ export default function SettingsPage() {
     }
   };
 
+  const handleDeleteAccount = async () => {
+    if (deleteAccount.confirmText !== "DELETE MY ACCOUNT") {
+      setDeleteAccount({
+        ...deleteAccount,
+        error: 'Please type "DELETE MY ACCOUNT" to confirm.',
+      });
+      return;
+    }
+    if (!deleteAccount.acknowledged) {
+      setDeleteAccount({
+        ...deleteAccount,
+        error:
+          "You must acknowledge that you forfeit all rewards and that creators are released from fulfilling them.",
+      });
+      return;
+    }
+    if (settings?.hasPassword && !deleteAccount.password) {
+      setDeleteAccount({ ...deleteAccount, error: "Password is required." });
+      return;
+    }
+
+    setDeleteAccount({ ...deleteAccount, isDeleting: true, error: null });
+
+    try {
+      const res = await apiFetch("/api/user/delete-account", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          password: settings?.hasPassword ? deleteAccount.password : undefined,
+          confirmText: deleteAccount.confirmText,
+          acknowledged: true,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to delete account");
+      }
+
+      setDeleteAccount({
+        password: "",
+        confirmText: "",
+        acknowledged: false,
+        isDeleting: false,
+        error: null,
+        success: true,
+      });
+
+      // The API already dropped every session row; this clears the cookie
+      // and any client-side auth state before we leave the dashboard.
+      await apiFetch("/api/auth/logout", { method: "POST" }).catch(() => {});
+      window.location.href = "/?accountDeleted=1";
+    } catch (err) {
+      setDeleteAccount({
+        ...deleteAccount,
+        isDeleting: false,
+        error: err instanceof Error ? err.message : "Failed to delete account",
+      });
+    }
+  };
+
   if (loading) {
     return <LoadingState />;
   }
@@ -431,6 +502,7 @@ export default function SettingsPage() {
           <PrivacyCard
             settings={settings}
             onChangePassword={() => setShowPasswordChangeDialog(true)}
+            onDeleteAccount={() => setShowDeleteAccountDialog(true)}
           />
 
           <PaypalCard
@@ -461,6 +533,15 @@ export default function SettingsPage() {
         passwordChange={passwordChange}
         onPasswordChangeUpdate={setPasswordChange}
         onSubmit={handlePasswordChange}
+      />
+
+      <DeleteAccountDialog
+        open={showDeleteAccountDialog}
+        onOpenChange={setShowDeleteAccountDialog}
+        hasPassword={settings.hasPassword}
+        deleteAccount={deleteAccount}
+        onDeleteAccountUpdate={setDeleteAccount}
+        onSubmit={handleDeleteAccount}
       />
     </div>
   );

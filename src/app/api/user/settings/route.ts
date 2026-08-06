@@ -30,6 +30,8 @@ export async function GET() {
         showNameOnly: true,
         emailVerified: true,
         createdAt: true,
+        // Only used to derive `hasPassword` below — never serialized.
+        password: true,
         accounts: {
           select: {
             provider: true,
@@ -68,10 +70,18 @@ export async function GET() {
       marketingEmails: false,
     };
 
+    // Destructure the raw relations and the password hash out of the
+    // payload — spreading `user` directly would ship the bcrypt hash and
+    // the nested accounts/preferences rows to the client.
+    const { password, accounts, preferences, ...safeUser } = user;
+
     return NextResponse.json({
-      ...user,
-      emailPreferences: user.preferences?.emailPreferences || defaultEmailPreferences,
-      connectedAccounts: user.accounts.map((a: { provider: string }) => a.provider),
+      ...safeUser,
+      // Drives the delete-account dialog: OAuth-only users have no password
+      // to re-enter, so the typed confirmation is the only gate for them.
+      hasPassword: !!password,
+      emailPreferences: preferences?.emailPreferences || defaultEmailPreferences,
+      connectedAccounts: accounts.map((a: { provider: string }) => a.provider),
     });
   } catch (error) {
     userSettingsLogger.error({ err: formatError(error) }, "Settings fetch error:");

@@ -178,7 +178,7 @@ export const KNOWLEDGE_BASE: KbEntry[] = [
     title: "Privacy policy",
     tags: ["privacy", "data", "personal information", "tracking", "cookies", "gdpr"],
     content:
-      "Our privacy policy details what we collect (account info, pledge data, shipping addresses, browser metadata), how we use it (account servicing, fulfillment, fraud prevention), what we share with processors (PayPal, Mentom Payments, Divinity Payments, Whop — each handles card data on their own PCI-compliant infrastructure; we never see card numbers), and your rights (access, deletion, opt-out of marketing). Account deletion can be requested from settings; full data is removed after a 30-day grace window.",
+      "Our privacy policy details what we collect (account info, pledge data, shipping addresses, browser metadata), how we use it (account servicing, fulfillment, fraud prevention), what we share with processors (PayPal, Mentom Payments, Divinity Payments, Whop — each handles card data on their own PCI-compliant infrastructure; we never see card numbers), and your rights (access, deletion, opt-out of marketing). You can delete your own account at Dashboard → Settings → Privacy & Security → Delete my account. Deletion is immediate and permanent — there is no grace window and it cannot be undone. Uncharged pledges are cancelled, rewards on completed pledges are forfeited, and your profile and shipping addresses are erased; pledge amounts and dates are retained for tax and audit purposes. Creators who still have a LIVE campaign must cancel or finish it first, or email support@indiecrowdfund.com.",
     link: "/privacy",
   },
   {

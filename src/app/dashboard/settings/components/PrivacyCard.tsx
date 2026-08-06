@@ -3,15 +3,16 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Shield } from "lucide-react";
+import { Shield, Trash2 } from "lucide-react";
 import { UserSettings } from "./types";
 
 interface PrivacyCardProps {
   settings: UserSettings;
   onChangePassword: () => void;
+  onDeleteAccount: () => void;
 }
 
-export function PrivacyCard({ settings, onChangePassword }: PrivacyCardProps) {
+export function PrivacyCard({ settings, onChangePassword, onDeleteAccount }: PrivacyCardProps) {
   return (
     <Card className="glass-card border shadow-lg animate-in fade-in slide-in-from-bottom-4 duration-500" style={{ animationDelay: '300ms' }}>
       <CardHeader>
@@ -56,13 +57,28 @@ export function PrivacyCard({ settings, onChangePassword }: PrivacyCardProps) {
           </Button>
         </div>
 
-        {/* Account deletion intentionally not exposed in the UI. There is
-            no /api/user/delete-account endpoint and the deletion flow
-            (active pledges, refund handling, soft-delete vs hard-delete,
-            GDPR right-to-erasure window) hasn't been designed yet. The
-            previous placeholder button shipped without a handler and
-            confused users; until the flow exists, users requesting
-            deletion go through support@indiecrowdfund.com. */}
+        {/* Self-serve deletion, backed by /api/user/delete-account. Both
+            the FAQ and the Data Deletion Policy tell users this lives in
+            Settings, so it has to be here — support was fielding requests
+            for a button that didn't exist. */}
+        <div className="flex items-center justify-between rounded-lg border border-destructive/30 bg-destructive/5 p-4">
+          <div>
+            <p className="font-medium text-destructive">Delete my account</p>
+            <p className="text-sm text-muted-foreground">
+              Permanently delete your account and personal data. This cannot be
+              undone and forfeits any rewards you are owed.
+            </p>
+          </div>
+          <Button
+            variant="destructive"
+            size="sm"
+            className="shrink-0"
+            onClick={onDeleteAccount}
+          >
+            <Trash2 className="h-4 w-4 mr-2" />
+            Delete
+          </Button>
+        </div>
       </CardContent>
     </Card>
   );

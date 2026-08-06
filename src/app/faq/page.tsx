@@ -85,7 +85,7 @@ const faqData: Record<string, { question: string; answer: string }[]> = {
   admin: [
     { question: "How do I contact support?", answer: "Use the help button in your dashboard, visit our Help Center, or email support@indiecrowdfund.com. We typically respond within 24-48 hours during business days." },
     { question: "How do I report a project?", answer: "Click the 'Report' button on any project page to flag concerns. Our moderation team reviews all reports and takes appropriate action, which may include removing projects that violate our terms." },
-    { question: "Can I delete my account?", answer: "Yes, you can request account deletion through your account settings. Note that this is permanent and you'll lose access to any backed projects or created campaigns." },
+    { question: "Can I delete my account?", answer: "Yes. Go to Dashboard → Settings → Privacy & Security and click \"Delete my account.\" You'll confirm with your password and by typing DELETE MY ACCOUNT. This is immediate and permanent: uncharged pledges are cancelled, you forfeit any rewards you're owed, and you lose access to backed projects and created campaigns. If you're running a LIVE campaign you'll need to cancel or finish it first, or contact support@indiecrowdfund.com." },
     { question: "How do I update my account information?", answer: "Go to your dashboard and click on Settings to update your profile, email, password, notification preferences, and connected social accounts." },
   ],
 };

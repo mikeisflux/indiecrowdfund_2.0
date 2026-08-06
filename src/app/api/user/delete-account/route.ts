@@ -57,19 +57,34 @@ export async function POST(req: NextRequest) {
   }
   const userId = session.user.id;
 
-  let body: { password?: string; confirmText?: string };
+  let body: { password?: string; confirmText?: string; acknowledged?: boolean };
   try {
     body = await req.json();
   } catch {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
-  const { password, confirmText } = body;
+  const { password, confirmText, acknowledged } = body;
 
   // Typed-confirmation phrase prevents accidental clicks. The dialog
-  // requires the user to type this string verbatim.
+  // requires the user to type this string verbatim. Exact match — no
+  // trimming or case-folding, so a stray paste can't slip through.
   if (confirmText !== "DELETE MY ACCOUNT") {
     return NextResponse.json(
       { error: 'Please type "DELETE MY ACCOUNT" to confirm.' },
+      { status: 400 }
+    );
+  }
+
+  // Section 4 of the Data Deletion Policy makes deletion a waiver of
+  // reward entitlements, refunds, chargebacks, and claims against
+  // creators. That has to be affirmatively accepted, and the acceptance
+  // is logged below — a client-side checkbox alone isn't a record.
+  if (acknowledged !== true) {
+    return NextResponse.json(
+      {
+        error:
+          "You must acknowledge that you forfeit all rewards and that creators are released from fulfilling them.",
+      },
       { status: 400 }
     );
   }
@@ -280,7 +295,21 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  deleteAccountLogger.info({ userId }, "Account deleted by user request");
+  // Durable record that the waiver was accepted, in case a deleted backer
+  // later disputes a forfeited reward or files a chargeback.
+  deleteAccountLogger.info(
+    {
+      userId,
+      acknowledgedForfeiture: true,
+      acknowledgedAt: new Date().toISOString(),
+      ip:
+        req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+        req.headers.get("x-real-ip") ||
+        null,
+      userAgent: req.headers.get("user-agent") || null,
+    },
+    "Account deleted by user request (reward forfeiture acknowledged)"
+  );
 
   return NextResponse.json({
     success: true,

@@ -125,6 +125,18 @@ export async function register(formData: FormData, callbackUrl?: string | null) 
     }
 
     if (existingUser) {
+      // Deleted accounts keep their email so creators retain backer records,
+      // so "already registered" reads as a bug to someone who just closed
+      // their account. Tell them what actually happened.
+      if (existingUser.accountDeletedAt) {
+        return {
+          error: {
+            email: [
+              "This email belonged to a deleted account and can't be reused. Please sign up with a different email.",
+            ],
+          },
+        };
+      }
       return { error: { email: ["Email already registered"] } };
     }
 
@@ -259,13 +271,26 @@ export async function login(formData: FormData, callbackUrl?: string) {
   // (e.g. failedLoginAttempts before migration is run)
   const user = await db.user.findFirst({
     where: { email: { equals: email, mode: "insensitive" }, deletedAt: null },
-    select: { id: true, password: true, role: true, lockedAt: true },
+    select: { id: true, password: true, role: true, lockedAt: true, accountDeletedAt: true },
   });
 
   if (!user || !user.password) {
     // Record failed attempt (even for non-existent users to prevent enumeration timing attacks)
     await recordLoginAttempt(clientIP, email, false);
     return { error: { _form: ["Invalid email or password"] } };
+  }
+
+  // Self-deleted accounts stay in the table so creators keep their backer
+  // records, but the person can never sign back in. Checked before the
+  // password compare so a reset-then-login can't resurrect the account.
+  if (user.accountDeletedAt) {
+    return {
+      error: {
+        _form: [
+          "This account has been deleted and cannot be used to sign in. Create a new account to continue.",
+        ],
+      },
+    };
   }
 
   // Check if account is locked
@@ -373,8 +398,11 @@ export async function requestPasswordReset(formData: FormData) {
       where: { email: { equals: email, mode: "insensitive" }, deletedAt: null },
     });
 
-    // Always return success to prevent email enumeration
-    if (!user) {
+    // Always return success to prevent email enumeration. A deleted
+    // account is treated the same as a missing one — otherwise a reset
+    // would hand back a working password on an account that's meant to
+    // be permanently closed.
+    if (!user || user.accountDeletedAt) {
       return { success: true };
     }
 
@@ -470,7 +498,10 @@ export async function resetPassword(formData: FormData, token: string) {
       where: { email: { equals: resetToken.email, mode: "insensitive" }, deletedAt: null },
     });
 
-    if (!targetUser) {
+    // Also covers a token issued before the user deleted their account —
+    // requestPasswordReset refuses to mint new ones, but an in-flight link
+    // must not be able to set a working password on a closed account.
+    if (!targetUser || targetUser.accountDeletedAt) {
       return { error: { _form: ["Invalid or expired reset link. Please request a new one."] } };
     }
 

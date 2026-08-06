@@ -33,6 +33,21 @@ export interface UserSettings {
   createdAt: string;
   connectedAccounts: string[];
   emailPreferences: EmailPreferences;
+  // False for OAuth-only accounts, which skip password re-entry when
+  // confirming a destructive action.
+  hasPassword: boolean;
+}
+
+export interface DeleteAccountState {
+  password: string;
+  confirmText: string;
+  // Explicit consent to the forfeiture/release terms in the Data Deletion
+  // Policy. Enforced server-side too — deletion is a legal waiver, so the
+  // acknowledgement has to be a deliberate act, not just displayed text.
+  acknowledged: boolean;
+  isDeleting: boolean;
+  error: string | null;
+  success: boolean;
 }
 
 export interface EmailChangeState {
