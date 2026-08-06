@@ -193,9 +193,30 @@ export function DataDeletionPolicyContent() {
 
         <h4 className="text-lg font-semibold mt-6 mb-3">B. Account Settings</h4>
         <p className="mb-4">
-          Settings → Privacy & Data → Delete My Account (If logged in)
+          Dashboard → Settings → Privacy &amp; Security → Delete My Account (if logged in)
         </p>
-        <p className="mb-6">You may be required to verify ownership.</p>
+        <p className="mb-6">You will be required to confirm your password and type a confirmation phrase to verify ownership.</p>
+
+        <h4 className="text-lg font-semibold mt-6 mb-3">C. Additional Requirements for Creators</h4>
+        <p className="mb-4">
+          If you have ever launched a live campaign on IndieCrowdfund, your account cannot be deleted on request alone. Because deletion releases you from your obligations to the backers who funded you, the following apply:
+        </p>
+        <ul className="list-disc pl-6 mb-4 space-y-2">
+          <li><strong>Outstanding fulfillment blocks deletion entirely.</strong> If any backer on any campaign you launched is not yet marked shipped or delivered, we will not accept a deletion request. You must complete fulfillment first.</li>
+          <li><strong>Deletion requires administrator approval.</strong> Once fulfillment is complete, you may submit a request. An IndieCrowdfund administrator reviews it before any data is removed. Your account remains fully active until the request is approved.</li>
+          <li><strong>Running campaigns must be concluded.</strong> A campaign that is currently live or paused must be cancelled or finished before a request can be submitted.</li>
+        </ul>
+        <p className="mb-4">
+          Prelaunch pages do not count as launched campaigns. A prelaunch page collects no funds and creates no reward obligations, so creators whose projects never left prelaunch or draft may delete their accounts immediately like any other user.
+        </p>
+        <p className="mb-6">
+          These requirements exist to protect backers. A creator cannot use account deletion to discharge fulfillment obligations they have already been paid for.
+        </p>
+
+        <h4 className="text-lg font-semibold mt-6 mb-3">D. Reuse of a Deleted Email Address</h4>
+        <p className="mb-6">
+          Your name and email address are retained on completed pledge records so creators keep an accurate accounting of who backed them. As a result, the email address on a deleted account cannot be used to register a new account.
+        </p>
 
         <h3 className="text-xl font-semibold mt-8 mb-4">7. Processing Time</h3>
         <p className="mb-4">Deletion requests are processed within:</p>

@@ -155,12 +155,61 @@ model User {
   // potential to restore). accountDeletedAt is irreversible.
   accountDeletedAt  DateTime?
 
+  accountDeletionRequests  AccountDeletionRequest[] @relation("DeletionRequester")
+  reviewedDeletionRequests AccountDeletionRequest[] @relation("DeletionReviewer")
+
   @@index([email])
   @@index([vanityUrl])
   @@index([creatorEmailHandle])
   @@index([deletedAt])  // For soft delete filtering
   @@index([lockedAt])   // For locked account filtering
   @@index([accountDeletedAt])  // For filtering deleted accounts from search/listing
+}
+
+// Account deletion requests from creators who have ever taken a campaign
+// live. Backers (and creators whose projects never left prelaunch/draft)
+// delete instantly via /api/user/delete-account and never create a row
+// here. Anyone who has actually launched must be reviewed by an admin,
+// because deletion releases creators from fulfillment obligations and we
+// need a human to confirm nothing is owed before that becomes irreversible.
+model AccountDeletionRequest {
+  id          String                       @id @default(cuid())
+  userId      String
+  status      AccountDeletionRequestStatus @default(PENDING)
+
+  // Snapshot of the fulfillment picture at request time. Stored rather
+  // than recomputed so the reviewer sees what the creator saw, and so the
+  // record survives the project data being changed afterwards.
+  launchedProjectCount Int    @default(0)
+  unfulfilledCount     Int    @default(0)
+  fulfilledCount       Int    @default(0)
+  snapshot             Json?
+
+  // Consent captured at request time — deletion waives reward
+  // entitlements, refunds, and chargebacks under the Data Deletion Policy.
+  acknowledgedAt DateTime @default(now())
+  requestIp      String?
+  requestUserAgent String? @db.Text
+
+  reviewedById String?
+  reviewedAt   DateTime?
+  reviewNotes  String?   @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user       User  @relation("DeletionRequester", fields: [userId], references: [id], onDelete: Cascade)
+  reviewedBy User? @relation("DeletionReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+
+  @@index([status, createdAt])
+  @@index([userId])
+}
+
+enum AccountDeletionRequestStatus {
+  PENDING
+  APPROVED
+  DENIED
+  CANCELLED
 }
 
 // IP Blocklist for banned users

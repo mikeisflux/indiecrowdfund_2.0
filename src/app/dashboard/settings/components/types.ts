@@ -38,6 +38,32 @@ export interface UserSettings {
   hasPassword: boolean;
 }
 
+export interface DeletionProjectSummary {
+  id: string;
+  title: string;
+  slug: string;
+  status: string;
+  launchedAt: string | null;
+  backerCount: number;
+  fulfilledCount: number;
+  unfulfilledCount: number;
+  fulfillmentPercent: number;
+}
+
+// Mirrors GET /api/user/delete-account. Decides which of the three
+// variants the dialog renders: instant self-delete, request-for-approval,
+// or blocked.
+export interface DeletionEligibilityInfo {
+  status: "INSTANT" | "REQUIRES_APPROVAL" | "BLOCKED";
+  everLaunched: boolean;
+  liveProjectCount: number;
+  totalUnfulfilled: number;
+  totalFulfilled: number;
+  blockedReason: string | null;
+  projects: DeletionProjectSummary[];
+  pendingRequest: { id: string; createdAt: string } | null;
+}
+
 export interface DeleteAccountState {
   password: string;
   confirmText: string;
@@ -48,6 +74,8 @@ export interface DeleteAccountState {
   isDeleting: boolean;
   error: string | null;
   success: boolean;
+  /** Set when a creator's request was filed rather than executed. */
+  submittedForApproval: boolean;
 }
 
 export interface EmailChangeState {

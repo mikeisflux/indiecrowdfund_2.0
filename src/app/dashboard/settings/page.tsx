@@ -9,7 +9,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { AlertCircle } from "lucide-react";
 import { useSession } from "@/components/providers/auth-provider";
 
-import { UserSettings, EmailChangeState, PasswordChangeState, DeleteAccountState } from "./components/types";
+import { UserSettings, EmailChangeState, PasswordChangeState, DeleteAccountState, DeletionEligibilityInfo } from "./components/types";
 import { LoadingState } from "./components/LoadingState";
 import { SettingsHeader } from "./components/SettingsHeader";
 import { ProfileCard } from "./components/ProfileCard";
@@ -57,7 +57,11 @@ export default function SettingsPage() {
     isDeleting: false,
     error: null,
     success: false,
+    submittedForApproval: false,
   });
+  const [deletionEligibility, setDeletionEligibility] =
+    useState<DeletionEligibilityInfo | null>(null);
+  const [eligibilityLoading, setEligibilityLoading] = useState(false);
   const [sendingVerification, setSendingVerification] = useState(false);
   const [verificationMessage, setVerificationMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [vanityUrlLocked, setVanityUrlLocked] = useState(false);
@@ -372,6 +376,39 @@ export default function SettingsPage() {
     }
   };
 
+  // Fetched when the dialog opens rather than on page load — it runs
+  // pledge aggregates across every campaign the user has launched, which
+  // is wasted work for the overwhelming majority who never open it.
+  const openDeleteAccountDialog = async () => {
+    setDeleteAccount({
+      password: "",
+      confirmText: "",
+      acknowledged: false,
+      isDeleting: false,
+      error: null,
+      success: false,
+      submittedForApproval: false,
+    });
+    setShowDeleteAccountDialog(true);
+    setEligibilityLoading(true);
+    try {
+      const res = await fetch("/api/user/delete-account");
+      if (!res.ok) throw new Error("Could not check your account status.");
+      setDeletionEligibility(await res.json());
+    } catch (err) {
+      setDeletionEligibility(null);
+      setDeleteAccount((prev) => ({
+        ...prev,
+        error:
+          err instanceof Error
+            ? err.message
+            : "Could not check your account status.",
+      }));
+    } finally {
+      setEligibilityLoading(false);
+    }
+  };
+
   const handleDeleteAccount = async () => {
     if (deleteAccount.confirmText !== "DELETE MY ACCOUNT") {
       setDeleteAccount({
@@ -411,6 +448,21 @@ export default function SettingsPage() {
         throw new Error(data.error || "Failed to delete account");
       }
 
+      // Creators who have launched get a review request instead of a
+      // deletion — nothing was destroyed, so don't sign them out.
+      if (data.pendingApproval) {
+        setDeleteAccount({
+          password: "",
+          confirmText: "",
+          acknowledged: false,
+          isDeleting: false,
+          error: null,
+          success: true,
+          submittedForApproval: true,
+        });
+        return;
+      }
+
       setDeleteAccount({
         password: "",
         confirmText: "",
@@ -418,6 +470,7 @@ export default function SettingsPage() {
         isDeleting: false,
         error: null,
         success: true,
+        submittedForApproval: false,
       });
 
       // The API already dropped every session row; this clears the cookie
@@ -502,7 +555,7 @@ export default function SettingsPage() {
           <PrivacyCard
             settings={settings}
             onChangePassword={() => setShowPasswordChangeDialog(true)}
-            onDeleteAccount={() => setShowDeleteAccountDialog(true)}
+            onDeleteAccount={openDeleteAccountDialog}
           />
 
           <PaypalCard
@@ -539,6 +592,8 @@ export default function SettingsPage() {
         open={showDeleteAccountDialog}
         onOpenChange={setShowDeleteAccountDialog}
         hasPassword={settings.hasPassword}
+        eligibility={deletionEligibility}
+        eligibilityLoading={eligibilityLoading}
         deleteAccount={deleteAccount}
         onDeleteAccountUpdate={setDeleteAccount}
         onSubmit={handleDeleteAccount}

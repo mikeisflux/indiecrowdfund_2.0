@@ -20,6 +20,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   LayoutDashboard,
   Users,
+  UserX,
   FolderKanban,
   Mail,
   BarChart3,
@@ -120,6 +121,7 @@ const navigation: NavSection[] = [
     title: "Users & Accounts",
     items: [
       { name: "Users", href: "/admin/users", icon: Users, badgeKey: "users" },
+      { name: "Account Deletions", href: "/admin/account-deletions", icon: UserX },
       { name: "Retailers", href: "/admin/retailers", icon: Store, badgeKey: "retailers" },
     ],
   },

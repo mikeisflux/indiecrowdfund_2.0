@@ -66,7 +66,8 @@ export function PrivacyCard({ settings, onChangePassword, onDeleteAccount }: Pri
             <p className="font-medium text-destructive">Delete my account</p>
             <p className="text-sm text-muted-foreground">
               Permanently delete your account and personal data. This cannot be
-              undone and forfeits any rewards you are owed.
+              undone and forfeits any rewards you are owed. Creators who have run
+              a campaign need admin approval and must finish fulfillment first.
             </p>
           </div>
           <Button
