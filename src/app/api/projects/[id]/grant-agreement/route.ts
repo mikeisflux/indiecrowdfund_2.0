@@ -5,6 +5,7 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { encrypt, decrypt, getLastDigits } from "@/lib/encryption";
 import { GRANT_AGREEMENT_VERSION } from "@/components/legal/grant-agreement";
+import { SUPPORTED_BANK_COUNTRIES } from "@/lib/bank-countries";
 
 const log = logger.child({ module: "project-grant-agreement" });
 
@@ -273,6 +274,15 @@ export async function POST(
     }
     if (!addressLine1 || !city || !zip || !country) {
       return NextResponse.json({ error: "A complete address is required" }, { status: 400 });
+    }
+    // Section 6 of the Agreement enumerates the eligible countries, and
+    // they're the same set the payout forms accept. Signing as anything
+    // else would record an acceptance the Grant Program can't pay out on.
+    if (!SUPPORTED_BANK_COUNTRIES.has(country)) {
+      return NextResponse.json(
+        { error: "Select a country supported by the Grant Program" },
+        { status: 400 }
+      );
     }
 
     // Idempotent: re-signing returns the existing record (unique projectId).

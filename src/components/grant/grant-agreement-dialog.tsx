@@ -24,6 +24,7 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { CheckCircle2, FileText, Loader2, ShieldCheck } from "lucide-react";
 import { GrantAgreementContent } from "@/components/legal/grant-agreement";
+import { BANK_COUNTRY_OPTIONS, SUPPORTED_BANK_COUNTRIES } from "@/lib/bank-countries";
 
 interface Props {
   open: boolean;
@@ -104,7 +105,11 @@ export function GrantAgreementDialog({
           city: p.city || prev.city,
           state: p.state || prev.state,
           zip: p.zip || prev.zip,
-          country: p.country || prev.country,
+          // Ignore a prefilled country the Select can't represent —
+          // otherwise the field renders blank with no way to tell why.
+          country: SUPPORTED_BANK_COUNTRIES.has(p.country)
+            ? p.country
+            : prev.country,
         }));
       }
     } catch {
@@ -129,6 +134,9 @@ export function GrantAgreementDialog({
     if (!form.city.trim()) return "City is required";
     if (!form.zip.trim()) return "ZIP / postal code is required";
     if (!form.country.trim()) return "Country is required";
+    if (!SUPPORTED_BANK_COUNTRIES.has(form.country)) {
+      return "Select a country supported by the Grant Program";
+    }
     return null;
   };
 
@@ -305,14 +313,25 @@ export function GrantAgreementDialog({
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="ga-country">Country *</Label>
-                  <Input
-                    id="ga-country"
+                  {/* Constrained to the countries the Agreement covers
+                      (section 6) and the payout forms accept. Free text
+                      here let creators sign as a country the Grant Program
+                      has no payout path for. */}
+                  <Select
                     value={form.country}
-                    onChange={(e) => set("country")(e.target.value.toUpperCase())}
-                    placeholder="US"
-                    maxLength={2}
-                    autoComplete="country"
-                  />
+                    onValueChange={(v) => set("country")(v)}
+                  >
+                    <SelectTrigger id="ga-country">
+                      <SelectValue placeholder="Select country" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {BANK_COUNTRY_OPTIONS.map((c) => (
+                        <SelectItem key={c.value} value={c.value}>
+                          {c.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
             </div>

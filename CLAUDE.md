@@ -67,6 +67,18 @@
 - Before committing any new/edited client fetch to `/api/*`, scan the diff: if the method is POST/PUT/PATCH/DELETE and it's not in the `csrfExemptRoutes` list in `src/proxy.ts`, it must go through `apiFetch`
 - Exempt routes (webhooks, `/api/track`, `/api/error-report`, etc.) live in `csrfExemptRoutes` — check that list before assuming plain `fetch()` is OK
 
+### Supported Creator Countries — KEEP THE GRANT AGREEMENT IN SYNC
+- The single source of truth for creator payout countries is `BANK_COUNTRY_OPTIONS` / `SUPPORTED_BANK_COUNTRIES` in `src/lib/bank-countries.ts`
+- It feeds the **Bank Country** dropdown in the campaign-creation payout step for **every** processor: DivinityCoin, PayPal, and Whop (`src/components/project/builder/payment-sections/*`)
+- **When adding a new supported country, you MUST do all of these:**
+  1. Add it to `BankCountry`, `BANK_COUNTRY_OPTIONS`, `SUPPORTED_BANK_COUNTRIES`, `BANK_COUNTRY_FIELDS`, and `parseBankCountry` in `src/lib/bank-countries.ts`
+  2. Add its branch to `validateBankAccountFormat` (routing/account format for that country)
+  3. Add its branch to `sanitizeBankField` if the identifiers are alphanumeric (IBAN/BIC) rather than digits
+  4. **Bump `GRANT_AGREEMENT_VERSION` in `src/components/legal/grant-agreement.tsx`** — Section 6 renders its eligible-country list from `BANK_COUNTRY_OPTIONS`, so the text updates itself, but the version string is manual and acceptances record the version signed
+  5. Re-read Sections 7–9 of the Grant Agreement (cross-border transfers, taxes/withholding, sanctions) and confirm they still hold for the new country
+- **Never** let a creator save a payout account in a country the Grant Agreement doesn't cover. If they can pick it in the bank dropdown, Section 6 must list it.
+- The Grant Agreement signing dialog (`src/components/grant/grant-agreement-dialog.tsx`) and its API route both validate the signer's country against `SUPPORTED_BANK_COUNTRIES` — no free-text country entry
+
 ### Admin Pages
 - Import icons only as needed from `lucide-react`
 - Use `fetchWithRetry` for API calls
@@ -123,7 +135,8 @@
    - Test that data survives page navigation and reloads
    - Avoid using Prisma `upsert` with composite unique constraints that may not exist - use `findFirst` + `create`/`update` pattern instead
    - Always handle and log database errors properly
-8. **TEST ALL FUNCTIONALITY** - Before marking any feature complete:
+8. **COUNTRY CHANGES** - If the diff touches `src/lib/bank-countries.ts`, verify the Grant Agreement country requirements above were followed (esp. bumping `GRANT_AGREEMENT_VERSION`)
+9. **TEST ALL FUNCTIONALITY** - Before marking any feature complete:
    - Actually test the feature works end-to-end, not just that code compiles
    - Test the full user flow: input → save → navigate away → return → verify data persists
    - Don't assume code works just because it looks correct - verify it functions as intended
