@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -18,25 +18,18 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Copy, Loader2 } from "lucide-react";
-
-interface ProjectReward {
-  title: string;
-  amount: number;
-  description: string;
-  type: "TIER" | "ADDON";
-}
-
-interface PreviousProject {
-  id: string;
-  title: string;
-  rewards: ProjectReward[];
-}
+import {
+  useImportableProjects,
+  type ImportableReward,
+} from "./use-importable-projects";
 
 interface ImportRewardDialogProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
   projectId: string | null;
-  onImportReward: (reward: { title: string; description: string; amount: number }) => void;
+  // Receives the whole source reward — image, items, shipping and all — so
+  // the import lands complete instead of as a bare title/price.
+  onImportReward: (rewards: ImportableReward[]) => void | Promise<void>;
 }
 
 export function ImportRewardDialog({
@@ -46,78 +39,24 @@ export function ImportRewardDialog({
   onImportReward,
 }: ImportRewardDialogProps) {
   const [selectedProject, setSelectedProject] = useState<string>("");
-  const [previousProjects, setPreviousProjects] = useState<PreviousProject[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const { projects: allProjects, isLoading } = useImportableProjects(projectId, isOpen);
 
-  // Fetch projects when dialog opens
-  const fetchProjects = useCallback(async () => {
-    setIsLoading(true);
-    try {
-      const url = `/api/creator/projects-for-import${projectId ? `?exclude=${projectId}` : ""}`;
-      console.log("[ImportRewardDialog] Fetching projects from:", url);
-      const response = await fetch(url);
-
-      if (!response.ok) {
-        console.error("[ImportRewardDialog] API error:", response.status, response.statusText);
-        return;
-      }
-
-      const data = await response.json();
-      console.log("[ImportRewardDialog] API returned projects:", data.projects?.length || 0);
-
-      if (!data.projects || data.projects.length === 0) {
-        setPreviousProjects([]);
-        return;
-      }
-
-      // Fetch rewards for each project
-      const projectsWithRewards: PreviousProject[] = await Promise.all(
-        data.projects.map(async (p: { id: string; title: string }) => {
-          const rewardsRes = await fetch(`/api/projects/${p.id}/rewards`);
-          let projectRewards: ProjectReward[] = [];
-          if (rewardsRes.ok) {
-            const rewardsData = await rewardsRes.json();
-            // Get ALL rewards (both TIER and ADDON)
-            projectRewards = (rewardsData.rewards || []).map((r: { title: string; amount: number; description?: string; type?: string }) => ({
-              title: r.title,
-              amount: r.amount,
-              description: r.description || "",
-              type: r.type || "TIER",
-            }));
-          }
-          return {
-            id: p.id,
-            title: p.title,
-            rewards: projectRewards,
-          };
-        })
-      );
-
-      // Only include projects that have rewards (TIER type only for reward import)
-      const projectsWithTiers = projectsWithRewards.filter(p =>
-        p.rewards.some(r => r.type === "TIER")
-      );
-
-      console.log("[ImportRewardDialog] Projects with tiers:", projectsWithTiers.length);
-      setPreviousProjects(projectsWithTiers);
-
-      // Auto-select first project if available
-      if (projectsWithTiers.length > 0) {
-        setSelectedProject(projectsWithTiers[0].id);
-      }
-    } catch (error) {
-      console.error("[ImportRewardDialog] Failed to fetch projects:", error);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [projectId]);
+  // Only projects that actually have tiers are offered here.
+  const previousProjects = allProjects.filter((p) =>
+    p.rewards.some((r) => r.type === "TIER")
+  );
 
   useEffect(() => {
-    if (isOpen) {
-      fetchProjects();
+    if (!isOpen) {
       setSelectedProject("");
+      return;
     }
-  }, [isOpen, fetchProjects]);
+    // Auto-select the first project once the list resolves, but don't
+    // clobber a choice the creator already made.
+    setSelectedProject((prev) =>
+      prev || (previousProjects.length > 0 ? previousProjects[0].id : "")
+    );
+  }, [isOpen, previousProjects]);
 
   // Get rewards (TIER only) from selected project
   const getRewardsToDisplay = () => {
@@ -126,23 +65,22 @@ export function ImportRewardDialog({
     if (!project) return [];
     // Only show TIER type rewards
     return project.rewards
-      .filter(r => r.type === "TIER")
+      .filter((r) => r.type === "TIER")
       .map((reward, idx) => ({
         title: reward.title,
         amount: reward.amount,
         description: reward.description,
         idx,
+        itemCount: reward.items.length,
+        hasImage: !!reward.imageUrl,
+        source: reward,
       }));
   };
 
   const rewardsToDisplay = getRewardsToDisplay();
 
-  const handleImport = (reward: { title: string; amount: number; description: string }) => {
-    onImportReward({
-      title: reward.title,
-      description: reward.description,
-      amount: reward.amount,
-    });
+  const handleImport = (reward: ImportableReward) => {
+    onImportReward([reward]);
     onOpenChange(false);
   };
 
@@ -189,11 +127,16 @@ export function ImportRewardDialog({
                 <div
                   key={displayIdx}
                   className="flex items-center justify-between p-3 border rounded-lg cursor-pointer hover:bg-muted/50 transition-colors"
-                  onClick={() => handleImport(reward)}
+                  onClick={() => handleImport(reward.source)}
                 >
                   <div>
                     <p className="font-medium">{reward.title}</p>
-                    <p className="text-sm text-muted-foreground">${Number(reward.amount).toFixed(2)}</p>
+                    <p className="text-sm text-muted-foreground">
+                      ${Number(reward.amount).toFixed(2)}
+                      {reward.itemCount > 0 &&
+                        ` · ${reward.itemCount} item${reward.itemCount > 1 ? "s" : ""}`}
+                      {reward.hasImage && " · image"}
+                    </p>
                   </div>
                   <Copy className="h-4 w-4 text-muted-foreground" />
                 </div>

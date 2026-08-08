@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -21,19 +21,10 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { RewardData } from "@/types";
-
-interface ProjectReward {
-  title: string;
-  amount: number;
-  description: string;
-  type: "TIER" | "ADDON";
-}
-
-interface PreviousProject {
-  id: string;
-  title: string;
-  rewards: ProjectReward[];
-}
+import {
+  useImportableProjects,
+  type ImportableReward,
+} from "./use-importable-projects";
 
 interface ImportAddonDialogProps {
   isOpen: boolean;
@@ -41,7 +32,9 @@ interface ImportAddonDialogProps {
   projectId: string | null;
   currentProjectTiers: RewardData[];
   onImportFromCurrentProject: (tierIndex: number) => void;
-  onImportAddon: (addon: { title: string; description: string; amount: number }) => void;
+  // Receives the whole source reward — image, items, shipping and all — so
+  // the import lands complete instead of as a bare title/price.
+  onImportAddon: (addons: ImportableReward[]) => void | Promise<void>;
 }
 
 export function ImportAddonDialog({
@@ -53,74 +46,19 @@ export function ImportAddonDialog({
   onImportAddon,
 }: ImportAddonDialogProps) {
   const [selectedProject, setSelectedProject] = useState<string>("current");
-  const [previousProjects, setPreviousProjects] = useState<PreviousProject[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
   // Which rows (by display index) are checked for import.
   const [selectedRows, setSelectedRows] = useState<Set<number>>(new Set());
-
-  // Fetch projects when dialog opens
-  const fetchProjects = useCallback(async () => {
-    setIsLoading(true);
-    try {
-      const url = `/api/creator/projects-for-import${projectId ? `?exclude=${projectId}` : ""}`;
-      console.log("[ImportAddonDialog] Fetching projects from:", url);
-      const response = await fetch(url);
-
-      if (!response.ok) {
-        console.error("[ImportAddonDialog] API error:", response.status, response.statusText);
-        return;
-      }
-
-      const data = await response.json();
-      console.log("[ImportAddonDialog] API returned projects:", data.projects?.length || 0);
-
-      if (!data.projects || data.projects.length === 0) {
-        setPreviousProjects([]);
-        return;
-      }
-
-      // Fetch rewards for each project
-      const projectsWithRewards: PreviousProject[] = await Promise.all(
-        data.projects.map(async (p: { id: string; title: string }) => {
-          const rewardsRes = await fetch(`/api/projects/${p.id}/rewards`);
-          let projectRewards: ProjectReward[] = [];
-          if (rewardsRes.ok) {
-            const rewardsData = await rewardsRes.json();
-            // Get ALL rewards (both TIER and ADDON)
-            projectRewards = (rewardsData.rewards || []).map((r: { title: string; amount: number; description?: string; type?: string }) => ({
-              title: r.title,
-              amount: r.amount,
-              description: r.description || "",
-              type: r.type || "TIER",
-            }));
-          }
-          return {
-            id: p.id,
-            title: p.title,
-            rewards: projectRewards,
-          };
-        })
-      );
-
-      // Include projects that have any rewards (TIER or ADDON)
-      const projectsWithRewardsFiltered = projectsWithRewards.filter(p => p.rewards.length > 0);
-
-      console.log("[ImportAddonDialog] Projects with rewards:", projectsWithRewardsFiltered.length);
-      setPreviousProjects(projectsWithRewardsFiltered);
-    } catch (error) {
-      console.error("[ImportAddonDialog] Failed to fetch projects:", error);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [projectId]);
+  const { projects: previousProjects, isLoading } = useImportableProjects(
+    projectId,
+    isOpen
+  );
 
   useEffect(() => {
     if (isOpen) {
-      fetchProjects();
       setSelectedProject("current");
       setSelectedRows(new Set());
     }
-  }, [isOpen, fetchProjects]);
+  }, [isOpen]);
 
   // Clear the selection whenever the source project changes — the display
   // indices no longer point at the same rewards.
@@ -139,13 +77,18 @@ export function ImportAddonDialog({
         type: "TIER" as const,
         idx,
         isCurrent: true,
+        itemCount: (tier.items ?? []).length,
+        hasImage: !!tier.imageUrl,
+        source: undefined as ImportableReward | undefined,
       }));
     }
 
     const project = previousProjects.find((p) => p.id === selectedProject);
     if (!project) return [];
 
-    // Show ALL rewards (both TIER and ADDON) from other projects
+    // Show ALL rewards (both TIER and ADDON) from other projects. `source`
+    // carries the full reward through to the import handler — the row only
+    // renders a few fields, but everything else has to survive the trip.
     return project.rewards.map((reward, idx) => ({
       title: reward.title,
       amount: reward.amount,
@@ -153,6 +96,9 @@ export function ImportAddonDialog({
       type: reward.type,
       idx,
       isCurrent: false,
+      itemCount: reward.items.length,
+      hasImage: !!reward.imageUrl,
+      source: reward,
     }));
   };
 
@@ -175,22 +121,23 @@ export function ImportAddonDialog({
     );
   };
 
-  const handleImportSelected = () => {
+  const handleImportSelected = async () => {
     // Import in display order so the resulting add-ons keep the same ordering.
     const selected = rewardsToDisplay.filter((_, i) => selectedRows.has(i));
     if (selected.length === 0) return;
 
-    selected.forEach((reward) => {
-      if (reward.isCurrent) {
-        onImportFromCurrentProject(reward.idx);
-      } else {
-        onImportAddon({
-          title: reward.title,
-          description: reward.description,
-          amount: reward.amount,
-        });
-      }
-    });
+    selected
+      .filter((reward) => reward.isCurrent)
+      .forEach((reward) => onImportFromCurrentProject(reward.idx));
+
+    // Cross-project rewards go over in one batch so two rewards sharing an
+    // item resolve to a single ProjectItem instead of duplicating it.
+    const fromOtherProject = selected
+      .filter((reward) => !reward.isCurrent && reward.source)
+      .map((reward) => reward.source as ImportableReward);
+    if (fromOtherProject.length > 0) {
+      await onImportAddon(fromOtherProject);
+    }
 
     toast.success(`Imported ${selected.length} add-on${selected.length > 1 ? "s" : ""}`);
     onOpenChange(false);
@@ -203,7 +150,8 @@ export function ImportAddonDialog({
           <DialogTitle>Import add-on from project</DialogTitle>
           <DialogDescription>
             Select one or more rewards to import as add-ons — copy reward tiers from this
-            project, or pull rewards/add-ons from another project.
+            project, or pull rewards/add-ons from another project. Images, items,
+            shipping, and delivery dates come with them.
           </DialogDescription>
         </DialogHeader>
 
@@ -294,7 +242,12 @@ export function ImportAddonDialog({
                           </span>
                         )}
                       </div>
-                      <p className="text-sm text-muted-foreground">${Number(reward.amount).toFixed(2)}</p>
+                      <p className="text-sm text-muted-foreground">
+                        ${Number(reward.amount).toFixed(2)}
+                        {reward.itemCount > 0 &&
+                          ` · ${reward.itemCount} item${reward.itemCount > 1 ? "s" : ""}`}
+                        {reward.hasImage && " · image"}
+                      </p>
                     </div>
                   </div>
                 );

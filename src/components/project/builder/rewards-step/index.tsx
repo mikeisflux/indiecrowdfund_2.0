@@ -1,7 +1,7 @@
 "use client";
 
 import { apiFetch } from "@/lib/fetch-utils";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { useProjectStore } from "@/lib/stores/project-store";
 import { RewardData, RewardItemData, RewardType, ShippingType } from "@/types";
 import { Button } from "@/components/ui/button";
@@ -18,6 +18,10 @@ import { ImportAddonDialog } from "./import-addon-dialog";
 import { ItemsTab } from "./items-tab";
 import { TiersTab } from "./tiers-tab";
 import { AddonsTab } from "./addons-tab";
+import type {
+  ImportableReward,
+  ImportableRewardItem,
+} from "./use-importable-projects";
 
 interface RewardsStepProps {
   onFormOpenChange?: (isOpen: boolean) => void;
@@ -566,27 +570,118 @@ export function RewardsStep({ onFormOpenChange }: RewardsStepProps) {
     );
   };
 
-  // Handler for importing a reward from another project (for Tiers tab)
-  const handleImportRewardFromProject = (reward: { title: string; description: string; amount: number }) => {
-    addReward({
-      ...defaultReward,
-      title: reward.title,
-      description: reward.description,
-      amount: reward.amount,
-      type: "TIER",
-    });
+  // The source reward's items belong to the source project, so their
+  // ProjectItem ids are meaningless here. Re-resolve each one against this
+  // project by title: reuse a matching item if the creator already has one
+  // (keeping the image they attached), otherwise create it. Without this
+  // step an imported reward arrives with no items and nothing in the Items
+  // tab, which is exactly what creators were reporting.
+  // Takes the whole selection at once rather than one reward at a time.
+  // Two rewards in the same import commonly share an item ("Poster", "Vinyl
+  // sticker"), and resolving them independently would create a duplicate
+  // ProjectItem for each — the store's `items` can't have updated between
+  // two calls in the same tick. `resolvedByTitle` is the batch-local map
+  // that keeps the second reward pointing at the item the first one made.
+  const importRewardsFromProject = useCallback(
+    async (sources: ImportableReward[], type: "TIER" | "ADDON") => {
+      const resolvedByTitle = new Map<string, RewardItemData>();
+      for (const existing of items) {
+        if (existing.id) {
+          resolvedByTitle.set(existing.title.trim().toLowerCase(), {
+            ...existing,
+            projectItemId: existing.id,
+          });
+        }
+      }
+
+      const resolveItem = async (
+        sourceItem: ImportableRewardItem
+      ): Promise<RewardItemData | null> => {
+        const title = sourceItem.title.trim();
+        if (!title) return null;
+        const key = title.toLowerCase();
+
+        const existing = resolvedByTitle.get(key);
+        if (existing) {
+          // Don't overwrite an image the creator already attached here;
+          // only fill one in if this project's item has none.
+          return { ...existing, imageUrl: existing.imageUrl || sourceItem.imageUrl };
+        }
+
+        const draft: RewardItemData = {
+          title,
+          description: sourceItem.description,
+          imageUrl: sourceItem.imageUrl,
+        };
+
+        // Saved projects persist the item immediately so it gets a real id
+        // and appears in the Items tab. Unsaved drafts keep it local and the
+        // project save creates it.
+        if (projectId) {
+          try {
+            const res = await apiFetch(`/api/projects/${projectId}/items`, {
+              method: "POST",
+              json: {
+                title: draft.title,
+                description: draft.description,
+                imageUrl: draft.imageUrl,
+              },
+            });
+            const body = await res.json();
+            if (res.ok && body.item?.id) {
+              const created = { ...draft, id: body.item.id, projectItemId: body.item.id };
+              addItem(created);
+              resolvedByTitle.set(key, created);
+              return created;
+            }
+          } catch {
+            // Fall through to the local-only path below.
+          }
+        }
+
+        addItem(draft);
+        resolvedByTitle.set(key, draft);
+        return draft;
+      };
+
+      for (const source of sources) {
+        const resolvedItems: RewardItemData[] = [];
+        for (const sourceItem of source.items) {
+          const resolved = await resolveItem(sourceItem);
+          if (resolved) resolvedItems.push(resolved);
+        }
+
+        addReward({
+          ...defaultReward,
+          type,
+          title: source.title,
+          description: source.description,
+          amount: source.amount,
+          imageUrl: source.imageUrl || undefined,
+          shippingType: source.shippingType ?? defaultReward.shippingType,
+          shippingCountries: source.shippingCountries ?? defaultReward.shippingCountries,
+          shippingCost: source.shippingCost ?? defaultReward.shippingCost,
+          quantityAvailable: source.quantityAvailable,
+          visibility: source.visibility ?? defaultReward.visibility,
+          estimatedDelivery: source.estimatedDelivery
+            ? new Date(source.estimatedDelivery)
+            : undefined,
+          items: resolvedItems,
+        });
+      }
+    },
+    [items, projectId, addItem, addReward]
+  );
+
+  // Handler for importing rewards from another project (for Tiers tab)
+  const handleImportRewardFromProject = async (sources: ImportableReward[]) => {
+    await importRewardsFromProject(sources, "TIER");
     toast.success("Reward imported successfully");
   };
 
-  // Handler for importing an addon from another project (for Addons tab)
-  const handleImportAddonFromProject = (addon: { title: string; description: string; amount: number }) => {
-    addReward({
-      ...defaultReward,
-      title: addon.title,
-      description: addon.description,
-      amount: addon.amount,
-      type: "ADDON",
-    });
+  // Handler for importing addons from another project (for Addons tab)
+  const handleImportAddonFromProject = async (sources: ImportableReward[]) => {
+    await importRewardsFromProject(sources, "ADDON");
     // Success toast is shown once by ImportAddonDialog after a (possibly bulk) import.
   };
 
