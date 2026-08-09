@@ -7,11 +7,16 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Loader2, CheckCircle, ArrowLeft } from "lucide-react";
+import { Loader2, CheckCircle, Clock, ArrowLeft } from "lucide-react";
 
 export function ForgotPasswordForm() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  // Set when the request was throttled. The server returns success:true here
+  // to avoid confirming whether the address exists, but NO email goes out —
+  // reporting it as sent left people waiting on mail that never came, and
+  // then clicking older links in the thread.
+  const [rateLimitedFor, setRateLimitedFor] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
   async function handleSubmit(formData: FormData) {
@@ -27,6 +32,9 @@ export function ForgotPasswordForm() {
           setError(result.error.email[0]);
         }
       } else {
+        setRateLimitedFor(
+          result?.rateLimited ? (result.retryAfter ?? 0) : null
+        );
         setSuccess(true);
       }
     } catch {
@@ -37,20 +45,40 @@ export function ForgotPasswordForm() {
   }
 
   if (success) {
+    const retryMinutes = rateLimitedFor
+      ? Math.max(1, Math.ceil(rateLimitedFor / 60))
+      : 0;
+
     return (
       <div className="space-y-6">
-        <Alert className="border-green-200 bg-green-50">
-          <CheckCircle className="h-4 w-4 text-green-600" />
-          <AlertDescription className="text-green-800">
-            If an account with that email exists, we&apos;ve sent you a password
-            reset link. Please check your inbox.
-          </AlertDescription>
-        </Alert>
+        {rateLimitedFor !== null ? (
+          <Alert className="border-amber-200 bg-amber-50">
+            <Clock className="h-4 w-4 text-amber-600" />
+            <AlertDescription className="text-amber-800">
+              You&apos;ve requested several reset links in a short time, so we
+              haven&apos;t sent another one. Use the most recent email already in
+              your inbox &mdash; it&apos;s still valid for 24 hours. You can
+              request a new one in about {retryMinutes} minute
+              {retryMinutes === 1 ? "" : "s"}.
+            </AlertDescription>
+          </Alert>
+        ) : (
+          <Alert className="border-green-200 bg-green-50">
+            <CheckCircle className="h-4 w-4 text-green-600" />
+            <AlertDescription className="text-green-800">
+              If an account with that email exists, we&apos;ve sent you a password
+              reset link. Please check your inbox. The link is good for 24 hours.
+            </AlertDescription>
+          </Alert>
+        )}
 
         <p className="text-center text-sm text-muted-foreground">
           Didn&apos;t receive the email? Check your spam folder or{" "}
           <button
-            onClick={() => setSuccess(false)}
+            onClick={() => {
+              setSuccess(false);
+              setRateLimitedFor(null);
+            }}
             className="text-primary hover:underline"
           >
             try again

@@ -39,7 +39,13 @@ export async function sendPasswordResetEmail(email: string, token: string) {
           </div>
 
           <p style="color: #666; font-size: 14px;">
-            This link will expire in 1 hour. If you didn't request a password reset, you can safely ignore this email.
+            This link works for 24 hours and can be used once. If you requested
+            more than one reset email, any of the recent ones will work &mdash; but
+            open the newest, since each link stops working after it's used.
+          </p>
+
+          <p style="color: #666; font-size: 14px;">
+            If you didn't request a password reset, you can safely ignore this email.
           </p>
 
           <p style="color: #666; font-size: 14px; margin-bottom: 0;">

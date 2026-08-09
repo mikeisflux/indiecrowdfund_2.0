@@ -3,7 +3,11 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
-import { resetPassword, verifyResetToken } from "@/lib/auth/actions";
+import {
+  resetPassword,
+  verifyResetToken,
+  type ResetTokenFailure,
+} from "@/lib/auth/actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -16,6 +20,11 @@ export function ResetPasswordForm() {
   const [isLoading, setIsLoading] = useState(false);
   const [isValidating, setIsValidating] = useState(true);
   const [isValidToken, setIsValidToken] = useState(false);
+  // Why the check failed. "error" means we couldn't reach the server, which
+  // is worth retrying — the old code showed those as "invalid link", sending
+  // people to request a replacement that would fail identically.
+  const [tokenFailure, setTokenFailure] = useState<ResetTokenFailure | null>(null);
+  const [recheckNonce, setRecheckNonce] = useState(0);
   const searchParams = useSearchParams();
   const router = useRouter();
   const token = searchParams?.get("token");
@@ -24,22 +33,28 @@ export function ResetPasswordForm() {
   useEffect(() => {
     async function validateToken() {
       if (!token) {
+        setTokenFailure("not_found");
         setIsValidating(false);
         return;
       }
 
+      setIsValidating(true);
       try {
         const result = await verifyResetToken(token);
         setIsValidToken(result.valid);
+        setTokenFailure(result.valid ? null : (result.reason ?? "not_found"));
       } catch {
+        // Network failure, a 403/429 from the bot filter, a deploy mid-click
+        // — none of these mean the link is bad.
         setIsValidToken(false);
+        setTokenFailure("error");
       } finally {
         setIsValidating(false);
       }
     }
 
     validateToken();
-  }, [token]);
+  }, [token, recheckNonce]);
 
   async function handleSubmit(formData: FormData) {
     if (!token) return;
@@ -73,14 +88,42 @@ export function ResetPasswordForm() {
     );
   }
 
+  // Couldn't reach the server to check. Offer a retry — requesting a new
+  // link doesn't help when the check itself is what failed.
+  if (tokenFailure === "error") {
+    return (
+      <div className="space-y-6">
+        <Alert variant="destructive">
+          <XCircle className="h-4 w-4" />
+          <AlertDescription>
+            We couldn&apos;t check your reset link just now. This is a problem on
+            our end, not with your link — please try again.
+          </AlertDescription>
+        </Alert>
+
+        <Button className="w-full" onClick={() => setRecheckNonce((n) => n + 1)}>
+          Try again
+        </Button>
+
+        <Link
+          href="/forgot-password"
+          className="flex items-center justify-center gap-2 text-sm text-muted-foreground hover:text-primary"
+        >
+          Request a new reset link
+        </Link>
+      </div>
+    );
+  }
+
   if (!token || !isValidToken) {
     return (
       <div className="space-y-6">
         <Alert variant="destructive">
           <XCircle className="h-4 w-4" />
           <AlertDescription>
-            This password reset link is invalid or has expired. Please request a
-            new one.
+            {tokenFailure === "expired"
+              ? "This password reset link has expired. Links are good for 24 hours — request a new one below."
+              : "This password reset link has already been used, or it isn't valid. Request a new one below."}
           </AlertDescription>
         </Alert>
 

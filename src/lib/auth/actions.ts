@@ -355,6 +355,17 @@ const requestResetSchema = z.object({
   email: z.string().email("Invalid email address"),
 });
 
+// How long an emailed reset link stays usable. This was one hour, which is
+// tight for a link that goes out through the email queue and then waits for
+// someone to check their inbox — any queue lag ate straight into it. A day
+// is the common default and the link is still single-use.
+// Not exported: this file is "use server", which permits async function
+// exports only.
+const PASSWORD_RESET_TOKEN_TTL_MS = 24 * 60 * 60 * 1000;
+
+// Live tokens kept per address. See the pruning note in requestPasswordReset.
+const MAX_LIVE_RESET_TOKENS = 3;
+
 const resetPasswordSchema = z.object({
   password: z.string().min(8, "Password must be at least 8 characters"),
   confirmPassword: z.string(),
@@ -409,14 +420,9 @@ export async function requestPasswordReset(formData: FormData) {
     // Use the actual user email (normalized to lowercase) for the token
     const normalizedEmail = user.email.toLowerCase();
 
-    // Delete any existing tokens for this email (case-insensitive cleanup)
-    await db.passwordResetToken.deleteMany({
-      where: { email: { in: [email, normalizedEmail, user.email] } },
-    });
-
     // Generate a secure token
     const token = crypto.randomUUID();
-    const expires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+    const expires = new Date(Date.now() + PASSWORD_RESET_TOKEN_TTL_MS);
 
     // Create the reset token (use normalized email so reset matches login lookup)
     await db.passwordResetToken.create({
@@ -426,6 +432,33 @@ export async function requestPasswordReset(formData: FormData) {
         expires,
       },
     });
+
+    // Requesting a new link used to delete every previous one for this
+    // address. That turned the common "I didn't see it, send another"
+    // behaviour into a trap: every earlier email in the thread became a
+    // dead link, and people reliably click the wrong one out of a stack of
+    // identical messages — which read as "your reset links never work".
+    //
+    // Recent links now stay valid until used or expired. Each is still
+    // single-use (the consume step deletes by token), so this doesn't widen
+    // the window on any individual link. Older ones beyond the newest few
+    // are pruned so a scripted flood can't accumulate live tokens.
+    const stale = await db.passwordResetToken.findMany({
+      where: { email: { in: [email, normalizedEmail, user.email] } },
+      orderBy: { createdAt: "desc" },
+      skip: MAX_LIVE_RESET_TOKENS,
+      select: { id: true },
+    });
+    if (stale.length > 0) {
+      await db.passwordResetToken.deleteMany({
+        where: { id: { in: stale.map((t: { id: string }) => t.id) } },
+      });
+    }
+
+    authActionsLogger.info(
+      { userId: user.id, expiresAt: expires.toISOString(), pruned: stale.length },
+      "Password reset token issued"
+    );
 
     // Send the reset email
     const { sendPasswordResetEmail } = await import("@/lib/email");
@@ -443,14 +476,27 @@ export async function requestPasswordReset(formData: FormData) {
   }
 }
 
-export async function verifyResetToken(token: string) {
+// Why a reset link couldn't be used. The form used to collapse all of
+// these — including "the check itself blew up" — into a single "this link
+// is invalid or has expired", which sent people off to request another link
+// that would fail exactly the same way. The reason lets the UI tell someone
+// to retry when retrying might actually work.
+export type ResetTokenFailure = "not_found" | "expired" | "error";
+
+export async function verifyResetToken(
+  token: string
+): Promise<{ valid: boolean; email?: string; reason?: ResetTokenFailure }> {
   try {
     const resetToken = await db.passwordResetToken.findUnique({
       where: { token },
     });
 
     if (!resetToken) {
-      return { valid: false };
+      authActionsLogger.info(
+        { tokenPrefix: token.slice(0, 8) },
+        "Password reset check: token not found (already used, pruned, or never issued)"
+      );
+      return { valid: false, reason: "not_found" };
     }
 
     if (resetToken.expires < new Date()) {
@@ -459,12 +505,22 @@ export async function verifyResetToken(token: string) {
       await db.passwordResetToken.deleteMany({
         where: { token },
       });
-      return { valid: false };
+      authActionsLogger.info(
+        { tokenPrefix: token.slice(0, 8), expiredAt: resetToken.expires.toISOString() },
+        "Password reset check: token expired"
+      );
+      return { valid: false, reason: "expired" };
     }
 
     return { valid: true, email: resetToken.email };
-  } catch {
-    return { valid: false };
+  } catch (error) {
+    // A DB hiccup is not a bad link. Say so, so the user retries instead of
+    // burning another request on a new link that lands in the same state.
+    authActionsLogger.error(
+      { err: error, tokenPrefix: token.slice(0, 8) },
+      "Password reset check failed"
+    );
+    return { valid: false, reason: "error" };
   }
 }
 
@@ -487,6 +543,14 @@ export async function resetPassword(formData: FormData, token: string) {
     });
 
     if (!resetToken || resetToken.expires < new Date()) {
+      authActionsLogger.warn(
+        {
+          tokenPrefix: token.slice(0, 8),
+          found: !!resetToken,
+          expiredAt: resetToken?.expires?.toISOString(),
+        },
+        "Password reset rejected: token missing or expired"
+      );
       return { error: { _form: ["Invalid or expired reset link. Please request a new one."] } };
     }
 
@@ -502,6 +566,14 @@ export async function resetPassword(formData: FormData, token: string) {
     // requestPasswordReset refuses to mint new ones, but an in-flight link
     // must not be able to set a working password on a closed account.
     if (!targetUser || targetUser.accountDeletedAt) {
+      authActionsLogger.warn(
+        {
+          tokenEmail: resetToken.email,
+          found: !!targetUser,
+          accountDeleted: !!targetUser?.accountDeletedAt,
+        },
+        "Password reset rejected: no live user for the token's email"
+      );
       return { error: { _form: ["Invalid or expired reset link. Please request a new one."] } };
     }
 
@@ -533,9 +605,16 @@ export async function resetPassword(formData: FormData, token: string) {
     });
 
     if (!consumed) {
+      // Lost the race to consume the token — almost always a double-submit,
+      // where the first request already set the password.
+      authActionsLogger.info(
+        { userId: targetUser.id, tokenPrefix: token.slice(0, 8) },
+        "Password reset token already consumed by a concurrent request"
+      );
       return { error: { _form: ["Invalid or expired reset link. Please request a new one."] } };
     }
 
+    authActionsLogger.info({ userId: targetUser.id }, "Password reset completed");
     return { success: true };
   } catch (error) {
     authActionsLogger.error({ err: error }, "Error resetting password:");
