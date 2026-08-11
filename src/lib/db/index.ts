@@ -62,6 +62,57 @@ async function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+// Empty-result stand-in used during `next build`. Methods are matched by
+// name so an unknown one still resolves rather than throwing — the point is
+// that nothing during a build should depend on real rows.
+function buildTimeStub(): any {
+  const resultFor = (method: string): unknown => {
+    if (method === "count") return 0;
+    // Aggregates are read as `result._sum.amount || 0`, so the wrapper keys
+    // have to exist — returning a bare {} makes `._sum` undefined and the
+    // call site throws on the property access.
+    if (method === "aggregate") {
+      return { _count: 0, _sum: {}, _avg: {}, _min: {}, _max: {} };
+    }
+    if (method === "createMany" || method === "updateMany" || method === "deleteMany") {
+      return { count: 0 };
+    }
+    // findFirst / findUnique / and their OrThrow variants
+    if (method.startsWith("find") && !method.startsWith("findMany")) return null;
+    // findMany, groupBy, $queryRaw, and anything else list-shaped
+    return [];
+  };
+
+  const modelStub = new Proxy(
+    {},
+    {
+      get: (_t, method: string | symbol) => {
+        if (typeof method !== "string") return undefined;
+        return async () => resultFor(method);
+      },
+    }
+  );
+
+  return new Proxy(
+    {},
+    {
+      get: (_t, prop: string | symbol) => {
+        if (typeof prop !== "string") return undefined;
+        // $transaction(fn) runs the callback against the same stub;
+        // $transaction([...]) resolves the array.
+        if (prop === "$transaction") {
+           
+          return async (arg: any) =>
+            typeof arg === "function" ? arg(buildTimeStub()) : Promise.all(arg ?? []);
+        }
+        if (prop === "$connect" || prop === "$disconnect") return async () => undefined;
+        if (prop.startsWith("$")) return async () => resultFor(prop);
+        return modelStub;
+      },
+    }
+  );
+}
+
 // Reset the cached Prisma client so the next request builds a fresh
 // PrismaClient + adapter + connection pool. Called when:
 //   1. The keepalive ping fails (connection dropped — Postgres restart,
@@ -97,9 +148,20 @@ function resetPrismaClient(reason: string): void {
 // Lazy initialization to avoid build-time errors when Prisma client isn't generated
 function getPrismaClient(): PrismaClient {
   if (isBuildTime) {
-    // Return a mock during build time to prevent initialization errors
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return {} as any;
+    // No database during `next build`. This used to return `{}`, which made
+    // every `db.someModel` undefined and every `.findMany()` throw — around
+    // 150 stack traces per build ("Layout data fetch error", "Sitemap:
+    // Error fetching projects", "Failed to build RSS feed", and so on).
+    // They were harmless, because each call site catches and degrades, but
+    // they buried anything that actually mattered in the build log.
+    //
+    // Behave like an empty database instead: every model method resolves to
+    // the shape a real empty result would have. Build output stays quiet,
+    // and a genuine failure is visible again.
+    //
+    // Pages that need real data must not be prerendered — see the
+    // force-dynamic note in app/sitemap.ts for what happens when they are.
+    return buildTimeStub();
   }
 
   if (!globalForPrisma.prisma) {
@@ -167,14 +229,14 @@ function getPrismaClient(): PrismaClient {
         "An operation failed because it depends on one or more records that were required but not found. No record was found for a delete.",
       ];
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+       
       (client.$on as any)("error", (e: { message: string }) => {
         if (IGNORED_PRISMA_PATTERNS.some((p) => e.message.includes(p))) return;
         dbLogger.error({ err: e.message }, "Prisma engine error");
       });
 
       if (process.env.NODE_ENV === "development") {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+         
         (client.$on as any)("warn", (e: { message: string }) => {
           dbLogger.warn({ err: e.message }, "Prisma engine warning");
         });
@@ -194,7 +256,7 @@ function getPrismaClient(): PrismaClient {
     // Reconnect on transient errors by wrapping with retry logic
     globalForPrisma.prisma = client.$extends({
       query: {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+         
         async $allOperations({ args, query }: { args: any; query: (args: any) => Promise<any> }) {
           for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
             try {

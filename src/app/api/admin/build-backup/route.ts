@@ -71,7 +71,7 @@ export async function GET() {
 
     for (const entry of entries) {
       if (entry.isDirectory() && entry.name.startsWith(".next-backup-")) {
-        const backupPath = path.join(BUILD_DIR, entry.name);
+        const backupPath = path.join(/*turbopackIgnore: true*/ BUILD_DIR, entry.name);
 
         // Parse timestamp from directory name: .next-backup-YYYYMMDD_HHMMSS
         const timestampMatch = entry.name.match(/\.next-backup-(\d{8})_(\d{6})/);
@@ -146,7 +146,7 @@ export async function DELETE(req: NextRequest) {
       );
     }
 
-    const backupPath = path.join(BUILD_DIR, backupName);
+    const backupPath = path.join(/*turbopackIgnore: true*/ BUILD_DIR, backupName);
 
     // Check if backup exists
     try {

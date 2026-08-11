@@ -156,21 +156,21 @@ export async function POST(req: NextRequest) {
     const safeProjectId = effectiveProjectId.replace(/[^a-zA-Z0-9-]/g, "") || "temp";
 
     const uploadDir = path.join(
-      UPLOADS_BASE,
+      /*turbopackIgnore: true*/ UPLOADS_BASE,
       "projects",
       safeProjectId,
       uploadType
     );
 
     // Guard against path traversal: ensure uploadDir stays within UPLOADS_BASE
-    const resolvedBase = path.resolve(UPLOADS_BASE);
-    const resolvedDir = path.resolve(uploadDir);
+    const resolvedBase = path.resolve(/*turbopackIgnore: true*/ UPLOADS_BASE);
+    const resolvedDir = path.resolve(/*turbopackIgnore: true*/ uploadDir);
     if (!resolvedDir.startsWith(resolvedBase + path.sep) && resolvedDir !== resolvedBase) {
       return NextResponse.json({ error: "Invalid upload path" }, { status: 400 });
     }
 
     // Ensure directory exists
-    if (!existsSync(uploadDir)) {
+    if (!existsSync(/*turbopackIgnore: true*/ uploadDir)) {
       await mkdir(uploadDir, { recursive: true });
     }
 
@@ -179,7 +179,7 @@ export async function POST(req: NextRequest) {
 
     // Generate unique filename
     const filename = generateFilename(file.name, shouldConvert);
-    const filePath = path.join(uploadDir, filename);
+    const filePath = path.join(/*turbopackIgnore: true*/ uploadDir, filename);
 
     // Convert file to buffer
     const bytes = await file.arrayBuffer();

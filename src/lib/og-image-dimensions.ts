@@ -63,7 +63,7 @@ export async function getOgImageInfo(
     // Reject path traversal attempts
     if (relativePath.includes("..")) return DEFAULT_DIMENSIONS;
 
-    const filePath = path.join(UPLOADS_BASE, relativePath);
+    const filePath = path.join(/*turbopackIgnore: true*/ UPLOADS_BASE, relativePath);
 
     // Check cache
     const cached = imageInfoCache.get(filePath);
@@ -71,7 +71,7 @@ export async function getOgImageInfo(
 
     // Try the exact file first
     let readPath = filePath;
-    if (!existsSync(readPath)) {
+    if (!existsSync(/*turbopackIgnore: true*/ readPath)) {
       // If caller asked for .jpg but only .webp exists, fall back to webp
       if (/\.jpe?g$/i.test(filePath)) {
         const webpPath = filePath.replace(/\.jpe?g$/i, ".webp");
@@ -91,7 +91,7 @@ export async function getOgImageInfo(
     // mtime as unix seconds — stable per-file-version cache buster
     let version: string | null = null;
     try {
-      const stats = statSync(readPath);
+      const stats = statSync(/*turbopackIgnore: true*/ readPath);
       version = Math.floor(stats.mtimeMs / 1000).toString();
     } catch {
       // non-fatal

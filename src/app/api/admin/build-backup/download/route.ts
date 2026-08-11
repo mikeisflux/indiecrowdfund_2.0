@@ -63,10 +63,10 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    const backupPath = path.join(BUILD_DIR, backupName);
+    const backupPath = path.join(/*turbopackIgnore: true*/ BUILD_DIR, backupName);
 
     // Check if backup exists
-    if (!existsSync(backupPath)) {
+    if (!existsSync(/*turbopackIgnore: true*/ backupPath)) {
       return NextResponse.json(
         { error: "Backup not found" },
         { status: 404 }

@@ -51,8 +51,8 @@ export async function POST(req: NextRequest) {
 
     const force = req.nextUrl.searchParams.get("force") === "true";
 
-    const projectsBase = path.join(UPLOADS_BASE, "projects");
-    if (!existsSync(projectsBase)) {
+    const projectsBase = path.join(/*turbopackIgnore: true*/ UPLOADS_BASE, "projects");
+    if (!existsSync(/*turbopackIgnore: true*/ projectsBase)) {
       return NextResponse.json({
         success: true,
         message: "No uploads/projects directory found",

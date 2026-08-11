@@ -34,11 +34,11 @@ export async function GET(
 
     // Reconstruct the file path
     const relativePath = pathSegments.join("/");
-    const filePath = path.join(UPLOADS_BASE, relativePath);
+    const filePath = path.join(/*turbopackIgnore: true*/ UPLOADS_BASE, relativePath);
 
     // Security: Ensure we're only serving from uploads directory
-    const uploadsDir = path.resolve(UPLOADS_BASE);
-    const resolvedPath = path.resolve(filePath);
+    const uploadsDir = path.resolve(/*turbopackIgnore: true*/ UPLOADS_BASE);
+    const resolvedPath = path.resolve(/*turbopackIgnore: true*/ filePath);
 
     if (!resolvedPath.startsWith(uploadsDir + path.sep) && resolvedPath !== uploadsDir) {
       return NextResponse.json({ error: "Invalid path" }, { status: 400 });
@@ -48,7 +48,7 @@ export async function GET(
     let finalPath = resolvedPath;
     let ext = path.extname(resolvedPath).toLowerCase();
 
-    if (!existsSync(resolvedPath)) {
+    if (!existsSync(/*turbopackIgnore: true*/ resolvedPath)) {
       // If requesting .png or .jpg but file doesn't exist, try .webp version
       // (handles legacy URLs from before WebP conversion was added)
       if (ext === ".png" || ext === ".jpg" || ext === ".jpeg") {
@@ -75,7 +75,7 @@ export async function GET(
     }
 
     // Get file stats for size
-    const fileStat = await stat(finalPath);
+    const fileStat = await stat(/*turbopackIgnore: true*/ finalPath);
     const fileSize = fileStat.size;
 
     // Check if this is a video and if Range header is present
@@ -90,7 +90,7 @@ export async function GET(
       const chunkSize = end - start + 1;
 
       // Read the specific chunk
-      const fileBuffer = await readFile(finalPath);
+      const fileBuffer = await readFile(/*turbopackIgnore: true*/ finalPath);
       const chunk = fileBuffer.subarray(start, end + 1);
 
       return new NextResponse(chunk, {
@@ -106,7 +106,7 @@ export async function GET(
     }
 
     // Read the file
-    const fileBuffer = await readFile(finalPath);
+    const fileBuffer = await readFile(/*turbopackIgnore: true*/ finalPath);
 
     // Support format conversion via ?format=jpeg (useful for og:image compatibility)
     // ALSO auto-convert WebP → JPEG when a social-media crawler fetches the file.

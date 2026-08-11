@@ -107,7 +107,7 @@ export async function GET() {
       continue;
     }
     for (const file of files) {
-      const full = path.join(dir, file);
+      const full = path.join(/*turbopackIgnore: true*/ dir, file);
       try {
         const stat = await fs.promises.stat(full);
         if (!stat.isFile()) continue;
@@ -136,7 +136,7 @@ export async function GET() {
     }
     for (const file of files) {
       if (file !== base && !file.startsWith(base + ".")) continue;
-      const full = path.join(dir, file);
+      const full = path.join(/*turbopackIgnore: true*/ dir, file);
       try {
         const stat = await fs.promises.stat(full);
         if (!stat.isFile()) continue;

@@ -3,6 +3,21 @@ import { db } from "@/lib/db";
 
 const SITE_URL = process.env.NEXT_PUBLIC_APP_URL || "https://indiecrowdfund.com";
 
+// Render per request, never at build time.
+//
+// Without this, Next prerenders sitemap.xml as a static file during `next
+// build` — and lib/db returns a stub during the build phase (there's no
+// database), so every query below threw and was swallowed by the catch
+// blocks. The result was a sitemap containing only the hardcoded pages
+// below: zero campaigns, zero prelaunch pages, zero creator profiles, for
+// as long as that build was deployed. Crawlers were being handed a
+// directory of the site with all the actual content missing.
+//
+// force-dynamic rather than revalidate: with ISR the first build still
+// ships an empty sitemap and it only self-corrects after the window
+// elapses. Crawlers hit this rarely, so querying per request is cheap.
+export const dynamic = "force-dynamic";
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // Static pages
   const staticPages: MetadataRoute.Sitemap = [
