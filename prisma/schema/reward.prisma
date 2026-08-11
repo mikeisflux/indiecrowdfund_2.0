@@ -66,6 +66,10 @@ model Reward {
   updatedAt         DateTime     @updatedAt
 
   @@index([projectId, type])
+  // Shared-stock pool lookups walk this both ways. Created by
+  // migrations/add_reward_shared_stock.sql — declared here so the schema
+  // matches the database and `migrate diff` doesn't propose dropping it.
+  @@index([sharedStockWithId])
 }
 
 enum RewardType {

@@ -125,6 +125,12 @@ model Project {
   @@index([slug])
   @@index([deletedAt])  // For soft delete filtering
   @@index([status, deletedAt])  // Common query pattern
+  // Account-deletion eligibility asks "has this creator ever launched?" on
+  // every open of the delete-account dialog. Created by
+  // migrations/add_account_deletion_requests.sql — declared here so the
+  // schema matches the database and `migrate diff` doesn't propose
+  // dropping it.
+  @@index([creatorId, launchedAt])
 }
 
 model ProjectFollower {
