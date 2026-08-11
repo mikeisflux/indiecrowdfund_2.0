@@ -157,7 +157,7 @@ model PlatformSettings {
   aiContentOptimization Boolean  @default(false)
   aiAbTesting           Boolean  @default(false)
   aiEmailFrequencyCap   Int      @default(3)
-  aiDailyEmailLimit     Int      @default(1000)
+  aiDailyEmailLimit     Int      @default(500)
   aiQuietHoursStart     String   @default("22:00")
   aiQuietHoursEnd       String   @default("08:00")
   aiCronSchedules       String?  @db.Text // JSON string for cron job schedules

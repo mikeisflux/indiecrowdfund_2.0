@@ -257,6 +257,19 @@ async function refreshUserProfiles(): Promise<AutomationStepResult> {
 // STEP 2: Should we send campaigns today?
 // ============================================
 
+// Marketing volume controls. These were each halved deliberately — the
+// automation was running an automated campaign every single day, a creator
+// newsletter twice a week, and allowing three marketing emails per person
+// per week on top of that. Raising any of these raises how often real
+// people hear from us, so change them together and on purpose.
+//
+// Minimum days between automated campaigns. Was effectively 1 (one per
+// calendar day); 2 halves the platform-level send rate.
+const AUTOMATED_CAMPAIGN_GAP_DAYS = 2;
+
+// Day of week the creator newsletter goes out (1 = Monday). Was Mon + Thu.
+const CREATOR_NEWSLETTER_DAY = 1;
+
 async function shouldSendCampaignToday(): Promise<{ send: boolean; reason: string }> {
   // Check if daily email limit is already hit
   const today = new Date();
@@ -272,22 +285,25 @@ async function shouldSendCampaignToday(): Promise<{ send: boolean; reason: strin
     return { send: false, reason: "Daily email limit already reached" };
   }
 
-  // Smart-daily cadence: at most ONE automated campaign per day. We no
-  // longer enforce a multi-day gap between campaigns — the per-user
-  // frequency cap (canSendEmail: max N emails per rolling 7 days, default
-  // 3) is what protects each individual recipient, so the platform can run
-  // every day while no single person is over-mailed.
-  const startOfToday = new Date();
-  startOfToday.setHours(0, 0, 0, 0);
-  const sentToday = await db.emailCampaign.count({
+  // Cadence: at most one automated campaign per AUTOMATED_CAMPAIGN_GAP_DAYS.
+  // This used to be one per day, which meant seven automated sends a week
+  // with only the per-user cap holding volume down. The gap halves the
+  // platform-level send rate to roughly 3–4 a week.
+  const gapStart = new Date(
+    Date.now() - AUTOMATED_CAMPAIGN_GAP_DAYS * 24 * 60 * 60 * 1000
+  );
+  const sentInGap = await db.emailCampaign.count({
     where: {
       status: "SENT",
-      sentAt: { gte: startOfToday },
+      sentAt: { gte: gapStart },
       filters: { path: ["automated"], equals: true },
     },
   });
-  if (sentToday > 0) {
-    return { send: false, reason: "An automated campaign already went out today" };
+  if (sentInGap > 0) {
+    return {
+      send: false,
+      reason: `An automated campaign went out within the last ${AUTOMATED_CAMPAIGN_GAP_DAYS} days`,
+    };
   }
 
   // Check if there are live projects to promote
@@ -354,19 +370,24 @@ const CREATOR_FEATURES: { title: string; description: string }[] = [
   { title: "AI marketing that promotes you", description: "We automatically feature your live campaign to backers whose interests match, so discovery keeps working while you focus on making." },
 ];
 
-// Creator "what's new" newsletter — goes out twice a week (Mon + Thu) to
-// anyone who has created at least a draft project. Feature-driven (not
+// Creator "what's new" newsletter — goes out weekly (Mon) to anyone who has
+// created at least a draft project. Feature-driven (not
 // project-recommendation based); picks a few features at random each send.
+//
+// Was Mon + Thu. Halved to Monday only: the content is a rotating sample of
+// the same fixed CREATOR_FEATURES list, so twice a week meant creators saw
+// the same features come round twice as fast for no extra information.
 async function maybeSendCreatorNewsletter(): Promise<AutomationStepResult | null> {
   const now = new Date();
-  const day = now.getDay(); // 0=Sun, 1=Mon, ... 4=Thu
-  if (day !== 1 && day !== 4) return null;
+  const day = now.getDay(); // 0=Sun, 1=Mon, ...
+  if (day !== CREATOR_NEWSLETTER_DAY) return null;
 
-  // Dedupe: at most one creator newsletter per 2-day window (guards against
-  // multiple cron fires and keeps the Mon/Thu cadence to twice a week).
+  // Dedupe: at most one creator newsletter per 6-day window. Guards against
+  // multiple cron fires in a day and keeps the cadence at once a week (6
+  // rather than 7 so a slightly early run on the same weekday isn't skipped).
   const recent = await db.emailCampaign.findFirst({
     where: {
-      sentAt: { gte: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000) },
+      sentAt: { gte: new Date(Date.now() - 6 * 24 * 60 * 60 * 1000) },
       filters: { path: ["campaignType"], equals: "creator_newsletter" },
     },
     select: { id: true },
@@ -651,12 +672,13 @@ async function planCampaigns(
     });
   }
 
-  // DAILY DIGEST — the everyday fallback so something relevant goes out
-  // each day even when no special campaign (new projects, ending soon,
-  // win-back, abandoned cart) is eligible. The per-user 7-day frequency
-  // cap governs who actually receives one, so "daily" never means "every
-  // user every day". Projects are reordered to each recipient's interests
-  // at send time, and delivered at their optimal hour.
+  // DIGEST — the fallback so something relevant still goes out on a run
+  // where no special campaign (new projects, ending soon, win-back,
+  // abandoned cart) is eligible. Despite the type name this is no longer
+  // daily: runs are gated by AUTOMATED_CAMPAIGN_GAP_DAYS, and the per-user
+  // frequency cap (EMAIL_FREQUENCY_WINDOW_DAYS) decides who actually
+  // receives one. Projects are reordered to each recipient's interests at
+  // send time, and delivered at their optimal hour.
   if (plans.length === 0 && liveProjects.length > 0) {
     plans.push({
       type: "daily_digest",

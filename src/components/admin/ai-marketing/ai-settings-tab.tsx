@@ -763,7 +763,11 @@ export function AISettingsTab({
         <CardContent className="space-y-6">
           <div className="grid gap-6 md:grid-cols-2">
             <div className="space-y-2">
-              <Label>Max Emails Per User Per Week</Label>
+              {/* The window is EMAIL_FREQUENCY_WINDOW_DAYS in
+                  lib/ai/settings-integration.ts — keep this label in step
+                  with it, or the number here means something other than
+                  what it says. */}
+              <Label>Max Emails Per User Per 14 Days</Label>
               <Slider
                 value={[aiSettings.emailFrequencyCap]}
                 onValueChange={([v]) => setAiSettings({ ...aiSettings, emailFrequencyCap: v })}
@@ -771,7 +775,12 @@ export function AISettingsTab({
                 max={7}
                 step={1}
               />
-              <p className="text-sm text-muted-foreground">{aiSettings.emailFrequencyCap} emails per week</p>
+              <p className="text-sm text-muted-foreground">
+                {aiSettings.emailFrequencyCap} email
+                {aiSettings.emailFrequencyCap === 1 ? "" : "s"} per 14 days
+                {" "}&mdash; about{" "}
+                {(aiSettings.emailFrequencyCap / 2).toFixed(1)} a week per person
+              </p>
             </div>
 
             <div className="space-y-2">

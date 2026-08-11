@@ -73,7 +73,10 @@ export async function getAISettings(): Promise<AISettings> {
     autoTagConfidence: settings?.aiAutoTagConfidence ?? 75,
     maxTags: settings?.aiMaxTags ?? 10,
     emailFrequencyCap: settings?.aiEmailFrequencyCap ?? 3,
-    dailyEmailLimit: settings?.aiDailyEmailLimit ?? 1000,
+    // Halved from 1000. Note this is only the fallback for an unset column —
+    // an existing PlatformSettings row keeps whatever it already stores, so
+    // the live value has to be changed in /admin (or by SQL) as well.
+    dailyEmailLimit: settings?.aiDailyEmailLimit ?? 500,
     quietHoursStart: settings?.aiQuietHoursStart ?? "22:00",
     quietHoursEnd: settings?.aiQuietHoursEnd ?? "08:00",
   };
@@ -275,18 +278,31 @@ export async function isQuietHours(userTimezone?: string): Promise<boolean> {
   return currentHour >= startHour && currentHour < endHour;
 }
 
+// Rolling window the per-user frequency cap is measured over. Was 7 days,
+// so the default cap of 3 meant up to 3 marketing emails per person per
+// week. Widening the window to 14 halves that rate to 3 per fortnight
+// without touching the admin-configurable cap number itself.
+//
+// This is the control that actually binds for engaged users — they qualify
+// for most campaigns, so the cap, not the campaign schedule, decides how
+// much mail they get. Reducing send cadence alone would not have reduced
+// their volume at all.
+export const EMAIL_FREQUENCY_WINDOW_DAYS = 14;
+
 /**
  * Check if user has exceeded email frequency cap
  */
 export async function hasExceededFrequencyCap(userId: string): Promise<boolean> {
   const settings = await getAISettings();
 
-  const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+  const windowStart = new Date(
+    Date.now() - EMAIL_FREQUENCY_WINDOW_DAYS * 24 * 60 * 60 * 1000
+  );
 
   const emailCount = await db.emailLog.count({
     where: {
       userId,
-      sentAt: { gte: oneWeekAgo },
+      sentAt: { gte: windowStart },
     },
   });
 
