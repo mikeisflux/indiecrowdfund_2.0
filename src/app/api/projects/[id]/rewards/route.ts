@@ -52,6 +52,18 @@ const rewardSchema = z.object({
   description: z.string().optional().default(""),
   amount: z.number().positive().max(999999.99),
   imageUrl: z.string().optional().nullable(),
+  // Free-text grouping label for the campaign-page filter pills. Trimmed, and
+  // an empty string is stored as NULL so "" and "no category" can't become two
+  // different buckets. Capped so a pill can't be a paragraph.
+  category: z
+    .string()
+    .max(40)
+    .optional()
+    .nullable()
+    .transform((v) => {
+      const trimmed = v?.trim();
+      return trimmed ? trimmed : null;
+    }),
   estimatedDelivery: z.string().optional().nullable(),
   shippingType: z.enum(["NO_SHIPPING", "WORLDWIDE", "SELECTED_COUNTRIES"]).default("NO_SHIPPING"),
   shippingCountries: z.array(z.string()).optional().default([]),
@@ -160,6 +172,7 @@ async function saveReward(projectId: string, reward: RewardData) {
           description: reward.description || "",
           amount: reward.amount,
           imageUrl: reward.imageUrl || null,
+          category: reward.category,
           estimatedDelivery: reward.estimatedDelivery ? new Date(reward.estimatedDelivery) : null,
           shippingType: reward.shippingType,
           shippingCountries: normalizeShippingCountries(reward),
@@ -199,6 +212,7 @@ async function saveReward(projectId: string, reward: RewardData) {
       description: reward.description || "",
       amount: reward.amount,
       imageUrl: reward.imageUrl || null,
+      category: reward.category,
       estimatedDelivery: reward.estimatedDelivery ? new Date(reward.estimatedDelivery) : null,
       shippingType: reward.shippingType,
       shippingCountries: normalizeShippingCountries(reward),
@@ -454,6 +468,7 @@ export async function PATCH(
           description: reward.description || "",
           amount: reward.amount,
           imageUrl: reward.imageUrl || null,
+          category: reward.category,
           estimatedDelivery: reward.estimatedDelivery ? new Date(reward.estimatedDelivery) : null,
           shippingType: reward.shippingType,
           shippingCountries: normalizeShippingCountries(reward),

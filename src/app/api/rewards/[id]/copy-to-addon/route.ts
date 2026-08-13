@@ -61,6 +61,8 @@ export async function POST(
         description: reward.description,
         amount: reward.amount,
         imageUrl: reward.imageUrl,
+        // Keep the source tier's grouping so the copy lands in the same tab.
+        category: reward.category,
         estimatedDelivery: reward.estimatedDelivery,
         shippingType: reward.shippingType,
         shippingCountries: reward.shippingCountries,

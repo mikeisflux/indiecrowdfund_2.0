@@ -573,6 +573,9 @@ export interface RewardData {
   description: string;
   amount: number;
   imageUrl?: string;
+  // Creator-chosen grouping label ("Covers", "Box Sets"). Drives the filter
+  // pills on layout-v2 campaign pages. Empty/undefined = uncategorised.
+  category?: string;
   estimatedDelivery?: Date;
   shippingType: ShippingType;
   shippingCountries: string[];
@@ -607,10 +610,9 @@ export interface ProjectStoryData {
   risks: string;
   usesAI: boolean;
   faqs: { question: string; answer: string }[];
-  // Interior preview pages in reading order — rendered in the page-turn
-  // reader on layout-v2 campaign pages. Images, not a PDF; see the note on
-  // Project.previewImages in the schema.
-  previewImages?: string[];
+  // Interior preview PDF — rasterised client-side and rendered in the
+  // page-turn reader on layout-v2 campaign pages.
+  previewPdfUrl?: string;
 }
 
 export interface ProjectPeopleData {

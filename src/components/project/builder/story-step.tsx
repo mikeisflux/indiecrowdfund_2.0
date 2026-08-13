@@ -163,8 +163,8 @@ export function StoryStep() {
           not part of the reward setup. */}
       <InteriorPreviewSection
         projectId={projectId ?? null}
-        images={story.previewImages || []}
-        onChange={(previewImages) => updateStory({ previewImages })}
+        pdfUrl={story.previewPdfUrl || ""}
+        onChange={(previewPdfUrl) => updateStory({ previewPdfUrl })}
       />
     </div>
   );

@@ -129,18 +129,16 @@ model Project {
   // launched was backfilled to 1 by the migration; new projects default to 2.
   layoutVersion         Int           @default(2)
 
-  // Interior preview pages, in reading order, shown in the page-turn reader on
-  // the campaign page (layout v2). Plain image URLs from /api/upload.
+  // Interior preview: a PDF of the pages the creator wants backers to flip
+  // through on the campaign page (layout v2). Rasterised in the browser by
+  // pdf.js and rendered in the same page-turn reader as the Digital Library.
   //
-  // Deliberately NOT a PDF. A public campaign page can only render a PDF the
-  // browser can fetch, which means the file is downloadable in full straight
-  // from the network tab — and a creator uploading their finished book as "the
-  // preview" would be giving it away. Rendering pages server-side would avoid
-  // that but needs the `canvas` native module, which isn't installed (see the
-  // dependency guard in lib/pdf-cover-extractor.ts). Having creators pick the
-  // pages sidesteps both problems: nothing exists server-side that wasn't
-  // meant to be public.
-  previewImages         String[]      @default([])
+  // This is a public URL under /api/uploads, so the file is downloadable in
+  // full from the network tab. That is inherent — a page a browser can render
+  // is a file a browser has fetched — so the rule the builder states plainly
+  // is that the uploaded PDF must BE the preview (only the pages the creator
+  // is happy to publish), never the finished book.
+  previewPdfUrl         String?
   fundedAt              DateTime?
   deletedAt             DateTime?     // Soft delete timestamp
 

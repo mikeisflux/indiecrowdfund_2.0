@@ -157,6 +157,7 @@ export function ProjectBuilder() {
         description: reward.description || "",
         amount: Number(reward.amount) || 0,
         imageUrl: reward.imageUrl || undefined,
+        category: reward.category || null,
         estimatedDelivery: reward.estimatedDelivery
           ? new Date(reward.estimatedDelivery).toISOString()
           : null,
@@ -471,7 +472,9 @@ export function ProjectBuilder() {
       const storyPayload: Record<string, unknown> = {
         usesAI: story.usesAI || false,
         faqs: story.faqs || [],
-        previewImages: story.previewImages || [],
+        // Always sent, including as "" — that's how a creator removes the
+        // preview. The API maps "" to NULL.
+        previewPdfUrl: story.previewPdfUrl ?? "",
       };
       if (typeof story.description === "string" && story.description.trim() !== "") {
         storyPayload.description = story.description;

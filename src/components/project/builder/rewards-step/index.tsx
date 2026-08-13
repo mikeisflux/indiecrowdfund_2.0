@@ -428,6 +428,7 @@ export function RewardsStep({ onFormOpenChange }: RewardsStepProps) {
             description: rewardToSave.description,
             amount: rewardToSave.amount,
             imageUrl: rewardToSave.imageUrl,
+            category: rewardToSave.category,
             estimatedDelivery: rewardToSave.estimatedDelivery?.toISOString(),
             shippingType: rewardToSave.shippingType,
             shippingCountries: rewardToSave.shippingCountries,
@@ -658,6 +659,7 @@ export function RewardsStep({ onFormOpenChange }: RewardsStepProps) {
           description: source.description,
           amount: source.amount,
           imageUrl: source.imageUrl || undefined,
+          category: source.category || "",
           shippingType: source.shippingType ?? defaultReward.shippingType,
           shippingCountries: source.shippingCountries ?? defaultReward.shippingCountries,
           shippingCost: source.shippingCost ?? defaultReward.shippingCost,
@@ -844,6 +846,10 @@ export function RewardsStep({ onFormOpenChange }: RewardsStepProps) {
           title,
           description: row.description?.trim() || "",
           amount: parseFloat(row.amount) || 1,
+          // Optional column. Absent header => undefined (keep whatever the
+          // reward already has, on the update path below); present but blank
+          // => an explicit clear.
+          category: row.category?.trim() || "",
           shippingType: (row.shippingType as ShippingType) || "NO_SHIPPING",
           shippingCost,
           // Digital rows get no country list at all — falling back to ["US"]
@@ -881,6 +887,13 @@ export function RewardsStep({ onFormOpenChange }: RewardsStepProps) {
             // column in the CSV. Without this, re-importing to correct a
             // price would clear every reward image.
             imageUrl: existing.imageUrl,
+            // Same reasoning for the category, but it does have a column, so
+            // only fall back when the sheet omits the header entirely. A
+            // present-but-empty cell is a deliberate clear.
+            category:
+              row.category !== undefined
+                ? row.category.trim()
+                : existing.category || "",
           });
           updatedCount++;
         } else {

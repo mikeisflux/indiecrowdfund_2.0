@@ -4,13 +4,15 @@ import { usePdfAsImages } from "@/lib/usePdfAsImages";
 import { Loader2 } from "lucide-react";
 import { PageFlipReader } from "./PageFlipReader";
 
-// PDF-backed page-turn reader, used by the Digital Library.
+// PDF-backed page-turn reader, used by the Digital Library and by the
+// interior preview on layout-v2 campaign pages.
 //
 // This used to contain the flipbook itself. The rendering half now lives in
-// PageFlipReader, which takes pages that are already images — campaign-page
-// interior previews are creator-uploaded images and have no PDF involved, and
-// two copies of the flipbook would have drifted. This file is now only the
-// PDF-specific part: rasterise, report progress, hand the images over.
+// PageFlipReader, which takes pages that are already images. This file is
+// only the PDF-specific part: rasterise, report progress, hand the images
+// over. Both pdf.js and react-pageflip load on demand, so importing this
+// component doesn't pull either into the caller's initial bundle — which
+// matters on the public campaign page, where most projects have no preview.
 type Props = {
   pdfUrl: string;
   fileId: string; // Unique ID for stable key

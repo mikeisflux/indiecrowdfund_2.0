@@ -25,6 +25,9 @@ export interface ImportableReward {
   description: string;
   type: "TIER" | "ADDON";
   imageUrl: string;
+  // Grouping label, carried across so an imported catalogue keeps the tabs
+  // the creator set up on the source campaign.
+  category?: string | null;
   // Deliberately NOT carrying the source RewardItem.projectItemId — it
   // points at a ProjectItem owned by the source project. The importing
   // side re-resolves each item against the target project by title,
@@ -56,6 +59,7 @@ interface ApiReward {
   description?: string | null;
   type?: string;
   imageUrl?: string | null;
+  category?: string | null;
   items?: ApiRewardItem[];
   shippingType?: string;
   shippingCountries?: string[];
@@ -72,6 +76,7 @@ function toImportableReward(r: ApiReward): ImportableReward {
     description: r.description || "",
     type: r.type === "ADDON" ? "ADDON" : "TIER",
     imageUrl: r.imageUrl || "",
+    category: r.category ?? null,
     items: (r.items || []).map((i) => ({
       title: i.title || "",
       description: i.description || "",

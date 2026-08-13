@@ -20,23 +20,43 @@ const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/gif", "image/webp
 // Allowed video types
 const ALLOWED_VIDEO_TYPES = ["video/mp4", "video/webm", "video/quicktime"];
 
+// PDF, allowed only for uploadType "preview" — the interior preview on
+// layout-v2 campaign pages. Everywhere else a PDF is not a valid upload, and
+// this endpoint is reachable by any signed-in creator, so the type is gated on
+// the upload type rather than added to the general allow-list.
+const ALLOWED_PDF_TYPES = ["application/pdf"];
+const PDF_UPLOAD_TYPE = "preview";
+
 // All allowed types
 const ALLOWED_TYPES = [...ALLOWED_IMAGE_TYPES, ...ALLOWED_VIDEO_TYPES];
 
 // Size limits
 const MAX_IMAGE_SIZE = 10 * 1024 * 1024; // 10MB for images
 const MAX_VIDEO_SIZE = 200 * 1024 * 1024; // 200MB for videos
+const MAX_PDF_SIZE = 50 * 1024 * 1024; // 50MB for preview PDFs
 
 const WEBP_QUALITY = 85;
 
 // Types that should be converted to WebP
 const CONVERT_TO_WEBP = ["image/jpeg", "image/png"];
 
-// Generate a unique filename with WebP extension for converted images
-function generateFilename(originalName: string, convertToWebP: boolean): string {
+// Generate a unique filename with WebP extension for converted images.
+// The extension decides the Content-Type when the file is served back by
+// /api/uploads, so it has to follow the actual bytes rather than whatever the
+// original name happened to end in — a PDF picked from a source with no
+// extension in its name would otherwise be stored as .jpg and served as an
+// image, which no PDF viewer will touch.
+function generateFilename(
+  originalName: string,
+  convertToWebP: boolean,
+  isPdf: boolean
+): string {
   const hash = crypto.randomBytes(16).toString("hex");
   if (convertToWebP) {
     return `${hash}.webp`;
+  }
+  if (isPdf) {
+    return `${hash}.pdf`;
   }
   const ext = path.extname(originalName).toLowerCase() || ".jpg";
   return `${hash}${ext}`;
@@ -128,8 +148,18 @@ export async function POST(req: NextRequest) {
     // Use "temp" folder if no projectId yet (new unsaved projects)
     const effectiveProjectId = projectId || "temp";
 
-    // Validate file type
-    if (!ALLOWED_TYPES.includes(file.type)) {
+    // Validate file type. PDFs are accepted only as an interior preview.
+    const isPdf = ALLOWED_PDF_TYPES.includes(file.type);
+    const isPreviewUpload = type === PDF_UPLOAD_TYPE;
+
+    if (isPdf && !isPreviewUpload) {
+      return NextResponse.json(
+        { error: "PDFs can only be uploaded as an interior preview." },
+        { status: 400 }
+      );
+    }
+
+    if (!isPdf && !ALLOWED_TYPES.includes(file.type)) {
       return NextResponse.json(
         { error: "Invalid file type. Allowed: JPG, PNG, GIF, WEBP" },
         { status: 400 }
@@ -138,8 +168,8 @@ export async function POST(req: NextRequest) {
 
     // Validate file size based on type
     const isVideo = ALLOWED_VIDEO_TYPES.includes(file.type);
-    const maxSize = isVideo ? MAX_VIDEO_SIZE : MAX_IMAGE_SIZE;
-    const maxSizeLabel = isVideo ? "200MB" : "10MB";
+    const maxSize = isPdf ? MAX_PDF_SIZE : isVideo ? MAX_VIDEO_SIZE : MAX_IMAGE_SIZE;
+    const maxSizeLabel = isPdf ? "50MB" : isVideo ? "200MB" : "10MB";
 
     if (file.size > maxSize) {
       return NextResponse.json(
@@ -178,7 +208,7 @@ export async function POST(req: NextRequest) {
     const shouldConvert = CONVERT_TO_WEBP.includes(file.type);
 
     // Generate unique filename
-    const filename = generateFilename(file.name, shouldConvert);
+    const filename = generateFilename(file.name, shouldConvert, isPdf);
     const filePath = path.join(/*turbopackIgnore: true*/ uploadDir, filename);
 
     // Convert file to buffer

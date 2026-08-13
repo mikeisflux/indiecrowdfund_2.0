@@ -11,10 +11,10 @@ type FlipEvent = { data: number };
 //
 // Extracted from PdfPageFlipReader, which was two things in one file: a hook
 // that rasterises a PDF into an image array, and a flipbook that renders that
-// array. Only the first half is PDF-specific. Campaign-page interior previews
-// are creator-uploaded images with no PDF anywhere in the pipeline, so they
-// use this directly; the Digital Library keeps using the PDF wrapper. One
-// flipbook implementation, two sources of pages.
+// array. Only the first half is PDF-specific, and both current callers — the
+// Digital Library and the campaign-page interior preview — reach this through
+// that PDF wrapper. Keeping the split means a future caller with pages that
+// are already images doesn't have to route them through a PDF to render them.
 export type PageFlipReaderProps = {
   images: string[];
   /** Stable identity for the book — remounts the flipbook when it changes. */

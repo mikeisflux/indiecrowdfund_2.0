@@ -180,7 +180,7 @@ export async function GET(
       launchDate: project.launchDate,
       launchedAt: project.launchedAt,
       layoutVersion: project.layoutVersion ?? 1,
-      previewImages: project.previewImages ?? [],
+      previewPdfUrl: project.previewPdfUrl ?? null,
       daysRemaining,
       // Payment settings
       projectType: project.projectType,
@@ -243,6 +243,7 @@ export async function GET(
       title: string;
       description: string;
       amount: number;
+      category: string | null;
       estimatedDelivery: Date | null;
       shippingType: string;
       shippingCountries: string[];
@@ -286,6 +287,7 @@ export async function GET(
       title: r.title,
       description: r.description,
       amount: Number(r.amount),
+      category: r.category,
       estimatedDelivery: r.estimatedDelivery,
       shippingType: r.shippingType,
       shippingCountries: r.shippingCountries || [],

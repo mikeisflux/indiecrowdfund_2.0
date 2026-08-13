@@ -12,6 +12,14 @@ model Reward {
   amount            Decimal      @db.Decimal(10, 2)
   imageUrl          String?
 
+  // Creator-chosen grouping label ("Covers", "Box Sets", "Upgrades"), used to
+  // build the filter pills above the reward grid on layout-v2 campaign pages.
+  // Free text rather than an enum: every campaign carves its catalogue up
+  // differently, and an enum would need a migration per creator idea.
+  // Null / empty = uncategorised, which the campaign page groups under
+  // "Other" so nothing becomes unreachable behind a filter.
+  category          String?
+
   // Delivery
   estimatedDelivery DateTime?
   shippingType      ShippingType
@@ -66,6 +74,10 @@ model Reward {
   updatedAt         DateTime     @updatedAt
 
   @@index([projectId, type])
+  // Category lookups (the builder's "categories already used here" datalist).
+  // Created by migrations/add_reward_category.sql — declared here so the
+  // schema matches the database and `migrate diff` doesn't propose dropping it.
+  @@index([projectId, category])
   // Shared-stock pool lookups walk this both ways. Created by
   // migrations/add_reward_shared_stock.sql — declared here so the schema
   // matches the database and `migrate diff` doesn't propose dropping it.

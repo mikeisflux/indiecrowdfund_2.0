@@ -10,20 +10,20 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import { Input } from "@/components/ui/input";
 import { AlertTriangle, CheckCircle, Clock } from "lucide-react";
-import { PageFlipReader } from "@/components/PageFlipReader";
+import { PdfPageFlipReader } from "@/components/PdfPageFlipReader";
 import { ProjectData, RewardData } from "../types";
 import { processStoryHtml, formatDeliveryDate } from "../utils";
 
 // Campaign layout v2 — for projects that had not gone live when this shipped.
 //
-// v1 splits the page 2 / 6 / 4: a reward-category rail, the story at 50%, and
-// reward tiers stacked one-per-row in a right rail. On a comics platform that
-// inverts the priority — the artwork is the pitch, and variant covers are
-// portrait art being shown at thumbnail size.
+// v1 splits the page 2 / 6 / 4: a story table-of-contents rail, the story
+// itself at 50%, and reward tiers stacked one-per-row in a right rail. On a
+// comics platform that inverts the priority — the artwork is the pitch, and
+// variant covers end up as thumbnails in a narrow column.
 //
 // v2 gives the story the full container, moves rewards below it as a grid so
-// covers render large, turns the category rail into a horizontal filter above
-// that grid, and pins a funding bar so the CTA never scrolls out of reach.
+// covers render large, adds a category filter above that grid, and pins a
+// funding bar so the CTA never scrolls out of reach.
 //
 // v1 lives on in campaign-tab.tsx and is not touched: live and finished
 // campaigns keep the layout their backers have already seen.
@@ -36,6 +36,76 @@ interface CampaignTabV2Props {
 }
 
 const ALL = "__all__";
+// Sentinel for the bucket of rewards with no category. Not a real category
+// string, so a creator who literally types "Other" still gets their own tab.
+const OTHER = "__other__";
+
+// The flipbook is canvas-backed and needs explicit pixel dimensions, so its
+// size can't come from CSS the way the rest of the page's responsiveness does.
+// These mirror the Tailwind breakpoints the surrounding layout uses, so the
+// reader steps at the same widths everything else does — including the two
+// tablet sizes, where a 7" portrait tablet wants a single page and a 10"+
+// landscape one comfortably fits the spread.
+//
+// `spread` false = one page at a time. A two-page spread below ~700px CSS
+// pixels renders each page too small to read the lettering.
+const READER_SIZES = [
+  { q: "(min-width: 1280px)", width: 520, height: 780, spread: true }, // xl: desktop
+  { q: "(min-width: 1024px)", width: 440, height: 660, spread: true }, // lg: small laptop / landscape tablet
+  { q: "(min-width: 768px)", width: 360, height: 540, spread: true }, // md: large tablet
+  { q: "(min-width: 640px)", width: 420, height: 630, spread: false }, // sm: small tablet / large phone landscape
+  { q: "(min-width: 400px)", width: 340, height: 510, spread: false }, // most phones
+  { q: "(min-width: 0px)", width: 280, height: 420, spread: false }, // small phones (SE-class)
+] as const;
+
+type ReaderSize = (typeof READER_SIZES)[number];
+
+function matchReaderSize(): ReaderSize {
+  // Ordered widest-first, so the first match is the most specific one.
+  for (const size of READER_SIZES) {
+    if (window.matchMedia(size.q).matches) return size;
+  }
+  return READER_SIZES[READER_SIZES.length - 1];
+}
+
+// Section headings. Shared so the rewards, story and preview sections can't
+// drift apart, and so the accent rule is defined once.
+function SectionHeading({ children }: { children: React.ReactNode }) {
+  return (
+    <h2 className="flex items-center gap-3 text-xl font-serif sm:text-2xl lg:text-3xl">
+      <span
+        aria-hidden
+        className="h-6 w-1 shrink-0 rounded-full bg-gradient-to-b from-[#05ce78] to-cyan-500 lg:h-8"
+      />
+      <span className="m-0">{children}</span>
+    </h2>
+  );
+}
+
+function FilterPill({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={active}
+      className={`shrink-0 whitespace-nowrap rounded-full border px-3 py-1.5 text-xs transition-all sm:px-4 sm:text-sm ${
+        active
+          ? "border-transparent bg-gradient-to-r from-[#05ce78] to-emerald-600 font-medium text-white shadow-[0_0_18px_-4px_rgba(5,206,120,0.8)]"
+          : "border-border/70 text-muted-foreground hover:border-[#05ce78]/40 hover:text-foreground"
+      }`}
+    >
+      {children}
+    </button>
+  );
+}
 
 export function CampaignTabV2({ project, tiers, projectPath, onViewCreator }: CampaignTabV2Props) {
   const [pledgeAmount, setPledgeAmount] = useState("1");
@@ -43,17 +113,25 @@ export function CampaignTabV2({ project, tiers, projectPath, onViewCreator }: Ca
 
   const projectEnded = project.endDate ? new Date(project.endDate) < new Date() : false;
 
-  const previewImages = useMemo(() => project.previewImages ?? [], [project.previewImages]);
+  const previewPdfUrl = project.previewPdfUrl || null;
 
-  // The flipbook needs explicit pixel dimensions, so the spread/single choice
-  // can't be made in CSS. Matches Tailwind's sm breakpoint.
-  const [isNarrow, setIsNarrow] = useState(false);
+  // Reader dimensions, resolved from the breakpoint ladder above. Starts at
+  // the smallest size so the server render and the first client render agree
+  // (matchMedia doesn't exist during SSR); the effect corrects it before
+  // paint. Re-resolved on resize AND orientation change — a tablet turned
+  // landscape crosses two of these steps at once.
+  const [reader, setReader] = useState<ReaderSize>(
+    READER_SIZES[READER_SIZES.length - 1]
+  );
   useEffect(() => {
-    const mq = window.matchMedia("(max-width: 640px)");
-    const sync = () => setIsNarrow(mq.matches);
+    const sync = () => setReader(matchReaderSize());
     sync();
-    mq.addEventListener("change", sync);
-    return () => mq.removeEventListener("change", sync);
+    window.addEventListener("resize", sync);
+    window.addEventListener("orientationchange", sync);
+    return () => {
+      window.removeEventListener("resize", sync);
+      window.removeEventListener("orientationchange", sync);
+    };
   }, []);
 
   const daysLeft = useMemo(() => {
@@ -75,62 +153,121 @@ export function CampaignTabV2({ project, tiers, projectPath, onViewCreator }: Ca
     return { processedDescription: processedHtml };
   }, [project.description]);
 
-  // Filter pills are derived from the reward titles' leading SKU-style group
-  // (e.g. "PG1-01 …" -> "PG1"). Creators already name tiers this way, so this
-  // reproduces what the old left rail listed without asking them for anything
-  // new. Falls back to no filter bar when the titles don't group.
-  const groups = useMemo(() => {
-    const seen = new Map<string, number>();
+  // Filter pills come from Reward.category, which the creator sets per reward
+  // in the builder. This used to infer groups from a SKU-ish prefix in the
+  // title ("PG1-01 …" -> "PG1"), which only worked for creators who happened
+  // to name things that way — and nothing makes them.
+  //
+  // Uncategorised rewards get an "Other" pill, but only when there is also at
+  // least one categorised reward: without that, filtering to a category would
+  // make them unreachable. Pills appear only when they actually partition the
+  // list into 2+ buckets.
+  const { groups, uncategorized } = useMemo(() => {
+    const named: string[] = [];
+    const seen = new Set<string>();
+    let hasUncategorized = false;
+
     for (const t of tiers) {
-      const m = t.title?.trim().match(/^([A-Za-z]+\d*)[-\s]/);
-      if (!m) continue;
-      const key = m[1].toUpperCase();
-      seen.set(key, (seen.get(key) ?? 0) + 1);
+      const c = t.category?.trim();
+      if (!c) {
+        hasUncategorized = true;
+        continue;
+      }
+      // Group case-insensitively but display the first spelling the creator
+      // used, so "Covers" and "covers" are one tab rather than two.
+      const key = c.toLowerCase();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      named.push(c);
     }
-    // Only worth showing when it actually partitions the list.
-    return seen.size >= 2 ? Array.from(seen.keys()) : [];
+
+    const bucketCount = named.length + (hasUncategorized ? 1 : 0);
+    if (named.length === 0 || bucketCount < 2) {
+      return { groups: [] as string[], uncategorized: false };
+    }
+    return { groups: named, uncategorized: hasUncategorized };
   }, [tiers]);
 
   const visibleTiers = useMemo(() => {
     if (activeFilter === ALL) return tiers;
-    return tiers.filter((t) =>
-      t.title?.trim().toUpperCase().startsWith(activeFilter)
+    if (activeFilter === OTHER) return tiers.filter((t) => !t.category?.trim());
+    return tiers.filter(
+      (t) => t.category?.trim().toLowerCase() === activeFilter.toLowerCase()
     );
   }, [tiers, activeFilter]);
 
   return (
-    <div className="space-y-10">
+    <div className="space-y-10 sm:space-y-12 lg:space-y-16">
       {/* Sticky funding bar. Replaces the job the right rail used to do —
           keeping progress and the primary CTA reachable from anywhere in a
-          long story. top-16 clears the site header. */}
-      <div className="sticky top-16 z-30 -mx-4 sm:mx-0 border-y sm:border sm:rounded-lg bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 px-4 py-3">
-        <div className="flex items-center gap-4 flex-wrap">
-          <div className="flex items-baseline gap-2 min-w-0">
-            <span className="text-lg font-bold text-[#05ce78] tabular-nums">
+          long story. top-16 clears the site header.
+
+          glass-card rather than a flat panel: it has to sit over scrolling
+          artwork without hiding it, and the class already carries its own
+          light-mode treatment (see globals.css). */}
+      <div className="sticky top-16 z-30 -mx-4 sm:mx-0 glass-card border-y sm:border sm:rounded-xl px-3 py-2.5 shadow-lg shadow-black/5 sm:px-4 sm:py-3 dark:shadow-black/30">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+          <div className="flex min-w-0 items-baseline gap-2">
+            <span className="text-base font-bold text-[#05ce78] neon-text-green tabular-nums sm:text-lg lg:text-xl">
               ${Number(project.currentAmount).toLocaleString()}
             </span>
-            <span className="text-xs text-muted-foreground whitespace-nowrap">
+            <span className="whitespace-nowrap text-xs text-muted-foreground">
               raised{pctFunded > 0 && ` · ${pctFunded}%`}
             </span>
           </div>
-          <div className="hidden sm:flex items-center gap-4 text-xs text-muted-foreground">
-            <span><span className="font-semibold text-foreground tabular-nums">{project.backerCount}</span> backers</span>
+
+          {/* Backers/days. Hidden on the narrowest phones, where the row has
+              only enough width for the amount and the CTA; the same numbers
+              are in the page header above. */}
+          <div className="hidden items-center gap-4 text-xs text-muted-foreground min-[420px]:flex sm:text-sm">
+            <span>
+              <span className="font-semibold text-foreground tabular-nums">
+                {project.backerCount}
+              </span>{" "}
+              backers
+            </span>
             {daysLeft !== null && (
-              <span><span className="font-semibold text-foreground tabular-nums">{daysLeft}</span> days left</span>
+              <span className="flex items-center gap-1.5">
+                {/* Live dot — only while the clock is actually running. */}
+                {!projectEnded && daysLeft > 0 && (
+                  <span className="relative flex h-1.5 w-1.5">
+                    <span className="absolute inline-flex h-full w-full rounded-full bg-[#05ce78] opacity-75 live-indicator" />
+                    <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-[#05ce78]" />
+                  </span>
+                )}
+                <span className="font-semibold text-foreground tabular-nums">{daysLeft}</span>{" "}
+                days left
+              </span>
             )}
           </div>
-          <div className="hidden md:block flex-1 min-w-[80px] h-1.5 rounded-full bg-muted overflow-hidden">
+
+          {/* Progress track. From md up it shares the row; below that it drops
+              to its own full-width line rather than disappearing — the bar is
+              the single most glanceable thing in this bar, and hiding it on
+              phones was the wrong trade. The shine sweep only runs on a live
+              campaign; an animated bar on a finished one reads as still going. */}
+          <div className="order-last h-1.5 w-full overflow-hidden rounded-full bg-muted md:order-none md:h-2 md:w-auto md:min-w-[80px] md:flex-1">
             <div
-              className="h-full bg-[#05ce78] rounded-full"
+              className={`h-full rounded-full bg-gradient-to-r from-[#05ce78] to-cyan-500 ${
+                projectEnded ? "" : "progress-glow-bar"
+              }`}
               style={{ width: `${Math.min(100, pctFunded)}%` }}
             />
           </div>
+
           {projectEnded ? (
-            <Button size="sm" disabled className="ml-auto">Campaign ended</Button>
+            <Button size="sm" disabled className="ml-auto">
+              Campaign ended
+            </Button>
           ) : (
             <Link href={`${projectPath}/pledge`} className="ml-auto">
-              <Button size="sm" className="bg-[#05ce78] hover:bg-[#05ce78]/90 text-white">
-                Back this project
+              <Button
+                size="sm"
+                className="btn-glow bg-gradient-to-r from-[#05ce78] to-emerald-600 text-white shadow-lg shadow-[#05ce78]/20 hover:from-[#05ce78]/90 hover:to-emerald-600/90"
+              >
+                {/* The full label doesn't fit beside the amount on a phone. */}
+                <span className="sm:hidden">Back this</span>
+                <span className="hidden sm:inline">Back this project</span>
               </Button>
             </Link>
           )}
@@ -138,26 +275,40 @@ export function CampaignTabV2({ project, tiers, projectPath, onViewCreator }: Ca
       </div>
 
       {/* Interior preview, above the story so the artwork leads the pitch.
-          Uses the same flipbook as the Digital Library reader, fed with the
-          creator's chosen pages. Absent when they haven't added any. */}
-      {previewImages.length > 0 && (
-        <div className="space-y-3">
-          <h2 className="text-2xl font-serif">Preview the interiors</h2>
-          <div className="rounded-lg bg-zinc-900 p-4 sm:p-6">
-            <PageFlipReader
-              images={previewImages}
-              bookId={`preview-${project.id}`}
-              singlePage={isNarrow}
-              width={isNarrow ? 320 : 420}
-              height={isNarrow ? 480 : 630}
-            />
+          Same reader as the Digital Library, pointed at the creator's preview
+          PDF. Absent when they haven't uploaded one.
+
+          The stage stays dark in both themes — it's a lightbox for artwork,
+          and pages read better against a dark surround either way — but the
+          light-mode version is softened so it isn't a black slab on a white
+          page. */}
+      {previewPdfUrl && (
+        <div className="space-y-4">
+          <SectionHeading>Preview the interiors</SectionHeading>
+          <div className="relative rounded-2xl p-[1px] bg-gradient-to-br from-[#05ce78]/40 via-cyan-500/20 to-purple-500/30">
+            <div className="rounded-2xl bg-zinc-100 p-3 sm:p-6 lg:p-8 dark:bg-zinc-950">
+              {/* Ambient wash behind the book. Purely decorative. */}
+              <div
+                aria-hidden
+                className="pointer-events-none absolute inset-0 rounded-2xl bg-[radial-gradient(ellipse_at_center,rgba(5,206,120,0.10),transparent_65%)]"
+              />
+              <div className="relative">
+                <PdfPageFlipReader
+                  pdfUrl={previewPdfUrl}
+                  fileId={`preview-${project.id}`}
+                  singlePage={!reader.spread}
+                  width={reader.width}
+                  height={reader.height}
+                />
+              </div>
+            </div>
           </div>
         </div>
       )}
 
       {/* Story — full container width. */}
       <div className="prose prose-sm sm:prose lg:prose-lg max-w-none dark:prose-invert prose-headings:font-serif prose-img:rounded-lg prose-img:my-6 prose-img:max-w-full prose-img:h-auto prose-a:text-primary prose-a:underline">
-        <h2 className="text-2xl font-serif">Story</h2>
+        <SectionHeading>Story</SectionHeading>
         <div
           className="[&>*:first-child]:mt-0 [&>*:last-child]:mb-0 [&_img]:max-w-full [&_img]:h-auto [&_img]:w-auto overflow-hidden"
           dangerouslySetInnerHTML={{ __html: processedDescription }}
@@ -165,52 +316,56 @@ export function CampaignTabV2({ project, tiers, projectPath, onViewCreator }: Ca
 
         <Separator className="my-8" />
 
-        <div>
-          <div className="mb-4 flex items-center gap-2">
+        <div className="rounded-xl border border-amber-300/60 bg-amber-50/60 p-4 dark:border-amber-800/60 dark:bg-amber-950/20">
+          <div className="mb-3 flex items-center gap-2">
             <AlertTriangle className="h-5 w-5 text-amber-500" />
-            <h3 className="font-semibold m-0">Risks and challenges</h3>
+            <h3 className="m-0 font-semibold">Risks and challenges</h3>
           </div>
-          <p className="text-muted-foreground">{project.risks}</p>
+          <p className="m-0 text-muted-foreground">{project.risks}</p>
         </div>
       </div>
 
       {/* Rewards — a grid, below the story, at full width. */}
-      <div className="space-y-4">
-        <h2 className="text-2xl font-serif">Rewards &amp; add-ons</h2>
+      <div className="space-y-5">
+        <SectionHeading>Rewards &amp; add-ons</SectionHeading>
 
         {groups.length > 0 && (
-          <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
+          /* Scrolls sideways on a phone and wraps from sm up. A catalogue with
+             eight categories would otherwise eat four stacked rows of the
+             screen before a backer sees a single cover. The negative margin
+             lets the strip bleed to the screen edge so it reads as scrollable. */
+          <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0 sm:pb-0">
+            <FilterPill
+              active={activeFilter === ALL}
               onClick={() => setActiveFilter(ALL)}
-              aria-pressed={activeFilter === ALL}
-              className={`rounded-full border px-3 py-1 text-sm transition-colors ${
-                activeFilter === ALL
-                  ? "bg-foreground text-background border-foreground font-medium"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
             >
               All
-            </button>
+            </FilterPill>
             {groups.map((g) => (
-              <button
+              <FilterPill
                 key={g}
-                type="button"
+                active={activeFilter === g}
                 onClick={() => setActiveFilter(g)}
-                aria-pressed={activeFilter === g}
-                className={`rounded-full border px-3 py-1 text-sm transition-colors ${
-                  activeFilter === g
-                    ? "bg-foreground text-background border-foreground font-medium"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
               >
                 {g}
-              </button>
+              </FilterPill>
             ))}
+            {uncategorized && (
+              <FilterPill
+                active={activeFilter === OTHER}
+                onClick={() => setActiveFilter(OTHER)}
+              >
+                Other
+              </FilterPill>
+            )}
           </div>
         )}
 
-        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        {/* Column count steps with the container, not with a device guess:
+            one cover on a phone, two from small tablets up, three on a
+            landscape tablet / small laptop, four on a desktop and five on a
+            wide monitor — so a cover is never smaller than it is on a phone. */}
+        <div className="grid gap-4 min-[480px]:grid-cols-2 sm:gap-5 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
           {visibleTiers.map((reward) => {
             const isLimited = reward.quantityAvailable !== null;
             const remaining =
@@ -218,28 +373,43 @@ export function CampaignTabV2({ project, tiers, projectPath, onViewCreator }: Ca
                 ? reward.quantityAvailable - reward.quantityClaimed
                 : null;
             const isSoldOut = isLimited && remaining === 0;
+            const isScarce =
+              isLimited && !isSoldOut && remaining !== null && remaining <= 25;
 
             return (
               <Card
                 key={reward.id}
-                className={`flex flex-col overflow-hidden transition-all hover:border-primary ${
-                  isSoldOut ? "opacity-60" : ""
+                className={`group relative flex flex-col overflow-hidden glass-card glass-card-hover border-border/60 ${
+                  isSoldOut ? "opacity-60 saturate-50" : ""
                 }`}
               >
                 {/* Portrait aspect — these are comic covers, not banners. */}
                 {reward.imageUrl && (
-                  <div className="relative aspect-[2/3] bg-muted">
+                  <div className="relative aspect-[2/3] overflow-hidden bg-muted">
                     <Image
                       src={reward.imageUrl}
                       alt={reward.title}
                       fill
                       sizes="(max-width: 640px) 100vw, (max-width: 1280px) 33vw, 25vw"
-                      className="object-cover"
+                      className="object-cover transition-transform duration-500 group-hover:scale-[1.04]"
                     />
+                    {/* Scrim so the category chip stays legible over any art. */}
+                    <div
+                      aria-hidden
+                      className="pointer-events-none absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-black/50 to-transparent opacity-0 transition-opacity group-hover:opacity-100"
+                    />
+                    {/* The reward's own category, shown when the grid isn't
+                        already filtered down to it. */}
+                    {reward.category?.trim() && activeFilter === ALL && (
+                      <span className="absolute left-2 top-2 rounded-full bg-black/60 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-white backdrop-blur-sm">
+                        {reward.category.trim()}
+                      </span>
+                    )}
                   </div>
                 )}
+
                 <CardContent className="flex flex-1 flex-col gap-2 p-4">
-                  <p className="text-xl font-bold leading-none text-[#05ce78] tabular-nums">
+                  <p className="text-xl font-bold leading-none text-[#05ce78] neon-text-green tabular-nums">
                     ${Number(reward.amount).toFixed(2)}
                   </p>
                   <p className="font-semibold leading-snug">{reward.title}</p>
@@ -266,8 +436,13 @@ export function CampaignTabV2({ project, tiers, projectPath, onViewCreator }: Ca
                     </div>
                   )}
 
-                  {isLimited && !isSoldOut && remaining !== null && remaining <= 25 && (
-                    <Badge variant="destructive" className="w-fit">Only {remaining} left</Badge>
+                  {isScarce && (
+                    <Badge
+                      variant="destructive"
+                      className="w-fit shadow-[0_0_12px_rgba(239,68,68,0.6)]"
+                    >
+                      Only {remaining} left
+                    </Badge>
                   )}
 
                   <div className="mt-auto space-y-2 pt-2">
@@ -298,12 +473,14 @@ export function CampaignTabV2({ project, tiers, projectPath, onViewCreator }: Ca
 
                     {!isSoldOut && !projectEnded ? (
                       <Link href={`${projectPath}/pledge?reward=${reward.id}`} className="block">
-                        <Button className="w-full bg-[#05ce78] hover:bg-[#05ce78]/90 text-white">
+                        <Button className="btn-glow w-full bg-gradient-to-r from-[#05ce78] to-emerald-600 text-white hover:from-[#05ce78]/90 hover:to-emerald-600/90">
                           Select
                         </Button>
                       </Link>
                     ) : (
-                      <Button className="w-full" disabled>No longer available</Button>
+                      <Button className="w-full" disabled>
+                        No longer available
+                      </Button>
                     )}
                   </div>
                 </CardContent>
@@ -322,9 +499,9 @@ export function CampaignTabV2({ project, tiers, projectPath, onViewCreator }: Ca
       {/* Creator + no-reward pledge. Below the rewards in v2 — the rail these
           lived in is gone, and they're supporting information rather than the
           primary path. */}
-      <div className="grid gap-6 md:grid-cols-2">
-        <Card>
-          <CardContent className="p-4">
+      <div className="grid gap-5 sm:gap-6 md:grid-cols-2">
+        <Card className="glass-card glass-card-hover border-border/60">
+          <CardContent className="p-5">
             <button
               type="button"
               onClick={onViewCreator}
@@ -332,12 +509,16 @@ export function CampaignTabV2({ project, tiers, projectPath, onViewCreator }: Ca
               className="group mb-4 flex w-full items-start gap-3 text-left disabled:cursor-default"
               aria-label={`View ${project.creator.name}'s creator profile`}
             >
-              <Avatar className="h-12 w-12">
-                <AvatarImage src={project.creator.image} />
-                <AvatarFallback className="bg-black text-white">
-                  {project.creator?.name?.[0] || "C"}
-                </AvatarFallback>
-              </Avatar>
+              {/* Gradient ring around the avatar — the same brand ramp the
+                  buttons and headings use. */}
+              <span className="rounded-full bg-gradient-to-br from-[#05ce78] via-cyan-500 to-purple-500 p-[2px]">
+                <Avatar className="h-12 w-12 border-2 border-background">
+                  <AvatarImage src={project.creator.image} />
+                  <AvatarFallback className="bg-black text-white">
+                    {project.creator?.name?.[0] || "C"}
+                  </AvatarFallback>
+                </Avatar>
+              </span>
               <div>
                 <h4 className="font-semibold transition-colors group-hover:text-primary group-hover:underline">
                   {project.creator.name}
@@ -351,7 +532,8 @@ export function CampaignTabV2({ project, tiers, projectPath, onViewCreator }: Ca
             {onViewCreator && (
               <Button
                 onClick={onViewCreator}
-                className="w-full bg-primary font-medium text-primary-foreground hover:bg-primary/90"
+                variant="outline"
+                className="w-full font-medium"
               >
                 View Creator Profile
               </Button>
@@ -359,8 +541,8 @@ export function CampaignTabV2({ project, tiers, projectPath, onViewCreator }: Ca
           </CardContent>
         </Card>
 
-        <Card>
-          <CardContent className="space-y-4 p-4">
+        <Card className="glass-card glass-card-hover border-border/60">
+          <CardContent className="space-y-4 p-5">
             <div>
               <h4 className="mb-1 font-medium">Make a pledge without a reward</h4>
               <div className="flex items-center gap-2">
@@ -376,19 +558,27 @@ export function CampaignTabV2({ project, tiers, projectPath, onViewCreator }: Ca
               </div>
             </div>
 
-            <div className="rounded-lg bg-[#028858] p-4 text-white">
-              <h5 className="mb-1 font-semibold">Donate — because you believe in it.</h5>
-              <p className="text-sm opacity-90">
+            <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-[#028858] to-emerald-700 p-4 text-white">
+              <div
+                aria-hidden
+                className="pointer-events-none absolute -right-8 -top-8 h-24 w-24 rounded-full bg-white/10 blur-2xl"
+              />
+              <h5 className="relative mb-1 font-semibold">
+                Donate — because you believe in it.
+              </h5>
+              <p className="relative text-sm opacity-90">
                 No reward, no strings — pure support. Help bring this project to life and
                 champion western comics and art through our Grant Program.
               </p>
             </div>
 
             {projectEnded ? (
-              <Button className="w-full" disabled>Campaign has ended</Button>
+              <Button className="w-full" disabled>
+                Campaign has ended
+              </Button>
             ) : (
               <Link href={`${projectPath}/pledge?amount=${pledgeAmount}`} className="block">
-                <Button className="w-full bg-[#05ce78] text-white hover:bg-[#05ce78]/90">
+                <Button className="btn-glow w-full bg-gradient-to-r from-[#05ce78] to-emerald-600 text-white hover:from-[#05ce78]/90 hover:to-emerald-600/90">
                   Continue
                 </Button>
               </Link>

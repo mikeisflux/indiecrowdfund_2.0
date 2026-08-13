@@ -20,8 +20,23 @@ export const defaultReward: RewardData = {
   shippingCountries: [],
   shippingCost: {},
   visibility: "PUBLIC",
+  category: "",
   items: [],
 };
+
+// Seed suggestions for the reward Category field. Only a starting point for
+// the datalist — the field is free text, and categories the creator has
+// already used on the project are listed ahead of these.
+export const DEFAULT_CATEGORIES = [
+  "Covers",
+  "Sets",
+  "Box Sets",
+  "Upgrades",
+  "Prints",
+  "Originals",
+  "Digital",
+  "Merch",
+];
 
 // Previous projects type for import feature
 export interface PreviousProjectForImport {

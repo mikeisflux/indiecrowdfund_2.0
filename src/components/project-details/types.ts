@@ -70,8 +70,8 @@ export interface ProjectData {
   // 1 = original three-column layout, 2 = full-width story + reward grid.
   // Absent on older cached payloads, so callers treat undefined as 1.
   layoutVersion?: number;
-  // Interior preview pages, in reading order (layout v2 only).
-  previewImages?: string[];
+  // Interior preview PDF, rendered in the page-turn reader (layout v2 only).
+  previewPdfUrl?: string | null;
   creator: ProjectCreator;
   creatorId: string;
   usesAI: boolean;
@@ -100,6 +100,8 @@ export interface RewardData {
   title: string;
   description: string;
   amount: number;
+  // Creator-chosen grouping label; drives the campaign-page filter pills.
+  category?: string | null;
   estimatedDelivery: string | Date | null;
   shippingType: string;
   shippingLocation: string;

@@ -83,7 +83,7 @@ const initialState = {
   story: {
     usesAI: false,
     faqs: [],
-    previewImages: [],
+    previewPdfUrl: "",
   },
   people: {
     showNameOnly: false,

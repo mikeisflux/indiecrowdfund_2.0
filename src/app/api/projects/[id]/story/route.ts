@@ -19,15 +19,19 @@ const storySchema = z.object({
     question: z.string(),
     answer: z.string(),
   })).optional(),
-  // Interior preview pages, in reading order. Constrained to our own upload
-  // paths so this can't become an arbitrary-remote-image field, and capped so
-  // a bad client can't write an unbounded array.
-  previewImages: z.array(
-    z.string().refine(
-      (u) => u.startsWith("/api/uploads/") || u.startsWith("/api/r2/serve/"),
-      { message: "Preview images must be uploaded through IndieCrowdfund" }
+  // Interior preview PDF. Constrained to our own upload paths so this can't
+  // be pointed at an arbitrary remote file. Empty string clears it.
+  previewPdfUrl: z
+    .string()
+    .refine(
+      (u) =>
+        u === "" ||
+        u.startsWith("/api/uploads/") ||
+        u.startsWith("/api/r2/serve/"),
+      { message: "The preview PDF must be uploaded through IndieCrowdfund" }
     )
-  ).max(24).optional(),
+    .optional()
+    .nullable(),
 });
 
 // POST - Update project story
@@ -61,9 +65,11 @@ export async function POST(
 
     if (data.description !== undefined) updateData.description = sanitizeHtml(data.description);
     if (data.risks !== undefined) updateData.risks = sanitizeHtml(data.risks);
-    // Ordered list; the zod schema above already enforces our own upload
-    // paths and the 24-page cap.
-    if (data.previewImages !== undefined) updateData.previewImages = data.previewImages;
+    // "" means the creator removed the preview — store NULL rather than an
+    // empty string so the campaign page has a single falsy case to check.
+    if (data.previewPdfUrl !== undefined) {
+      updateData.previewPdfUrl = data.previewPdfUrl || null;
+    }
     if (data.usesAI !== undefined) updateData.usesAI = data.usesAI;
     if (data.faqs !== undefined) updateData.faqs = data.faqs;
 
@@ -76,6 +82,7 @@ export async function POST(
         risks: true,
         usesAI: true,
         faqs: true,
+        previewPdfUrl: true,
       },
     });
 
@@ -132,6 +139,7 @@ export async function GET(
         risks: true,
         usesAI: true,
         faqs: true,
+        previewPdfUrl: true,
       },
     });
 

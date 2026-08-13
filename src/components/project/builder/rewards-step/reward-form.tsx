@@ -34,7 +34,7 @@ import { apiFetch } from "@/lib/fetch-utils";
 import { ImageUpload } from "@/components/ui/image-upload";
 import { cn } from "@/lib/utils";
 import { RewardData, RewardItemData, ShippingType, SHIPPING_COUNTRIES } from "@/types";
-import { MONTHS, YEARS } from "./constants";
+import { DEFAULT_CATEGORIES, MONTHS, YEARS } from "./constants";
 
 interface RewardFormProps {
   currentReward: RewardData;
@@ -115,6 +115,25 @@ export function RewardForm({
     () => findStockCandidates(currentReward, allRewards),
     [currentReward, allRewards]
   );
+
+  // Categories already in use on this project come first — reusing an exact
+  // string is what puts two rewards in the same tab, so the ones that already
+  // exist matter more than our defaults. Case-insensitive dedupe against the
+  // defaults so "Covers" and "covers" don't both show up.
+  const categorySuggestions = useMemo(() => {
+    const used: string[] = [];
+    const seen = new Set<string>();
+    for (const r of allRewards) {
+      const c = r.category?.trim();
+      if (!c) continue;
+      const key = c.toLowerCase();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      used.push(c);
+    }
+    const defaults = DEFAULT_CATEGORIES.filter((c) => !seen.has(c.toLowerCase()));
+    return [...used, ...defaults];
+  }, [allRewards]);
   const [isCopied, setIsCopied] = React.useState(false);
   const [isEmailing, setIsEmailing] = React.useState(false);
 
@@ -200,6 +219,38 @@ export function RewardForm({
                     onRewardChange({ ...currentReward, title: e.target.value })
                   }
                 />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="reward-category">
+                  Category <span className="text-muted-foreground">(optional)</span>
+                </Label>
+                <Input
+                  id="reward-category"
+                  list="reward-category-suggestions"
+                  placeholder="Covers"
+                  maxLength={40}
+                  value={currentReward.category || ""}
+                  onChange={(e) =>
+                    onRewardChange({ ...currentReward, category: e.target.value })
+                  }
+                />
+                {/* Suggestions, not a fixed list — the categories already used
+                    on this project first, then common ones. A creator can type
+                    anything; a plain <select> would force their catalogue into
+                    our vocabulary. */}
+                <datalist id="reward-category-suggestions">
+                  {categorySuggestions.map((c) => (
+                    <option key={c} value={c} />
+                  ))}
+                </datalist>
+                <p className="text-xs text-muted-foreground flex items-start gap-1">
+                  <Info className="h-3 w-3 mt-0.5 shrink-0" />
+                  Groups this reward into a filter tab on your campaign page — e.g.
+                  Covers, Box Sets, Upgrades. Reuse the same wording across rewards to
+                  put them in the same tab. Leave it blank and it lands under
+                  &ldquo;Other&rdquo;.
+                </p>
               </div>
 
               <div className="space-y-2">

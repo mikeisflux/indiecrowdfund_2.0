@@ -95,7 +95,7 @@ export default function EditProjectPage() {
           risks: project.risks || "",
           usesAI: project.usesAI || false,
           faqs: project.faqs || [],
-          previewImages: project.previewImages || [],
+          previewPdfUrl: project.previewPdfUrl || "",
         });
 
         // Load payment settings
@@ -185,6 +185,7 @@ export default function EditProjectPage() {
             description: reward.description,
             amount: reward.amount,
             imageUrl: reward.imageUrl || "",
+            category: reward.category || "",
             estimatedDelivery: reward.estimatedDelivery
               ? new Date(reward.estimatedDelivery)
               : undefined,
