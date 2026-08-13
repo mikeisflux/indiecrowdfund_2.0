@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useProjectStore } from "@/lib/stores/project-store";
 import { ProjectBuilder } from "@/components/project/builder/project-builder";
@@ -12,6 +12,20 @@ export default function EditProjectPage() {
   const router = useRouter();
   const slug = (params?.slug as string) || "";
   const [loading, setLoading] = useState(true);
+
+  // Which slug we've already loaded. The effect below starts with reset(),
+  // which throws away the entire builder state — including whatever the
+  // creator has typed and every image they've inserted since their last
+  // save. It must therefore run exactly once per campaign.
+  //
+  // It had no such guard. Its dependency array includes `router`, whose
+  // identity can change when the App Router context updates, so a re-render
+  // at the wrong moment silently rolled the editor back to the last saved
+  // version. A creator lost ~18 minutes of story edits to this: the images
+  // she inserted in that window were uploaded and sitting on disk, but the
+  // HTML that referenced them had been discarded, so the save wrote a
+  // version that never contained them.
+  const loadedSlugRef = useRef<string | null>(null);
 
   const {
     setProjectId,
@@ -210,7 +224,10 @@ export default function EditProjectPage() {
       }
     }
 
-    if (slug) {
+    // Load once per slug. Re-entering here after the creator has started
+    // editing would reset() their unsaved work away — see loadedSlugRef.
+    if (slug && loadedSlugRef.current !== slug) {
+      loadedSlugRef.current = slug;
       loadProject();
     }
   }, [slug, router, reset, setProjectId, setProjectSlug, setProjectStatus, updateBasics, updateStory, updatePeople, updatePayment, updatePromotion, addReward, addItem]);
