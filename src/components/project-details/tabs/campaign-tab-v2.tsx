@@ -11,6 +11,7 @@ import { Separator } from "@/components/ui/separator";
 import { Input } from "@/components/ui/input";
 import { AlertTriangle, CheckCircle, Clock } from "lucide-react";
 import { PdfPageFlipReader } from "@/components/PdfPageFlipReader";
+import { FundingCurve } from "../funding-curve";
 import { ProjectData, RewardData } from "../types";
 import { processStoryHtml, formatDeliveryDate } from "../utils";
 
@@ -273,6 +274,18 @@ export function CampaignTabV2({ project, tiers, projectPath, onViewCreator }: Ca
           )}
         </div>
       </div>
+
+      {/* Funding curve, directly under the bar whose number it explains. The
+          bar says how much; this says how it got there — the launch spike, the
+          quiet middle, the day the goal broke. Renders itself as null when
+          there isn't enough history to be worth drawing, which is why there's
+          no length check here. */}
+      <FundingCurve
+        series={project.fundingSeries ?? []}
+        goalAmount={Number(project.goalAmount) || 0}
+        currency={project.currentAmountDisplay?.symbol || "$"}
+        className="-mt-4 sm:-mt-6"
+      />
 
       {/* Interior preview, above the story so the artwork leads the pitch.
           Same reader as the Digital Library, pointed at the creator's preview

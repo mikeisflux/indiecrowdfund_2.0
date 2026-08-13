@@ -72,6 +72,9 @@ export interface ProjectData {
   layoutVersion?: number;
   // Interior preview PDF, rendered in the page-turn reader (layout v2 only).
   previewPdfUrl?: string | null;
+  // Daily cumulative funding, oldest first. Empty when there isn't enough
+  // history to be worth charting.
+  fundingSeries?: { date: string; amount: number; cumulative: number }[];
   creator: ProjectCreator;
   creatorId: string;
   usesAI: boolean;

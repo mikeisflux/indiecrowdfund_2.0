@@ -47,6 +47,16 @@ export interface SyncResult {
   backerCount: number;
 }
 
+/** One day of the public funding curve. `cumulative` is the running total. */
+export interface FundingPoint {
+  /** ISO date, YYYY-MM-DD, in UTC. */
+  date: string;
+  /** Committed that day. */
+  amount: number;
+  /** Running total through the end of that day. */
+  cumulative: number;
+}
+
 export interface BatchProjectStats {
   currentAmount: number;
   backerCount: number;
@@ -330,4 +340,130 @@ export async function getPlatformTotals(): Promise<PlatformTotals> {
     totalUsers,
     categoryCounts: categoryCounts.map((c) => ({ category: c.category, count: c._count.id })),
   };
+}
+
+// ---------------------------------------------------------------------------
+// Public funding curve
+// ---------------------------------------------------------------------------
+
+// Minimal shape of the raw-query surface we need. The project's Prisma client
+// is loosely typed via prisma-client-stub.d.ts, so spelling this out keeps the
+// function checkable without importing Prisma types (same approach as
+// lib/payments/rewards.ts).
+interface RawQueryable {
+  $queryRaw<T = unknown>(query: TemplateStringsArray, ...values: unknown[]): Promise<T>;
+}
+
+interface DayRow {
+  /** Already formatted YYYY-MM-DD by the query — see the note below. */
+  day: string;
+  total: number;
+}
+
+/**
+ * Daily funding history for a project's public campaign page.
+ *
+ * The counting rule is the one at the top of this file, and it has to be:
+ * the last point of this series is rendered directly beneath the headline
+ * "raised" figure from getProjectStats(), so any divergence reads to a backer
+ * as one of the two numbers being wrong. COMPLETED always; confirmed PENDING
+ * as well while the project is LIVE.
+ *
+ * Grouped in SQL rather than by pulling pledges and bucketing in JS — a
+ * campaign with thousands of backers would otherwise ship thousands of rows
+ * into the request just to draw ~30 points.
+ *
+ * Days with no pledges are filled in with zero so the curve advances at a
+ * constant rate along the x-axis; a series that skipped quiet days would
+ * compress the slow middle of a campaign and overstate its momentum.
+ *
+ * Returns [] when there is nothing worth drawing — the caller renders no chart
+ * rather than an empty one.
+ */
+export async function getProjectFundingSeries(
+  projectId: string,
+  opts: { status: string; launchedAt?: Date | null }
+): Promise<FundingPoint[]> {
+  const includePending = opts.status === "LIVE";
+
+  try {
+    // Three deliberate casts:
+    //   to_char  — bucket to a date string in SQL. Returning a timestamp and
+    //              calling toISOString() on the driver's Date would re-project
+    //              a `timestamp without time zone` through the server's local
+    //              zone and slide every bucket by a day west of UTC.
+    //   ::float8 — SUM over a numeric column comes back as a Decimal object;
+    //              a plain number needs no marshalling on our side.
+    //   ::boolean— the parameter is otherwise untyped, and Postgres won't infer
+    //              a bare $n used as a boolean operand.
+    const rows = await (db as unknown as RawQueryable).$queryRaw<DayRow[]>`
+      SELECT to_char(date_trunc('day', "createdAt"), 'YYYY-MM-DD') AS day,
+             SUM("amount")::float8 AS total
+      FROM "Pledge"
+      WHERE "projectId" = ${projectId}
+        AND "deletedAt" IS NULL
+        AND (
+          "status" = 'COMPLETED'
+          OR (
+            ${includePending}::boolean
+            AND "status" = 'PENDING'
+            AND "confirmationEmailSent" = true
+          )
+        )
+      GROUP BY day
+      ORDER BY day ASC
+    `;
+
+    if (!rows || rows.length === 0) return [];
+
+    const byDay = new Map<string, number>();
+    for (const r of rows) {
+      byDay.set(r.day, Number(r.total) || 0);
+    }
+
+    const keys = Array.from(byDay.keys()).sort();
+    // Start at launch when we know it, so the curve opens on day one rather
+    // than on the first day money happened to come in.
+    const firstKey = keys[0];
+    const launchKey = opts.launchedAt
+      ? new Date(opts.launchedAt).toISOString().slice(0, 10)
+      : firstKey;
+    const start = new Date((launchKey < firstKey ? launchKey : firstKey) + "T00:00:00Z");
+
+    // End at the last day with money, or today for a running campaign.
+    const lastKey = keys[keys.length - 1];
+    const today = new Date().toISOString().slice(0, 10);
+    const endKey = opts.status === "LIVE" && today > lastKey ? today : lastKey;
+    const end = new Date(endKey + "T00:00:00Z");
+
+    // Guard against a bad launchedAt (or clock skew) producing an unbounded
+    // loop: a campaign can't sensibly chart more than a few years of days.
+    const MAX_DAYS = 1000;
+
+    const series: FundingPoint[] = [];
+    let cumulative = 0;
+    for (
+      let d = new Date(start);
+      d <= end && series.length < MAX_DAYS;
+      d.setUTCDate(d.getUTCDate() + 1)
+    ) {
+      const key = d.toISOString().slice(0, 10);
+      const amount = byDay.get(key) ?? 0;
+      cumulative += amount;
+      series.push({
+        date: key,
+        amount: Math.round(amount * 100) / 100,
+        cumulative: Math.round(cumulative * 100) / 100,
+      });
+    }
+
+    return series;
+  } catch (error) {
+    // A missing curve is a missing decoration, not a broken campaign page.
+    statsLogger.error(
+      { err: error instanceof Error ? error.message : String(error), projectId },
+      "Failed to build funding series"
+    );
+    return [];
+  }
 }

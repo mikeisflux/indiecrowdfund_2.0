@@ -5,7 +5,7 @@ import { logger } from "@/lib/logger";
 const projectsSlugLogger = logger.child({ module: "projects-slug" });
 import { db } from "@/lib/db";
 import { auth } from "@/lib/auth";
-import { getProjectStats } from "@/lib/stats";
+import { getProjectStats, getProjectFundingSeries } from "@/lib/stats";
 
 export async function GET(
   req: NextRequest,
@@ -135,10 +135,21 @@ export async function GET(
     }
 
     // Always calculate live stats from pledges
+    // Daily funding curve for the campaign page. Same counting rule as the
+    // headline total above, so the curve's last point matches it. Runs
+    // alongside the stats query rather than after it — neither depends on the
+    // other, and this is the public page's critical path.
+    const fundingSeriesPromise = getProjectFundingSeries(project.id, {
+      status: project.status,
+      launchedAt: project.launchedAt,
+    });
+
     const liveStats = await getProjectStats(project.id, {
       status: project.status,
       goalAmount: project.goalAmount,
     });
+
+    const fundingSeries = await fundingSeriesPromise;
 
     // Calculate days remaining
     let daysRemaining = 0;
@@ -181,6 +192,7 @@ export async function GET(
       launchedAt: project.launchedAt,
       layoutVersion: project.layoutVersion ?? 1,
       previewPdfUrl: project.previewPdfUrl ?? null,
+      fundingSeries,
       daysRemaining,
       // Payment settings
       projectType: project.projectType,
