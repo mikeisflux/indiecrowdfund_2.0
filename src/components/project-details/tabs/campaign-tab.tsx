@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { AlertTriangle, CheckCircle, Clock } from "lucide-react";
 import { ProjectData, RewardData, StoryNavItem } from "../types";
 import { processStoryHtml, formatDeliveryDate } from "../utils";
+import { CampaignTabV2 } from "./campaign-tab-v2";
 
 interface CampaignTabProps {
   project: ProjectData;
@@ -23,7 +24,18 @@ interface CampaignTabProps {
   onViewCreator?: () => void;
 }
 
-export function CampaignTab({ project, tiers, projectPath, onViewCreator }: CampaignTabProps) {
+export function CampaignTab(props: CampaignTabProps) {
+  // Layout v2 — full-width story, reward grid, sticky funding bar — for
+  // campaigns that hadn't gone live when it shipped. Anything already live or
+  // finished stays on v1 below, so backers mid-campaign don't get the page
+  // rearranged under them. Older payloads without the field read as v1.
+  if ((props.project.layoutVersion ?? 1) >= 2) {
+    return <CampaignTabV2 {...props} />;
+  }
+  return <CampaignTabV1 {...props} />;
+}
+
+function CampaignTabV1({ project, tiers, projectPath, onViewCreator }: CampaignTabProps) {
   const [pledgeAmount, setPledgeAmount] = useState("1");
   const [activeStorySection, setActiveStorySection] = useState<string>("");
   const storyContentRef = useRef<HTMLDivElement>(null);

@@ -607,6 +607,10 @@ export interface ProjectStoryData {
   risks: string;
   usesAI: boolean;
   faqs: { question: string; answer: string }[];
+  // Interior preview pages in reading order — rendered in the page-turn
+  // reader on layout-v2 campaign pages. Images, not a PDF; see the note on
+  // Project.previewImages in the schema.
+  previewImages?: string[];
 }
 
 export interface ProjectPeopleData {

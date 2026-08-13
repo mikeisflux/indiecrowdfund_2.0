@@ -67,6 +67,11 @@ export interface ProjectData {
   daysRemaining: number;
   endDate: string | Date;
   launchedAt: string | Date | null;
+  // 1 = original three-column layout, 2 = full-width story + reward grid.
+  // Absent on older cached payloads, so callers treat undefined as 1.
+  layoutVersion?: number;
+  // Interior preview pages, in reading order (layout v2 only).
+  previewImages?: string[];
   creator: ProjectCreator;
   creatorId: string;
   usesAI: boolean;
@@ -196,6 +201,7 @@ export const initialProject: ProjectData = {
   daysRemaining: 0,
   endDate: new Date(),
   launchedAt: new Date(),
+  layoutVersion: 1,
   creator: {
     id: "",
     name: "",

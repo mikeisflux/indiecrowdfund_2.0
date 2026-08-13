@@ -471,6 +471,7 @@ export function ProjectBuilder() {
       const storyPayload: Record<string, unknown> = {
         usesAI: story.usesAI || false,
         faqs: story.faqs || [],
+        previewImages: story.previewImages || [],
       };
       if (typeof story.description === "string" && story.description.trim() !== "") {
         storyPayload.description = story.description;

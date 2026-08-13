@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { BlockEditor } from "@/components/ui/block-editor";
 import { Plus, Trash2, AlertTriangle, HelpCircle } from "lucide-react";
+import { InteriorPreviewSection } from "./interior-preview-section";
 
 export function StoryStep() {
   const { story, updateStory, projectId } = useProjectStore();
@@ -156,6 +157,15 @@ export function StoryStep() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Interior preview — pages backers flip through in the reader on the
+          campaign page. Lives with the story because it's part of the pitch,
+          not part of the reward setup. */}
+      <InteriorPreviewSection
+        projectId={projectId ?? null}
+        images={story.previewImages || []}
+        onChange={(previewImages) => updateStory({ previewImages })}
+      />
     </div>
   );
 }

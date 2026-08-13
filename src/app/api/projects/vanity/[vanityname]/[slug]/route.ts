@@ -227,6 +227,8 @@ export async function GET(
       endDate: project.endDate,
       launchDate: project.launchDate,
       launchedAt: project.launchedAt,
+      layoutVersion: project.layoutVersion ?? 1,
+      previewImages: project.previewImages ?? [],
       daysRemaining,
       // Payment settings
       projectType: project.projectType,

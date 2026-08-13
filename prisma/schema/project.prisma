@@ -116,6 +116,31 @@ model Project {
   createdAt             DateTime      @default(now())
   updatedAt             DateTime      @updatedAt
   launchedAt            DateTime?
+
+  // Which campaign-page layout this project renders with.
+  //   1 = the original three-column layout (2 / 6 / 4): reward-category rail,
+  //       story at 50%, reward tiers stacked single-file in a right rail.
+  //   2 = story at full width, rewards as a grid beneath it, sticky funding bar.
+  //
+  // Stamped per project rather than derived from status, because the rule is
+  // "campaigns that had not launched when we shipped v2" — and a derived check
+  // on launchedAt would flip a v2 campaign back to v1 the moment it went live,
+  // which is the opposite of the intent. Every project that had already
+  // launched was backfilled to 1 by the migration; new projects default to 2.
+  layoutVersion         Int           @default(2)
+
+  // Interior preview pages, in reading order, shown in the page-turn reader on
+  // the campaign page (layout v2). Plain image URLs from /api/upload.
+  //
+  // Deliberately NOT a PDF. A public campaign page can only render a PDF the
+  // browser can fetch, which means the file is downloadable in full straight
+  // from the network tab — and a creator uploading their finished book as "the
+  // preview" would be giving it away. Rendering pages server-side would avoid
+  // that but needs the `canvas` native module, which isn't installed (see the
+  // dependency guard in lib/pdf-cover-extractor.ts). Having creators pick the
+  // pages sidesteps both problems: nothing exists server-side that wasn't
+  // meant to be public.
+  previewImages         String[]      @default([])
   fundedAt              DateTime?
   deletedAt             DateTime?     // Soft delete timestamp
 

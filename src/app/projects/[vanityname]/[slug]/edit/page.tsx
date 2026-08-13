@@ -95,6 +95,7 @@ export default function EditProjectPage() {
           risks: project.risks || "",
           usesAI: project.usesAI || false,
           faqs: project.faqs || [],
+          previewImages: project.previewImages || [],
         });
 
         // Load payment settings
