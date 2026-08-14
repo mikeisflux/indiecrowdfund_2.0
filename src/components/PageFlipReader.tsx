@@ -27,6 +27,15 @@ export type PageFlipReaderProps = {
   height?: number;
   /** Single page instead of a two-page spread — used on mobile. */
   singlePage?: boolean;
+  /**
+   * Treat the first and last pages as a hard cover, shown alone.
+   *
+   * True for a real book (the Digital Library). False for a campaign-page
+   * interior preview, which is a handful of pages out of the middle of a book
+   * — there is no cover among them, and a stiff first page reads as one. With
+   * this off every page is marked soft, so all of them bend.
+   */
+  showCover?: boolean;
 };
 
 export function PageFlipReader({
@@ -39,6 +48,7 @@ export function PageFlipReader({
   width = 380,
   height = 520,
   singlePage = false,
+  showCover = true,
 }: PageFlipReaderProps) {
    
   const flipRef = useRef<any>(null);
@@ -116,7 +126,7 @@ export function PageFlipReader({
         maxWidth={1000}
         minHeight={400}
         maxHeight={1533}
-        showCover={true}
+        showCover={showCover}
         mobileScrollSupport={true}
         useMouseEvents={true}
         clickEventForward={false}
@@ -138,7 +148,10 @@ export function PageFlipReader({
         className={ready ? "demo-book" : "demo-book opacity-0"}
       >
         {images.map((src, idx) => (
-          <div key={src} className="page">
+          // react-pageflip reads density off the DOM node. Pages default to
+          // soft, but showCover promotes the first and last to hard — so with
+          // covers off we state soft explicitly and every page bends.
+          <div key={src} className="page" data-density={showCover ? undefined : "soft"}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={src}

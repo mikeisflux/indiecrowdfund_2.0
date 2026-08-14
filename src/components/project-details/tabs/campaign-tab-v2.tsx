@@ -74,7 +74,7 @@ function matchReaderSize(): ReaderSize {
 // drift apart, and so the accent rule is defined once.
 function SectionHeading({ children }: { children: React.ReactNode }) {
   return (
-    <h2 className="flex items-center gap-3 text-xl font-serif sm:text-2xl lg:text-3xl">
+    <h2 className="flex items-center gap-3 text-xl font-semibold tracking-tight sm:text-2xl lg:text-3xl">
       <span
         aria-hidden
         className="h-6 w-1 shrink-0 rounded-full bg-gradient-to-b from-[#05ce78] to-cyan-500 lg:h-8"
@@ -257,6 +257,9 @@ export function CampaignTabV2({ project, tiers, projectPath, onViewCreator }: Ca
                   singlePage={!reader.spread}
                   width={reader.width}
                   height={reader.height}
+                  // These are pages from the middle of a book, not a book —
+                  // there's no cover among them, so nothing should be stiff.
+                  showCover={false}
                 />
               </div>
             </div>
@@ -265,7 +268,7 @@ export function CampaignTabV2({ project, tiers, projectPath, onViewCreator }: Ca
       )}
 
       {/* Story — full container width. */}
-      <div className="prose prose-sm sm:prose lg:prose-lg max-w-none dark:prose-invert prose-headings:font-serif prose-img:rounded-lg prose-img:my-6 prose-img:max-w-full prose-img:h-auto prose-a:text-primary prose-a:underline">
+      <div className="prose prose-sm sm:prose-base lg:prose-lg max-w-none sm:max-w-none lg:max-w-none dark:prose-invert prose-img:rounded-lg prose-img:my-6 prose-img:max-w-full prose-img:h-auto prose-a:text-primary prose-a:underline">
         <SectionHeading>Story</SectionHeading>
         <div
           className="[&>*:first-child]:mt-0 [&>*:last-child]:mb-0 [&_img]:max-w-full [&_img]:h-auto [&_img]:w-auto overflow-hidden"

@@ -909,7 +909,11 @@ export default function ProjectPage() {
         )}
 
         {activeTab === "faq" && (
-          <FaqTab faqs={project.faqs} similarProjects={similarProjects} />
+          <FaqTab
+            faqs={project.faqs}
+            similarProjects={similarProjects}
+            fullWidth={(project.layoutVersion ?? 1) >= 2}
+          />
         )}
 
         {activeTab === "updates" && (

@@ -10,9 +10,15 @@ import { SimilarProjectsGrid } from "../similar-projects-grid";
 interface FaqTabProps {
   faqs: { question: string; answer: string }[];
   similarProjects: SimilarProject[];
+  /**
+   * Layout v2 gives the questions the full container and drops the "Ask a
+   * question" rail below them. v1 keeps the 8/4 split it launched with — live
+   * campaigns don't get relaid out under their backers.
+   */
+  fullWidth?: boolean;
 }
 
-export function FaqTab({ faqs, similarProjects }: FaqTabProps) {
+export function FaqTab({ faqs, similarProjects, fullWidth = false }: FaqTabProps) {
   const [expandedFaqs, setExpandedFaqs] = useState<number[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -39,9 +45,9 @@ export function FaqTab({ faqs, similarProjects }: FaqTabProps) {
   return (
     <div className="space-y-12">
       {/* FAQ Main Section */}
-      <div className="grid gap-8 md:grid-cols-12">
+      <div className={fullWidth ? "space-y-8" : "grid gap-8 md:grid-cols-12"}>
         {/* Left - FAQ Questions */}
-        <div className="md:col-span-7 lg:col-span-8">
+        <div className={fullWidth ? "" : "md:col-span-7 lg:col-span-8"}>
           <h2 className="text-2xl font-semibold mb-6">Frequently Asked Questions</h2>
           {faqs.length > 3 && (
             <div className="relative mb-6">
@@ -82,12 +88,18 @@ export function FaqTab({ faqs, similarProjects }: FaqTabProps) {
         </div>
 
         {/* Right - Ask a Question */}
-        <div className="md:col-span-5 lg:col-span-4">
-          <div className="sticky top-20">
-            <p className="text-muted-foreground mb-4">
+        <div className={fullWidth ? "" : "md:col-span-5 lg:col-span-4"}>
+          <div
+            className={
+              fullWidth
+                ? "flex flex-wrap items-center justify-between gap-4 rounded-xl border p-4"
+                : "sticky top-20"
+            }
+          >
+            <p className={fullWidth ? "text-muted-foreground" : "text-muted-foreground mb-4"}>
               Don&apos;t see the answer to your question? Ask the project creator directly.
             </p>
-            <Button variant="outline" className="w-full">
+            <Button variant="outline" className={fullWidth ? "sm:w-auto" : "w-full"}>
               Ask a question
             </Button>
           </div>
