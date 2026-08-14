@@ -18,6 +18,7 @@ import { AddressWarning } from "./components/AddressWarning";
 import { Breadcrumb } from "./components/Breadcrumb";
 import { RewardSelector } from "./components/RewardSelector";
 import { AddonSelector } from "./components/AddonSelector";
+import { AddonGrid } from "./components/AddonGrid";
 import { PaymentStep } from "./components/PaymentStep";
 import { OrderSummary } from "./components/OrderSummary";
 import { FAQSection } from "./components/FAQSection";
@@ -129,7 +130,20 @@ export default function PledgePage() {
               />
             )}
 
-            {pledge.step === "addons" && (
+            {/* v2 gets the grid; v1 keeps the stacked list it launched with. */}
+            {pledge.step === "addons" && (pledge.project.layoutVersion ?? 1) >= 2 && (
+              <AddonGrid
+                addons={pledge.addons}
+                selectedAddons={pledge.selectedAddons}
+                isAddItemsMode={pledge.isAddItemsMode}
+                shippingCountry={pledge.shippingCountry}
+                handleAddonToggle={pledge.handleAddonToggle}
+                handleAddonQuantityChange={pledge.handleAddonQuantityChange}
+                getShippingCost={pledge.getShippingCost}
+              />
+            )}
+
+            {pledge.step === "addons" && (pledge.project.layoutVersion ?? 1) < 2 && (
               <AddonSelector
                 addons={pledge.addons}
                 selectedAddons={pledge.selectedAddons}

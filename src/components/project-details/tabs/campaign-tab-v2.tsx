@@ -12,6 +12,12 @@ import { Input } from "@/components/ui/input";
 import { AlertTriangle, CheckCircle, Clock } from "lucide-react";
 import { PdfPageFlipReader } from "@/components/PdfPageFlipReader";
 import { FundingCurve } from "../funding-curve";
+import {
+  ALL_CATEGORIES,
+  CategoryFilter,
+  filterByCategory,
+  useCategoryGroups,
+} from "@/components/rewards/category-filter";
 import { ProjectData, RewardData } from "../types";
 import { processStoryHtml, formatDeliveryDate } from "../utils";
 
@@ -35,11 +41,6 @@ interface CampaignTabV2Props {
   projectPath: string;
   onViewCreator?: () => void;
 }
-
-const ALL = "__all__";
-// Sentinel for the bucket of rewards with no category. Not a real category
-// string, so a creator who literally types "Other" still gets their own tab.
-const OTHER = "__other__";
 
 // The flipbook is canvas-backed and needs explicit pixel dimensions, so its
 // size can't come from CSS the way the rest of the page's responsiveness does.
@@ -83,34 +84,9 @@ function SectionHeading({ children }: { children: React.ReactNode }) {
   );
 }
 
-function FilterPill({
-  active,
-  onClick,
-  children,
-}: {
-  active: boolean;
-  onClick: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-pressed={active}
-      className={`shrink-0 whitespace-nowrap rounded-full border px-3 py-1.5 text-xs transition-all sm:px-4 sm:text-sm ${
-        active
-          ? "border-transparent bg-gradient-to-r from-[#05ce78] to-emerald-600 font-medium text-white shadow-[0_0_18px_-4px_rgba(5,206,120,0.8)]"
-          : "border-border/70 text-muted-foreground hover:border-[#05ce78]/40 hover:text-foreground"
-      }`}
-    >
-      {children}
-    </button>
-  );
-}
-
 export function CampaignTabV2({ project, tiers, projectPath, onViewCreator }: CampaignTabV2Props) {
   const [pledgeAmount, setPledgeAmount] = useState("1");
-  const [activeFilter, setActiveFilter] = useState<string>(ALL);
+  const [activeFilter, setActiveFilter] = useState<string>(ALL_CATEGORIES);
 
   const projectEnded = project.endDate ? new Date(project.endDate) < new Date() : false;
 
@@ -154,48 +130,17 @@ export function CampaignTabV2({ project, tiers, projectPath, onViewCreator }: Ca
     return { processedDescription: processedHtml };
   }, [project.description]);
 
-  // Filter pills come from Reward.category, which the creator sets per reward
-  // in the builder. This used to infer groups from a SKU-ish prefix in the
-  // title ("PG1-01 …" -> "PG1"), which only worked for creators who happened
-  // to name things that way — and nothing makes them.
+  // Pills come from Reward.category, set per reward in the builder. This used
+  // to infer groups from a SKU-ish prefix in the title ("PG1-01 …" -> "PG1"),
+  // which only worked for creators who happened to name things that way.
   //
-  // Uncategorised rewards get an "Other" pill, but only when there is also at
-  // least one categorised reward: without that, filtering to a category would
-  // make them unreachable. Pills appear only when they actually partition the
-  // list into 2+ buckets.
-  const { groups, uncategorized } = useMemo(() => {
-    const named: string[] = [];
-    const seen = new Set<string>();
-    let hasUncategorized = false;
-
-    for (const t of tiers) {
-      const c = t.category?.trim();
-      if (!c) {
-        hasUncategorized = true;
-        continue;
-      }
-      // Group case-insensitively but display the first spelling the creator
-      // used, so "Covers" and "covers" are one tab rather than two.
-      const key = c.toLowerCase();
-      if (seen.has(key)) continue;
-      seen.add(key);
-      named.push(c);
-    }
-
-    const bucketCount = named.length + (hasUncategorized ? 1 : 0);
-    if (named.length === 0 || bucketCount < 2) {
-      return { groups: [] as string[], uncategorized: false };
-    }
-    return { groups: named, uncategorized: hasUncategorized };
-  }, [tiers]);
-
-  const visibleTiers = useMemo(() => {
-    if (activeFilter === ALL) return tiers;
-    if (activeFilter === OTHER) return tiers.filter((t) => !t.category?.trim());
-    return tiers.filter(
-      (t) => t.category?.trim().toLowerCase() === activeFilter.toLowerCase()
-    );
-  }, [tiers, activeFilter]);
+  // Shared with the pledge flow's add-on step so the two grids filter and look
+  // identical — see components/rewards/category-filter.
+  const { groups, uncategorized } = useCategoryGroups(tiers);
+  const visibleTiers = useMemo(
+    () => filterByCategory(tiers, activeFilter),
+    [tiers, activeFilter]
+  );
 
   return (
     <div className="space-y-10 sm:space-y-12 lg:space-y-16">
@@ -340,39 +285,22 @@ export function CampaignTabV2({ project, tiers, projectPath, onViewCreator }: Ca
 
       {/* Rewards — a grid, below the story, at full width. */}
       <div className="space-y-5">
-        <SectionHeading>Rewards &amp; add-ons</SectionHeading>
+        {/* "Rewards", not "Rewards & add-ons". This grid is fed `tiers` only —
+            the project page keeps add-ons in separate state and hands them to
+            the Rewards tab. That split is deliberate: add-ons attach to a
+            pledge, so a backer only ever sees them once they've chosen a
+            reward (RewardsTab gates them behind isSelected, and the pledge
+            flow puts them on their own step after reward selection). Naming
+            them here promised something this grid does not do. */}
+        <SectionHeading>Rewards</SectionHeading>
 
-        {groups.length > 0 && (
-          /* Scrolls sideways on a phone and wraps from sm up. A catalogue with
-             eight categories would otherwise eat four stacked rows of the
-             screen before a backer sees a single cover. The negative margin
-             lets the strip bleed to the screen edge so it reads as scrollable. */
-          <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0 sm:pb-0">
-            <FilterPill
-              active={activeFilter === ALL}
-              onClick={() => setActiveFilter(ALL)}
-            >
-              All
-            </FilterPill>
-            {groups.map((g) => (
-              <FilterPill
-                key={g}
-                active={activeFilter === g}
-                onClick={() => setActiveFilter(g)}
-              >
-                {g}
-              </FilterPill>
-            ))}
-            {uncategorized && (
-              <FilterPill
-                active={activeFilter === OTHER}
-                onClick={() => setActiveFilter(OTHER)}
-              >
-                Other
-              </FilterPill>
-            )}
-          </div>
-        )}
+        <CategoryFilter
+          groups={groups}
+          uncategorized={uncategorized}
+          active={activeFilter}
+          onChange={setActiveFilter}
+          label="Filter rewards by category"
+        />
 
         {/* Column count steps with the container, not with a device guess:
             one cover on a phone, two from small tablets up, three on a
@@ -413,7 +341,7 @@ export function CampaignTabV2({ project, tiers, projectPath, onViewCreator }: Ca
                     />
                     {/* The reward's own category, shown when the grid isn't
                         already filtered down to it. */}
-                    {reward.category?.trim() && activeFilter === ALL && (
+                    {reward.category?.trim() && activeFilter === ALL_CATEGORIES && (
                       <span className="absolute left-2 top-2 rounded-full bg-black/60 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-white backdrop-blur-sm">
                         {reward.category.trim()}
                       </span>

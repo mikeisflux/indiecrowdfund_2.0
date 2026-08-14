@@ -128,10 +128,19 @@ export function RewardForm({
   // string is what puts two rewards in the same tab, so the ones that already
   // exist matter more than our defaults. Case-insensitive dedupe against the
   // defaults so "Covers" and "covers" don't both show up.
+  //
+  // Scoped to the reward's own type. Tiers and add-ons are filtered into
+  // separate grids for the backer, so their categories are separate
+  // vocabularies — suggesting an add-on's "Slipcases" while the creator edits
+  // a tier would invite them to create a tier tab nothing can fill. The
+  // database distinction is Reward.type, already on the row: (TIER, "Covers")
+  // and (ADDON, "Covers") are different things without needing the stored
+  // string to say so, which keeps the creator's exact wording intact.
   const categorySuggestions = useMemo(() => {
     const used: string[] = [];
     const seen = new Set<string>();
     for (const r of allRewards) {
+      if ((r.type || "TIER") !== (currentReward.type || "TIER")) continue;
       const c = r.category?.trim();
       if (!c) continue;
       const key = c.toLowerCase();
@@ -141,7 +150,7 @@ export function RewardForm({
     }
     const defaults = DEFAULT_CATEGORIES.filter((c) => !seen.has(c.toLowerCase()));
     return [...used, ...defaults];
-  }, [allRewards]);
+  }, [allRewards, currentReward.type]);
   const [isCopied, setIsCopied] = React.useState(false);
   const [isEmailing, setIsEmailing] = React.useState(false);
 
@@ -254,10 +263,11 @@ export function RewardForm({
                 </datalist>
                 <p className="text-xs text-muted-foreground flex items-start gap-1">
                   <Info className="h-3 w-3 mt-0.5 shrink-0" />
-                  Groups this reward into a filter tab on your campaign page — e.g.
-                  Covers, Box Sets, Upgrades. Reuse the same wording across rewards to
-                  put them in the same tab. Leave it blank and it lands under
-                  &ldquo;Other&rdquo;.
+                  Groups this {currentReward.type === "ADDON" ? "add-on" : "reward"} into
+                  a filter tab — e.g. Covers, Box Sets, Upgrades. Reuse the same wording
+                  to put several in the same tab. Leave it blank and it lands under
+                  &ldquo;Other&rdquo;. Rewards and add-ons are filtered separately, so
+                  their tabs never mix.
                 </p>
               </div>
 
