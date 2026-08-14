@@ -68,6 +68,24 @@ export function PageFlipReader({
 
   const flipKey = useMemo(() => `flipbook-${bookId}`, [bookId]);
 
+  // page-flip forces two pages hard, and neither is configurable:
+  //
+  //   createSpread():
+  //     if (showCover)            pages[0].setDensity('hard')   // the cover
+  //     ... lone trailing page -> pages[last].setDensity('hard')
+  //
+  // The trailing case ignores showCover entirely: whenever the count is odd,
+  // the final page has no partner, gets a spread of its own, and is stiffened.
+  // A short preview hits both at once — with a cover and two pages, page 0 is
+  // the cover and page 1 is the orphan, so *every* page is hard and nothing
+  // bends.
+  //
+  // Covers are already off for previews. For the orphan there's no setting, so
+  // pad to an even count with one blank leaf: the real last page gains a
+  // partner and stays soft, and the blank is what goes stiff instead. Only
+  // when covers are off — a real book wants its back cover hard.
+  const needsBlankLeaf = !showCover && images.length % 2 === 1;
+
   useEffect(() => {
     setReady(false);
     setCurrentPage(initialPageIndex);
@@ -151,7 +169,7 @@ export function PageFlipReader({
           // react-pageflip reads density off the DOM node. Pages default to
           // soft, but showCover promotes the first and last to hard — so with
           // covers off we state soft explicitly and every page bends.
-          <div key={src} className="page" data-density={showCover ? undefined : "soft"}>
+          <div key={src} className="page" data-density="soft">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={src}
@@ -161,6 +179,9 @@ export function PageFlipReader({
             />
           </div>
         ))}
+        {needsBlankLeaf && (
+          <div key="blank-leaf" className="page" data-density="soft" aria-hidden />
+        )}
       </HTMLFlipBook>
 
       <div className="mt-4 text-center text-sm text-white/70">
