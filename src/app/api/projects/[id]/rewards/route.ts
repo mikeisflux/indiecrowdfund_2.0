@@ -131,6 +131,27 @@ async function existingProjectItemIds(
   return new Set(rows.map((r: { id: string }) => r.id));
 }
 
+// Position for a newly created reward: the end of its own type's list.
+//
+// displayOrder used to be left null on create and only filled in when the
+// creator dragged something. The public page orders by
+// `displayOrder asc nulls last, amount asc`, so any reward that had never been
+// dragged fell to the back of the grid sorted by price — while the builder
+// showed it wherever the creator put it. A campaign where nothing had ever
+// been dragged rendered entirely in price order, which is not an order anyone
+// chose.
+//
+// Appending matches the builder, whose addReward pushes to the end of the
+// list. Scoped by type because the page reads order within TIER and ADDON
+// separately.
+async function nextDisplayOrder(projectId: string, type: string): Promise<number> {
+  const agg = await db.reward.aggregate({
+    where: { projectId, type: type as "TIER" | "ADDON" },
+    _max: { displayOrder: true },
+  });
+  return (agg._max.displayOrder ?? -1) + 1;
+}
+
 async function saveReward(projectId: string, reward: RewardData) {
   // Only keep projectItemId references that exist in this project.
   const validItemIds = await existingProjectItemIds(reward.items, projectId);
@@ -204,9 +225,11 @@ async function saveReward(projectId: string, reward: RewardData) {
   }
 
   // Otherwise, create new reward
+  const displayOrder = await nextDisplayOrder(projectId, reward.type);
   const created = await db.reward.create({
     data: {
       projectId,
+      displayOrder,
       type: reward.type,
       title: reward.title,
       description: reward.description || "",

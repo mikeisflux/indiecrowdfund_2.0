@@ -800,9 +800,18 @@ export async function PATCH(
                 }
               }
             } else {
-              // Create new reward
+              // Create new reward. displayOrder appends within this type so a
+              // reward that is never dragged still holds a chosen position
+              // rather than falling to the back of the grid by price.
+              const maxOrder = await tx.reward.aggregate({
+                where: { projectId: id, type: rewardData.type },
+                _max: { displayOrder: true },
+              });
               const newReward = await tx.reward.create({
-                data: rewardData,
+                data: {
+                  ...rewardData,
+                  displayOrder: (maxOrder._max.displayOrder ?? -1) + 1,
+                },
               });
 
               // Create items
