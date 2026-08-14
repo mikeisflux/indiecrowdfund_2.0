@@ -480,6 +480,11 @@ export function usePledge() {
         hasAdultContent: projectData.hasAdultContent || false, estimatedDelivery: projectData.estimatedDelivery || "",
         currentAmount: projectData.currentAmount || 0, goalAmount: projectData.goalAmount || 0,
         endDate: projectData.endDate || null,
+        // Chooses the add-on step's UI. This object maps fields explicitly, so
+        // anything the step needs has to be listed here — a missing key is not
+        // a type error when the field is optional, it just silently selects
+        // the v1 layout.
+        layoutVersion: projectData.layoutVersion ?? 1,
         creator: { id: projectData.creator?.id || "", name: projectData.creator?.name || "Creator", location: projectData.location || "", image: projectData.creator?.image || "" },
       };
 
@@ -534,8 +539,10 @@ export function usePledge() {
         shippingCost?: Record<string, number> | number; shippingType?: string;
         shippingCountries?: string[]; imageUrl?: string; estimatedDelivery?: string;
         quantityAvailable?: number; quantityClaimed?: number; items?: { title: string }[];
+        category?: string | null;
       }) => ({
         id: addon.id, title: addon.title, description: addon.description || "",
+        category: addon.category ?? null,
         amount: addon.amount, shippingCost: addon.shippingCost || {},
         shippingType: (addon.shippingType as AddonData["shippingType"]) || "NO_SHIPPING",
         shippingCountries: addon.shippingCountries || [], imageUrl: addon.imageUrl || null,
