@@ -61,7 +61,11 @@ export async function POST(
         description: reward.description,
         amount: reward.amount,
         imageUrl: reward.imageUrl,
-        // Keep the source tier's grouping so the copy lands in the same tab.
+        // Carry the category NAME across, not the tier's bucket. Grouping keys
+        // on (type, category) and the campaign page splits by type before
+        // grouping, so this copy lands in the ADD-ON tab's "Covers" — it cannot
+        // show up among the reward pills. That falls out of the type column;
+        // nothing here has to rewrite the string to keep the two apart.
         category: reward.category,
         estimatedDelivery: reward.estimatedDelivery,
         shippingType: reward.shippingType,
