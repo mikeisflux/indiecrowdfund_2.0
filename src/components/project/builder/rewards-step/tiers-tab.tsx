@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { usePersistentSort } from "./use-persistent-sort";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -377,12 +377,31 @@ export function TiersTab({
     }
   };
 
-  // Picking a sort writes it through as the project's display order, so the
-  // public page matches what the creator arranged here. Without this the sort
-  // box was preview-only and backers still saw the old order.
+  // Whatever this list shows is the order backers get. Both directions of the
+  // picker write through, because both are the creator arranging the campaign.
+  //
+  // Switching to Manual used to return early, so it persisted nothing — and
+  // manualOrder is local state that only resyncs when tiers are added or
+  // removed, never when the order changes. So after applying a sort the store
+  // held the sorted order while manualOrder still held the old one: flipping
+  // back to Manual showed a list that existed nowhere else, and saved nothing.
+  //
+  // A sort choice IS an arrangement, so applying one also adopts it as the new
+  // manual baseline. Manual then always shows what the site shows.
+  // Skips the mount run so simply opening the builder doesn't rewrite the
+  // creator's order. Only an actual change of the picker persists.
+  const sortAppliedRef = useRef(false);
   useEffect(() => {
-    if (sortOption === "manual") return;
+    if (!sortAppliedRef.current) {
+      sortAppliedRef.current = true;
+      return;
+    }
     const addonsList = rewards.filter(r => r.type === "ADDON");
+    if (sortOption === "manual") {
+      onReorderRewards([...manualOrder, ...addonsList]);
+      return;
+    }
+    setManualOrder(sortedTiers);
     onReorderRewards([...sortedTiers, ...addonsList]);
     // Runs on the creator's choice only — re-running on sortedTiers would
     // loop, since persisting updates the store the list derives from.

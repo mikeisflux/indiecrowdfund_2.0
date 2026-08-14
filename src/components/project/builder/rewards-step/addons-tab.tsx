@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { usePersistentSort } from "./use-persistent-sort";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -371,10 +371,22 @@ export function AddonsTab({
     }
   };
 
-  // Persist the chosen sort as the real display order (see tiers tab).
+  // Persist the chosen order, in both directions (see tiers tab for why
+  // switching to Manual has to write through too).
+  // Skips the mount run so simply opening the builder doesn't rewrite the
+  // creator's order. Only an actual change of the picker persists.
+  const sortAppliedRef = useRef(false);
   useEffect(() => {
-    if (sortOption === "manual") return;
+    if (!sortAppliedRef.current) {
+      sortAppliedRef.current = true;
+      return;
+    }
     const tiersList = rewards.filter(r => r.type === "TIER");
+    if (sortOption === "manual") {
+      onReorderRewards([...tiersList, ...manualOrder]);
+      return;
+    }
+    setManualOrder(sortedAddons);
     onReorderRewards([...tiersList, ...sortedAddons]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sortOption]);
