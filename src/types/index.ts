@@ -585,6 +585,14 @@ export interface RewardData {
   // Shared stock: when set, this reward draws from the linked reward's
   // quantity pool rather than counting on its own.
   sharedStockWithId?: string;
+  // Cross-project import only. A pool is per-campaign, so the source's
+  // sharedStockWithId means nothing in the target — but neither copy has a
+  // real id until it's saved, so the pair can't be linked client-side either.
+  // These carry the intent through the batch save, where the server resolves
+  // clientKey -> new id and writes the real link. Both ends must be in the
+  // same import for it to resolve; otherwise it's dropped.
+  clientKey?: string;
+  sharedStockWithClientKey?: string;
   visibility: Visibility;
   secretToken?: string;  // For secret rewards - only accessible via this token
   availableFrom?: Date;

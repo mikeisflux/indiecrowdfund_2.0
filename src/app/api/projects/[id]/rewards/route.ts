@@ -74,8 +74,14 @@ const rewardSchema = z.object({
   ]).optional().default({}),
   quantityAvailable: z.number().int().min(1).optional().nullable(),
   // Shared stock pool: id of another reward on this project whose quantity
-  // this one draws from. Validated below against the same project.
+  // this one draws from. Checked against the project by validSharedStockId
+  // before every write — a foreign id would pool two campaigns' inventories.
   sharedStockWithId: z.string().optional().nullable(),
+  // Batch-only. See RewardData in types/index.ts: a cross-project import knows
+  // which rewards should share a pool but not their future ids, so it labels
+  // them and the batch handler links them once they exist.
+  clientKey: z.string().max(100).optional(),
+  sharedStockWithClientKey: z.string().max(100).optional(),
   visibility: z.enum(["PUBLIC", "SECRET"]).optional().default("PUBLIC"),
   secretToken: z.string().optional().nullable(),
   isEnded: z.boolean().optional().default(false),
@@ -152,9 +158,48 @@ async function nextDisplayOrder(projectId: string, type: string): Promise<number
   return (agg._max.displayOrder ?? -1) + 1;
 }
 
+// A shared-stock target must live in the SAME project.
+//
+// The pool query is `COALESCE(sharedStockWithId, id)` (lib/payments/rewards.ts),
+// so a cross-project id doesn't dangle — it silently joins two campaigns'
+// inventories, and a claim on one decrements the other's limited run. Nothing
+// enforced this: the field was written straight through from the request, and
+// the schema comment claiming otherwise was aspirational.
+//
+// A stale or foreign id is nulled rather than rejected, matching how invalid
+// projectItemIds are handled: the creator's save succeeds and the reward simply
+// keeps its own count, which is the safe direction to fail.
+async function validSharedStockId(
+  sharedStockWithId: string | null | undefined,
+  projectId: string,
+  selfId?: string
+): Promise<string | null> {
+  if (!sharedStockWithId) return null;
+  // Pointing at itself would make the pool key its own id — harmless but
+  // meaningless, and it renders as "shares stock with itself" in the builder.
+  if (selfId && sharedStockWithId === selfId) return null;
+  const target = await db.reward.findFirst({
+    where: { id: sharedStockWithId, projectId },
+    select: { id: true },
+  });
+  if (!target) {
+    projectsRewardsLogger.warn(
+      { sharedStockWithId, projectId },
+      "Dropped shared-stock link: target is not a reward in this project"
+    );
+    return null;
+  }
+  return target.id;
+}
+
 async function saveReward(projectId: string, reward: RewardData) {
   // Only keep projectItemId references that exist in this project.
   const validItemIds = await existingProjectItemIds(reward.items, projectId);
+  const sharedStockId = await validSharedStockId(
+    reward.sharedStockWithId,
+    projectId,
+    reward.id
+  );
   // Generate secret token for SECRET visibility if not provided
   let secretToken = reward.secretToken || null;
   if (reward.visibility === "SECRET" && !secretToken) {
@@ -199,7 +244,7 @@ async function saveReward(projectId: string, reward: RewardData) {
           shippingCountries: normalizeShippingCountries(reward),
           shippingCost: reward.shippingCost,
           quantityAvailable: reward.quantityAvailable,
-          sharedStockWithId: reward.sharedStockWithId || null,
+          sharedStockWithId: sharedStockId,
           visibility: reward.visibility,
           secretToken,
           isEnded: reward.isEnded,
@@ -241,7 +286,7 @@ async function saveReward(projectId: string, reward: RewardData) {
       shippingCountries: normalizeShippingCountries(reward),
       shippingCost: reward.shippingCost,
       quantityAvailable: reward.quantityAvailable,
-      sharedStockWithId: reward.sharedStockWithId || null,
+      sharedStockWithId: sharedStockId,
       visibility: reward.visibility,
       secretToken,
       isEnded: reward.isEnded,
@@ -345,6 +390,46 @@ export async function POST(
             success: false,
             error: message,
           });
+        }
+      }
+
+      // Second pass: link shared-stock pairs that were imported together.
+      // Both rewards now exist, so the client's labels can be resolved to real
+      // ids. Pairs whose partner wasn't in this batch are skipped — that link
+      // pointed at another campaign's pool and must not be recreated here.
+      const keyToId = new Map<string, string>();
+      batch.rewards.forEach((r, i) => {
+        const saved = results[i];
+        const id = (saved?.reward as { id?: string } | undefined)?.id;
+        if (r.clientKey && saved?.success && id) keyToId.set(r.clientKey, id);
+      });
+
+      const links = batch.rewards
+        .map((r, i) => {
+          if (!r.sharedStockWithClientKey) return null;
+          const selfId = (results[i]?.reward as { id?: string } | undefined)?.id;
+          const targetId = keyToId.get(r.sharedStockWithClientKey);
+          if (!selfId || !targetId || selfId === targetId) return null;
+          return db.reward.update({
+            where: { id: selfId },
+            data: { sharedStockWithId: targetId },
+          });
+        })
+        .filter((u): u is NonNullable<typeof u> => u !== null);
+
+      if (links.length > 0) {
+        try {
+          await db.$transaction(links);
+          projectsRewardsLogger.info(
+            `Linked ${links.length} imported shared-stock pair(s) for project ${projectId}`
+          );
+        } catch (err) {
+          // The rewards themselves saved; only the pooling is missing, and the
+          // creator can re-link in the builder.
+          projectsRewardsLogger.error(
+            { err: formatError(err), projectId },
+            "Failed to link imported shared-stock pairs"
+          );
         }
       }
 
@@ -474,6 +559,11 @@ export async function PATCH(
     // Only keep projectItemId references that exist in this project (a stale
     // client id otherwise trips the RewardItem FK and 500s the save).
     const validItemIds = await existingProjectItemIds(reward.items, projectId);
+    const patchSharedStockId = await validSharedStockId(
+      reward.sharedStockWithId,
+      projectId,
+      reward.id
+    );
 
     // Update reward and replace items
     const updated = await db.$transaction(async (tx) => {
@@ -497,7 +587,7 @@ export async function PATCH(
           shippingCountries: normalizeShippingCountries(reward),
           shippingCost: reward.shippingCost,
           quantityAvailable: reward.quantityAvailable,
-          sharedStockWithId: reward.sharedStockWithId || null,
+          sharedStockWithId: patchSharedStockId,
           visibility: reward.visibility,
           secretToken,
           isEnded: reward.isEnded,

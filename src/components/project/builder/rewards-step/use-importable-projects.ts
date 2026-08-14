@@ -20,6 +20,11 @@ export interface ImportableRewardItem {
 }
 
 export interface ImportableReward {
+  /** Source reward id. Meaningless in the target project — used only to match
+   *  shared-stock partners within a single import. */
+  id?: string;
+  /** The source's shared-stock partner, likewise only for matching. */
+  sharedStockWithId?: string | null;
   title: string;
   amount: number;
   description: string;
@@ -60,6 +65,8 @@ interface ApiReward {
   type?: string;
   imageUrl?: string | null;
   category?: string | null;
+  id?: string;
+  sharedStockWithId?: string | null;
   items?: ApiRewardItem[];
   shippingType?: string;
   shippingCountries?: string[];
@@ -77,6 +84,8 @@ function toImportableReward(r: ApiReward): ImportableReward {
     type: r.type === "ADDON" ? "ADDON" : "TIER",
     imageUrl: r.imageUrl || "",
     category: r.category ?? null,
+    id: r.id,
+    sharedStockWithId: r.sharedStockWithId ?? null,
     items: (r.items || []).map((i) => ({
       title: i.title || "",
       description: i.description || "",

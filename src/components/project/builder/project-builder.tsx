@@ -158,6 +158,10 @@ export function ProjectBuilder() {
         amount: Number(reward.amount) || 0,
         imageUrl: reward.imageUrl || undefined,
         category: reward.category || null,
+        // Carried so the server can link shared-stock pairs that were imported
+        // together; ignored for every other reward.
+        clientKey: reward.clientKey,
+        sharedStockWithClientKey: reward.sharedStockWithClientKey,
         estimatedDelivery: reward.estimatedDelivery
           ? new Date(reward.estimatedDelivery).toISOString()
           : null,

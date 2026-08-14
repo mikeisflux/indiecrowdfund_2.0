@@ -614,7 +614,16 @@ export function RewardsStep({ onFormOpenChange }: RewardsStepProps) {
   const handleDuplicateReward = (index: number) => {
     const reward = rewards[index];
     if (!reward) return;
-    addReward({ ...reward, id: undefined, title: `${reward.title} (Copy)` });
+    addReward({
+      ...reward,
+      id: undefined,
+      title: `${reward.title} (Copy)`,
+      // Shed the cross-project import labels. They identify one specific
+      // reward from one specific import; a duplicate carrying them would be
+      // linked to that pair's partner on the next batch save.
+      clientKey: undefined,
+      sharedStockWithClientKey: undefined,
+    });
     toast.success("Reward duplicated");
   };
 
@@ -701,6 +710,17 @@ export function RewardsStep({ onFormOpenChange }: RewardsStepProps) {
         return draft;
       };
 
+      // Shared stock is per-campaign, so the source's sharedStockWithId can't
+      // come across as-is — it names a reward in the other project, and the
+      // pool key is COALESCE(sharedStockWithId, id), so carrying it would join
+      // two campaigns' inventories. Neither copy has an id yet either.
+      //
+      // Instead both ends are labelled with their source id and the server
+      // resolves the pair after the batch save. Only pairs imported together
+      // can be resolved; a partner left behind in the other campaign is
+      // dropped, which is the correct outcome rather than a missing feature.
+      const importedIds = new Set(sources.map((s) => s.id).filter(Boolean));
+
       for (const source of sources) {
         const resolvedItems: RewardItemData[] = [];
         for (const sourceItem of source.items) {
@@ -716,6 +736,11 @@ export function RewardsStep({ onFormOpenChange }: RewardsStepProps) {
           amount: source.amount,
           imageUrl: source.imageUrl || undefined,
           category: source.category || "",
+          clientKey: source.id,
+          sharedStockWithClientKey:
+            source.sharedStockWithId && importedIds.has(source.sharedStockWithId)
+              ? source.sharedStockWithId
+              : undefined,
           shippingType: source.shippingType ?? defaultReward.shippingType,
           shippingCountries: source.shippingCountries ?? defaultReward.shippingCountries,
           shippingCost: source.shippingCost ?? defaultReward.shippingCost,
@@ -760,6 +785,12 @@ export function RewardsStep({ onFormOpenChange }: RewardsStepProps) {
       type: "ADDON",
       title: `${tier.title} (Add-on)`,
       items: itemsWithProjectItemId,
+      // sharedStockWithId is kept deliberately: this copy is the same physical
+      // thing as the tier and lives in the same project, so pooling is both
+      // valid and usually what the creator wants. The import labels are not —
+      // see handleDuplicateReward.
+      clientKey: undefined,
+      sharedStockWithClientKey: undefined,
     });
     // Success toast is shown once by ImportAddonDialog after a (possibly bulk) import.
   };
