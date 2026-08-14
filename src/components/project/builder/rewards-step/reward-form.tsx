@@ -35,6 +35,8 @@ import { ImageUpload } from "@/components/ui/image-upload";
 import { cn } from "@/lib/utils";
 import { RewardData, RewardItemData, ShippingType, SHIPPING_COUNTRIES } from "@/types";
 import { DEFAULT_CATEGORIES, MONTHS, YEARS } from "./constants";
+import { useProjectStore } from "@/lib/stores/project-store";
+import { rewardImageSpec } from "@/lib/image-specs";
 
 interface RewardFormProps {
   currentReward: RewardData;
@@ -115,6 +117,12 @@ export function RewardForm({
     () => findStockCandidates(currentReward, allRewards),
     [currentReward, allRewards]
   );
+
+  // v1 renders reward covers landscape, v2 renders them portrait, so the two
+  // layouts need different source artwork. Ask for the one this campaign will
+  // actually display.
+  const layoutVersion = useProjectStore((s) => s.projectLayoutVersion);
+  const artwork = rewardImageSpec(layoutVersion);
 
   // Categories already in use on this project come first — reusing an exact
   // string is what puts two rewards in the same tab, so the ones that already
@@ -287,8 +295,8 @@ export function RewardForm({
                 onChange={(url) => onRewardChange({ ...currentReward, imageUrl: url })}
                 projectId={projectId || undefined}
                 uploadType="reward"
-                aspectRatio="aspect-[933/621]"
-                recommendedSize="933 x 621 px (required size)"
+                aspectRatio={artwork.aspect}
+                recommendedSize={artwork.label}
                 maxSizeMB={10}
               />
             </CardContent>

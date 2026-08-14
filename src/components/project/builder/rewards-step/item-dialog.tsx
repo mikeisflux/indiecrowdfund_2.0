@@ -15,6 +15,7 @@ import {
 import { Loader2 } from "lucide-react";
 import { ImageUpload } from "@/components/ui/image-upload";
 import { RewardItemData } from "@/types";
+import { ITEM_SPEC } from "@/lib/image-specs";
 
 interface ItemDialogProps {
   isOpen: boolean;
@@ -82,8 +83,8 @@ export function ItemDialog({
               onChange={(url) => onItemChange({ ...currentItem, imageUrl: url })}
               projectId={projectId}
               uploadType="item"
-              aspectRatio="aspect-[933/621]"
-              recommendedSize="933 x 621 px (required size)"
+              aspectRatio={ITEM_SPEC.aspect}
+              recommendedSize={ITEM_SPEC.label}
               maxSizeMB={10}
             />
           </div>

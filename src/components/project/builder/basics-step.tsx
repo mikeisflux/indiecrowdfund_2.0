@@ -23,6 +23,7 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { slugify } from "@/lib/utils";
 import { toast } from "sonner";
+import { PROJECT_COVER_SPEC } from "@/lib/image-specs";
 
 // A type="date" input needs "YYYY-MM-DD" or "". Clearing the field
 // yields new Date("") (Invalid Date); calling .toISOString() on that
@@ -492,8 +493,8 @@ export function BasicsStep() {
           onChange={(url) => updateBasics({ imageUrl: url })}
           projectId={projectId || undefined}
           uploadType="project"
-          aspectRatio="aspect-video"
-          recommendedSize="1024 x 576 px (16:9 ratio)"
+          aspectRatio={PROJECT_COVER_SPEC.aspect}
+          recommendedSize={PROJECT_COVER_SPEC.label}
           maxSizeMB={10}
         />
       </div>

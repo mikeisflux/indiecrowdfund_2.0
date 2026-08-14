@@ -43,6 +43,8 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { cn } from "@/lib/utils";
+import { useProjectStore } from "@/lib/stores/project-store";
+import { rewardImageSpec } from "@/lib/image-specs";
 
 type SortOption = "manual" | "name-asc" | "name-desc" | "price-asc" | "price-desc";
 
@@ -85,6 +87,9 @@ function SortableTierRow({
   onEndReward: (index: number) => void;
   onRewardImageChange: (rewardIndex: number, imageUrl: string) => Promise<void>;
 }) {
+  // Which layout this campaign renders with — decides whether the thumbnail
+  // below is landscape (v1) or portrait (v2).
+  const layoutVersion = useProjectStore((s) => s.projectLayoutVersion);
   const {
     attributes,
     listeners,
@@ -156,6 +161,10 @@ function SortableTierRow({
             alt={tier.title}
             projectId={projectId || undefined}
             uploadType="reward"
+            // Thumbnail carries the aspect the campaign page will actually
+            // render at, so a creator can see a bad crop here rather than
+            // after launch. tailwind-merge lets this beat the default.
+            className={rewardImageSpec(layoutVersion).aspect}
             onImageChange={(url) => onRewardImageChange(rewardIndex, url)}
           />
         </div>

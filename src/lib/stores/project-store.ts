@@ -61,6 +61,13 @@ interface ProjectBuilderState {
   projectStatus: string | null;
   setProjectStatus: (status: string | null) => void;
 
+  // Campaign page layout the project renders with. Drives the builder's
+  // recommended artwork sizes: v1 shows reward covers landscape, v2 shows them
+  // portrait, so the two ask creators for different files. Null until a saved
+  // project is loaded; treated as v2 (the schema default for new projects).
+  projectLayoutVersion: number | null;
+  setProjectLayoutVersion: (version: number | null) => void;
+
   // End a reward (for live campaigns with backers)
   endReward: (index: number) => void;
 }
@@ -108,6 +115,7 @@ const initialState = {
   projectId: null,
   projectSlug: null,
   projectStatus: null,
+  projectLayoutVersion: null,
 };
 
 export const useProjectStore = create<ProjectBuilderState>()(
@@ -193,6 +201,8 @@ export const useProjectStore = create<ProjectBuilderState>()(
       setProjectSlug: (slug) => set({ projectSlug: slug }),
 
       setProjectStatus: (status) => set({ projectStatus: status }),
+
+      setProjectLayoutVersion: (version) => set({ projectLayoutVersion: version }),
 
       endReward: (index) =>
         set((state) => ({
@@ -294,6 +304,7 @@ export const useProjectStore = create<ProjectBuilderState>()(
           projectId: state.projectId,
           projectSlug: state.projectSlug,
           projectStatus: state.projectStatus,
+          projectLayoutVersion: state.projectLayoutVersion,
         } as ProjectBuilderState;
       },
     }

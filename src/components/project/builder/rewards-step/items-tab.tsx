@@ -43,6 +43,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { cn } from "@/lib/utils";
+import { ITEM_SPEC } from "@/lib/image-specs";
 
 type SortOption = "manual" | "name-asc" | "name-desc";
 
@@ -158,6 +159,7 @@ function SortableItemRow({
             alt={item.title}
             projectId={projectId || undefined}
             uploadType="item"
+            className={ITEM_SPEC.aspect}
             onImageChange={(url) => onItemImageChange(item.id || "", url)}
           />
         </div>

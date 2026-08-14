@@ -24,6 +24,7 @@ import { Plus, Trash2, Link, ExternalLink, Loader2 } from "lucide-react";
 import { getInitials } from "@/lib/utils";
 import { toast } from "sonner";
 import { ImageUpload } from "@/components/ui/image-upload";
+import { AVATAR_SPEC } from "@/lib/image-specs";
 
 export function PeopleStep() {
   const { people, updatePeople, projectId } = useProjectStore();
@@ -384,8 +385,8 @@ export function PeopleStep() {
                 }}
                 projectId={projectId || undefined}
                 uploadType="project"
-                aspectRatio="aspect-square"
-                recommendedSize="400 x 400 px"
+                aspectRatio={AVATAR_SPEC.aspect}
+                recommendedSize={AVATAR_SPEC.label}
                 maxSizeMB={5}
                 className="w-32 h-32"
               />
