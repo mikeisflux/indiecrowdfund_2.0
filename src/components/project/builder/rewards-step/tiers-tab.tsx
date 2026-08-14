@@ -43,6 +43,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { cn } from "@/lib/utils";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useProjectStore } from "@/lib/stores/project-store";
 import { rewardImageSpec } from "@/lib/image-specs";
 
@@ -64,6 +65,11 @@ interface TiersTabProps {
   onRewardImageChange: (rewardIndex: number, imageUrl: string) => Promise<void>;
   onOpenImportDialog: () => void;
   onReorderRewards: (rewards: RewardData[]) => void;
+  // Value-calculator selection, owned by the step so the total survives a tab
+  // switch and both tabs share one implementation.
+  calcMode?: boolean;
+  calcSelected?: Set<string>;
+  onToggleCalc?: (key: string) => void;
 }
 
 function SortableTierRow({
@@ -76,6 +82,9 @@ function SortableTierRow({
   onDeleteReward,
   onEndReward,
   onRewardImageChange,
+  calcMode,
+  calcChecked,
+  onToggleCalc,
 }: {
   tier: RewardData;
   rewardIndex: number;
@@ -86,6 +95,9 @@ function SortableTierRow({
   onDeleteReward: (index: number) => void;
   onEndReward: (index: number) => void;
   onRewardImageChange: (rewardIndex: number, imageUrl: string) => Promise<void>;
+  calcMode: boolean;
+  calcChecked: boolean;
+  onToggleCalc: () => void;
 }) {
   // Which layout this campaign renders with — decides whether the thumbnail
   // below is landscape (v1) or portrait (v2).
@@ -110,11 +122,33 @@ function SortableTierRow({
       style={style}
       className={cn(
         "border-b last:border-b-0",
-        isDragging && "opacity-50 bg-muted shadow-lg z-10 relative"
+        isDragging && "opacity-50 bg-muted shadow-lg z-10 relative",
+        calcMode && "cursor-pointer",
+        calcMode && calcChecked && "bg-primary/10 ring-1 ring-inset ring-primary/40"
       )}
+      onClick={
+        calcMode
+          ? (e) => {
+              // Let the row's own controls keep working while armed.
+              if ((e.target as HTMLElement).closest("button,a,input,[role='checkbox']")) return;
+              onToggleCalc();
+            }
+          : undefined
+      }
     >
       <div className="grid grid-cols-12 gap-4 px-4 py-4 items-start">
-        {/* Drag handle */}
+        {/* Calculator selection. Replaces the drag handle while the tool is
+            armed — dragging and picking would otherwise compete for the same
+            gesture on the same square of the row. */}
+        {calcMode ? (
+          <div className="col-span-1 flex items-center justify-center pt-1">
+            <Checkbox
+              checked={calcChecked}
+              onCheckedChange={onToggleCalc}
+              aria-label={`Include ${tier.title} in the total`}
+            />
+          </div>
+        ) : (
         <div
           className="col-span-1 flex items-center justify-center cursor-grab active:cursor-grabbing pt-1"
           {...attributes}
@@ -122,6 +156,7 @@ function SortableTierRow({
         >
           <GripVertical className="h-5 w-5 text-muted-foreground" />
         </div>
+        )}
 
         {/* Pledge amount */}
         <div className="col-span-2">
@@ -299,6 +334,9 @@ export function TiersTab({
   onRewardImageChange,
   onOpenImportDialog,
   onReorderRewards,
+  calcMode = false,
+  calcSelected,
+  onToggleCalc,
 }: TiersTabProps) {
   const [sortOption, setSortOption] = usePersistentSort<SortOption>(
     "icf.builder.sort.tiers",
@@ -485,6 +523,9 @@ export function TiersTab({
                 return (
                   <SortableTierRow
                     key={tier.id || `tier-${rewardIndex}`}
+                    calcMode={calcMode}
+                    calcChecked={!!calcSelected?.has(tier.id || `t:${tier.title}`)}
+                    onToggleCalc={() => onToggleCalc?.(tier.id || `t:${tier.title}`)}
                     tier={tier}
                     rewardIndex={rewardIndex}
                     isLive={isLive}

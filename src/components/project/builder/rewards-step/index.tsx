@@ -6,10 +6,13 @@ import { useProjectStore } from "@/lib/stores/project-store";
 import { RewardData, RewardItemData, RewardType, ShippingType } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Upload } from "lucide-react";
+import { Calculator, FileDown, Upload } from "lucide-react";
 import { toast } from "sonner";
 
-import { defaultItem, defaultReward, MONTHS } from "./constants";
+import { defaultItem, defaultReward, MONTHS, REWARD_CSV_HEADERS } from "./constants";
+import { rewardsToCsvRows } from "./reward-csv";
+import { RewardValueDialog } from "./reward-value-dialog";
+import { csvFilename, downloadCsv, toCsv } from "@/lib/csv";
 import { CSVImportScreen } from "./csv-import-screen";
 import { RewardForm } from "./reward-form";
 import { ItemDialog } from "./item-dialog";
@@ -116,6 +119,59 @@ export function RewardsStep({ onFormOpenChange }: RewardsStepProps) {
 
   const tiers = rewards.filter((r) => r.type === "TIER");
   const addons = rewards.filter((r) => r.type === "ADDON");
+
+  // Value calculator.
+  //
+  // Two-step by design: arm it, tick what you want, then read the total in a
+  // dialog. Plain click-to-select without an explicit mode would fight the row
+  // itself, which already carries a drag handle, an Edit button and a menu —
+  // and ctrl-click alone has no equivalent on a touch screen. Arming it makes
+  // the rows selectable and nothing else.
+  //
+  // Base prices only. Shipping is per-country and per-backer, so folding it in
+  // would produce a figure that is true for nobody.
+  const [calcMode, setCalcMode] = useState(false);
+  const [calcOpen, setCalcOpen] = useState(false);
+  const [calcSelected, setCalcSelected] = useState<Set<string>>(new Set());
+
+  // Unsaved rewards have no id yet, so fall back to the title for identity.
+  const calcKey = (r: RewardData) => r.id || `t:${r.title}`;
+
+  const toggleCalc = (key: string) =>
+    setCalcSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+
+  // Scoped to the tab in view, so the total always matches what's tickable.
+  const calcScope = activeTab === "addons" ? addons : tiers;
+  const calcPicked = calcScope.filter((r) => calcSelected.has(calcKey(r)));
+  const calcTotal = calcPicked.reduce((sum, r) => sum + (Number(r.amount) || 0), 0);
+
+  const exitCalc = () => {
+    setCalcMode(false);
+    setCalcOpen(false);
+    setCalcSelected(new Set());
+  };
+
+  // Export the tab in view, in the order it's displayed.
+  const handleExportCsv = () => {
+    const isAddons = activeTab === "addons";
+    const list = isAddons ? addons : tiers;
+    if (list.length === 0) {
+      toast.info(`No ${isAddons ? "add-ons" : "rewards"} to export yet.`);
+      return;
+    }
+    downloadCsv(
+      csvFilename(projectSlug || "campaign", isAddons ? "addons" : "rewards"),
+      toCsv([...REWARD_CSV_HEADERS], rewardsToCsvRows(list))
+    );
+    toast.success(
+      `Exported ${list.length} ${isAddons ? "add-on" : "reward"}${list.length === 1 ? "" : "s"}`
+    );
+  };
 
   // Item handlers
   const openCreateItemDialog = () => {
@@ -709,30 +765,49 @@ export function RewardsStep({ onFormOpenChange }: RewardsStepProps) {
   };
 
   // CSV Import handlers
+  // One CSV line into fields.
+  //
+  // Handles the RFC 4180 escape ("" inside a quoted field is one literal
+  // quote), which the previous version did not: it toggled on every quote, so
+  // a JSON shipping map came back as {US:5} with the quotes stripped and
+  // JSON.parse rejected it. That made our own Export CSV unimportable.
+  const parseCsvLine = (line: string): string[] => {
+    const values: string[] = [];
+    let current = "";
+    let inQuotes = false;
+
+    for (let i = 0; i < line.length; i++) {
+      const char = line[i];
+      if (char === '"') {
+        if (inQuotes && line[i + 1] === '"') {
+          current += '"';
+          i++;
+        } else {
+          inQuotes = !inQuotes;
+        }
+      } else if (char === "," && !inQuotes) {
+        values.push(current.trim());
+        current = "";
+      } else {
+        current += char;
+      }
+    }
+    values.push(current.trim());
+    return values;
+  };
+
   const parseCSV = (text: string): Record<string, string>[] => {
-    const lines = text.trim().split("\n");
+    // Excel writes a UTF-8 BOM, and so does our export so Excel reads it back
+    // correctly. Left in place it becomes part of the first header name, and
+    // the title column silently vanishes.
+    const lines = text.replace(/^\uFEFF/, "").trim().split(/\r?\n/);
     if (lines.length < 2) return [];
 
-    const headers = lines[0].split(",").map(h => h.trim());
+    const headers = parseCsvLine(lines[0]).map(h => h.trim());
     const rows: Record<string, string>[] = [];
 
     for (let i = 1; i < lines.length; i++) {
-      const values: string[] = [];
-      let current = "";
-      let inQuotes = false;
-
-      for (const char of lines[i]) {
-        if (char === '"') {
-          inQuotes = !inQuotes;
-        } else if (char === "," && !inQuotes) {
-          values.push(current.trim());
-          current = "";
-        } else {
-          current += char;
-        }
-      }
-      values.push(current.trim());
-
+      const values = parseCsvLine(lines[i]);
       const row: Record<string, string> = {};
       headers.forEach((header, idx) => {
         row[header] = values[idx] || "";
@@ -967,14 +1042,67 @@ export function RewardsStep({ onFormOpenChange }: RewardsStepProps) {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <h2 className="text-2xl font-semibold">Create your rewards</h2>
-          <Button variant="outline" onClick={() => {
-            setIsImportScreenOpen(true);
-            onFormOpenChange?.(true);
-          }}>
-            <Upload className="h-4 w-4 mr-2" />
-            Import
-          </Button>
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Both act on the tab in view, so neither appears on Items, which
+                has no prices and no reward CSV shape. */}
+            {activeTab !== "items" && (
+              <>
+                <Button
+                  variant={calcMode ? "default" : "outline"}
+                  onClick={() => (calcMode ? exitCalc() : setCalcMode(true))}
+                >
+                  <Calculator className="h-4 w-4 mr-2" />
+                  {calcMode ? "Cancel" : "Calculate value"}
+                </Button>
+                <Button variant="outline" onClick={handleExportCsv}>
+                  <FileDown className="h-4 w-4 mr-2" />
+                  Export CSV
+                </Button>
+              </>
+            )}
+            <Button variant="outline" onClick={() => {
+              setIsImportScreenOpen(true);
+              onFormOpenChange?.(true);
+            }}>
+              <Upload className="h-4 w-4 mr-2" />
+              Import
+            </Button>
+          </div>
         </div>
+
+        {calcMode && (
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-primary/40 bg-primary/5 px-4 py-3">
+            <p className="text-sm">
+              <span className="font-medium">
+                {calcPicked.length} of {calcScope.length}{" "}
+                {activeTab === "addons" ? "add-ons" : "rewards"} selected
+              </span>
+              <span className="text-muted-foreground">
+                {" "}— click a row to add it, shift-click for a range
+              </span>
+            </p>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setCalcSelected(new Set(calcScope.map(calcKey)))}
+              >
+                Select all
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setCalcSelected(new Set())}
+                disabled={calcPicked.length === 0}
+              >
+                Clear
+              </Button>
+              <Button size="sm" onClick={() => setCalcOpen(true)} disabled={calcPicked.length === 0}>
+                Calculate
+              </Button>
+            </div>
+          </div>
+        )}
 
         <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as typeof activeTab)}>
           <TabsList className="border-b w-full justify-start rounded-none bg-transparent p-0 h-auto">
@@ -1027,6 +1155,9 @@ export function RewardsStep({ onFormOpenChange }: RewardsStepProps) {
               onRewardImageChange={handleRewardImageChange}
               onOpenImportDialog={() => setIsImportRewardDialogOpen(true)}
               onReorderRewards={handleReorderRewards}
+              calcMode={calcMode}
+              calcSelected={calcSelected}
+              onToggleCalc={toggleCalc}
             />
           </TabsContent>
 
@@ -1044,6 +1175,9 @@ export function RewardsStep({ onFormOpenChange }: RewardsStepProps) {
               onRewardImageChange={handleRewardImageChange}
               onOpenImportDialog={() => setIsImportAddonDialogOpen(true)}
               onReorderRewards={handleReorderRewards}
+              calcMode={calcMode}
+              calcSelected={calcSelected}
+              onToggleCalc={toggleCalc}
             />
           </TabsContent>
         </Tabs>
@@ -1073,6 +1207,13 @@ export function RewardsStep({ onFormOpenChange }: RewardsStepProps) {
         onOpenChange={setIsImportRewardDialogOpen}
         projectId={projectId}
         onImportReward={handleImportRewardFromProject}
+      />
+
+      <RewardValueDialog
+        open={calcOpen}
+        onOpenChange={setCalcOpen}
+        rewards={calcPicked}
+        label={activeTab === "addons" ? "add-on" : "reward"}
       />
 
       {/* Import Addon Dialog (for Addons tab) */}

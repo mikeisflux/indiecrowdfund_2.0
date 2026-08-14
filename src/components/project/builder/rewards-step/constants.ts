@@ -54,3 +54,24 @@ export const MONTHS = [
 // Generate year options (current year + 5 years)
 const currentYear = new Date().getFullYear();
 export const YEARS = Array.from({ length: 6 }, (_, i) => currentYear + i);
+
+// Columns for the Rewards / Add-ons CSV export.
+//
+// Deliberately identical to what handleImportRewards reads, so a creator can
+// export, edit in a spreadsheet, and import the same file back. Anything not
+// in this list is not round-trippable and is left out rather than exported as
+// a column that silently does nothing on the way back in — notably the reward
+// image, which is uploaded by hand and has no CSV representation.
+export const REWARD_CSV_HEADERS = [
+  "title",
+  "description",
+  "category",
+  "amount",
+  "shippingType",
+  "shippingCost",
+  "quantityAvailable",
+  "visibility",
+  "estimatedDeliveryMonth",
+  "estimatedDeliveryYear",
+  "itemTitles",
+] as const;
