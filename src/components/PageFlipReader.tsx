@@ -116,6 +116,51 @@ export function PageFlipReader({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bookId]);
 
+  // Guard an upstream crash in page-flip's touch handling.
+  //
+  // Flip.fold() creates a calculation and then runs it. When that first run
+  // fails — which it does for a fold that starts too close to the spine, or
+  // when the pointer has already left the page — `position` is never assigned,
+  // but `calc` is non-null. stopMove() only guards the null case, so on
+  // touchend it reads `this.calc.getPosition().x` off undefined and throws:
+  //
+  //   TypeError: Cannot read properties of undefined (reading 'x')
+  //     at stopMove -> userStop -> onTouchEnd
+  //
+  // Reported from iOS Safari, Android Chrome and desktop. The library is
+  // unmaintained, so the controller's method is wrapped in place: on failure
+  // reset() clears the half-built fold and the book settles instead of the
+  // error reaching the page's error boundary.
+  useEffect(() => {
+    type Controller = {
+      stopMove: () => void;
+      reset?: () => void;
+      __icfStopMoveGuarded?: boolean;
+    };
+    const patch = () => {
+      const controller = flipRef.current?.pageFlip?.()?.getFlipController?.() as
+        | Controller
+        | undefined;
+      if (!controller || controller.__icfStopMoveGuarded) return !!controller;
+      const original = controller.stopMove.bind(controller);
+      controller.stopMove = () => {
+        try {
+          original();
+        } catch {
+          controller.reset?.();
+        }
+      };
+      controller.__icfStopMoveGuarded = true;
+      return true;
+    };
+
+    // The instance is built by react-pageflip in its own effect, which may not
+    // have run yet on our first pass.
+    if (patch()) return;
+    const frame = requestAnimationFrame(() => patch());
+    return () => cancelAnimationFrame(frame);
+  }, [flipKey]);
+
   const imageCount = images.length;
 
   useEffect(() => {
