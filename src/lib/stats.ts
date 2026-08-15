@@ -24,6 +24,7 @@
 
 import { db } from "@/lib/db";
 import { logger } from "@/lib/logger";
+import { PLATFORM_TIME_ZONE, platformTimeKey } from "@/lib/platform-time";
 
 const statsLogger = logger.child({ module: "stats" });
 
@@ -47,13 +48,17 @@ export interface SyncResult {
   backerCount: number;
 }
 
-/** One day of the public funding curve. `cumulative` is the running total. */
+/** One bucket of the public funding curve. `cumulative` is the running total. */
 export interface FundingPoint {
-  /** ISO date, YYYY-MM-DD, in UTC. */
+  /**
+   * Wall-clock bucket in the platform's zone (lib/platform-time), not UTC:
+   * `YYYY-MM-DD` for a daily series, `YYYY-MM-DDTHH` for the hourly one a
+   * campaign gets on its launch day. Renderers print these digits as-is.
+   */
   date: string;
-  /** Committed that day. */
+  /** Committed in that bucket. */
   amount: number;
-  /** Running total through the end of that day. */
+  /** Running total through the end of that bucket. */
   cumulative: number;
 }
 
@@ -420,7 +425,14 @@ async function buildFundingSeries(
     //              a bare $n used as a boolean operand.
     const rows = await (db as unknown as RawQueryable).$queryRaw<DayRow[]>`
       SELECT to_char(
-               date_trunc(${granularity}::text, "createdAt"),
+               date_trunc(
+                 ${granularity}::text,
+                 -- createdAt is a bare timestamp holding UTC, so it has to be
+                 -- labelled UTC before it can be read in another zone.
+                 -- Bucketing in UTC would break the "day" at 7pm Central and
+                 -- put the evening's pledges on tomorrow's point.
+                 "createdAt" AT TIME ZONE 'UTC' AT TIME ZONE ${PLATFORM_TIME_ZONE}::text
+               ),
                ${byHour ? 'YYYY-MM-DD"T"HH24' : "YYYY-MM-DD"}::text
              ) AS day,
              SUM("amount")::float8 AS total
@@ -446,10 +458,17 @@ async function buildFundingSeries(
       byDay.set(r.day, Number(r.total) || 0);
     }
 
-    // Bucket keys are ISO prefixes, so they sort and compare as strings:
-    // 10 characters for a day, 13 for an hour.
+    // Bucket keys are platform-local wall-clock prefixes, so they sort and
+    // compare as strings: 10 characters for a day, 13 for an hour.
+    //
+    // Two conversions, and they are not interchangeable. A real instant
+    // (launchedAt, now) has to be shifted into the platform zone to find its
+    // bucket. The loop cursor below is already a wall-clock value — fromKey
+    // parsed it as UTC so the range can be stepped with date arithmetic — and
+    // shifting that again would move every bucket by the offset.
     const keyLength = byHour ? 13 : 10;
-    const toKey = (d: Date) => d.toISOString().slice(0, keyLength);
+    const instantToKey = (d: Date) => platformTimeKey(d, granularity);
+    const cursorToKey = (d: Date) => d.toISOString().slice(0, keyLength);
     const fromKey = (k: string) =>
       new Date(byHour ? `${k}:00:00Z` : `${k}T00:00:00Z`);
 
@@ -457,12 +476,12 @@ async function buildFundingSeries(
     // Start at launch when we know it, so the curve opens on day one rather
     // than on the first day money happened to come in.
     const firstKey = keys[0];
-    const launchKey = opts.launchedAt ? toKey(new Date(opts.launchedAt)) : firstKey;
+    const launchKey = opts.launchedAt ? instantToKey(new Date(opts.launchedAt)) : firstKey;
     const start = fromKey(launchKey < firstKey ? launchKey : firstKey);
 
     // End at the last bucket with money, or now for a running campaign.
     const lastKey = keys[keys.length - 1];
-    const nowKey = toKey(new Date());
+    const nowKey = instantToKey(new Date());
     const endKey = opts.status === "LIVE" && nowKey > lastKey ? nowKey : lastKey;
     const end = fromKey(endKey);
 
@@ -477,7 +496,7 @@ async function buildFundingSeries(
       d <= end && series.length < MAX_DAYS;
       byHour ? d.setUTCHours(d.getUTCHours() + 1) : d.setUTCDate(d.getUTCDate() + 1)
     ) {
-      const key = toKey(d);
+      const key = cursorToKey(d);
       const amount = byDay.get(key) ?? 0;
       cumulative += amount;
       series.push({

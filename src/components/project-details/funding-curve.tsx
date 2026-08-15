@@ -49,8 +49,10 @@ const isHourly = (series: { date: string }[]) => (series[0]?.date.length ?? 10) 
 
 function formatPoint(iso: string) {
   const hourly = iso.length > 10;
-  // Parsed as UTC to match how the series is bucketed; a local-time parse
-  // shifts every label back a day for anyone west of Greenwich.
+  // The key is already a platform-local wall clock (lib/platform-time), so it
+  // is read back and formatted as UTC to print those same digits. Formatting
+  // in the viewer's zone would re-offset an already-offset value and label
+  // midnight Central as 5 AM.
   const d = new Date(hourly ? `${iso}:00:00Z` : `${iso}T00:00:00Z`);
   return hourly
     ? d.toLocaleTimeString(undefined, { hour: "numeric", timeZone: "UTC" })
