@@ -377,6 +377,13 @@ interface DayRow {
  * constant rate along the x-axis; a series that skipped quiet days would
  * compress the slow middle of a campaign and overstate its momentum.
  *
+ * On its first day a campaign has only one daily bucket, which is not a curve
+ * — so the series falls back to hourly buckets until a second day exists.
+ * Hourly points carry a `YYYY-MM-DDTHH` date; daily ones carry `YYYY-MM-DD`.
+ * That length difference is the granularity marker the renderer reads, which
+ * keeps this returning a plain FundingPoint[] rather than pushing a second
+ * field through the project payload and both public routes.
+ *
  * Returns [] when there is nothing worth drawing — the caller renders no chart
  * rather than an empty one.
  */
@@ -384,7 +391,22 @@ export async function getProjectFundingSeries(
   projectId: string,
   opts: { status: string; launchedAt?: Date | null }
 ): Promise<FundingPoint[]> {
+  const daily = await buildFundingSeries(projectId, opts, "day");
+  if (daily.length >= 2) return daily;
+
+  // Launch day. One bucket can't show a trend, and a creator watching their
+  // own launch is the likeliest person to be looking at this.
+  const hourly = await buildFundingSeries(projectId, opts, "hour");
+  return hourly.length >= 2 ? hourly : daily;
+}
+
+async function buildFundingSeries(
+  projectId: string,
+  opts: { status: string; launchedAt?: Date | null },
+  granularity: "day" | "hour"
+): Promise<FundingPoint[]> {
   const includePending = opts.status === "LIVE";
+  const byHour = granularity === "hour";
 
   try {
     // Three deliberate casts:
@@ -397,7 +419,10 @@ export async function getProjectFundingSeries(
     //   ::boolean— the parameter is otherwise untyped, and Postgres won't infer
     //              a bare $n used as a boolean operand.
     const rows = await (db as unknown as RawQueryable).$queryRaw<DayRow[]>`
-      SELECT to_char(date_trunc('day', "createdAt"), 'YYYY-MM-DD') AS day,
+      SELECT to_char(
+               date_trunc(${granularity}::text, "createdAt"),
+               ${byHour ? 'YYYY-MM-DD"T"HH24' : "YYYY-MM-DD"}::text
+             ) AS day,
              SUM("amount")::float8 AS total
       FROM "Pledge"
       WHERE "projectId" = ${projectId}
@@ -421,20 +446,25 @@ export async function getProjectFundingSeries(
       byDay.set(r.day, Number(r.total) || 0);
     }
 
+    // Bucket keys are ISO prefixes, so they sort and compare as strings:
+    // 10 characters for a day, 13 for an hour.
+    const keyLength = byHour ? 13 : 10;
+    const toKey = (d: Date) => d.toISOString().slice(0, keyLength);
+    const fromKey = (k: string) =>
+      new Date(byHour ? `${k}:00:00Z` : `${k}T00:00:00Z`);
+
     const keys = Array.from(byDay.keys()).sort();
     // Start at launch when we know it, so the curve opens on day one rather
     // than on the first day money happened to come in.
     const firstKey = keys[0];
-    const launchKey = opts.launchedAt
-      ? new Date(opts.launchedAt).toISOString().slice(0, 10)
-      : firstKey;
-    const start = new Date((launchKey < firstKey ? launchKey : firstKey) + "T00:00:00Z");
+    const launchKey = opts.launchedAt ? toKey(new Date(opts.launchedAt)) : firstKey;
+    const start = fromKey(launchKey < firstKey ? launchKey : firstKey);
 
-    // End at the last day with money, or today for a running campaign.
+    // End at the last bucket with money, or now for a running campaign.
     const lastKey = keys[keys.length - 1];
-    const today = new Date().toISOString().slice(0, 10);
-    const endKey = opts.status === "LIVE" && today > lastKey ? today : lastKey;
-    const end = new Date(endKey + "T00:00:00Z");
+    const nowKey = toKey(new Date());
+    const endKey = opts.status === "LIVE" && nowKey > lastKey ? nowKey : lastKey;
+    const end = fromKey(endKey);
 
     // Guard against a bad launchedAt (or clock skew) producing an unbounded
     // loop: a campaign can't sensibly chart more than a few years of days.
@@ -445,9 +475,9 @@ export async function getProjectFundingSeries(
     for (
       let d = new Date(start);
       d <= end && series.length < MAX_DAYS;
-      d.setUTCDate(d.getUTCDate() + 1)
+      byHour ? d.setUTCHours(d.getUTCHours() + 1) : d.setUTCDate(d.getUTCDate() + 1)
     ) {
-      const key = d.toISOString().slice(0, 10);
+      const key = toKey(d);
       const amount = byDay.get(key) ?? 0;
       cumulative += amount;
       series.push({

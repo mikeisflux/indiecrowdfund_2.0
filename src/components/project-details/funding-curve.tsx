@@ -42,15 +42,23 @@ function money(n: number, currency = "$") {
   return `${currency}${Math.round(n)}`;
 }
 
-function formatDay(iso: string) {
+// A point's date is `YYYY-MM-DD` for a daily series and `YYYY-MM-DDTHH` for
+// the hourly one a campaign gets on its launch day — see
+// getProjectFundingSeries. Length is the marker.
+const isHourly = (series: { date: string }[]) => (series[0]?.date.length ?? 10) > 10;
+
+function formatPoint(iso: string) {
+  const hourly = iso.length > 10;
   // Parsed as UTC to match how the series is bucketed; a local-time parse
   // shifts every label back a day for anyone west of Greenwich.
-  const d = new Date(iso + "T00:00:00Z");
-  return d.toLocaleDateString(undefined, {
-    month: "short",
-    day: "numeric",
-    timeZone: "UTC",
-  });
+  const d = new Date(hourly ? `${iso}:00:00Z` : `${iso}T00:00:00Z`);
+  return hourly
+    ? d.toLocaleTimeString(undefined, { hour: "numeric", timeZone: "UTC" })
+    : d.toLocaleDateString(undefined, {
+        month: "short",
+        day: "numeric",
+        timeZone: "UTC",
+      });
 }
 
 export function FundingCurve({
@@ -130,15 +138,20 @@ export function FundingCurve({
   const last = series[series.length - 1];
   const pct = goalAmount > 0 ? Math.round((model.finalTotal / goalAmount) * 100) : 0;
 
+  // On launch day the series is hourly, so every "day" in the copy would be a
+  // lie. One noun, picked once.
+  const hourly = isHourly(series);
+  const unit = hourly ? "hour" : "day";
+
   const summary =
-    `Funding from ${formatDay(first.date)} to ${formatDay(last.date)}: ` +
+    `Funding from ${formatPoint(first.date)} to ${formatPoint(last.date)}: ` +
     `${currency}${Math.round(model.finalTotal).toLocaleString()} committed across ` +
-    `${series.length} days` +
+    `${series.length} ${unit}s` +
     (goalAmount > 0 ? `, ${pct}% of the ${currency}${Math.round(goalAmount).toLocaleString()} goal` : "") +
     (model.goalIndex >= 0
-      ? `. Goal reached on ${formatDay(series[model.goalIndex].date)}, day ${model.goalIndex + 1}.`
+      ? `. Goal reached on ${formatPoint(series[model.goalIndex].date)}, ${unit} ${model.goalIndex + 1}.`
       : ".") +
-    ` Best day was ${formatDay(model.bestDay.date)} at ${currency}${Math.round(model.bestDay.amount).toLocaleString()}.`;
+    ` Best ${unit} was ${formatPoint(model.bestDay.date)} at ${currency}${Math.round(model.bestDay.amount).toLocaleString()}.`;
 
   return (
     <div className={className}>
@@ -151,14 +164,14 @@ export function FundingCurve({
             <>
               Goal met on{" "}
               <span className="font-medium text-foreground">
-                day {model.goalIndex + 1}
+                {unit} {model.goalIndex + 1}
               </span>{" "}
               of {series.length}
             </>
           ) : (
             <>
               <span className="font-medium text-foreground tabular-nums">{pct}%</span> of goal
-              over {series.length} days
+              over {series.length} {unit}s
             </>
           )}
         </p>
@@ -234,14 +247,14 @@ export function FundingCurve({
           lets the curve stretch to any container width without recalculating
           the path, but it would stretch text with it. */}
       <div className="mt-1 flex items-center justify-between text-[10px] text-muted-foreground sm:text-[11px]">
-        <span>{formatDay(first.date)}</span>
+        <span>{formatPoint(first.date)}</span>
         {goalAmount > 0 && (
           <span className="hidden sm:inline">
             Goal {money(goalAmount, currency)}
           </span>
         )}
         <span className="tabular-nums">
-          {money(model.finalTotal, currency)} · {formatDay(last.date)}
+          {money(model.finalTotal, currency)} · {formatPoint(last.date)}
         </span>
       </div>
     </div>
