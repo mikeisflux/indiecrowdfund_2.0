@@ -901,6 +901,7 @@ export default function ProjectPage() {
             selectedAddons={selectedAddons}
             onToggleAddon={toggleAddon}
             projectEnded={project.endDate ? new Date(project.endDate) < new Date() : false}
+            layoutVersion={project.layoutVersion}
           />
         )}
 

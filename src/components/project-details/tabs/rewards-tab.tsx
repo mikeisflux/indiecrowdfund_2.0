@@ -9,6 +9,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Package, ChevronRight } from "lucide-react";
 import { RewardData, AddonData } from "../types";
 import { formatMoney, formatDeliveryDate } from "../utils";
+import { RewardGrid } from "../reward-grid";
 
 interface RewardsTabProps {
   projectPath: string;
@@ -17,9 +18,28 @@ interface RewardsTabProps {
   selectedAddons: string[];
   onToggleAddon: (addonId: string) => void;
   projectEnded?: boolean; // True when project end date has passed
+  layoutVersion?: number;
 }
 
-export function RewardsTab({
+export function RewardsTab(props: RewardsTabProps) {
+  // v2 campaigns get the same reward grid the campaign tab shows. Without this
+  // the tab was still rendering v1's sidebar-and-expanding-cards view, so the
+  // design changed under the backer the moment they clicked "Rewards" — and
+  // that view lists add-ons inside each expanded reward, which v2 moved to its
+  // own step after a reward is chosen.
+  if ((props.layoutVersion ?? 1) >= 2) {
+    return (
+      <RewardGrid
+        tiers={props.tiers}
+        projectPath={props.projectPath}
+        projectEnded={props.projectEnded ?? false}
+      />
+    );
+  }
+  return <RewardsTabV1 {...props} />;
+}
+
+function RewardsTabV1({
   projectPath,
   tiers,
   addons,
