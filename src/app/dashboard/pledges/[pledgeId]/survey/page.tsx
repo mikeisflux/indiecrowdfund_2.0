@@ -527,7 +527,10 @@ export default function BackerSurveyPage() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
+    // Bottom padding on small screens keeps the step's own Back/Continue row
+    // clear of the floating support-chat button, which is fixed to the
+    // bottom-right corner and was landing on top of "Skip Add-ons" on phones.
+    <div className="max-w-2xl mx-auto space-y-6 pb-24 sm:pb-0">
       <SurveyHeader
         data={data}
         steps={steps}
