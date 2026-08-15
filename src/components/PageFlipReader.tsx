@@ -165,23 +165,30 @@ export function PageFlipReader({
         }}
         className={ready ? "demo-book" : "demo-book opacity-0"}
       >
-        {images.map((src, idx) => (
-          // react-pageflip reads density off the DOM node. Pages default to
-          // soft, but showCover promotes the first and last to hard — so with
-          // covers off we state soft explicitly and every page bends.
-          <div key={src} className="page" data-density="soft">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={src}
-              alt={`Page ${idx + 1}`}
-              draggable={false}
-              className="page-img"
-            />
-          </div>
-        ))}
-        {needsBlankLeaf && (
-          <div key="blank-leaf" className="page" data-density="soft" aria-hidden />
-        )}
+        {/* One array, no conditional siblings. react-pageflip runs its children
+            through React.Children.map and calls cloneElement on whatever comes
+            back — and Children.map hands the callback `null` for a `false`
+            child rather than skipping it, so a `{cond && <div/>}` sibling here
+            crashes the whole page the moment cond is false. */}
+        {[
+          ...images.map((src, idx) => (
+            // react-pageflip reads density off the DOM node. Pages default to
+            // soft, but showCover promotes the first and last to hard — so with
+            // covers off we state soft explicitly and every page bends.
+            <div key={src} className="page" data-density="soft">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={src}
+                alt={`Page ${idx + 1}`}
+                draggable={false}
+                className="page-img"
+              />
+            </div>
+          )),
+          ...(needsBlankLeaf
+            ? [<div key="blank-leaf" className="page" data-density="soft" aria-hidden />]
+            : []),
+        ]}
       </HTMLFlipBook>
 
       <div className="mt-4 text-center text-sm text-white/70">
