@@ -43,6 +43,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { cn } from "@/lib/utils";
+import { rewardRowDomId } from "./reward-row-id";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useProjectStore } from "@/lib/stores/project-store";
 import { rewardImageSpec } from "@/lib/image-specs";
@@ -70,6 +71,9 @@ interface AddonsTabProps {
   calcMode?: boolean;
   calcSelected?: Set<string>;
   onToggleCalc?: (key: string) => void;
+  // Row to scroll back to after the edit form closes. See RewardsStep.
+  focusKey?: string | null;
+  onFocusHandled?: () => void;
 }
 
 function SortableAddonRow({
@@ -85,6 +89,7 @@ function SortableAddonRow({
   calcMode,
   calcChecked,
   onToggleCalc,
+  isFocused,
 }: {
   addon: RewardData;
   rewardIndex: number;
@@ -98,6 +103,7 @@ function SortableAddonRow({
   calcMode: boolean;
   calcChecked: boolean;
   onToggleCalc: () => void;
+  isFocused: boolean;
 }) {
   // Which layout this campaign renders with — decides whether the thumbnail
   // below is landscape (v1) or portrait (v2).
@@ -119,9 +125,11 @@ function SortableAddonRow({
   return (
     <div
       ref={setNodeRef}
+      id={rewardRowDomId(addon.id || `t:${addon.title}`)}
       style={style}
       className={cn(
-        "border-b last:border-b-0",
+        "border-b last:border-b-0 transition-colors duration-500",
+        isFocused && "bg-primary/10 ring-2 ring-inset ring-primary/50",
         isDragging && "opacity-50 bg-muted shadow-lg z-10 relative",
         calcMode && "cursor-pointer",
         calcMode && calcChecked && "bg-primary/10 ring-1 ring-inset ring-primary/40"
@@ -333,6 +341,8 @@ export function AddonsTab({
   calcMode = false,
   calcSelected,
   onToggleCalc,
+  focusKey,
+  onFocusHandled,
 }: AddonsTabProps) {
   const [sortOption, setSortOption] = usePersistentSort<SortOption>(
     "icf.builder.sort.addons",
@@ -429,6 +439,21 @@ export function AddonsTab({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sortOption]);
 
+  // Bring the just-edited row back into view. The form replaces the whole
+  // step, so without this the creator returns to wherever the page happened to
+  // be scrolled — which on a long catalogue is nowhere near the row they were
+  // working on. Centred rather than scrolled-to-top so the rows either side
+  // give it context.
+  useEffect(() => {
+    if (!focusKey) return;
+    const el = document.getElementById(rewardRowDomId(focusKey));
+    el?.scrollIntoView({ block: "center", behavior: "smooth" });
+    // Clear after the highlight has had time to register, so it fades rather
+    // than sticking and so a later edit of the same row re-triggers it.
+    const timer = setTimeout(() => onFocusHandled?.(), 1800);
+    return () => clearTimeout(timer);
+  }, [focusKey, onFocusHandled]);
+
   const addonIds = sortedAddons.map(addon => addon.id || `addon-${rewards.indexOf(addon)}`);
 
   return (
@@ -504,6 +529,7 @@ export function AddonsTab({
                   <SortableAddonRow
                     key={addon.id || `addon-${rewardIndex}`}
                     calcMode={calcMode}
+                    isFocused={focusKey === (addon.id || `t:${addon.title}`)}
                     calcChecked={!!calcSelected?.has(addon.id || `t:${addon.title}`)}
                     onToggleCalc={() => onToggleCalc?.(addon.id || `t:${addon.title}`)}
                     addon={addon}

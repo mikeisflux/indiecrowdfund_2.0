@@ -43,6 +43,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { cn } from "@/lib/utils";
+import { rewardRowDomId } from "./reward-row-id";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useProjectStore } from "@/lib/stores/project-store";
 import { rewardImageSpec } from "@/lib/image-specs";
@@ -70,6 +71,9 @@ interface TiersTabProps {
   calcMode?: boolean;
   calcSelected?: Set<string>;
   onToggleCalc?: (key: string) => void;
+  // Row to scroll back to after the edit form closes. See RewardsStep.
+  focusKey?: string | null;
+  onFocusHandled?: () => void;
 }
 
 function SortableTierRow({
@@ -85,6 +89,7 @@ function SortableTierRow({
   calcMode,
   calcChecked,
   onToggleCalc,
+  isFocused,
 }: {
   tier: RewardData;
   rewardIndex: number;
@@ -98,6 +103,7 @@ function SortableTierRow({
   calcMode: boolean;
   calcChecked: boolean;
   onToggleCalc: () => void;
+  isFocused: boolean;
 }) {
   // Which layout this campaign renders with — decides whether the thumbnail
   // below is landscape (v1) or portrait (v2).
@@ -119,9 +125,11 @@ function SortableTierRow({
   return (
     <div
       ref={setNodeRef}
+      id={rewardRowDomId(tier.id || `t:${tier.title}`)}
       style={style}
       className={cn(
-        "border-b last:border-b-0",
+        "border-b last:border-b-0 transition-colors duration-500",
+        isFocused && "bg-primary/10 ring-2 ring-inset ring-primary/50",
         isDragging && "opacity-50 bg-muted shadow-lg z-10 relative",
         calcMode && "cursor-pointer",
         calcMode && calcChecked && "bg-primary/10 ring-1 ring-inset ring-primary/40"
@@ -337,6 +345,8 @@ export function TiersTab({
   calcMode = false,
   calcSelected,
   onToggleCalc,
+  focusKey,
+  onFocusHandled,
 }: TiersTabProps) {
   const [sortOption, setSortOption] = usePersistentSort<SortOption>(
     "icf.builder.sort.tiers",
@@ -446,6 +456,21 @@ export function TiersTab({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sortOption]);
 
+  // Bring the just-edited row back into view. The form replaces the whole
+  // step, so without this the creator returns to wherever the page happened to
+  // be scrolled — which on a long catalogue is nowhere near the row they were
+  // working on. Centred rather than scrolled-to-top so the rows either side
+  // give it context.
+  useEffect(() => {
+    if (!focusKey) return;
+    const el = document.getElementById(rewardRowDomId(focusKey));
+    el?.scrollIntoView({ block: "center", behavior: "smooth" });
+    // Clear after the highlight has had time to register, so it fades rather
+    // than sticking and so a later edit of the same row re-triggers it.
+    const timer = setTimeout(() => onFocusHandled?.(), 1800);
+    return () => clearTimeout(timer);
+  }, [focusKey, onFocusHandled]);
+
   const tierIds = sortedTiers.map(tier => tier.id || `tier-${rewards.indexOf(tier)}`);
 
   return (
@@ -524,6 +549,7 @@ export function TiersTab({
                   <SortableTierRow
                     key={tier.id || `tier-${rewardIndex}`}
                     calcMode={calcMode}
+                    isFocused={focusKey === (tier.id || `t:${tier.title}`)}
                     calcChecked={!!calcSelected?.has(tier.id || `t:${tier.title}`)}
                     onToggleCalc={() => onToggleCalc?.(tier.id || `t:${tier.title}`)}
                     tier={tier}

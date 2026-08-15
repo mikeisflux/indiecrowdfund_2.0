@@ -1,7 +1,7 @@
 "use client";
 
 import { apiFetch } from "@/lib/fetch-utils";
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { useProjectStore } from "@/lib/stores/project-store";
 import { RewardData, RewardItemData, RewardType, ShippingType } from "@/types";
 import { Button } from "@/components/ui/button";
@@ -100,6 +100,11 @@ export function RewardsStep({ onFormOpenChange }: RewardsStepProps) {
 
   // Reward form state (replaces dialog - now shows full page form)
   const [isRewardFormOpen, setIsRewardFormOpen] = useState(false);
+  // The row that was open, so it can be scrolled back to. Refs rather than
+  // state: nothing renders from them, and they must survive the form's own
+  // re-renders without causing any.
+  const editingKeyRef = useRef<string | null>(null);
+  const savedKeyRef = useRef<string | null>(null);
   const [editingRewardIndex, setEditingRewardIndex] = useState<number | null>(null);
   const [currentReward, setCurrentReward] = useState<RewardData>(defaultReward);
   const [selectedItemIds, setSelectedItemIds] = useState<string[]>([]);
@@ -135,7 +140,19 @@ export function RewardsStep({ onFormOpenChange }: RewardsStepProps) {
   const [calcSelected, setCalcSelected] = useState<Set<string>>(new Set());
 
   // Unsaved rewards have no id yet, so fall back to the title for identity.
+  // Shared by the value calculator and by the return-from-edit scroll.
   const calcKey = (r: RewardData) => r.id || `t:${r.title}`;
+
+  // Which reward to bring back into view once the edit form closes.
+  //
+  // The form replaces the whole step, so closing it remounts the list and the
+  // creator lands wherever the page happened to be scrolled — on a catalogue of
+  // 110 rewards that's nowhere near the one they just edited. Held as a key
+  // rather than an index because saving can change the reward's position.
+  const [focusKey, setFocusKey] = useState<string | null>(null);
+  // Stable so the tabs can list it as an effect dependency without the effect
+  // re-firing on every parent render.
+  const handleFocusHandled = useCallback(() => setFocusKey(null), []);
 
   const toggleCalc = (key: string) =>
     setCalcSelected((prev) => {
@@ -374,6 +391,7 @@ export function RewardsStep({ onFormOpenChange }: RewardsStepProps) {
 
   // Reward handlers
   const openCreateRewardForm = (type: RewardType) => {
+    editingKeyRef.current = null;
     setCurrentReward({ ...defaultReward, type });
     setSelectedItemIds([]);
     setEditingRewardIndex(null);
@@ -390,6 +408,7 @@ export function RewardsStep({ onFormOpenChange }: RewardsStepProps) {
   const openEditRewardForm = (index: number) => {
     const reward = rewards[index];
     if (!reward) return;
+    editingKeyRef.current = calcKey(reward);
     setCurrentReward(reward);
     // Use projectItemId if available (from API), otherwise try to match by title, then fall back to id.
     // Older reward records loaded from the API may have items as undefined rather than an empty array;
@@ -515,6 +534,10 @@ export function RewardsStep({ onFormOpenChange }: RewardsStepProps) {
           id: result.reward.id,
           secretToken: result.reward.secretToken,
         };
+        // A brand-new reward only gets its id here, and that id is what the row
+        // will key off. Without this the scroll-back would look for `t:<title>`
+        // and find nothing.
+        savedKeyRef.current = calcKey(savedReward);
         if (editingRewardIndex !== null) {
           updateReward(editingRewardIndex, savedReward);
           toast.success("Reward saved");
@@ -542,6 +565,10 @@ export function RewardsStep({ onFormOpenChange }: RewardsStepProps) {
     setActiveTab(rewardToSave.type === "ADDON" ? "addons" : "tiers");
     setIsRewardFormOpen(false);
     onFormOpenChange?.(false);
+    // Keyed off the saved reward, not the pre-edit one — a rename changes the
+    // fallback key, and a first save gives it a real id.
+    setFocusKey(savedKeyRef.current || calcKey(rewardToSave));
+    savedKeyRef.current = null;
     setCurrentReward(defaultReward);
     setSelectedItemIds([]);
   };
@@ -550,6 +577,9 @@ export function RewardsStep({ onFormOpenChange }: RewardsStepProps) {
     setActiveTab(currentReward.type === "ADDON" ? "addons" : "tiers");
     setIsRewardFormOpen(false);
     onFormOpenChange?.(false);
+    // Cancel discards edits, so the row is still whatever it was when opened.
+    setFocusKey(editingKeyRef.current);
+    editingKeyRef.current = null;
     setCurrentReward(defaultReward);
     setSelectedItemIds([]);
   };
@@ -1185,6 +1215,8 @@ export function RewardsStep({ onFormOpenChange }: RewardsStepProps) {
               onEndReward={handleEndReward}
               onRewardImageChange={handleRewardImageChange}
               onOpenImportDialog={() => setIsImportRewardDialogOpen(true)}
+              focusKey={focusKey}
+              onFocusHandled={handleFocusHandled}
               onReorderRewards={handleReorderRewards}
               calcMode={calcMode}
               calcSelected={calcSelected}
@@ -1205,6 +1237,8 @@ export function RewardsStep({ onFormOpenChange }: RewardsStepProps) {
               onEndReward={handleEndReward}
               onRewardImageChange={handleRewardImageChange}
               onOpenImportDialog={() => setIsImportAddonDialogOpen(true)}
+              focusKey={focusKey}
+              onFocusHandled={handleFocusHandled}
               onReorderRewards={handleReorderRewards}
               calcMode={calcMode}
               calcSelected={calcSelected}
