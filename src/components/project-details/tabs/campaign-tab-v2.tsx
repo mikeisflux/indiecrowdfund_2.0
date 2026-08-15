@@ -51,23 +51,63 @@ interface CampaignTabV2Props {
 //
 // `spread` false = one page at a time. A two-page spread below ~700px CSS
 // pixels renders each page too small to read the lettering.
+//
+// `share` is how much of the viewport's *height* the book may occupy. The
+// reader sits inline in the page, and page-flip claims a touch gesture the
+// moment it reads as horizontal. Scroll to a book that fills a phone screen
+// and there is nothing left to grab: every swipe turns a page and the page
+// itself won't move. Keeping the book to 70% leaves a band above and below to
+// put a thumb on. Pointer devices scroll with a wheel and can't be trapped, so
+// the two widest steps only need enough headroom to show the book is inline.
 const READER_SIZES = [
-  { q: "(min-width: 1280px)", width: 520, height: 780, spread: true }, // xl: desktop
-  { q: "(min-width: 1024px)", width: 440, height: 660, spread: true }, // lg: small laptop / landscape tablet
-  { q: "(min-width: 768px)", width: 360, height: 540, spread: true }, // md: large tablet
-  { q: "(min-width: 640px)", width: 420, height: 630, spread: false }, // sm: small tablet / large phone landscape
-  { q: "(min-width: 400px)", width: 340, height: 510, spread: false }, // most phones
-  { q: "(min-width: 0px)", width: 280, height: 420, spread: false }, // small phones (SE-class)
+  { q: "(min-width: 1280px)", width: 520, height: 780, spread: true, share: 0.9 }, // xl: desktop
+  { q: "(min-width: 1024px)", width: 440, height: 660, spread: true, share: 0.8 }, // lg: small laptop / landscape tablet
+  { q: "(min-width: 768px)", width: 360, height: 540, spread: true, share: 0.7 }, // md: large tablet
+  { q: "(min-width: 640px)", width: 420, height: 630, spread: false, share: 0.7 }, // sm: small tablet / large phone landscape
+  { q: "(min-width: 400px)", width: 340, height: 510, spread: false, share: 0.7 }, // most phones
+  { q: "(min-width: 0px)", width: 280, height: 420, spread: false, share: 0.7 }, // small phones (SE-class)
 ] as const;
 
-type ReaderSize = (typeof READER_SIZES)[number];
+type ReaderSize = {
+  width: number;
+  height: number;
+  spread: boolean;
+  /** Widest a single page may render — this is what bounds the height. */
+  maxPageWidth: number;
+};
 
 function matchReaderSize(): ReaderSize {
   // Ordered widest-first, so the first match is the most specific one.
-  for (const size of READER_SIZES) {
-    if (window.matchMedia(size.q).matches) return size;
-  }
-  return READER_SIZES[READER_SIZES.length - 1];
+  const matched =
+    READER_SIZES.find((size) => window.matchMedia(size.q).matches) ??
+    READER_SIZES[READER_SIZES.length - 1];
+
+  // A phone held sideways is wide enough to match a tablet step, and would be
+  // handed a two-page spread on a 390px-tall screen. Width alone can't tell
+  // those apart; a short viewport can.
+  const base = window.innerHeight < 520 ? { ...matched, spread: false } : matched;
+
+  // Width can't tell a landscape tablet from a laptop either — a 12.9" iPad
+  // sideways is 1366px, same as plenty of desktops. The gesture-trap only
+  // exists where scrolling is a swipe, so ask about the pointer instead of
+  // guessing from the viewport.
+  const touch = window.matchMedia("(pointer: coarse)").matches;
+  const share = touch ? Math.min(base.share, 0.7) : base.share;
+
+  // The ladder above only knows the viewport's width, which is why a phone
+  // held sideways used to get a book taller than the screen. page-flip derives
+  // height from page width via the aspect ratio and ignores maxHeight in
+  // stretch mode, so invert that: the widest page whose height still fits the
+  // share we're allowing. Floored so a very short window shrinks the book
+  // rather than erasing it.
+  const fitsHeight = Math.round(
+    (window.innerHeight * share * base.width) / base.height
+  );
+
+  // Quantised to 10px. A mobile URL bar sliding away changes innerHeight by
+  // tens of pixels, and every distinct value here rebuilds the flipbook.
+  const capped = Math.max(150, Math.min(1000, fitsHeight));
+  return { ...base, maxPageWidth: Math.floor(capped / 10) * 10 };
 }
 
 // Section headings. Shared so the rewards, story and preview sections can't
@@ -97,9 +137,10 @@ export function CampaignTabV2({ project, tiers, projectPath, onViewCreator }: Ca
   // (matchMedia doesn't exist during SSR); the effect corrects it before
   // paint. Re-resolved on resize AND orientation change — a tablet turned
   // landscape crosses two of these steps at once.
-  const [reader, setReader] = useState<ReaderSize>(
-    READER_SIZES[READER_SIZES.length - 1]
-  );
+  const [reader, setReader] = useState<ReaderSize>(() => {
+    const smallest = READER_SIZES[READER_SIZES.length - 1];
+    return { ...smallest, maxPageWidth: smallest.width };
+  });
   useEffect(() => {
     const sync = () => setReader(matchReaderSize());
     sync();
@@ -257,6 +298,7 @@ export function CampaignTabV2({ project, tiers, projectPath, onViewCreator }: Ca
                   singlePage={!reader.spread}
                   width={reader.width}
                   height={reader.height}
+                  maxPageWidth={reader.maxPageWidth}
                   // These are pages from the middle of a book, not a book —
                   // there's no cover among them, so nothing should be stiff.
                   showCover={false}

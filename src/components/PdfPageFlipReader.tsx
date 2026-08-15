@@ -23,6 +23,7 @@ type Props = {
   width?: number;
   height?: number;
   singlePage?: boolean; // Show single page instead of spread (for mobile)
+  maxPageWidth?: number; // Caps page width, and so the book's height — see PageFlipReader
   showCover?: boolean; // False = no hard cover, every page bends
 };
 
@@ -36,6 +37,7 @@ export function PdfPageFlipReader({
   width = 380,
   height = 520,
   singlePage = false,
+  maxPageWidth,
   showCover = true,
 }: Props) {
   const { state } = usePdfAsImages(pdfUrl, { scale: 1.6, concurrency: 2 });
@@ -79,6 +81,7 @@ export function PdfPageFlipReader({
       width={width}
       height={height}
       singlePage={singlePage}
+      maxPageWidth={maxPageWidth}
       showCover={showCover}
     />
   );

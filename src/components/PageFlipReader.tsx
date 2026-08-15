@@ -28,6 +28,16 @@ export type PageFlipReaderProps = {
   /** Single page instead of a two-page spread — used on mobile. */
   singlePage?: boolean;
   /**
+   * Widest a single page may render, in CSS pixels.
+   *
+   * This is the only lever that controls how *tall* the book gets. In stretch
+   * mode page-flip ignores maxHeight completely — it takes the page width from
+   * the container, caps it at maxWidth, then derives height from the
+   * width:height ratio. So capping the width is how a caller keeps the book
+   * from swallowing the viewport.
+   */
+  maxPageWidth?: number;
+  /**
    * Treat the first and last pages as a hard cover, shown alone.
    *
    * True for a real book (the Digital Library). False for a campaign-page
@@ -48,6 +58,7 @@ export function PageFlipReader({
   width = 380,
   height = 520,
   singlePage = false,
+  maxPageWidth = 1000,
   showCover = true,
 }: PageFlipReaderProps) {
    
@@ -66,7 +77,18 @@ export function PageFlipReader({
     onReadyRef.current = onReady;
   }, [onPageChange, onReady]);
 
-  const flipKey = useMemo(() => `flipbook-${bookId}`, [bookId]);
+  // Remount key. page-flip reads its settings once, in the constructor, and
+  // react-pageflip only constructs it once — so usePortrait, the page ratio and
+  // maxWidth are all frozen at mount. Its own resize handler recomputes the
+  // layout, but against those frozen settings, which is why a phone turned
+  // sideways used to keep a portrait-sized cap and end up taller than the
+  // screen. Folding the geometry into the key rebuilds the book when the step
+  // actually changes, and only then.
+  const flipKey = useMemo(
+    () =>
+      `flipbook-${bookId}-${width}x${height}-${singlePage ? "single" : "spread"}-${maxPageWidth}`,
+    [bookId, width, height, singlePage, maxPageWidth]
+  );
 
   // page-flip forces two pages hard, and neither is configurable:
   //
@@ -132,17 +154,37 @@ export function PageFlipReader({
     );
   }
 
+  // Bound the book by narrowing its container rather than by page-flip's own
+  // maxWidth. maxWidth looks like the obvious knob, but page-flip decides
+  // portrait-vs-spread from `blockWidth < 2 * minWidth`, and minWidth has to
+  // stay under maxWidth or its validation discards maxWidth and substitutes
+  // 2000. Squeezing maxWidth down therefore flips a single-page phone layout
+  // into a two-page spread. Squeezing the container has neither problem: the
+  // block is genuinely narrow, so portrait triggers on its own and the derived
+  // height comes out where we want it.
+  const stageWidth = singlePage ? maxPageWidth : maxPageWidth * 2;
+
   return (
-    <div className={className} style={{ height: '100%' }}>
+    <div
+      className={className}
+      style={{ height: "100%", maxWidth: stageWidth, marginInline: "auto" }}
+    >
       <HTMLFlipBook
         key={flipKey}
         ref={flipRef}
         width={width}
         height={height}
         size="stretch"
-        minWidth={315}
-        maxWidth={1000}
-        minHeight={400}
+        // minWidth is a hard floor on page width — leave it at 315 and a
+        // narrowed stage is simply ignored. It also has to stay at or under
+        // maxWidth, or page-flip's validation discards maxWidth and
+        // substitutes 2000. Both move with the cap.
+        minWidth={Math.min(315, maxPageWidth)}
+        maxWidth={maxPageWidth}
+        // minHeight is a floor too, and it bites before maxWidth does: cap the
+        // page at 180px wide and a 400px minHeight puts the book right back
+        // over the screen. maxHeight is inert in stretch mode.
+        minHeight={Math.min(400, Math.round((maxPageWidth * height) / width))}
         maxHeight={1533}
         showCover={showCover}
         mobileScrollSupport={true}
@@ -153,7 +195,9 @@ export function PageFlipReader({
         drawShadow={true}
         showPageCorners={true}
         disableFlipByClick={false}
-        startPage={initialPageIndex}
+        // Where the rebuilt book opens. Reading the live page rather than the
+        // caller's start index keeps the reader's place across a rotate.
+        startPage={currentPage}
         startZIndex={0}
         autoSize={true}
         usePortrait={singlePage}
