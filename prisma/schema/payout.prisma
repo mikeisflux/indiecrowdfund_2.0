@@ -73,3 +73,25 @@ model GrantAgreement {
 
   @@index([userId])
 }
+
+// A creator's acceptance of a specific version of the Terms of Service.
+//
+// One row per (user, version) rather than a single "acceptedVersion" column on
+// User: section 16 of the Terms promises we can say which version applied to a
+// given campaign or pledge, and that needs the history, not just the latest
+// answer. IP and user agent are captured because an acceptance nobody can
+// evidence is worth little in a dispute.
+model TermsAcceptance {
+  id         String   @id @default(cuid())
+  userId     String
+  version    String
+  acceptedAt DateTime @default(now())
+  ipAddress  String?
+  userAgent  String?  @db.Text
+
+  user User @relation("TermsAcceptances", fields: [userId], references: [id], onDelete: Cascade)
+
+  // Re-accepting the same version is a no-op rather than a duplicate row.
+  @@unique([userId, version])
+  @@index([userId])
+}

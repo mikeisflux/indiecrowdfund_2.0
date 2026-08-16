@@ -1,4 +1,4 @@
-export { TermsOfServiceContent } from "./terms-of-service";
+export { TermsOfServiceContent, TERMS_VERSION, TERMS_LAST_UPDATED } from "./terms-of-service";
 export { PrivacyPolicyContent } from "./privacy-policy";
 export { RefundPolicyContent } from "./refund-policy";
 export { CreatorAgreementContent } from "./creator-agreement";

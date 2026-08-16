@@ -2,13 +2,26 @@
 
 import Link from "next/link";
 
+// Bump this whenever the Terms change in a way creators must re-accept.
+//
+// Acceptances are recorded against this exact string (see TermsAcceptance in
+// the schema), which is what lets us answer "which version did this creator
+// agree to, and when" — a promise section 16 now makes explicitly. Changing
+// the text without bumping the version leaves that promise unbacked; bumping
+// it re-prompts every creator on their next dashboard visit.
+//
+// Date-based so the ordering is obvious, with a counter for same-day edits.
+export const TERMS_VERSION = "2026-08-16.1";
+export const TERMS_LAST_UPDATED = "August 16, 2026";
+
 export function TermsOfServiceContent() {
   return (
     <div className="prose prose-zinc dark:prose-invert max-w-none">
       <div className="rounded-lg border bg-white dark:bg-zinc-900 p-6 md:p-8">
         <h2 className="text-2xl font-bold mb-2">IndieCrowdfund — Terms of Service</h2>
         <p className="text-sm text-muted-foreground mb-8">
-          <strong>Last Updated:</strong> May 17, 2026
+          <strong>Last Updated:</strong> {TERMS_LAST_UPDATED} &middot;{" "}
+          <strong>Version:</strong> {TERMS_VERSION}
         </p>
 
         <p className="mb-6">

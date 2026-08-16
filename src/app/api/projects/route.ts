@@ -5,6 +5,7 @@ import { withCorrelation, CORRELATION_HEADER } from "@/lib/correlation";
 
 const projectsLogger = logger.child({ module: "projects" });
 import { auth } from "@/lib/auth";
+import { hasAcceptedCurrentTerms } from "@/lib/legal/terms-gate";
 import { db } from "@/lib/db";
 import { z } from "zod";
 import { generateProjectSlug } from "@/lib/utils";
@@ -278,6 +279,20 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         { error: "Unauthorized" },
         { status: 401 }
+      );
+    }
+
+    // The page at /projects/new shows the Terms gate, but the endpoint has to
+    // enforce it too — a page check alone is bypassed by anything that posts
+    // here directly, and this is the moment a person becomes a creator.
+    if (!(await hasAcceptedCurrentTerms(session.user.id))) {
+      return NextResponse.json(
+        {
+          error:
+            "Please accept the current Terms of Service before creating a campaign.",
+          code: "TERMS_ACCEPTANCE_REQUIRED",
+        },
+        { status: 403 }
       );
     }
 
