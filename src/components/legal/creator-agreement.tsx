@@ -52,8 +52,13 @@ export function CreatorAgreementContent() {
           <li>Posting meaningful updates</li>
           <li>Responding to backer messages</li>
           <li>Informing backers promptly if plans change</li>
+          <li>Notifying IndieCrowdfund if a backer cannot be reached, so that we may attempt to contact them</li>
         </ul>
-        <p className="mb-6 font-medium">Silence or abandonment of a campaign violates this agreement.</p>
+        <p className="mb-4 font-medium">Silence or abandonment of a campaign violates this agreement.</p>
+        <p className="mb-6">
+          We reserve the right to contact any creator by any means we see fit. Failure to respond to any
+          communication will be considered campaign abandonment and will be dealt with accordingly.
+        </p>
 
         <h3 className="text-xl font-semibold mt-8 mb-4">5. Failure to Complete a Project</h3>
         <p className="mb-4">If a creator cannot complete a project, they must:</p>

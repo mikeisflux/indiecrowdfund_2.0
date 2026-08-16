@@ -402,8 +402,46 @@ export function TermsOfServiceContent() {
         </p>
 
         <h3 className="text-xl font-semibold mt-8 mb-4">16. Changes to These Terms</h3>
+        <p className="mb-4">
+          We may update these Terms from time to time — for example to reflect new features, a change of
+          payment processor, or legal and regulatory requirements.
+        </p>
+        <p className="mb-2 font-medium">How changes take effect</p>
+        <ul className="list-disc pl-6 mb-4 space-y-2">
+          <li>
+            <strong>Material changes:</strong> we will give at least 30 days&apos; notice, by email to the
+            address on your account and by notice on the website. The change takes effect on the effective
+            date stated in that notice.
+          </li>
+          <li>
+            <strong>Non-material changes</strong> — clarifications, typographical corrections, and changes
+            required by law or by a payment processor on shorter notice — take effect when posted.
+          </li>
+          <li>
+            <strong>Changes apply going forward only.</strong> They do not alter the terms that governed a
+            campaign already launched or a pledge already made before the effective date.
+          </li>
+        </ul>
+        <p className="mb-2 font-medium">Your choices</p>
+        <p className="mb-4">
+          If you continue to use IndieCrowdfund as a creator or a backer on or after the effective date, you
+          accept the updated Terms. If you do not agree, you may reject the change by written notice to
+          support@indiecrowdfund.com before that date. If you do:
+        </p>
+        <ul className="list-disc pl-6 mb-4 space-y-2">
+          <li>
+            <strong>Creators:</strong> any campaign already live continues under the Terms in force when it
+            launched, through fulfillment. You may not launch a new campaign without accepting the updated
+            Terms.
+          </li>
+          <li>
+            <strong>Backers:</strong> pledges already made continue under the Terms in force when they were
+            made. You may not make new pledges without accepting the updated Terms.
+          </li>
+        </ul>
         <p className="mb-6">
-          We may update these Terms at any time. We will notify users by email or website notice. Continued use after changes means you accept the updated Terms.
+          We keep dated copies of prior versions of these Terms and will provide the version that applied to
+          your campaign or pledge on request.
         </p>
 
         <h3 className="text-xl font-semibold mt-8 mb-4">17. Contact Information</h3>
