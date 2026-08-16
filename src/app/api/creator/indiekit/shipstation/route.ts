@@ -20,9 +20,62 @@ const actionSchema = z.object({
 });
 
 /**
- * ShipStation API Integration
- * API Docs: https://www.shipstation.com/docs/api/
+ * ShipStation API Integration — V1 (legacy).
+ *
+ * Docs: https://www.shipstation.com/docs/api/
+ *
+ * This targets ShipStation API V1 (ssapi.shipstation.com, Basic auth with an
+ * API key AND secret). ShipStation now describes V1 as "deprecated and will be
+ * removed in the future" and gates it behind higher-tier plans; V2
+ * (api.shipstation.com, a single `API-Key` header) is the going-forward API.
+ *
+ * V2 is not a drop-in swap: it has no orders endpoint at all. Its model is
+ * shipments, labels and fulfillments, so pushing a pledge would mean
+ * POST /v2/shipments with create_sales_order: true, and tracking would come
+ * from the fulfillments/tracking endpoints rather than from an order record.
+ * That is a rewrite of this file, not a base-URL change — tracked separately.
  */
+
+// V1 rate limit is 40 requests per minute per key pair. Every call below goes
+// through shipStationFetch so a bulk push paces itself instead of walking into
+// a wall of 429s partway down a backer list and reporting them as failures.
+const V1_MIN_GAP_MS = 1_600;
+// Server-side budget for one bulk push. Past this the handler returns what it
+// managed and tells the caller how many are left, rather than being killed
+// mid-flight with no record of where it got to.
+const PUSH_BUDGET_MS = 45_000;
+
+let lastShipStationCallAt = 0;
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+/**
+ * Rate-limit-aware ShipStation V1 call.
+ *
+ * Paces requests to stay inside the 40/minute limit, and on a 429 waits for
+ * the window named by X-Rate-Limit-Reset before retrying. V1 sends that header
+ * rather than Retry-After, so generic retry logic misses it.
+ */
+async function shipStationFetch(
+  url: string,
+  init: RequestInit,
+  attempt = 0
+): Promise<Response> {
+  const since = Date.now() - lastShipStationCallAt;
+  if (since < V1_MIN_GAP_MS) await sleep(V1_MIN_GAP_MS - since);
+  lastShipStationCallAt = Date.now();
+
+  const response = await circuitBreaker.execute("shipstation", () => fetch(url, init));
+
+  if (response.status === 429 && attempt < 2) {
+    const reset = Number(response.headers.get("X-Rate-Limit-Reset") || "0");
+    // Cap the wait so a hostile or malformed header can't park the request.
+    await sleep(Math.min(Math.max(reset, 1) * 1000, 20_000));
+    return shipStationFetch(url, init, attempt + 1);
+  }
+
+  return response;
+}
 
 // Base64 encode API credentials for ShipStation auth
 function getShipStationAuthHeader(apiKey: string, apiSecret: string): string {
@@ -116,10 +169,20 @@ export async function POST(req: NextRequest) {
           pushed: 0,
           failed: 0,
           errors: [] as string[],
+          // Backers not attempted this call. Pacing for the 40/minute limit
+          // means a long list cannot finish inside one request; the caller
+          // re-submits the remainder rather than the run dying silently.
+          remaining: 0,
         };
 
+        const startedAt = Date.now();
+
         // Push each order to ShipStation
-        for (const pledge of pledges) {
+        for (const [index, pledge] of pledges.entries()) {
+          if (Date.now() - startedAt > PUSH_BUDGET_MS) {
+            results.remaining = pledges.length - index;
+            break;
+          }
           try {
             const shippingAddress = resolvePledgeShippingAddress(
               pledge.surveyResponse?.shippingAddress,
@@ -131,31 +194,44 @@ export async function POST(req: NextRequest) {
               continue;
             }
 
-            // Build line items
+            // Build line items.
+            //
+            // Reward.amount is Decimal(10,2) in DOLLARS, and there is no
+            // `price` or `sku` column on Reward at all. The previous code read
+            // `reward.price / 100`, which is undefined / 100 = NaN, and
+            // JSON.stringify writes NaN as null — so every line item reached
+            // ShipStation priced at null. Prisma's result types would normally
+            // have caught that; they are erased by the $allOperations extension
+            // in lib/db, so it compiled cleanly. Same for the `sku` reads,
+            // which silently always fell through to the generated fallback.
             const items = [];
             if (pledge.reward) {
               items.push({
                 lineItemKey: `reward-${pledge.reward.id}`,
-                sku: pledge.reward.sku || `REWARD-${pledge.reward.id}`,
+                sku: `REWARD-${pledge.reward.id}`,
                 name: pledge.reward.title,
                 quantity: 1,
-                unitPrice: pledge.reward.price / 100,
+                unitPrice: Number(pledge.reward.amount),
               });
             }
 
             for (const addonEntry of pledge.addons) {
               items.push({
                 lineItemKey: `addon-${addonEntry.addon.id}`,
-                sku: addonEntry.addon.sku || `ADDON-${addonEntry.addon.id}`,
+                sku: `ADDON-${addonEntry.addon.id}`,
                 name: addonEntry.addon.title,
                 quantity: addonEntry.quantity,
-                unitPrice: addonEntry.addon.price / 100,
+                unitPrice: Number(addonEntry.addon.amount),
               });
             }
 
             // Create ShipStation order
             const orderData = {
               orderNumber: `ICF-${pledge.id.substring(0, 8)}`,
+              // createorder is an upsert keyed on orderKey. Without one, every
+              // re-push of the same backer creates a duplicate order for the
+              // fulfilment house to pick, pack and ship twice.
+              orderKey: `icf-${pledge.id}`,
               orderDate: pledge.createdAt.toISOString(),
               orderStatus: "awaiting_shipment",
               customerEmail: pledge.user.email,
@@ -178,19 +254,22 @@ export async function POST(req: NextRequest) {
                 country: shippingAddress.country,
               },
               items,
-              amountPaid: Number(pledge.amount) / 100,
+              // Pledge.amount is Decimal(10,2) in dollars. Dividing by 100
+              // reported a $53 pledge to ShipStation as $0.53.
+              amountPaid: Number(pledge.amount),
               internalNotes: `IndieCrowdfund · ${project.title} · Backer #${pledge.backerNumber || pledge.id}`,
             };
 
-            const response = await circuitBreaker.execute("shipstation", () =>
-              fetch("https://ssapi.shipstation.com/orders/createorder", {
+            const response = await shipStationFetch(
+              "https://ssapi.shipstation.com/orders/createorder",
+              {
                 method: "POST",
                 headers: {
-                  "Authorization": authHeader,
+                  Authorization: authHeader,
                   "Content-Type": "application/json",
                 },
                 body: JSON.stringify(orderData),
-              })
+              }
             );
 
             if (response.ok) {
@@ -233,21 +312,39 @@ export async function POST(req: NextRequest) {
         });
 
         const updated = [];
+        const startedAt = Date.now();
+        let remaining = 0;
+
         for (const pledge of pledgesWithOrders) {
+          if (Date.now() - startedAt > PUSH_BUDGET_MS) {
+            remaining = pledgesWithOrders.length - updated.length;
+            break;
+          }
           try {
-            const response = await circuitBreaker.execute("shipstation", () =>
-              fetch(
-                `https://ssapi.shipstation.com/orders/${pledge.externalOrderId}`,
-                {
-                  headers: { Authorization: authHeader },
-                }
-              )
+            // Tracking comes from the shipments endpoint, not the order.
+            //
+            // This used to GET /orders/{orderId} and read `order.shipments`.
+            // A V1 order object carries no shipments array, so the check was
+            // always false: tracking numbers were never written and nothing
+            // was ever marked SHIPPED, no matter how much had gone out. That
+            // is why a fulfilment partner could not signal shipped status back
+            // to the platform for backers to see.
+            const response = await shipStationFetch(
+              `https://ssapi.shipstation.com/shipments?orderId=${encodeURIComponent(
+                String(pledge.externalOrderId)
+              )}`,
+              { headers: { Authorization: authHeader } }
             );
 
             if (response.ok) {
-              const order = await response.json();
-              if (order.shipments && order.shipments.length > 0) {
-                const shipment = order.shipments[0];
+              const body = await response.json();
+              // Voided shipments are returned by default and must be skipped,
+              // or a cancelled label would mark the pledge shipped.
+              const shipment = (body.shipments || []).find(
+                (s: { voided?: boolean; trackingNumber?: string | null }) =>
+                  !s.voided && s.trackingNumber
+              );
+              if (shipment) {
                 await db.pledge.update({
                   where: { id: pledge.id },
                   data: {
@@ -263,7 +360,11 @@ export async function POST(req: NextRequest) {
           }
         }
 
-        return NextResponse.json({ synced: updated.length, pledgeIds: updated });
+        return NextResponse.json({
+          synced: updated.length,
+          pledgeIds: updated,
+          remaining,
+        });
       }
 
       case "get_rates": {
