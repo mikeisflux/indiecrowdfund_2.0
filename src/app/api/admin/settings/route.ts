@@ -118,11 +118,38 @@ export async function GET() {
         },
       });
     } catch (dbError) {
-      settingsLogger.error({ err: String(dbError) }, "Database error fetching settings");
-      return NextResponse.json(
-        { error: "Database error fetching settings", details: String(dbError) },
-        { status: 500 }
-      );
+      // One missing column takes the entire settings page down — every field
+      // is named in the select above, so Postgres 42703 on any one of them
+      // fails the whole query and the admin sees "Failed to load settings".
+      // Migrations here are applied by hand, so a deploy that lands before its
+      // migration does exactly that.
+      //
+      // Retry once without the columns most recently added. Losing a scheduled
+      // maintenance window from the form is a great deal better than locking
+      // the operator out of every setting on the site.
+      const message = String(dbError);
+      if (message.includes("maintenanceStartsAt") || message.includes("maintenanceEndsAt") || message.includes("maintenanceMessage")) {
+        settingsLogger.warn(
+          { err: message },
+          "Scheduled-maintenance columns missing — run prisma/migrations/add_scheduled_maintenance.sql. Serving settings without them."
+        );
+        try {
+          const partial = await db.platformSettings.findUnique({ where: { id: "default" } });
+          settings = partial as typeof settings;
+        } catch (retryError) {
+          settingsLogger.error({ err: String(retryError) }, "Database error fetching settings");
+          return NextResponse.json(
+            { error: "Database error fetching settings", details: String(retryError) },
+            { status: 500 }
+          );
+        }
+      } else {
+        settingsLogger.error({ err: message }, "Database error fetching settings");
+        return NextResponse.json(
+          { error: "Database error fetching settings", details: message },
+          { status: 500 }
+        );
+      }
     }
 
     if (!settings) {
