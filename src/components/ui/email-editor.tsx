@@ -32,12 +32,26 @@ import {
   Loader2,
 } from "lucide-react";
 
+// Alignment has to be stated outright in email HTML.
+//
+// These used to omit text-align when it was "left", treating left as a default
+// that could be inherited. It cannot: the campaign wrapper centres its content
+// with <td align="center">, which every major email client cascades onto the
+// text inside. Left-aligned paragraphs inherited that and came out centred, so
+// the align-left button appeared to do nothing while centre and right worked.
+//
+// Nothing about the wrapper is wrong — align="center" is how you centre a
+// table in Outlook. The content just has to say what it wants instead of
+// assuming it starts from left.
+function emailBlockStyle(textAlign: string): string {
+  return `margin: 0 0 16px 0; text-align: ${textAlign};`;
+}
+
 // Custom Paragraph extension that outputs inline styles for emails
 const EmailParagraph = Paragraph.extend({
   renderHTML({ node, HTMLAttributes }) {
     const textAlign = node.attrs.textAlign || "left";
-    const style = `margin: 0 0 16px 0;${textAlign !== "left" ? ` text-align: ${textAlign};` : ""}`;
-    return ["p", { ...HTMLAttributes, style }, 0];
+    return ["p", { ...HTMLAttributes, style: emailBlockStyle(textAlign) }, 0];
   },
 });
 
@@ -46,8 +60,7 @@ const EmailHeading = Heading.extend({
   renderHTML({ node, HTMLAttributes }) {
     const textAlign = node.attrs.textAlign || "left";
     const level = node.attrs.level || 1;
-    const style = `margin: 0 0 16px 0;${textAlign !== "left" ? ` text-align: ${textAlign};` : ""}`;
-    return [`h${level}`, { ...HTMLAttributes, style }, 0];
+    return [`h${level}`, { ...HTMLAttributes, style: emailBlockStyle(textAlign) }, 0];
   },
 });
 
