@@ -83,7 +83,15 @@ export function IntegrationsSection({
   }, [searchParams, setShopifyStatus]);
 
   const handleConnectShipStation = async () => {
-    if (!projectId || !shipStationKey.trim() || !shipStationSecret.trim()) {
+    // A missing project used to be folded into the credentials check, so a
+    // creator who had typed both fields correctly was told to enter both
+    // fields. Blaming the operator for the app's own missing state cost a
+    // support round-trip; the two conditions report separately now.
+    if (!projectId) {
+      toast.error("Select a campaign at the top of the page first");
+      return;
+    }
+    if (!shipStationKey.trim() || !shipStationSecret.trim()) {
       toast.error("Please enter both API key and secret");
       return;
     }
@@ -118,7 +126,11 @@ export function IntegrationsSection({
   };
 
   const handleConnectEasyship = async () => {
-    if (!projectId || !easyshipToken.trim()) {
+    if (!projectId) {
+      toast.error("Select a campaign at the top of the page first");
+      return;
+    }
+    if (!easyshipToken.trim()) {
       toast.error("Please enter your API token");
       return;
     }
