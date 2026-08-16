@@ -114,7 +114,13 @@ export function CreatorAgreementContent() {
           time, for any reason.
         </p>
 
-        <h3 className="text-xl font-semibold mt-8 mb-4">9. Group Affiliations</h3>
+        <h3 className="text-xl font-semibold mt-8 mb-4">9. Group Affiliations & Organized Harassment</h3>
+        <p className="mb-4">
+          IndieCrowdfund does not host creators who take part in organized campaigns of harassment against
+          other creators, industry professionals, or members of the public. This is a rule about conduct —
+          coordinated abuse, intimidation, threats, doxxing, and circulated blacklists — and not about a
+          creator&apos;s politics, opinions about the industry, or criticism of any company or its work.
+        </p>
         <p className="mb-4">
           As part of the verification described in Section 7, creators must disclose current affiliations
           with organized online groups, movements, or collectives operating in the comics space. We may also
@@ -125,6 +131,12 @@ export function CreatorAgreementContent() {
             Creators currently affiliated with the online group known as &quot;Comicsgate&quot; are not
             eligible to launch campaigns on IndieCrowdfund.
           </p>
+          <p className="text-red-700 dark:text-red-300 text-sm mb-2">
+            Comicsgate is an organized harassment campaign in the comics industry, documented as directing
+            racist, sexist, and threatening abuse at creators and industry professionals and as circulating
+            blacklists of people to target. Participation in it falls squarely within the conduct prohibited
+            above, and we name it here so there is no ambiguity about where we stand.
+          </p>
           <p className="text-red-700 dark:text-red-300 text-sm mb-0">
             For this purpose, affiliation means currently identifying yourself with the group in public,
             presenting a campaign, its rewards, or its branding under that banner, or acting as an organizer
@@ -133,9 +145,10 @@ export function CreatorAgreementContent() {
           </p>
         </div>
         <p className="mb-6">
-          Misrepresenting or concealing an affiliation covered by this section is grounds for removal from
-          the platform under Section 7, in addition to our general right to refuse service described in
-          Section 8.
+          This section applies equally to any other group engaged in the same conduct, whether or not it is
+          named here. Misrepresenting or concealing an affiliation covered by this section is grounds for
+          removal from the platform under Section 7, in addition to our general right to refuse service
+          described in Section 8.
         </p>
 
         <div className="bg-zinc-50 dark:bg-zinc-800 rounded-lg p-4">
