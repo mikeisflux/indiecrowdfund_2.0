@@ -86,7 +86,7 @@ export function CreatorAgreementContent() {
           <li><strong>New Creators:</strong> Must provide a valid government-issued photo ID and a legitimate business filing from their state&apos;s Secretary of State office</li>
           <li><strong>Social Media Verification:</strong> All linked social media accounts are logged and verified by our team</li>
           <li><strong>Cross-Platform Audit:</strong> We search other crowdfunding platforms (Kickstarter, Indiegogo, GoFundMe, etc.) to review your previous campaign history, including backer reviews, comments, and public feedback</li>
-          <li><strong>Fulfillment History Validation:</strong> We contact creators directly when discrepancies or concerns are identified during our review</li>
+          <li><strong>Fulfillment History Validation:</strong> We contact creators directly when discrepancies or concerns are identified during our review. We reserve the right to contact any creator by any means we see fit. Failure to respond to any communication will be considered campaign abandonment and will be dealt with accordingly.</li>
           <li><strong>Payment Verification:</strong> Adding a valid PayPal payout email (standard campaigns), or completing Divinity Payments bank account setup (NSFW/adult campaigns), or connecting a Whop account (Whop-processed campaigns) to receive payouts.</li>
         </ul>
         <p className="mb-4 font-medium">All verification findings, correspondence, and review decisions are documented internally and retained for compliance purposes.</p>
