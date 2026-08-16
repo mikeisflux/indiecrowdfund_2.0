@@ -61,6 +61,7 @@ export async function GET() {
         select: {
           id: true, siteName: true, siteDescription: true, supportEmail: true, timezone: true,
           currency: true, platformFee: true, maintenanceMode: true, googlePlacesApiKey: true,
+          maintenanceStartsAt: true, maintenanceEndsAt: true, maintenanceMessage: true,
           logoUrl: true, faviconUrl: true,
           stripeEnabled: true, stripePublishableKey: true, stripeSecretKey: true, stripeWebhookSecret: true, stripeConnectWebhookSecret: true,
           divinityCoinEnabled: true, divinityCoinApiKey: true, divinityCoinWebhookSecret: true, divinityCoinPartnerId: true,
@@ -136,6 +137,7 @@ export async function GET() {
           select: {
             id: true, siteName: true, siteDescription: true, supportEmail: true, timezone: true,
             currency: true, platformFee: true, maintenanceMode: true, googlePlacesApiKey: true,
+            maintenanceStartsAt: true, maintenanceEndsAt: true, maintenanceMessage: true,
             logoUrl: true, faviconUrl: true,
             stripeEnabled: true, stripePublishableKey: true, stripeSecretKey: true, stripeWebhookSecret: true, stripeConnectWebhookSecret: true,
             divinityCoinEnabled: true, divinityCoinApiKey: true, divinityCoinWebhookSecret: true, divinityCoinPartnerId: true,
@@ -325,6 +327,7 @@ export async function PATCH(req: NextRequest) {
       general: [
         "siteName", "siteDescription", "supportEmail", "timezone",
         "currency", "platformFee", "maintenanceMode", "googlePlacesApiKey",
+        "maintenanceStartsAt", "maintenanceEndsAt", "maintenanceMessage",
         "logoUrl", "faviconUrl"
       ],
       payments: [

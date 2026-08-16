@@ -49,6 +49,9 @@ interface PlatformSettings {
   currency: string;
   platformFee: number;
   maintenanceMode: boolean;
+  maintenanceStartsAt: string;
+  maintenanceEndsAt: string;
+  maintenanceMessage: string;
   googlePlacesApiKey: string | null;
   stripeEnabled: boolean;
   stripePublishableKey: string | null;
@@ -218,6 +221,9 @@ export default function SettingsPage() {
     currency: "USD",
     platformFee: "5",
     maintenanceMode: false,
+    maintenanceStartsAt: "",
+    maintenanceEndsAt: "",
+    maintenanceMessage: "",
     googlePlacesApiKey: "",
   });
 
@@ -425,6 +431,15 @@ export default function SettingsPage() {
         currency: settings.currency || "USD",
         platformFee: String(settings.platformFee || 5),
         maintenanceMode: settings.maintenanceMode || false,
+        // <input type="datetime-local"> wants "YYYY-MM-DDTHH:mm" with no zone
+        // or seconds; an ISO string with either makes the field render blank.
+        maintenanceStartsAt: settings.maintenanceStartsAt
+          ? String(settings.maintenanceStartsAt).slice(0, 16)
+          : "",
+        maintenanceEndsAt: settings.maintenanceEndsAt
+          ? String(settings.maintenanceEndsAt).slice(0, 16)
+          : "",
+        maintenanceMessage: settings.maintenanceMessage || "",
         googlePlacesApiKey: settings.googlePlacesApiKey || "",
       });
 
@@ -699,6 +714,11 @@ export default function SettingsPage() {
             currency: generalSettings.currency,
             platformFee: parseFloat(generalSettings.platformFee),
             maintenanceMode: generalSettings.maintenanceMode,
+            // Empty means "no bound", which has to reach the API as null
+            // rather than "" or Prisma rejects it as an invalid DateTime.
+            maintenanceStartsAt: generalSettings.maintenanceStartsAt || null,
+            maintenanceEndsAt: generalSettings.maintenanceEndsAt || null,
+            maintenanceMessage: generalSettings.maintenanceMessage || null,
             googlePlacesApiKey: generalSettings.googlePlacesApiKey,
           };
           break;

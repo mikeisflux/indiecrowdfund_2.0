@@ -13,6 +13,13 @@ model PlatformSettings {
   currency              String   @default("USD")
   platformFee           Float    @default(5)
   maintenanceMode       Boolean  @default(false)
+  // Scheduled maintenance. When a window is set, the site goes down at
+  // maintenanceStartsAt and comes back on its own at maintenanceEndsAt without
+  // anyone needing to be awake to flip the switch back. maintenanceMode on its
+  // own (no window) is an immediate, open-ended outage.
+  maintenanceStartsAt   DateTime?
+  maintenanceEndsAt     DateTime?
+  maintenanceMessage    String?  @db.Text
   logoUrl               String?
   faviconUrl            String?
 

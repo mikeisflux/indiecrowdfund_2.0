@@ -24,6 +24,9 @@ interface GeneralSettingsProps {
     currency: string;
     platformFee: string;
     maintenanceMode: boolean;
+    maintenanceStartsAt: string;
+    maintenanceEndsAt: string;
+    maintenanceMessage: string;
     googlePlacesApiKey: string;
   };
   onSettingsChange: (settings: GeneralSettingsProps["settings"]) => void;
@@ -118,19 +121,67 @@ export function GeneralSettings({ settings, onSettingsChange, onSave }: GeneralS
             </div>
           </div>
 
-          <div className="flex items-center justify-between rounded-lg border p-4">
-            <div className="space-y-0.5">
-              <Label>Maintenance Mode</Label>
-              <p className="text-sm text-muted-foreground">
-                Temporarily disable the site for maintenance
-              </p>
+          <div className="rounded-lg border p-4 space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label>Maintenance Mode</Label>
+                <p className="text-sm text-muted-foreground">
+                  Show the maintenance page to visitors. /admin stays reachable so
+                  you can turn it back off.
+                </p>
+              </div>
+              <Switch
+                checked={settings.maintenanceMode}
+                onCheckedChange={(checked) =>
+                  onSettingsChange({ ...settings, maintenanceMode: checked })
+                }
+              />
             </div>
-            <Switch
-              checked={settings.maintenanceMode}
-              onCheckedChange={(checked) =>
-                onSettingsChange({ ...settings, maintenanceMode: checked })
-              }
-            />
+
+            {settings.maintenanceMode && (
+              <div className="space-y-4 border-t pt-4">
+                <p className="text-sm text-muted-foreground">
+                  Leave both times empty to go down now and stay down until you switch
+                  this off. Set a window to schedule it — the site takes itself down and
+                  brings itself back without anyone having to be awake for either edge.
+                </p>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="maintenance-starts">Starts (optional)</Label>
+                    <Input
+                      id="maintenance-starts"
+                      type="datetime-local"
+                      value={settings.maintenanceStartsAt}
+                      onChange={(e) =>
+                        onSettingsChange({ ...settings, maintenanceStartsAt: e.target.value })
+                      }
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="maintenance-ends">Ends (optional)</Label>
+                    <Input
+                      id="maintenance-ends"
+                      type="datetime-local"
+                      value={settings.maintenanceEndsAt}
+                      onChange={(e) =>
+                        onSettingsChange({ ...settings, maintenanceEndsAt: e.target.value })
+                      }
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="maintenance-message">Message (optional)</Label>
+                  <Input
+                    id="maintenance-message"
+                    value={settings.maintenanceMessage}
+                    onChange={(e) =>
+                      onSettingsChange({ ...settings, maintenanceMessage: e.target.value })
+                    }
+                    placeholder="Back by 3pm Central — upgrading the payment system."
+                  />
+                </div>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>

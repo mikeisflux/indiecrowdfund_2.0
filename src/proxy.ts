@@ -247,6 +247,74 @@ function getInternalApiUrl(): string {
   return `http://127.0.0.1:${port}`;
 }
 
+
+// ---------------------------------------------------------------------------
+// Maintenance mode
+// ---------------------------------------------------------------------------
+//
+// The /admin toggle writes PlatformSettings.maintenanceMode. This used to read
+// process.env.MAINTENANCE_MODE instead, so flipping the switch in the admin UI
+// did nothing at all and taking the site down meant editing the environment and
+// restarting. Middleware cannot open a Prisma connection, so the value comes
+// through the internal API, cached — this runs on every request.
+const MAINTENANCE_CACHE_MS = 15_000;
+let maintenanceCache: {
+  enabled: boolean;
+  message: string | null;
+  endsAt: string | null;
+  fetchedAt: number;
+} = { enabled: false, message: null, endsAt: null, fetchedAt: 0 };
+let maintenanceInFlight: Promise<void> | null = null;
+
+function refreshMaintenance(): Promise<void> {
+  if (maintenanceInFlight) return maintenanceInFlight;
+
+  const headers: Record<string, string> = {};
+  if (process.env.INTERNAL_API_SECRET) {
+    headers["x-internal-secret"] = process.env.INTERNAL_API_SECRET;
+  }
+
+  maintenanceInFlight = fetch(`${getInternalApiUrl()}/api/internal/maintenance`, {
+    headers,
+    cache: "no-store",
+  })
+    .then(async (res) => {
+      if (!res.ok) return;
+      const data = await res.json();
+      maintenanceCache = {
+        enabled: !!data.enabled,
+        message: data.message || null,
+        endsAt: data.endsAt || null,
+        fetchedAt: Date.now(),
+      };
+    })
+    .catch(() => {
+      // Unreachable internal API leaves the last known state in place. Failing
+      // closed here would take the site down on a transient blip.
+    })
+    .finally(() => {
+      maintenanceInFlight = null;
+    });
+
+  return maintenanceInFlight;
+}
+
+async function isMaintenanceModeEnabled(): Promise<boolean> {
+  // The env var stays as an override, so there is still a way to force the
+  // site down when the database itself is the thing being worked on.
+  if (process.env.MAINTENANCE_MODE === "true") return true;
+
+  const age = Date.now() - maintenanceCache.fetchedAt;
+  if (age > MAINTENANCE_CACHE_MS) {
+    // First call blocks so a freshly flipped switch takes effect immediately;
+    // later refreshes serve the cached value and update in the background.
+    if (maintenanceCache.fetchedAt === 0) await refreshMaintenance();
+    else void refreshMaintenance();
+  }
+
+  return maintenanceCache.enabled;
+}
+
 /**
  * Load blocked IPs from database via internal API
  * Called on startup and periodically to stay in sync
@@ -751,8 +819,8 @@ export async function proxy(req: NextRequest) {
   }
   } // end: bot-blocker kill switch else
 
-  // Check for maintenance mode (set MAINTENANCE_MODE=true in env)
-  const isMaintenanceMode = process.env.MAINTENANCE_MODE === "true";
+  // Maintenance mode: the /admin toggle, or the env override.
+  const isMaintenanceMode = await isMaintenanceModeEnabled();
 
   if (isMaintenanceMode) {
     // Allow certain routes to bypass maintenance
@@ -764,8 +832,17 @@ export async function proxy(req: NextRequest) {
     const isAdminAccess = pathname.startsWith("/admin") || pathname.startsWith("/api/admin");
 
     if (!bypassMaintenance && !isAdminAccess) {
-      // Redirect to static maintenance page
-      return NextResponse.rewrite(new URL("/maintenance.html", req.url));
+      // Rewrite to the static maintenance page, carrying the operator's
+      // message and end time on the query string. The page is a plain file
+      // with no database access, so this is how it learns what to say.
+      const maintenanceUrl = new URL("/maintenance.html", req.url);
+      if (maintenanceCache.message) {
+        maintenanceUrl.searchParams.set("msg", maintenanceCache.message);
+      }
+      if (maintenanceCache.endsAt) {
+        maintenanceUrl.searchParams.set("until", maintenanceCache.endsAt);
+      }
+      return NextResponse.rewrite(maintenanceUrl);
     }
   }
 

@@ -120,6 +120,77 @@
     }
 
     /* Auto-refresh indicator */
+
+    /* Code monkeys hard at work.
+       Emoji and CSS only — this page has to render with the app down, so it
+       pulls in no fonts, images or scripts from anywhere. */
+    .monkeys {
+      position: fixed;
+      inset: 0 0 auto 0;
+      height: 0;
+      pointer-events: none;
+      z-index: 0;
+    }
+    .monkey {
+      position: absolute;
+      top: 0;
+      transform-origin: top center;
+      animation: swing 3.4s ease-in-out infinite alternate;
+      will-change: transform;
+    }
+    .monkey .rope {
+      width: 2px;
+      margin: 0 auto;
+      background: linear-gradient(#475569, #64748b);
+      border-radius: 2px;
+    }
+    .monkey .body {
+      font-size: 2rem;
+      line-height: 1;
+      white-space: nowrap;
+      margin-top: -2px;
+      filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.45));
+    }
+    .monkey .wrench {
+      display: inline-block;
+      font-size: 1.4rem;
+      /* Tucked back against the monkey so it reads as held rather than
+         floating alongside; emoji carry their own side bearings. */
+      margin-left: -0.35em;
+      vertical-align: 0.15em;
+      transform-origin: bottom left;
+      animation: wrench 0.9s ease-in-out infinite alternate;
+    }
+    /* Spread them out and desynchronise, so it reads as several monkeys
+       rather than one repeated four times. */
+    .monkey:nth-child(1) { left: 8%;  animation-duration: 3.1s; }
+    .monkey:nth-child(1) .rope { height: 70px; }
+    .monkey:nth-child(2) { left: 30%; animation-duration: 4.2s; animation-delay: -1.2s; }
+    .monkey:nth-child(2) .rope { height: 120px; }
+    .monkey:nth-child(3) { left: 62%; animation-duration: 3.6s; animation-delay: -0.6s; }
+    .monkey:nth-child(3) .rope { height: 55px; }
+    .monkey:nth-child(4) { left: 84%; animation-duration: 4.8s; animation-delay: -2.1s; }
+    .monkey:nth-child(4) .rope { height: 95px; }
+
+    @keyframes swing {
+      from { transform: rotate(-16deg); }
+      to   { transform: rotate(16deg); }
+    }
+    @keyframes wrench {
+      from { transform: rotate(-25deg); }
+      to   { transform: rotate(35deg); }
+    }
+
+    /* Two monkeys is plenty on a phone, and none at all for anyone who has
+       asked the browser to stop moving things. */
+    @media (max-width: 640px) {
+      .monkey:nth-child(2), .monkey:nth-child(4) { display: none; }
+      .monkey .body { font-size: 1.5rem; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .monkeys { display: none; }
+    }
+
     .auto-refresh {
       margin-top: 1rem;
       font-size: 0.75rem;
@@ -138,10 +209,18 @@
 
     <h1>We'll Be Right Back</h1>
 
-    <p class="subtitle">
+    <div class="monkeys" aria-hidden="true">
+      <div class="monkey"><div class="rope"></div><div class="body">🐒<span class="wrench">🔧</span></div></div>
+      <div class="monkey"><div class="rope"></div><div class="body">🐒<span class="wrench">🔧</span></div></div>
+      <div class="monkey"><div class="rope"></div><div class="body">🐵<span class="wrench">🔧</span></div></div>
+      <div class="monkey"><div class="rope"></div><div class="body">🐒<span class="wrench">🔧</span></div></div>
+    </div>
+
+    <p class="subtitle" id="subtitle">
       We're currently performing scheduled maintenance to improve your experience.
       This should only take a few minutes.
     </p>
+    <p class="subtitle" id="eta" style="display:none;margin-top:-1rem"></p>
 
     <div class="status">
       <div class="status-item">
@@ -157,8 +236,40 @@
     </button>
 
     <p class="auto-refresh">
-      This page will automatically refresh when the site is ready
+      Code monkeys hard at work. This page will automatically refresh when the site is ready.
     </p>
+
+    <script>
+      // The admin can set a message and an end time for a scheduled window.
+      // This page is a static file the proxy rewrites to, so it cannot read
+      // the database — the proxy passes them on the query string instead.
+      // Both are rendered as text, never as HTML, so an operator's message
+      // cannot inject markup into a page shown to every visitor.
+      (function () {
+        var params = new URLSearchParams(window.location.search);
+
+        var msg = params.get("msg");
+        if (msg) document.getElementById("subtitle").textContent = msg;
+
+        var until = params.get("until");
+        if (until) {
+          var end = new Date(until);
+          if (!isNaN(end.getTime())) {
+            var el = document.getElementById("eta");
+            el.textContent =
+              "Expected back by " +
+              end.toLocaleString(undefined, {
+                hour: "numeric",
+                minute: "2-digit",
+                timeZoneName: "short",
+                month: "short",
+                day: "numeric",
+              });
+            el.style.display = "";
+          }
+        }
+      })();
+    </script>
 
     <p class="info">
       Questions? Contact us at <a href="mailto:support@indiecrowdfund.com">support@indiecrowdfund.com</a>
