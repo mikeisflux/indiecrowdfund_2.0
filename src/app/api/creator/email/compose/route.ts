@@ -171,6 +171,18 @@ export async function POST(request: NextRequest) {
       fromName: senderName,
       replyTo: creatorEmail, // Replies go to the creator's email
       isCreatorEmail: true, // Mark as creator email for mailbox filtering
+      // A creator writing to a backer about the campaign that backer funded is
+      // transactional, not marketing. Turning off site emails is a choice about
+      // our newsletters and notifications; it is not a way to stop hearing from
+      // the creator you gave money to about shipping, delays or what you owe.
+      // The backer would otherwise silently miss the one channel that matters
+      // and the creator would have no idea the message never landed.
+      //
+      // Scoped deliberately to this endpoint, which is a single message tied to
+      // a project the recipient is a backer of. Bulk sends from the campaign
+      // endpoint still honour unsubscribe — that is marketing, and treating it
+      // as transactional is how a platform earns a CAN-SPAM problem.
+      skipUnsubscribeCheck: true,
       attachments: attachments || undefined,
     });
 
