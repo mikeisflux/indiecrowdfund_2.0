@@ -6,7 +6,7 @@ export function CreatorAgreementContent() {
       <div className="rounded-lg border bg-white dark:bg-zinc-900 p-6 md:p-8">
         <h2 className="text-2xl font-bold mb-2">Creator Responsibility Agreement</h2>
         <p className="text-sm text-muted-foreground mb-8">
-          <strong>Last Updated:</strong> March 13, 2026
+          <strong>Last Updated:</strong> August 16, 2026
         </p>
 
         <p className="mb-8 font-medium">
@@ -112,6 +112,30 @@ export function CreatorAgreementContent() {
           process. This includes campaigns you are running right now, on this platform or any other, as well
           as campaigns you have run in the past. We reserve the right to refuse service to anyone, at any
           time, for any reason.
+        </p>
+
+        <h3 className="text-xl font-semibold mt-8 mb-4">9. Group Affiliations</h3>
+        <p className="mb-4">
+          As part of the verification described in Section 7, creators must disclose current affiliations
+          with organized online groups, movements, or collectives operating in the comics space. We may also
+          identify affiliations from public sources during that review.
+        </p>
+        <div className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-lg p-4 mb-4">
+          <p className="text-red-800 dark:text-red-200 font-medium mb-2">
+            Creators currently affiliated with the online group known as &quot;Comicsgate&quot; are not
+            eligible to launch campaigns on IndieCrowdfund.
+          </p>
+          <p className="text-red-700 dark:text-red-300 text-sm mb-0">
+            For this purpose, affiliation means currently identifying yourself with the group in public,
+            presenting a campaign, its rewards, or its branding under that banner, or acting as an organizer
+            or promoter for it. Past association a creator has since left is not, on its own, a
+            disqualification.
+          </p>
+        </div>
+        <p className="mb-6">
+          Misrepresenting or concealing an affiliation covered by this section is grounds for removal from
+          the platform under Section 7, in addition to our general right to refuse service described in
+          Section 8.
         </p>
 
         <div className="bg-zinc-50 dark:bg-zinc-800 rounded-lg p-4">
