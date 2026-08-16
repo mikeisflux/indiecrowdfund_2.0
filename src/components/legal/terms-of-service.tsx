@@ -150,12 +150,12 @@ export function TermsOfServiceContent() {
 
         <h3 className="text-xl font-semibold mt-8 mb-4">7. Creator Verification & Due Diligence</h3>
         <p className="mb-4">
-          IndieCrowdfund conducts thorough due diligence on all creators before approving campaigns. Our verification process includes:
+          IndieCrowdfund conducts thorough due diligence on all creators before approving campaigns, and continues to review creators and their campaigns while those campaigns are running. Our verification process includes:
         </p>
         <ul className="list-disc pl-6 mb-4 space-y-2">
           <li><strong>Identity Verification:</strong> New creators must provide a valid government-issued photo ID and a legitimate business filing from their state Secretary of State office. Returning creators with verified accounts may be exempt from re-submission.</li>
-          <li><strong>Social Media & Online Presence Audit:</strong> We log and verify all social media accounts linked to the creator. Our team searches other crowdfunding platforms (Kickstarter, Indiegogo, GoFundMe, etc.) to review the creator&apos;s previous campaign history.</li>
-          <li><strong>Fulfillment History Review:</strong> We review backer comments, reviews, and public feedback on all prior campaigns across all platforms. We contact creators directly when discrepancies or concerns are identified. We reserve the right to contact any creator by any means we see fit. Failure to respond to any communication will be considered campaign abandonment and will be dealt with accordingly.</li>
+          <li><strong>Social Media & Online Presence Audit:</strong> We log and verify all social media accounts linked to the creator. Our team searches other crowdfunding platforms (Kickstarter, Indiegogo, GoFundMe, etc.) to review the creator&apos;s campaign history, including campaigns currently running as well as completed ones.</li>
+          <li><strong>Fulfillment History Review:</strong> We review backer comments, reviews, and public feedback on all of a creator&apos;s campaigns across all platforms — completed campaigns, campaigns currently running, and campaigns running concurrently on other platforms. This review is ongoing and is not limited to the period before approval. We contact creators directly when discrepancies or concerns are identified. We reserve the right to contact any creator by any means we see fit. Failure to respond to any communication will be considered campaign abandonment and will be dealt with accordingly.</li>
           <li><strong>Internal Documentation:</strong> All verification findings, correspondence, and review decisions are documented internally and retained for compliance and audit purposes.</li>
           <li><strong>Payment Account Verification:</strong> Creators must add a valid PayPal payout email (for standard campaigns), complete bank account setup through Divinity Payments (for NSFW/adult content campaigns), or connect a Whop account (for Whop-processed campaigns) to receive payouts.</li>
         </ul>

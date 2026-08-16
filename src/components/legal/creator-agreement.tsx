@@ -86,12 +86,12 @@ export function CreatorAgreementContent() {
         <p className="mb-6 font-medium">Creators must not use IndieCrowdfund to violate any law.</p>
 
         <h3 className="text-xl font-semibold mt-8 mb-4">7. Identity Verification & Due Diligence</h3>
-        <p className="mb-4">Before launching a campaign, creators must complete our verification process:</p>
+        <p className="mb-4">Before launching a campaign, creators must complete our verification process. Review does not stop at approval — we continue to review creators and their campaigns while those campaigns are running:</p>
         <ul className="list-disc pl-6 mb-4 space-y-2">
           <li><strong>New Creators:</strong> Must provide a valid government-issued photo ID and a legitimate business filing from their state&apos;s Secretary of State office</li>
           <li><strong>Social Media Verification:</strong> All linked social media accounts are logged and verified by our team</li>
-          <li><strong>Cross-Platform Audit:</strong> We search other crowdfunding platforms (Kickstarter, Indiegogo, GoFundMe, etc.) to review your previous campaign history, including backer reviews, comments, and public feedback</li>
-          <li><strong>Fulfillment History Validation:</strong> We contact creators directly when discrepancies or concerns are identified during our review. We reserve the right to contact any creator by any means we see fit. Failure to respond to any communication will be considered campaign abandonment and will be dealt with accordingly.</li>
+          <li><strong>Cross-Platform Audit:</strong> We search other crowdfunding platforms (Kickstarter, Indiegogo, GoFundMe, etc.) to review your campaign history — completed campaigns and any you are currently running, on this platform or elsewhere — including backer reviews, comments, and public feedback</li>
+          <li><strong>Fulfillment History Validation:</strong> We contact creators directly when discrepancies or concerns are identified during our review, whether the campaign in question has ended or is still running. We reserve the right to contact any creator by any means we see fit. Failure to respond to any communication will be considered campaign abandonment and will be dealt with accordingly.</li>
           <li><strong>Payment Verification:</strong> Adding a valid PayPal payout email (standard campaigns), or completing Divinity Payments bank account setup (NSFW/adult campaigns), or connecting a Whop account (Whop-processed campaigns) to receive payouts.</li>
         </ul>
         <p className="mb-4 font-medium">All verification findings, correspondence, and review decisions are documented internally and retained for compliance purposes.</p>
@@ -106,9 +106,12 @@ export function CreatorAgreementContent() {
           </ul>
         </div>
 
-        <h3 className="text-xl font-semibold mt-8 mb-4">8. Previous History</h3>
+        <h3 className="text-xl font-semibold mt-8 mb-4">8. Campaign History</h3>
         <p className="mb-6">
-          Your previous history on other crowdfunding sites will be thoroughly reviewed as part of our verification process. We reserve the right to refuse service to anyone, at any time, for any reason.
+          Your history on other crowdfunding sites will be thoroughly reviewed as part of our verification
+          process. This includes campaigns you are running right now, on this platform or any other, as well
+          as campaigns you have run in the past. We reserve the right to refuse service to anyone, at any
+          time, for any reason.
         </p>
 
         <div className="bg-zinc-50 dark:bg-zinc-800 rounded-lg p-4">
