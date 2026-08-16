@@ -6,6 +6,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { Switch } from "@/components/ui/switch";
+import { toast } from "sonner";
+import { apiFetch } from "@/lib/fetch-utils";
 import {
   Select,
   SelectContent,
@@ -108,6 +111,12 @@ interface HealthData {
 
 export default function AdminDashboard() {
   const [timeRange, setTimeRange] = useState("7d");
+  // Maintenance mode, on the dashboard rather than four tabs deep in Settings.
+  // Taking the site down is the thing you reach for when something is on fire,
+  // and hunting for it through a scrolling tab strip is not what you want to be
+  // doing at that moment.
+  const [maintenanceOn, setMaintenanceOn] = useState(false);
+  const [maintenanceBusy, setMaintenanceBusy] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [recentProjects, setRecentProjects] = useState<RecentProject[]>([]);
@@ -154,14 +163,63 @@ export default function AdminDashboard() {
     }
   }, []);
 
+  // Read the current flag from the same settings record the toggle writes, so
+  // the tile reflects reality rather than whatever this tab last did.
+  const fetchMaintenance = useCallback(async () => {
+    try {
+      const res = await fetch("/api/admin/settings");
+      if (!res.ok) return;
+      const data = await res.json();
+      setMaintenanceOn(!!data.settings?.maintenanceMode);
+    } catch {
+      // Leave the tile showing "live" rather than guessing.
+    }
+  }, []);
+
+  const toggleMaintenance = useCallback(
+    async (next: boolean) => {
+      // Optimistic, then reconciled: the switch should move under the finger,
+      // but the tile must not keep claiming the site is down if the save failed.
+      setMaintenanceOn(next);
+      setMaintenanceBusy(true);
+      try {
+        // PATCH with { section, data } — the same contract the Settings page
+        // uses. Only maintenanceMode is sent, so nothing else is disturbed.
+        const res = await apiFetch("/api/admin/settings", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ section: "general", data: { maintenanceMode: next } }),
+        });
+        if (!res.ok) {
+          const body = await res.json().catch(() => ({}));
+          throw new Error(body.error || "Could not change maintenance mode");
+        }
+        toast.success(
+          next
+            ? "Maintenance mode on — visitors now see the maintenance page"
+            : "Maintenance mode off — the site is live again"
+        );
+      } catch (error) {
+        setMaintenanceOn(!next);
+        toast.error(
+          error instanceof Error ? error.message : "Could not change maintenance mode"
+        );
+      } finally {
+        setMaintenanceBusy(false);
+      }
+    },
+    []
+  );
+
   useEffect(() => {
     fetchDashboardData();
     fetchHealthData();
+    fetchMaintenance();
 
     // Refresh health data every 30 seconds
     const healthInterval = setInterval(fetchHealthData, 30000);
     return () => clearInterval(healthInterval);
-  }, [fetchDashboardData, fetchHealthData]);
+  }, [fetchDashboardData, fetchHealthData, fetchMaintenance]);
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -597,6 +655,37 @@ export default function AdminDashboard() {
                 </div>
               </div>
             )}
+          </CardContent>
+        </Card>
+
+        <Card className={`bg-gradient-to-br text-white ${
+          maintenanceOn ? "from-amber-500 to-orange-600" : "from-slate-600 to-slate-800"
+        }`}>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-white/80">Maintenance Mode</p>
+                <p className="mt-1 text-2xl font-bold">
+                  {maintenanceOn ? "Site is down" : "Site is live"}
+                </p>
+                <p className="mt-1 text-xs text-white/70">
+                  {maintenanceOn
+                    ? "Visitors see the maintenance page. /admin stays open."
+                    : "Flip to show the maintenance page to visitors."}
+                </p>
+              </div>
+              <Switch
+                checked={maintenanceOn}
+                disabled={maintenanceBusy}
+                onCheckedChange={toggleMaintenance}
+                aria-label="Maintenance mode"
+              />
+            </div>
+            <div className="mt-3 pt-3 border-t border-white/20">
+              <Link href="/admin/settings">
+                <Button size="sm" variant="secondary">Schedule a window</Button>
+              </Link>
+            </div>
           </CardContent>
         </Card>
       </div>
