@@ -67,6 +67,10 @@ export async function GET() {
 
       // Reports/Moderation
       pendingReports,
+
+      // Payouts awaiting processing
+      pendingPayoutAgg,
+      pendingPayoutCount,
     ] = await Promise.all([
       // Users (exclude deleted)
       db.user.count({ where: { deletedAt: null } }),
@@ -184,6 +188,15 @@ export async function GET() {
 
       // Reports
       db.report.count({ where: { status: "PENDING" } }).catch(() => 0),
+
+      // Payouts awaiting processing. Same filter /admin/payouts uses for its
+      // PENDING tab, so the dashboard figure and the list behind the Process
+      // button describe the same money.
+      db.payout.aggregate({
+        where: { status: "PENDING", deletedAt: null },
+        _sum: { amount: true },
+      }),
+      db.payout.count({ where: { status: "PENDING", deletedAt: null } }),
     ]);
 
     // Calculate growth percentages
@@ -236,6 +249,12 @@ export async function GET() {
         revenueThisMonth,
         revenueGrowth: Number(revenueGrowth),
         pendingReports,
+        // Real money owed to creators, matching what /admin/payouts lists as
+        // PENDING. The tile used to render totalRevenue * 0.1 — a made-up
+        // tenth of gross revenue that tracked nothing and moved whenever
+        // pledges came in, whether or not a payout existed.
+        pendingPayoutAmount: Number(pendingPayoutAgg._sum.amount || 0),
+        pendingPayoutCount,
       },
       projectsByStatus: statusBreakdown,
       // Projects requiring action (SUBMITTED or APPROVED needing launch)

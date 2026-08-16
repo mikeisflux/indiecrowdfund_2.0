@@ -57,6 +57,8 @@ interface DashboardStats {
   revenueThisMonth: number;
   revenueGrowth: number;
   pendingReports: number;
+  pendingPayoutAmount: number;
+  pendingPayoutCount: number;
 }
 
 interface RecentProject {
@@ -509,8 +511,16 @@ export default function AdminDashboard() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-white/80">Pending Payouts</p>
+                {/* Sum of payouts actually sitting in PENDING, which is what
+                    the Process button opens. This read totalRevenue * 0.1 — a
+                    tenth of gross revenue, invented, tracking no payout and
+                    drifting upward with every pledge whether or not a single
+                    creator was owed anything. */}
                 <p className="mt-1 text-2xl font-bold">
-                  {stats ? formatCurrency(stats.totalRevenue * 0.1) : "$0"}
+                  {stats ? formatCurrency(stats.pendingPayoutAmount) : "$0"}
+                </p>
+                <p className="text-xs text-white/80">
+                  {stats?.pendingPayoutCount ?? 0} awaiting processing
                 </p>
               </div>
               <Link href="/admin/payouts">
