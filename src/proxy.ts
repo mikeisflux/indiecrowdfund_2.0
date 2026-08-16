@@ -277,6 +277,9 @@ function refreshMaintenance(): Promise<void> {
   maintenanceInFlight = fetch(`${getInternalApiUrl()}/api/internal/maintenance`, {
     headers,
     cache: "no-store",
+    // Never let this outlive a request. Without a bound, a socket that
+    // connects but never answers pins middleware open on every request.
+    signal: AbortSignal.timeout(2_000),
   })
     .then(async (res) => {
       if (!res.ok) return;
@@ -299,17 +302,25 @@ function refreshMaintenance(): Promise<void> {
   return maintenanceInFlight;
 }
 
-async function isMaintenanceModeEnabled(): Promise<boolean> {
+function isMaintenanceModeEnabled(pathname: string): boolean {
   // The env var stays as an override, so there is still a way to force the
   // site down when the database itself is the thing being worked on.
   if (process.env.MAINTENANCE_MODE === "true") return true;
 
-  const age = Date.now() - maintenanceCache.fetchedAt;
-  if (age > MAINTENANCE_CACHE_MS) {
-    // First call blocks so a freshly flipped switch takes effect immediately;
-    // later refreshes serve the cached value and update in the background.
-    if (maintenanceCache.fetchedAt === 0) await refreshMaintenance();
-    else void refreshMaintenance();
+  // The refresh below fetches /api/internal/maintenance, and that request comes
+  // back through this same middleware. Asking it about itself deadlocks: the
+  // inner call waits on the in-flight promise that only the inner call can
+  // complete. Internal routes are never user-facing, so they are answered
+  // without consulting the flag at all.
+  if (pathname.startsWith("/api/internal")) return false;
+
+  if (Date.now() - maintenanceCache.fetchedAt > MAINTENANCE_CACHE_MS) {
+    // Fire and forget, always. An earlier version awaited the first call so a
+    // freshly flipped switch applied instantly; that is what turned a slow or
+    // recursive internal request into a hung site. A flip now takes up to the
+    // cache interval to appear, which is a fair price for middleware that
+    // cannot block.
+    void refreshMaintenance();
   }
 
   return maintenanceCache.enabled;
@@ -820,7 +831,7 @@ export async function proxy(req: NextRequest) {
   } // end: bot-blocker kill switch else
 
   // Maintenance mode: the /admin toggle, or the env override.
-  const isMaintenanceMode = await isMaintenanceModeEnabled();
+  const isMaintenanceMode = isMaintenanceModeEnabled(pathname);
 
   if (isMaintenanceMode) {
     // Allow certain routes to bypass maintenance
