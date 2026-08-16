@@ -5,8 +5,11 @@ import { logger } from "@/lib/logger";
 const creatorIndiekitIntegrationsLogger = logger.child({ module: "creator-indiekit-integrations" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { encryptCredential } from "@/lib/encryption";
 import { circuitBreaker } from "@/lib/circuit-breaker";
+import {
+  canManageShipStation,
+  encryptShipStationCredentials,
+} from "@/lib/fulfillment/shipstation-credentials";
 
 export async function GET(req: NextRequest) {
   try {
@@ -123,19 +126,18 @@ export async function POST(req: NextRequest) {
         );
       }
 
-      // Credentials live on the creator's user record — that is where the
-      // order push and tracking sync read them from, for collaborators too —
-      // so only the creator may set them.
-      const project = await db.project.findFirst({
-        where: { id: projectId, deletedAt: null, creatorId: session.user.id },
-        select: { id: true },
-      });
-
-      if (!project) {
+      // The creator or an accepted collaborator. The fulfilment partner is
+      // usually a collaborator rather than the creator, and they are the one
+      // holding the ShipStation account, so locking this to the creator put
+      // the connection in the hands of the person who does not do the
+      // shipping. Credentials are stored against the project (below), so a
+      // collaborator connecting here cannot affect the creator's other
+      // campaigns.
+      if (!(await canManageShipStation(projectId, session.user.id))) {
         return NextResponse.json(
           {
             error:
-              "Only the project creator can connect ShipStation. Collaborators use the creator's connection.",
+              "You need to be the creator or an accepted collaborator on this campaign to connect ShipStation.",
           },
           { status: 403 }
         );
@@ -194,31 +196,21 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: reason }, { status: 400 });
       }
 
-      await db.user.update({
-        where: { id: session.user.id },
-        data: {
-          shipstationApiKey: encryptCredential(key),
-          shipstationApiSecret: encryptCredential(secret),
-        },
-      });
+      // Stored against the project, encrypted, rather than on whoever happened
+      // to submit the form. Scoping it this way is what makes it safe for a
+      // collaborator to connect: it cannot reach the creator's other campaigns.
+      const credentials = encryptShipStationCredentials(key, secret);
 
-      // The row is what the GET above reports as "connected". The secrets are
-      // deliberately not copied into its credentials column — one encrypted
-      // home for them, not two to keep in step.
       await db.fulfillmentIntegration.upsert({
         where: { projectId_provider: { projectId, provider: "SHIPSTATION" } },
         create: {
           projectId,
           provider: "SHIPSTATION",
-          credentials: { storedOn: "user" },
+          credentials,
           status: "CONNECTED",
           lastSyncError: null,
         },
-        update: {
-          credentials: { storedOn: "user" },
-          status: "CONNECTED",
-          lastSyncError: null,
-        },
+        update: { credentials, status: "CONNECTED", lastSyncError: null },
       });
 
       return NextResponse.json({ success: true, message: "Connected to ShipStation" });

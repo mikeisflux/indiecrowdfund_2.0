@@ -9,9 +9,8 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { z } from "zod";
 import { circuitBreaker } from "@/lib/circuit-breaker";
-import { decryptCredential } from "@/lib/encryption";
 import { resolvePledgeShippingAddress } from "@/lib/fulfillment/shipping-address";
-function safeDecrypt(v: string): string { try { return decryptCredential(v); } catch { return v; } }
+import { resolveShipStationCredentials } from "@/lib/fulfillment/shipstation-credentials";
 
 const actionSchema = z.object({
   projectId: z.string(),
@@ -122,24 +121,22 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Project not found or access denied" }, { status: 403 });
     }
 
-    // Get PROJECT CREATOR's ShipStation credentials
-    // Collaborators use the creator's connection, not their own
-    const creator = await db.user.findFirst({
-      where: { id: project.creatorId, deletedAt: null },
-      select: {
-        shipstationApiKey: true,
-        shipstationApiSecret: true,
-      },
-    });
+    // Credentials for this project: the connection made on the campaign
+    // itself if there is one, otherwise the creator's account-level keys from
+    // before connections were project-scoped.
+    const credentials = await resolveShipStationCredentials(projectId, project.creatorId);
 
-    if (!creator?.shipstationApiKey || !creator?.shipstationApiSecret) {
+    if (!credentials) {
       return NextResponse.json(
-        { error: "ShipStation credentials not configured. The project creator must add their API Key and Secret in Settings." },
+        {
+          error:
+            "ShipStation isn't connected for this campaign. The creator or an accepted collaborator can connect it in IndieKit under Settings > Integrations.",
+        },
         { status: 400 }
       );
     }
 
-    const authHeader = getShipStationAuthHeader(safeDecrypt(creator.shipstationApiKey), safeDecrypt(creator.shipstationApiSecret));
+    const authHeader = getShipStationAuthHeader(credentials.apiKey, credentials.apiSecret);
 
     switch (action) {
       case "push_orders": {
