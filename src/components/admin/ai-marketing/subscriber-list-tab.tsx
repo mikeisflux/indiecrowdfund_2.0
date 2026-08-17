@@ -35,6 +35,7 @@ import {
   Plus,
   Pencil,
   Copy,
+  UserMinus,
   Loader2,
   Store,
   Target,
@@ -120,6 +121,12 @@ export function SubscriberListTab({ onImportCSV }: SubscriberListTabProps) {
   const [formError, setFormError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [removingDuplicates, setRemovingDuplicates] = useState(false);
+  const [removingUnsubscribed, setRemovingUnsubscribed] = useState(false);
+  const [unsubPreview, setUnsubPreview] = useState<{
+    subscribersDeactivated: number;
+    queuedCancelled: number;
+    failedCleared: number;
+  } | null>(null);
 
   // Confirmation dialog state
   const [deleteConfirm, setDeleteConfirm] = useState<{ open: boolean; id: string; category: string }>({
@@ -128,6 +135,7 @@ export function SubscriberListTab({ onImportCSV }: SubscriberListTabProps) {
     category: "",
   });
   const [showDuplicatesConfirm, setShowDuplicatesConfirm] = useState(false);
+  const [showUnsubConfirm, setShowUnsubConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
   const fetchSubscribers = useCallback(async () => {
@@ -256,6 +264,54 @@ export function SubscriberListTab({ onImportCSV }: SubscriberListTabProps) {
     a.download = `subscribers-${selectedCategory}-${new Date().toISOString().split("T")[0]}.csv`;
     a.click();
     URL.revokeObjectURL(url);
+  };
+
+  // Take everyone who has opted out off the marketing list.
+  //
+  // Counts first, so the confirmation says what will actually happen rather
+  // than asking for a blank cheque.
+  const previewRemoveUnsubscribed = async () => {
+    setRemovingUnsubscribed(true);
+    try {
+      const res = await apiFetch("/api/admin/email-queue", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "clean-unsubscribed", dryRun: true }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      const d = data.detail;
+      if (!d || d.subscribersDeactivated + d.queuedCancelled + d.failedCleared === 0) {
+        toast.info("Nothing to remove — no opted-out address is still on a list.");
+        return;
+      }
+      setUnsubPreview(d);
+      setShowUnsubConfirm(true);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Couldn't check the list");
+    } finally {
+      setRemovingUnsubscribed(false);
+    }
+  };
+
+  const handleRemoveUnsubscribed = async () => {
+    setRemovingUnsubscribed(true);
+    try {
+      const res = await apiFetch("/api/admin/email-queue", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "clean-unsubscribed" }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      toast.success(data.message);
+      setShowUnsubConfirm(false);
+      fetchSubscribers();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to remove unsubscribed");
+    } finally {
+      setRemovingUnsubscribed(false);
+    }
   };
 
   const handleRemoveDuplicates = async () => {
@@ -411,6 +467,20 @@ export function SubscriberListTab({ onImportCSV }: SubscriberListTabProps) {
               <Button variant="outline" size="sm" onClick={exportCSV}>
                 <Download className="mr-2 h-4 w-4" />
                 Export
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={previewRemoveUnsubscribed}
+                disabled={removingUnsubscribed}
+                title="Remove everyone who has unsubscribed, been banned, or closed their account from the marketing list"
+              >
+                {removingUnsubscribed ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <UserMinus className="mr-2 h-4 w-4" />
+                )}
+                Remove Unsubscribed
               </Button>
               <Button
                 variant="outline"
@@ -650,6 +720,22 @@ export function SubscriberListTab({ onImportCSV }: SubscriberListTabProps) {
         variant="destructive"
         onConfirm={handleDelete}
         loading={deleting}
+      />
+
+      {/* Remove Unsubscribed Confirmation */}
+      <ConfirmDialog
+        open={showUnsubConfirm}
+        onOpenChange={setShowUnsubConfirm}
+        title="Remove Unsubscribed From Marketing List?"
+        description={
+          unsubPreview
+            ? `This will take ${unsubPreview.subscribersDeactivated} address(es) off the marketing list — people who unsubscribed, were banned, or closed their account. It also cancels ${unsubPreview.queuedCancelled} queued email(s) to them and clears ${unsubPreview.failedCleared} failed row(s). Password resets and verification emails are not affected.`
+            : ""
+        }
+        confirmText="Remove Them"
+        variant="destructive"
+        onConfirm={handleRemoveUnsubscribed}
+        loading={removingUnsubscribed}
       />
 
       {/* Remove Duplicates Confirmation */}
