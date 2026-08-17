@@ -197,6 +197,7 @@ export function DataDeletionPolicyContent() {
           Where an account has been banned, suspended, or terminated for violating our Terms of Service or policies, we retain a limited set of identifiers for the specific purpose of recognizing that person if they attempt to return:
         </p>
         <ul className="list-disc pl-6 mb-4 space-y-2">
+          <li>The name on the account, and any name given for shipping or verification</li>
           <li>The email address or addresses associated with the account</li>
           <li>Any phone number provided for verification</li>
           <li>The last known IP address or addresses used to access the account</li>
@@ -204,6 +205,9 @@ export function DataDeletionPolicyContent() {
           <li>Payment identifiers associated with a chargeback, fraud, or abuse ban — these are processor-side references, not full card numbers</li>
           <li>The enforcement record itself: the date of the ban, the reason, and the administrator who applied it</li>
         </ul>
+        <p className="mb-4">
+          These are compared against new and existing accounts to identify the same person returning under a different registration. A name on its own is weak evidence and is never acted on alone — it is used alongside the other identifiers above, and a match is reviewed by a person before any account is closed.
+        </p>
         <p className="mb-6">
           We retain these identifiers for as long as the enforcement action remains in force. Where the ban is permanent — including the automatic permanent ban for chargebacks described in Section 5a of our Terms of Service — the retention is indefinite.
         </p>

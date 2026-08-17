@@ -482,6 +482,7 @@ export function TermsOfServiceContent() {
           account or your personal data does not oblige us to erase it:
         </p>
         <ul className="list-disc pl-6 mb-4 space-y-2">
+          <li>The name on the account, and any name given for shipping or verification</li>
           <li>The email address or addresses associated with the account</li>
           <li>Any phone number provided for verification</li>
           <li>The last known IP address or addresses used to access the account</li>
@@ -492,6 +493,11 @@ export function TermsOfServiceContent() {
           </li>
           <li>The enforcement record itself: the date, the reason, and who applied it</li>
         </ul>
+        <p className="mb-4">
+          We compare these against new and existing accounts to identify the same person returning. A
+          name on its own is weak evidence and we do not act on one alone — it is used together with the
+          other identifiers above, and a match is reviewed before any account is closed.
+        </p>
         <p className="mb-4">
           We keep these for as long as the ban remains in force, which for a permanent ban means
           indefinitely. We keep nothing else for this purpose: everything outside this list is deleted or
