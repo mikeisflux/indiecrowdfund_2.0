@@ -4,7 +4,7 @@ import { apiFetch } from "@/lib/fetch-utils";
 import { toast } from "sonner";
 import { autoFormatEmailBody } from "@/lib/email/auto-format-body";
 import { sanitizeHtml } from "@/lib/utils/sanitize";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -169,25 +169,44 @@ export function EmailCampaignsTab({
   const [editHtmlContent, setEditHtmlContent] = useState("");
   const [isFormatting, setIsFormatting] = useState(false);
   const [liveCampaigns, setLiveCampaigns] = useState<
-    { slug: string; title: string; category: string | null }[]
+    { slug: string; title: string; category: string | null; stateLabel?: string }[]
   >([]);
+  const [campaignsLoading, setCampaignsLoading] = useState(true);
+  const [campaignsError, setCampaignsError] = useState<string | null>(null);
 
-  // Campaigns available to drop into an email. Loaded once when the editor is
-  // in use rather than on every render of the tab.
-  useEffect(() => {
-    let cancelled = false;
-    fetch("/api/admin/ai-marketing/live-campaigns")
-      .then((res) => (res.ok ? res.json() : { campaigns: [] }))
-      .then((data) => {
-        if (!cancelled) setLiveCampaigns(data.campaigns || []);
-      })
-      .catch(() => {
-        // The dropdown simply stays empty; nothing else depends on this.
-      });
-    return () => {
-      cancelled = true;
-    };
+  // Campaigns available to drop into an email.
+  //
+  // Both failure modes used to end in the same place — an empty list and a
+  // greyed-out button — so "there is nothing to insert" and "the request
+  // failed" were indistinguishable from the outside. They are tracked
+  // separately now and the menu says which one happened.
+  const loadCampaigns = useCallback(async () => {
+    setCampaignsLoading(true);
+    setCampaignsError(null);
+    try {
+      const res = await fetch("/api/admin/ai-marketing/live-campaigns");
+      if (!res.ok) {
+        throw new Error(
+          res.status === 401
+            ? "You need admin access to list campaigns."
+            : `Couldn't load campaigns (HTTP ${res.status}).`
+        );
+      }
+      const data = await res.json();
+      setLiveCampaigns(Array.isArray(data.campaigns) ? data.campaigns : []);
+    } catch (error) {
+      setCampaignsError(
+        error instanceof Error ? error.message : "Couldn't load campaigns."
+      );
+      setLiveCampaigns([]);
+    } finally {
+      setCampaignsLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    void loadCampaigns();
+  }, [loadCampaigns]);
 
   // Insert a token the operator can see and delete like any other text. It
   // becomes the real project card when "Format as email" runs — the card is a
@@ -876,16 +895,16 @@ export function EmailCampaignsTab({
                       <div className="flex items-center gap-2">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
+                          {/* Never disabled. A greyed-out control with a
+                              tooltip is a dead end — the operator cannot tell
+                              an empty list from a failed request, and has
+                              nothing to click to find out. It always opens
+                              and the menu explains itself. */}
                           <Button
                             type="button"
                             variant="outline"
                             size="sm"
-                            disabled={liveCampaigns.length === 0}
-                            title={
-                              liveCampaigns.length === 0
-                                ? "No live campaigns to insert"
-                                : "Insert a campaign card"
-                            }
+                            title="Insert a campaign card"
                           >
                             <LayoutGrid className="h-3.5 w-3.5 mr-2" />
                             Insert campaign
@@ -893,19 +912,52 @@ export function EmailCampaignsTab({
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" side="bottom" className="max-h-80 overflow-y-auto">
-                          {liveCampaigns.map((c) => (
-                            <DropdownMenuItem
-                              key={c.slug}
-                              onSelect={() => insertCampaign(c.slug, c.title)}
-                            >
-                              <span className="truncate">{c.title}</span>
-                              {c.category && (
-                                <span className="ml-2 text-xs text-muted-foreground">
-                                  {c.category}
-                                </span>
-                              )}
-                            </DropdownMenuItem>
-                          ))}
+                          {campaignsLoading ? (
+                            <div className="flex items-center gap-2 px-2 py-3 text-sm text-muted-foreground">
+                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                              Loading campaigns...
+                            </div>
+                          ) : campaignsError ? (
+                            <div className="px-2 py-3 text-sm">
+                              <p className="mb-2 text-destructive">{campaignsError}</p>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                className="w-full"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  void loadCampaigns();
+                                }}
+                              >
+                                Try again
+                              </Button>
+                            </div>
+                          ) : liveCampaigns.length === 0 ? (
+                            <div className="px-2 py-3 text-sm text-muted-foreground">
+                              No campaigns are live, in prelaunch, or funded right now, so there is
+                              nothing to insert yet.
+                            </div>
+                          ) : (
+                            liveCampaigns.map((c) => (
+                              <DropdownMenuItem
+                                key={c.slug}
+                                onSelect={() => insertCampaign(c.slug, c.title)}
+                              >
+                                <span className="truncate">{c.title}</span>
+                                {c.stateLabel && (
+                                  <span className="ml-2 shrink-0 rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+                                    {c.stateLabel}
+                                  </span>
+                                )}
+                                {c.category && (
+                                  <span className="ml-2 truncate text-xs text-muted-foreground">
+                                    {c.category}
+                                  </span>
+                                )}
+                              </DropdownMenuItem>
+                            ))
+                          )}
                         </DropdownMenuContent>
                       </DropdownMenu>
                       <Button
