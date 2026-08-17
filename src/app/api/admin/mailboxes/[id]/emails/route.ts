@@ -249,6 +249,8 @@ export async function POST(
       },
     });
 
+    let sendFailure: string | null = null;
+
     // If sendNow is true, actually send the email via the email service
     if (sendNow && folder !== "DRAFTS") {
       try {
@@ -260,6 +262,17 @@ export async function POST(
           html: bodyHtml,
           text: bodyText || bodyHtml.replace(/<[^>]*>/g, ""),
           attachments: attachments.length > 0 ? attachments : undefined,
+          // A reply typed by a human in the support mailbox is 1:1
+          // correspondence, not a mailing. The unsubscribe flag exists to stop
+          // bulk mail, and applying it here meant we could not answer anyone
+          // who had opted out — including someone who opted out *because* we
+          // closed their account, and is now owed a reply about that closure.
+          // Support and compliance mail has to reach them.
+          //
+          // The hard blocklist still applies: an address that bounces or
+          // reports spam is genuinely undeliverable, and there is no point
+          // pretending otherwise.
+          skipUnsubscribeCheck: true,
           // We already created our own adminEmail row above (line ~230);
           // skip sendEmail's auto-log so we don't double up the Sent
           // folder for every message this route handles.
@@ -281,6 +294,7 @@ export async function POST(
             where: { id: email.id },
             data: { status: "FAILED" },
           });
+          sendFailure = sendResult.error || "The email could not be sent.";
         }
       } catch (sendError) {
         adminMailboxesEmailsLogger.error({ err: String(sendError) }, `[Admin Email] Exception sending email:`);
@@ -288,10 +302,24 @@ export async function POST(
           where: { id: email.id },
           data: { status: "FAILED" },
         });
+        sendFailure = String(sendError);
       }
     }
 
-    return NextResponse.json({ email });
+    // Say so when it did not go.
+    //
+    // This route stored FAILED on the row and then answered 200 with no hint,
+    // so the message appeared in the thread looking sent. A reply that was
+    // silently dropped is worse than an error: nobody follows up on mail they
+    // believe was delivered.
+    if (sendFailure) {
+      return NextResponse.json(
+        { email, sent: false, error: `Saved to the thread, but not delivered: ${sendFailure}` },
+        { status: 502 }
+      );
+    }
+
+    return NextResponse.json({ email, sent: sendNow && folder !== "DRAFTS" });
   } catch (error) {
     adminMailboxesEmailsLogger.error({ err: formatError(error) }, "Error creating email:");
     return NextResponse.json(
