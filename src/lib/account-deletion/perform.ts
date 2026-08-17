@@ -3,6 +3,17 @@ import { logger } from "@/lib/logger";
 
 const log = logger.child({ module: "account-deletion" });
 
+// Prisma's sentinel for "set this JSON column to SQL NULL".
+//
+// Passing plain `null` to a nullable Json field is rejected at runtime, and
+// passing `undefined` silently means "leave it as it is" — which is exactly
+// how the survey answers below went on surviving deletion. The value exists on
+// the runtime client but this project's generated types expose `Prisma` as a
+// namespace only, so it is read through a narrow cast rather than imported.
+const DB_NULL = (
+  require("@prisma/client") as { Prisma: { DbNull: unknown } }
+).Prisma.DbNull as never;
+
 // Sentinel object written to Pledge.shippingAddress when the backer
 // deletes their account. Backer reports render this verbatim so the
 // creator sees a clear "this person is gone, do not ship" signal
@@ -106,13 +117,45 @@ export async function performAccountDeletion(userId: string): Promise<void> {
         where: { id: { in: completedIds } },
         data: {
           shippingAddress: DELETED_ADDRESS_SENTINEL,
-          surveyResponses: undefined,
+          // Prisma reads `undefined` as "leave this field alone", so the
+          // previous value here cleared nothing at all — the backer's survey
+          // answers stayed on the pledge after deletion. DbNull is how a JSON
+          // column is actually set to NULL.
+          surveyResponses: DB_NULL,
           surveyCompleted: false,
         },
       });
       await tx.pledgeAddon.updateMany({
         where: { pledgeId: { in: completedIds } },
         data: { quantity: 0 },
+      });
+    }
+
+    // 2b. The survey response is a separate row, and it is the one that counts.
+    //
+    // resolvePledgeShippingAddress() reads the survey address FIRST and only
+    // falls back to the pledge address. Writing the sentinel to the pledge
+    // while leaving SurveyResponse.shippingAddress intact meant the deleted
+    // backer's real home address was still what every fulfilment surface
+    // returned — backer reports, CSV exports, and the ShipStation push. The
+    // "Account deleted" marker was written to a field nothing read.
+    //
+    // Covers every pledge the user made, not only completed ones: a cancelled
+    // pledge's survey answers are just as personal.
+    const allPledges = await tx.pledge.findMany({
+      where: { userId },
+      select: { id: true },
+    });
+    if (allPledges.length > 0) {
+      await tx.surveyResponse.updateMany({
+        where: { pledgeId: { in: allPledges.map((p: { id: string }) => p.id) } },
+        data: {
+          shippingAddress: DELETED_ADDRESS_SENTINEL,
+          // Free-text answers routinely contain names, addresses and phone
+          // numbers regardless of what the question asked for.
+          backerResponses: DB_NULL,
+          itemResponses: DB_NULL,
+        },
       });
     }
 
