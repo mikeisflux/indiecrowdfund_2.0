@@ -49,6 +49,8 @@ export async function GET(
             bio: true,
             location: true,
             vanityUrl: true,
+            // Drives the BANNED stamp on the campaign page.
+            lockedAt: true,
             _count: {
               select: {
                 createdProjects: true,
@@ -263,6 +265,7 @@ export async function GET(
       // Creator
       creatorId: project.creatorId,
       creator: {
+        creatorBanned: !!project.creator.lockedAt,
         id: project.creator.id,
         name: project.creator.name || "Creator",
         image: project.creator.image || "",

@@ -50,6 +50,7 @@ import {
 } from "@/components/project-details";
 import { CountdownTimer } from "@/components/ui/countdown-timer";
 import { BackToTop } from "@/components/back-to-top";
+import { BannedStamp } from "@/components/ui/banned-stamp";
 
 export default function ProjectPage() {
   const { data: session } = useSession();
@@ -884,6 +885,15 @@ export default function ProjectPage() {
 
       {/* Main Content */}
       <section ref={contentSectionRef} className="container py-8 relative">
+        {/* Banned creator: stamped across the campaign so nobody scrolls past
+            the notice. Sticky rather than pinned to the top of the section —
+            the campaign is long, and a mark at the very top is gone by the
+            time a reader reaches the pledge buttons. */}
+        {project.creator?.creatorBanned && (
+          <div className="pointer-events-none sticky top-24 z-30 h-0">
+            <BannedStamp size="lg" className="h-[40vh]" />
+          </div>
+        )}
         {activeTab === "campaign" && (
           <CampaignTab
             project={project}

@@ -50,6 +50,7 @@ import {
 import { PROJECT_CATEGORIES } from "@/types";
 import { formatTimeRemaining } from "@/lib/utils";
 import type { CampaignAmountDisplay } from "@/components/project-details/types";
+import { BannedStamp } from "@/components/ui/banned-stamp";
 
 // Project type from API
 interface Project {
@@ -59,7 +60,7 @@ interface Project {
   slug: string;
   category: string;
   imageUrl: string;
-  creator: { id: string; name: string; image: string | null };
+  creator: { id: string; name: string; image: string | null; creatorBanned?: boolean };
   goalAmount: number;
   currentAmount: number;
   // Server-resolved currency display (creator's local currency
@@ -662,6 +663,9 @@ function ProjectCard({ project }: { project: Project }) {
     <Link href={project.projectUrl}>
       <Card className={`project-card h-full overflow-hidden glass-card glass-card-hover rounded-2xl border-border/50 ${isPrelaunch ? "border-amber-300/50 dark:border-amber-700/50" : ""}`}>
         <div className="aspect-video bg-muted relative overflow-hidden group">
+          {/* Over the cover art rather than the whole card, so the title and
+              funding bar underneath stay readable. */}
+          {project.creator?.creatorBanned && <BannedStamp />}
           {project.imageUrl ? (
             <Image
               src={project.imageUrl}

@@ -11,6 +11,8 @@ export interface ProjectCreatorRatings {
 }
 
 export interface ProjectCreator {
+  /** True when an admin has banned this creator — drives the BANNED stamp. */
+  creatorBanned?: boolean;
   id: string;
   name: string;
   image: string;
@@ -208,6 +210,7 @@ export const initialProject: ProjectData = {
   launchedAt: new Date(),
   layoutVersion: 1,
   creator: {
+    creatorBanned: false,
     id: "",
     name: "",
     image: "",

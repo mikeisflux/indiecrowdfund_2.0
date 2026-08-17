@@ -215,6 +215,7 @@ export async function GET(
       // Creator
       creatorId: project.creatorId,
       creator: {
+        creatorBanned: !!project.creator.lockedAt,
         id: project.creator.id,
         name: project.creator.name || "Creator",
         image: project.creator.image || "",
