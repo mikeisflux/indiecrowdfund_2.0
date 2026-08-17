@@ -533,13 +533,29 @@ export function IntegrationsSection({
             </div>
             <div>
               <p className="font-medium">ShipStation</p>
+              {/* The store control sits inline with the store it names, not in
+                  the button row. A third button there wrapped onto a second
+                  line, and putting it on its own line below added a third row
+                  — either way this became the only tile in the panel taller
+                  than the rest. */}
               <p className="text-sm text-muted-foreground">
                 {shipStation.loading
                   ? "Checking connection..."
-                  : shipStation.connected
-                    ? shipStation.storeName
-                      ? `Orders import into ${shipStation.storeName}`
-                      : "Connected · using your default ShipStation store"
+                  : shipStation.connected ? (
+                      <>
+                        {shipStation.storeName
+                          ? `Orders import into ${shipStation.storeName}`
+                          : "Connected · using your default ShipStation store"}
+                        {" · "}
+                        <button
+                          type="button"
+                          onClick={openStorePicker}
+                          className="font-medium text-teal-600 underline-offset-2 hover:underline"
+                        >
+                          {shipStation.storeName ? "Change store" : "Choose store"}
+                        </button>
+                      </>
+                    )
                     : "Shipping label generation & tracking"}
               </p>
               {shipStation.error && !shipStation.connected && (
@@ -556,13 +572,10 @@ export function IntegrationsSection({
               <Loader2 className="h-4 w-4 animate-spin" />
             </Button>
           ) : shipStation.connected ? (
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex items-center gap-2">
               <Button variant="outline" className="text-green-600 border-green-600">
                 <CheckCircle className="h-4 w-4 mr-1" />
                 Connected
-              </Button>
-              <Button variant="ghost" size="sm" onClick={openStorePicker}>
-                {shipStation.storeName ? "Change store" : "Choose store"}
               </Button>
               <Button
                 variant="ghost"
