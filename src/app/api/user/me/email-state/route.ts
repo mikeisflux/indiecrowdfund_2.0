@@ -26,9 +26,25 @@ export async function PATCH(req: NextRequest) {
   }
   const body = await req.json();
   const unsubscribed = !!body?.unsubscribed;
-  await db.user.update({
+
+  const user = await db.user.update({
     where: { id: session.user.id },
     data: { emailUnsubscribedAt: unsubscribed ? new Date() : null },
+    select: { email: true },
   });
+
+  // The newsletter is a separate table keyed by email, and this toggle used to
+  // ignore it. /api/unsubscribe has always updated both; this one updated only
+  // the User row, so anyone who opted out here stayed on the newsletter list,
+  // got queued by the next digest, and was rejected at send — a FAILED row
+  // every time, saying "User has unsubscribed from emails". The suppression
+  // worked; the list was wrong.
+  await db.newsletterSubscriber.updateMany({
+    where: { email: user.email.toLowerCase() },
+    data: unsubscribed
+      ? { isActive: false, unsubscribedAt: new Date() }
+      : { isActive: true, unsubscribedAt: null },
+  });
+
   return NextResponse.json({ unsubscribed });
 }

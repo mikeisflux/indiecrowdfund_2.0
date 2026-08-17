@@ -16,6 +16,7 @@ import {
   RotateCcw,
   ArrowUpCircle,
   Mail,
+  MailX,
   AlertTriangle,
   CheckCircle,
   Loader2,
@@ -215,6 +216,53 @@ export default function EmailQueuePage() {
       fetchQueue();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Action failed");
+    } finally {
+      setIsActioning(false);
+    }
+  }, [fetchQueue]);
+
+  // Take everyone who has opted out off the lists.
+  //
+  // Runs as a dry run first and shows the real numbers, because this deletes
+  // queued mail — "clean up 2,182 pending" is not something to trigger blind
+  // from a button whose effect you cannot see beforehand.
+  const cleanUnsubscribed = useCallback(async () => {
+    setIsActioning(true);
+    try {
+      const preview = await apiFetch("/api/admin/email-queue", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "clean-unsubscribed", dryRun: true }),
+      });
+      const previewData = await preview.json();
+      if (!preview.ok) throw new Error(previewData.error);
+
+      const d = previewData.detail;
+      if (!d || d.subscribersDeactivated + d.queuedCancelled + d.failedCleared === 0) {
+        toast.success("Nothing to clean up — no opted-out address is still on a list.");
+        return;
+      }
+
+      const ok = confirm(
+        `This will:\n\n` +
+          `• remove ${d.subscribersDeactivated} unsubscribed address(es) from the newsletter list\n` +
+          `• cancel ${d.queuedCancelled} queued email(s) to people who opted out\n` +
+          `• clear ${d.failedCleared} failed row(s) already rejected for this reason\n\n` +
+          `Password resets and verification emails are not affected. Continue?`
+      );
+      if (!ok) return;
+
+      const res = await apiFetch("/api/admin/email-queue", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "clean-unsubscribed" }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      toast.success(data.message);
+      fetchQueue();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Cleanup failed");
     } finally {
       setIsActioning(false);
     }
@@ -473,6 +521,17 @@ export default function EmailQueuePage() {
                 Promote Demoted ({stats?.demoted})
               </Button>
             )}
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={cleanUnsubscribed}
+              disabled={isActioning}
+              title="Remove opted-out addresses from the mailing lists and cancel mail queued to them"
+            >
+              <MailX className="h-4 w-4 mr-1" />
+              Clean Unsubscribed
+            </Button>
 
             <Button
               variant="outline"

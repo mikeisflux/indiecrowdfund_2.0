@@ -6,6 +6,7 @@ const adminEmailQueueLogger = logger.child({ module: "admin-email-queue" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { getEmailQueueStats, setEmailQueueEnabled, EMAIL_PRIORITY } from "@/lib/email";
+import { cleanUpSuppressedRecipients } from "@/lib/email/suppression-cleanup";
 
 export const dynamic = "force-dynamic";
 
@@ -251,6 +252,20 @@ export async function POST(request: NextRequest) {
         success: true,
         message: `Reset ${result.count} stuck processing email(s) back to pending`,
         count: result.count,
+      });
+    } else if (action === "clean-unsubscribed") {
+      // Take everyone who has opted out off the lists, and drop the mail
+      // already queued to them. Pass dryRun to see the numbers first.
+      const result = await cleanUpSuppressedRecipients(body?.dryRun === true);
+      const verb = body?.dryRun === true ? "Would remove" : "Removed";
+      return NextResponse.json({
+        success: true,
+        message:
+          `${verb} ${result.subscribersDeactivated} unsubscribed address(es) from the newsletter list, ` +
+          `cancelled ${result.queuedCancelled} queued email(s), and cleared ${result.failedCleared} failed row(s). ` +
+          `${result.addresses} suppressed address(es) checked.`,
+        count: result.subscribersDeactivated + result.queuedCancelled + result.failedCleared,
+        detail: result,
       });
     } else if (action === "clear-all-sent") {
       // Clear ALL sent emails
