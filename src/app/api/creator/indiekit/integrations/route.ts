@@ -9,6 +9,10 @@ import { circuitBreaker } from "@/lib/circuit-breaker";
 import {
   canManageShipStation,
   encryptShipStationCredentials,
+  fetchShipStationStores,
+  getShipStationStoreSelection,
+  resolveShipStationCredentials,
+  saveShipStationStore,
 } from "@/lib/fulfillment/shipstation-credentials";
 
 export async function GET(req: NextRequest) {
@@ -32,11 +36,23 @@ export async function GET(req: NextRequest) {
 
     // Get project-specific integrations if projectId provided
     let projectIntegrations = null;
+    type IntegrationState = {
+      connected: boolean;
+      status: string | null;
+      lastSyncError: string | null;
+      storeId?: number | null;
+      storeName?: string | null;
+    };
+    const blank = (): IntegrationState => ({
+      connected: false,
+      status: null,
+      lastSyncError: null,
+    });
     const fulfillmentIntegrations = {
-      shopify: { connected: false, status: null as string | null },
-      shipstation: { connected: false, status: null as string | null },
-      shippo: { connected: false, status: null as string | null },
-      easypost: { connected: false, status: null as string | null },
+      shopify: blank(),
+      shipstation: blank(),
+      shippo: blank(),
+      easypost: blank(),
     };
 
     if (projectId) {
@@ -52,23 +68,46 @@ export async function GET(req: NextRequest) {
         select: {
           id: true,
           stripeProductId: true,
-          fulfillmentIntegrations: true,
+          fulfillmentIntegrations: {
+            select: {
+              provider: true,
+              status: true,
+              lastSyncError: true,
+              lastSyncAt: true,
+              // Needed for the store selection only. Never returned as-is —
+              // it also holds the encrypted API key and secret, and this
+              // payload goes to the browser.
+              credentials: true,
+            },
+          },
         },
       });
-      projectIntegrations = project;
 
       // Check for connected fulfillment integrations
       if (project?.fulfillmentIntegrations) {
         for (const integration of project.fulfillmentIntegrations) {
           const provider = integration.provider.toLowerCase() as keyof typeof fulfillmentIntegrations;
           if (provider in fulfillmentIntegrations) {
+            const stored = (integration.credentials ?? {}) as {
+              storeId?: unknown;
+              storeName?: unknown;
+            };
             fulfillmentIntegrations[provider] = {
               connected: integration.status === "CONNECTED",
               status: integration.status,
+              lastSyncError: integration.lastSyncError ?? null,
+              storeId: typeof stored.storeId === "number" ? stored.storeId : null,
+              storeName: typeof stored.storeName === "string" ? stored.storeName : null,
             };
           }
         }
       }
+
+      // Only the two harmless fields. `project` used to be the raw rows,
+      // encrypted API keys and all, handed straight to the client.
+      projectIntegrations = project
+        ? { id: project.id, stripeProductId: project.stripeProductId }
+        : null;
     }
 
     return NextResponse.json({
@@ -93,7 +132,7 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { action, provider, service, projectId, apiKey, apiSecret } = body;
+    const { action, provider, service, projectId, apiKey, apiSecret, storeId } = body;
 
     // Credential connect from the IndieKit Integrations tab.
     //
@@ -110,7 +149,98 @@ export async function POST(req: NextRequest) {
         );
       }
 
-      if (!projectId || typeof apiKey !== "string" || typeof apiSecret !== "string") {
+      if (!projectId) {
+        return NextResponse.json({ error: "Project is required" }, { status: 400 });
+      }
+
+      // Every ShipStation action here can repoint where a campaign's orders
+      // go, so they all sit behind the same permission check.
+      if (!(await canManageShipStation(projectId, session.user.id))) {
+        return NextResponse.json(
+          {
+            error:
+              "You need to be the creator or an accepted collaborator on this campaign to manage ShipStation.",
+          },
+          { status: 403 }
+        );
+      }
+
+      // --- Store selection -------------------------------------------------
+      //
+      // A ShipStation account has one store per selling channel. Until now
+      // nothing asked which one, so pushed orders landed in whichever store
+      // the account defaults to — the complaint that prompted this.
+
+      if (action === "list_stores" || action === "set_store") {
+        const project = await db.project.findFirst({
+          where: { id: projectId, deletedAt: null },
+          select: { creatorId: true },
+        });
+        if (!project) {
+          return NextResponse.json({ error: "Project not found" }, { status: 404 });
+        }
+
+        const existing = await resolveShipStationCredentials(projectId, project.creatorId);
+        if (!existing) {
+          return NextResponse.json(
+            { error: "Connect ShipStation first, then choose a store." },
+            { status: 400 }
+          );
+        }
+
+        const stores = await fetchShipStationStores(existing.apiKey, existing.apiSecret);
+
+        if (action === "list_stores") {
+          return NextResponse.json({
+            stores: stores ?? [],
+            storeId: existing.storeId,
+            storeName: existing.storeName,
+            // Distinguishes "this account genuinely has no stores" from
+            // "we could not ask", which need different messages in the UI.
+            storesUnavailable: stores === null,
+          });
+        }
+
+        // set_store. null clears the selection back to the account default.
+        if (storeId === null) {
+          await saveShipStationStore(projectId, null);
+          return NextResponse.json({ success: true, storeId: null, storeName: null });
+        }
+
+        const chosen = (stores ?? []).find((s) => s.storeId === Number(storeId));
+        if (!chosen) {
+          return NextResponse.json(
+            { error: "That store isn't on this ShipStation account." },
+            { status: 400 }
+          );
+        }
+
+        await saveShipStationStore(projectId, {
+          storeId: chosen.storeId,
+          storeName: chosen.storeName,
+        });
+        return NextResponse.json({
+          success: true,
+          storeId: chosen.storeId,
+          storeName: chosen.storeName,
+        });
+      }
+
+      if (action === "disconnect") {
+        await db.fulfillmentIntegration.updateMany({
+          where: { projectId, provider: "SHIPSTATION" },
+          data: {
+            credentials: {},
+            status: "DISCONNECTED",
+            lastSyncError: null,
+          },
+        });
+        return NextResponse.json({ success: true, message: "Disconnected from ShipStation" });
+      }
+
+      // --- Connect ---------------------------------------------------------
+
+      if (typeof apiKey !== "string" || typeof apiSecret !== "string") {
         return NextResponse.json(
           { error: "Project, API key and API secret are all required" },
           { status: 400 }
@@ -126,22 +256,13 @@ export async function POST(req: NextRequest) {
         );
       }
 
-      // The creator or an accepted collaborator. The fulfilment partner is
-      // usually a collaborator rather than the creator, and they are the one
-      // holding the ShipStation account, so locking this to the creator put
-      // the connection in the hands of the person who does not do the
-      // shipping. Credentials are stored against the project (below), so a
-      // collaborator connecting here cannot affect the creator's other
-      // campaigns.
-      if (!(await canManageShipStation(projectId, session.user.id))) {
-        return NextResponse.json(
-          {
-            error:
-              "You need to be the creator or an accepted collaborator on this campaign to connect ShipStation.",
-          },
-          { status: 403 }
-        );
-      }
+      // Permission was checked above: the creator or an accepted collaborator.
+      // The fulfilment partner is usually a collaborator rather than the
+      // creator, and they are the one holding the ShipStation account, so
+      // locking this to the creator put the connection in the hands of the
+      // person who does not do the shipping. Credentials are stored against
+      // the project (below), so a collaborator connecting here cannot affect
+      // the creator's other campaigns.
 
       // Prove the credentials work before storing them. Saving unverified keys
       // is how "connected" ends up meaning nothing and the failure only
@@ -196,10 +317,36 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: reason }, { status: 400 });
       }
 
+      // Which stores this account has, so the creator can say where orders
+      // should import to instead of finding out after the first push. Asked
+      // for before the write so a single-store account can be resolved in one
+      // step; a null result (plan gating, a blip) just means no picker.
+      const stores = await fetchShipStationStores(key, secret);
+
+      // Re-entering keys must not silently move where orders go, so an
+      // existing selection is kept as long as the account still has that
+      // store. Otherwise: one store is not a choice, and selecting it is the
+      // difference between "connected" and "connected, now answer a question
+      // with one possible answer".
+      const previous = await getShipStationStoreSelection(projectId);
+      const keptStore =
+        previous.storeId !== null
+          ? (stores ?? []).find((s) => s.storeId === previous.storeId) ??
+            // Nothing to check it against, so trust what was already chosen.
+            (stores === null
+              ? { storeId: previous.storeId, storeName: previous.storeName ?? "" }
+              : null)
+          : null;
+      const soleStore = keptStore ?? (stores && stores.length === 1 ? stores[0] : null);
+
       // Stored against the project, encrypted, rather than on whoever happened
       // to submit the form. Scoping it this way is what makes it safe for a
       // collaborator to connect: it cannot reach the creator's other campaigns.
-      const credentials = encryptShipStationCredentials(key, secret);
+      const credentials: Record<string, unknown> = encryptShipStationCredentials(key, secret);
+      if (soleStore) {
+        credentials.storeId = soleStore.storeId;
+        credentials.storeName = soleStore.storeName;
+      }
 
       await db.fulfillmentIntegration.upsert({
         where: { projectId_provider: { projectId, provider: "SHIPSTATION" } },
@@ -213,7 +360,14 @@ export async function POST(req: NextRequest) {
         update: { credentials, status: "CONNECTED", lastSyncError: null },
       });
 
-      return NextResponse.json({ success: true, message: "Connected to ShipStation" });
+      return NextResponse.json({
+        success: true,
+        message: "Connected to ShipStation",
+        stores: stores ?? [],
+        storesUnavailable: stores === null,
+        storeId: soleStore?.storeId ?? null,
+        storeName: soleStore?.storeName ?? null,
+      });
     }
 
     if (action === "connect") {

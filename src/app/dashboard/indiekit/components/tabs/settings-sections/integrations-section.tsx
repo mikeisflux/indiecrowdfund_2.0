@@ -1,7 +1,7 @@
 "use client";
 
 import { apiFetch } from "@/lib/fetch-utils";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,12 +18,28 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   CreditCard,
   Truck,
   Globe,
   ExternalLink,
   Loader2,
   CheckCircle,
+  AlertTriangle,
   Store,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -33,6 +49,22 @@ interface ShopifyStatus {
   connected: boolean;
   loading: boolean;
   shopName: string | null;
+}
+
+/** One store on the creator's ShipStation account. */
+interface ShipStationStore {
+  storeId: number;
+  storeName: string;
+  marketplaceName?: string | null;
+}
+
+interface ShipStationStatus {
+  loading: boolean;
+  connected: boolean;
+  /** Set when the last connection attempt or sync failed. */
+  error: string | null;
+  storeId: number | null;
+  storeName: string | null;
 }
 
 interface IntegrationsSectionProps {
@@ -56,6 +88,67 @@ export function IntegrationsSection({
   const [isConnectingShipStation, setIsConnectingShipStation] = useState(false);
   const [isConnectingEasyship, setIsConnectingEasyship] = useState(false);
   const [isConnectingShopify, setIsConnectingShopify] = useState(false);
+
+  // ShipStation's tile used to be static markup: it read no status at all, so
+  // it said "Connect" whether or not the campaign was connected. Connecting
+  // showed a success toast next to a button still inviting you to connect,
+  // which is exactly how it was reported to us.
+  const [shipStation, setShipStation] = useState<ShipStationStatus>({
+    loading: true,
+    connected: false,
+    error: null,
+    storeId: null,
+    storeName: null,
+  });
+  const [shipStationDialogOpen, setShipStationDialogOpen] = useState(false);
+  const [isDisconnectingShipStation, setIsDisconnectingShipStation] = useState(false);
+
+  // Store picker.
+  const [storeDialogOpen, setStoreDialogOpen] = useState(false);
+  const [storeOptions, setStoreOptions] = useState<ShipStationStore[]>([]);
+  const [storesUnavailable, setStoresUnavailable] = useState(false);
+  const [isLoadingStores, setIsLoadingStores] = useState(false);
+  const [isSavingStore, setIsSavingStore] = useState(false);
+  const [selectedStoreId, setSelectedStoreId] = useState<string>("");
+
+  const loadIntegrationStatus = useCallback(async () => {
+    if (!projectId) {
+      setShipStation({
+        loading: false,
+        connected: false,
+        error: null,
+        storeId: null,
+        storeName: null,
+      });
+      return;
+    }
+
+    setShipStation((prev) => ({ ...prev, loading: true }));
+    try {
+      const res = await fetch(
+        `/api/creator/indiekit/integrations?projectId=${encodeURIComponent(projectId)}`
+      );
+      if (!res.ok) throw new Error("Failed to load integrations");
+      const data = await res.json();
+      const ss = data?.fulfillment?.shipstation;
+      setShipStation({
+        loading: false,
+        connected: !!ss?.connected,
+        error: ss?.status === "ERROR" ? ss?.lastSyncError || "Connection error" : null,
+        storeId: typeof ss?.storeId === "number" ? ss.storeId : null,
+        storeName: typeof ss?.storeName === "string" ? ss.storeName : null,
+      });
+    } catch {
+      // Leaving it stuck on a spinner is worse than showing the connect path;
+      // a failed status read is not evidence of a failed connection, so the
+      // tile falls back to its uncommitted state rather than claiming either.
+      setShipStation((prev) => ({ ...prev, loading: false }));
+    }
+  }, [projectId]);
+
+  useEffect(() => {
+    void loadIntegrationStatus();
+  }, [loadIntegrationStatus]);
 
   // Handle OAuth callback messages
   useEffect(() => {
@@ -114,14 +207,134 @@ export function IntegrationsSection({
         throw new Error(data.error || "Failed to connect ShipStation");
       }
 
+      const data = await res.json();
+
       toast.success("Connected to ShipStation");
       setShipStationKey("");
       setShipStationSecret("");
+      setShipStationDialogOpen(false);
+
+      const stores: ShipStationStore[] = Array.isArray(data.stores) ? data.stores : [];
+      setShipStation({
+        loading: false,
+        connected: true,
+        error: null,
+        storeId: typeof data.storeId === "number" ? data.storeId : null,
+        storeName: typeof data.storeName === "string" ? data.storeName : null,
+      });
+
+      // Jordan's other question: a ShipStation account has a store per selling
+      // channel, and nothing here ever asked which one orders should import
+      // into. If there's a real choice to make, make it now rather than
+      // letting the first push land somewhere unexpected.
+      if (stores.length > 1 && typeof data.storeId !== "number") {
+        setStoreOptions(stores);
+        setStoresUnavailable(false);
+        setSelectedStoreId("");
+        setStoreDialogOpen(true);
+      }
+
       onRefresh?.();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to connect ShipStation");
     } finally {
       setIsConnectingShipStation(false);
+    }
+  };
+
+  const openStorePicker = async () => {
+    if (!projectId) return;
+
+    setStoreOptions([]);
+    setStoresUnavailable(false);
+    setSelectedStoreId(shipStation.storeId != null ? String(shipStation.storeId) : "");
+    setStoreDialogOpen(true);
+    setIsLoadingStores(true);
+    try {
+      const res = await apiFetch("/api/creator/indiekit/integrations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ projectId, service: "shipstation", action: "list_stores" }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Couldn't load your ShipStation stores");
+      }
+      const data = await res.json();
+      setStoreOptions(Array.isArray(data.stores) ? data.stores : []);
+      setStoresUnavailable(!!data.storesUnavailable);
+      if (typeof data.storeId === "number") setSelectedStoreId(String(data.storeId));
+    } catch (error) {
+      setStoresUnavailable(true);
+      toast.error(
+        error instanceof Error ? error.message : "Couldn't load your ShipStation stores"
+      );
+    } finally {
+      setIsLoadingStores(false);
+    }
+  };
+
+  const handleSaveStore = async () => {
+    if (!projectId || !selectedStoreId) return;
+
+    setIsSavingStore(true);
+    try {
+      const res = await apiFetch("/api/creator/indiekit/integrations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          projectId,
+          service: "shipstation",
+          action: "set_store",
+          storeId: Number(selectedStoreId),
+        }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to save store");
+      }
+      const data = await res.json();
+      setShipStation((prev) => ({
+        ...prev,
+        storeId: data.storeId ?? null,
+        storeName: data.storeName ?? null,
+      }));
+      setStoreDialogOpen(false);
+      toast.success(`Orders will import into ${data.storeName || "the selected store"}`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to save store");
+    } finally {
+      setIsSavingStore(false);
+    }
+  };
+
+  const handleDisconnectShipStation = async () => {
+    if (!projectId) return;
+
+    setIsDisconnectingShipStation(true);
+    try {
+      const res = await apiFetch("/api/creator/indiekit/integrations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ projectId, service: "shipstation", action: "disconnect" }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to disconnect ShipStation");
+      }
+      setShipStation({
+        loading: false,
+        connected: false,
+        error: null,
+        storeId: null,
+        storeName: null,
+      });
+      toast.success("Disconnected from ShipStation");
+      onRefresh?.();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to disconnect ShipStation");
+    } finally {
+      setIsDisconnectingShipStation(false);
     }
   };
 
@@ -303,20 +516,71 @@ export function IntegrationsSection({
         </div>
 
         {/* ShipStation */}
-        <div className="flex items-center justify-between p-4 border rounded-lg">
+        <div
+          className={`flex flex-wrap items-center justify-between gap-3 p-4 border rounded-lg ${
+            shipStation.connected ? "border-green-500" : shipStation.error ? "border-amber-500" : ""
+          }`}
+        >
           <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded bg-blue-100 flex items-center justify-center">
-              <Truck className="h-5 w-5 text-blue-600" />
+            <div
+              className={`h-10 w-10 rounded flex items-center justify-center ${
+                shipStation.connected ? "bg-green-100" : "bg-blue-100"
+              }`}
+            >
+              <Truck
+                className={`h-5 w-5 ${shipStation.connected ? "text-green-600" : "text-blue-600"}`}
+              />
             </div>
             <div>
               <p className="font-medium">ShipStation</p>
-              <p className="text-sm text-muted-foreground">Shipping label generation & tracking</p>
+              <p className="text-sm text-muted-foreground">
+                {shipStation.loading
+                  ? "Checking connection..."
+                  : shipStation.connected
+                    ? shipStation.storeName
+                      ? `Orders import into ${shipStation.storeName}`
+                      : "Connected · using your default ShipStation store"
+                    : "Shipping label generation & tracking"}
+              </p>
+              {shipStation.error && !shipStation.connected && (
+                <p className="mt-1 flex items-center gap-1 text-xs text-amber-600">
+                  <AlertTriangle className="h-3 w-3 shrink-0" />
+                  {shipStation.error}
+                </p>
+              )}
             </div>
           </div>
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button variant="outline">Connect</Button>
-            </AlertDialogTrigger>
+
+          {shipStation.loading ? (
+            <Button variant="outline" disabled>
+              <Loader2 className="h-4 w-4 animate-spin" />
+            </Button>
+          ) : shipStation.connected ? (
+            <div className="flex flex-wrap items-center gap-2">
+              <Button variant="outline" className="text-green-600 border-green-600">
+                <CheckCircle className="h-4 w-4 mr-1" />
+                Connected
+              </Button>
+              <Button variant="ghost" size="sm" onClick={openStorePicker}>
+                {shipStation.storeName ? "Change store" : "Choose store"}
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleDisconnectShipStation}
+                disabled={isDisconnectingShipStation}
+                className="text-muted-foreground hover:text-destructive"
+              >
+                {isDisconnectingShipStation ? "..." : "Disconnect"}
+              </Button>
+            </div>
+          ) : (
+            <Button variant="outline" onClick={() => setShipStationDialogOpen(true)}>
+              {shipStation.error ? "Reconnect" : "Connect"}
+            </Button>
+          )}
+
+          <AlertDialog open={shipStationDialogOpen} onOpenChange={setShipStationDialogOpen}>
             <AlertDialogContent>
               <AlertDialogHeader>
                 <AlertDialogTitle>Connect ShipStation</AlertDialogTitle>
@@ -349,8 +613,12 @@ export function IntegrationsSection({
                 </p>
               </div>
               <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={handleConnectShipStation} disabled={isConnectingShipStation}>
+                <AlertDialogCancel disabled={isConnectingShipStation}>Cancel</AlertDialogCancel>
+                {/* A plain Button, not AlertDialogAction: the Radix action
+                    closes the dialog the moment it is clicked, which would
+                    tear down the form mid-request and take a failed attempt's
+                    typed-in keys with it. The handler closes it on success. */}
+                <Button onClick={handleConnectShipStation} disabled={isConnectingShipStation}>
                   {isConnectingShipStation ? (
                     <>
                       <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -359,11 +627,83 @@ export function IntegrationsSection({
                   ) : (
                     "Connect"
                   )}
-                </AlertDialogAction>
+                </Button>
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>
         </div>
+
+        {/* Which ShipStation store this campaign's orders import into. */}
+        <Dialog open={storeDialogOpen} onOpenChange={setStoreDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Choose a ShipStation store</DialogTitle>
+              <DialogDescription>
+                Your ShipStation account has more than one store. Pick the one this campaign&apos;s
+                orders should import into — it decides which branding, packing slips and automation
+                rules apply.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="py-4">
+              {isLoadingStores ? (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Loading your stores...
+                </div>
+              ) : storesUnavailable ? (
+                <p className="text-sm text-muted-foreground">
+                  We couldn&apos;t read the store list from ShipStation. Orders will import into
+                  your account&apos;s default store, which is fine if you only use one.
+                </p>
+              ) : storeOptions.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  No stores came back from ShipStation. Orders will import into your account&apos;s
+                  default store.
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  <Label htmlFor="shipstation-store">Store</Label>
+                  <Select value={selectedStoreId} onValueChange={setSelectedStoreId}>
+                    <SelectTrigger id="shipstation-store">
+                      <SelectValue placeholder="Select a store" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {storeOptions.map((store) => (
+                        <SelectItem key={store.storeId} value={String(store.storeId)}>
+                          {store.storeName}
+                          {store.marketplaceName ? ` · ${store.marketplaceName}` : ""}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+            </div>
+
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => setStoreDialogOpen(false)}
+                disabled={isSavingStore}
+              >
+                {storeOptions.length === 0 ? "Close" : "Cancel"}
+              </Button>
+              {storeOptions.length > 0 && (
+                <Button onClick={handleSaveStore} disabled={isSavingStore || !selectedStoreId}>
+                  {isSavingStore ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    "Save store"
+                  )}
+                </Button>
+              )}
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
         {/* Zapier */}
         <div className="flex items-center justify-between p-4 border rounded-lg">

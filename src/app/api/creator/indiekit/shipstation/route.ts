@@ -255,6 +255,13 @@ export async function POST(req: NextRequest) {
               // reported a $53 pledge to ShipStation as $0.53.
               amountPaid: Number(pledge.amount),
               internalNotes: `IndieCrowdfund · ${project.title} · Backer #${pledge.backerNumber || pledge.id}`,
+              // Which ShipStation store the order imports into. Chosen on the
+              // Integrations tab; omitted entirely when unset so ShipStation
+              // applies the account default rather than receiving a null and
+              // rejecting the order.
+              ...(credentials.storeId
+                ? { advancedOptions: { storeId: credentials.storeId } }
+                : {}),
             };
 
             const response = await shipStationFetch(
