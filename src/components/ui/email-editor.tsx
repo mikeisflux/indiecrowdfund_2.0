@@ -11,6 +11,12 @@ import Paragraph from "@tiptap/extension-paragraph";
 import Heading from "@tiptap/extension-heading";
 import { useEffect, useCallback, useState, useRef } from "react";
 import { cn } from "@/lib/utils";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "./dropdown-menu";
 import { Button } from "./button";
 import {
   Bold,
@@ -28,6 +34,7 @@ import {
   AlignLeft,
   AlignCenter,
   AlignRight,
+  ChevronDown,
   Upload,
   Loader2,
 } from "lucide-react";
@@ -110,6 +117,12 @@ const EmailImage = Image.extend({
     return ["img", { ...HTMLAttributes, style: imgStyle }];
   },
 });
+
+const ALIGNMENTS = [
+  { value: "left" as const, label: "Align left", Icon: AlignLeft },
+  { value: "center" as const, label: "Align center", Icon: AlignCenter },
+  { value: "right" as const, label: "Align right", Icon: AlignRight },
+];
 
 interface EmailEditorProps {
   value: string;
@@ -372,7 +385,10 @@ export function EmailEditor({
   }
 
   return (
-    <div className={cn("relative border rounded-md overflow-hidden bg-background", className)}>
+    // No overflow-hidden here. It clipped anything that reached past the
+    // editor's edge — the selection bubble menu and any toolbar dropdown — so
+    // controls opened and were then cut off by the container itself.
+    <div className={cn("relative border rounded-md bg-background", className)}>
       <input
         ref={fileInputRef}
         type="file"
@@ -384,7 +400,11 @@ export function EmailEditor({
       {editor && (
         <BubbleMenu
           editor={editor}
-          tippyOptions={{ duration: 100 }}
+          // Opens below the selection. The default is above, which for any
+          // selection on the first line or two puts it straight on top of the
+          // toolbar — the controls are there, with the bubble menu sitting over
+          // them. Below the selection there is nothing to collide with.
+          tippyOptions={{ duration: 100, placement: "bottom", zIndex: 50 }}
           className="flex gap-1 p-1 bg-popover border rounded-lg shadow-lg"
         >
           <Button
@@ -466,36 +486,45 @@ export function EmailEditor({
         </div>
 
         <div className="flex items-center gap-0.5 px-2 border-r">
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={() => editor.chain().focus().setTextAlign("left").run()}
-            className={cn("h-8 w-8 p-0", editor.isActive({ textAlign: "left" }) && "bg-muted")}
-            title="Align Left"
-          >
-            <AlignLeft className="h-4 w-4" />
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={() => editor.chain().focus().setTextAlign("center").run()}
-            className={cn("h-8 w-8 p-0", editor.isActive({ textAlign: "center" }) && "bg-muted")}
-            title="Align Center"
-          >
-            <AlignCenter className="h-4 w-4" />
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={() => editor.chain().focus().setTextAlign("right").run()}
-            className={cn("h-8 w-8 p-0", editor.isActive({ textAlign: "right" }) && "bg-muted")}
-            title="Align Right"
-          >
-            <AlignRight className="h-4 w-4" />
-          </Button>
+          {/* One control rather than three. The toolbar wraps to two or three
+              rows inside the campaign dialog, and a wrapped row of identical
+              icon buttons is where the alignment controls kept disappearing.
+              The menu also shows which alignment is active, which three
+              same-looking buttons never did clearly. */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-8 gap-1 px-2"
+                title="Text alignment"
+              >
+                {editor.isActive({ textAlign: "center" }) ? (
+                  <AlignCenter className="h-4 w-4" />
+                ) : editor.isActive({ textAlign: "right" }) ? (
+                  <AlignRight className="h-4 w-4" />
+                ) : (
+                  <AlignLeft className="h-4 w-4" />
+                )}
+                <ChevronDown className="h-3 w-3 opacity-60" />
+              </Button>
+            </DropdownMenuTrigger>
+            {/* Opens downward and is portalled to the body, so it is never
+                covered by a neighbouring button or clipped by the editor. */}
+            <DropdownMenuContent align="start" side="bottom" className="min-w-[10rem]">
+              {ALIGNMENTS.map(({ value, label, Icon }) => (
+                <DropdownMenuItem
+                  key={value}
+                  onSelect={() => editor.chain().focus().setTextAlign(value).run()}
+                  className={cn(editor.isActive({ textAlign: value }) && "bg-muted")}
+                >
+                  <Icon className="h-4 w-4 mr-2" />
+                  {label}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
 
         <div className="flex items-center gap-0.5 px-2 border-r">
