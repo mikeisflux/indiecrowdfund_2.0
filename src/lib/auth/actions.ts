@@ -3,6 +3,7 @@
 import { db } from "@/lib/db";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
+import { checkBanEvasion, BAN_EVASION_MESSAGE } from "@/lib/moderation/ban-evasion";
 import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import { createSession, deleteSession } from "./session";
@@ -91,6 +92,20 @@ export async function register(formData: FormData, callbackUrl?: string | null) 
           _form: [rateLimitCheck.message || "Too many registration attempts. Please try again later."],
         },
       };
+    }
+
+    // Refuse sign-ups from a banned person coming back for another go.
+    //
+    // Terms 11a says a ban attaches to the person and that registering again
+    // is a breach. Until now nothing enforced it: every writer to IPBlocklist
+    // added rows that no code ever read.
+    const evasion = await checkBanEvasion(clientIP);
+    if (evasion.blocked) {
+      authActionsLogger.warn(
+        { ip: clientIP, reason: evasion.reason },
+        "[Register] Blocked sign-up attempt from banned source"
+      );
+      return { error: { _form: [BAN_EVASION_MESSAGE] } };
     }
 
     const validatedFields = registerSchema.safeParse({

@@ -23,8 +23,16 @@ function verifyCronAuth(req: NextRequest): boolean {
   return false;
 }
 
-const CHARGEBACK_REASON_MARKER = "chargeback";
-const AUTO_BAN_REASON_PREFIX = "Auto-banned: matches chargeback-banned account";
+const AUTO_BAN_REASON_PREFIX = "Auto-banned: matches banned account";
+
+// An IP used by more than this many distinct accounts is a shared one —
+// office NAT, campus, carrier-grade NAT, a household — not a person.
+//
+// Propagating a ban across an address like that bans strangers. The signal is
+// still recorded and an admin can act on it by hand; what it will not do is
+// lock out a dozen unrelated creators because one person on their ISP's CGNAT
+// pool was banned. Email matching is exact and is never subject to this.
+const SHARED_IP_ACCOUNT_THRESHOLD = 4;
 
 interface BannedSignal {
   bannedUserId: string;
@@ -42,12 +50,17 @@ interface BanMatch {
 
 // POST /api/cron/enforce-chargeback-bans
 //
-// Implements the "future accounts created under the same email,
-// payment method, IP, or device fingerprint are also banned" clause
-// of the Chargeback Handling Policy (/terms?tab=chargebacks).
+// Enforces two things: the "future accounts created under the same
+// email, payment method, IP, or device fingerprint are also banned"
+// clause of the Chargeback Handling Policy (/terms?tab=chargebacks),
+// and Terms of Service 11a, which makes a ban for any violation
+// attach to the person rather than to the account record.
+//
+// The route keeps its original path so the deployed cron entry does
+// not need changing; despite the name it is no longer chargeback-only.
 //
 // What this does on each run:
-//   1. Load every User whose lockedReason mentions "chargeback".
+//   1. Load every banned User (lockedAt set), whatever the reason.
 //      These are the source bans we propagate from. (Bans are
 //      applied by the payment-processor dispute webhook handler or
 //      by SUPER_ADMIN action -- this cron does NOT create new
@@ -87,10 +100,16 @@ export async function POST(req: NextRequest) {
   const dryRun = url.searchParams.get("dryRun") === "1";
 
   try {
+    // Every banned account, not only the chargeback ones.
+    //
+    // This used to filter on lockedReason containing "chargeback", which meant
+    // a creator banned for fraud, harassment or prohibited content propagated
+    // to nothing: they could open a new account from the same machine and no
+    // job would ever notice. Terms 11a makes the ban attach to the person for
+    // any violation, so the enforcement has to match.
     const bannedUsers = await db.user.findMany({
       where: {
         lockedAt: { not: null },
-        lockedReason: { contains: CHARGEBACK_REASON_MARKER, mode: "insensitive" },
       },
       select: {
         id: true,
@@ -101,7 +120,7 @@ export async function POST(req: NextRequest) {
     });
 
     if (bannedUsers.length === 0) {
-      cronEnforceChargebackBansLogger.info("No chargeback-banned source accounts to propagate from");
+      cronEnforceChargebackBansLogger.info("No banned source accounts to propagate from");
       return NextResponse.json({
         ok: true,
         sourceBanCount: 0,
@@ -119,9 +138,37 @@ export async function POST(req: NextRequest) {
     }));
 
     const bannedEmails = Array.from(new Set(signals.map((s) => s.email)));
-    const bannedIps = Array.from(
+    const candidateIps = Array.from(
       new Set(signals.map((s) => s.ip).filter((ip): ip is string => !!ip))
     );
+
+    // Drop the addresses too many people sit behind before they are used to
+    // ban anybody. Counting every account on the IP, banned or not, is what
+    // distinguishes "one person's home connection" from "a shared exit node".
+    const ipCounts =
+      candidateIps.length > 0
+        ? await db.user.groupBy({
+            by: ["lastKnownIP"],
+            where: { lastKnownIP: { in: candidateIps }, deletedAt: null },
+            _count: { _all: true },
+          })
+        : [];
+    const sharedIps = new Set(
+      (ipCounts as { lastKnownIP: string | null; _count: { _all: number } }[])
+        .filter((r) => r._count._all > SHARED_IP_ACCOUNT_THRESHOLD)
+        .map((r) => r.lastKnownIP)
+        .filter((ip): ip is string => !!ip)
+    );
+    const bannedIps = candidateIps.filter((ip) => !sharedIps.has(ip));
+
+    if (sharedIps.size > 0) {
+      // Never silently. A skipped IP is a banned person we did not follow, and
+      // whoever reads these logs needs to know it happened.
+      cronEnforceChargebackBansLogger.warn(
+        { sharedIps: Array.from(sharedIps), threshold: SHARED_IP_ACCOUNT_THRESHOLD },
+        "Skipped IP propagation for addresses shared by many accounts; review by hand"
+      );
+    }
 
     // Map a signal back to which source ban it came from -- so the
     // auto-ban reason can reference the source for audit.
@@ -131,7 +178,7 @@ export async function POST(req: NextRequest) {
       const eList = emailToSourceIds.get(s.email) ?? [];
       eList.push(s.bannedUserId);
       emailToSourceIds.set(s.email, eList);
-      if (s.ip) {
+      if (s.ip && !sharedIps.has(s.ip)) {
         const iList = ipToSourceIds.get(s.ip) ?? [];
         iList.push(s.bannedUserId);
         ipToSourceIds.set(s.ip, iList);
@@ -233,7 +280,7 @@ export async function POST(req: NextRequest) {
               create: {
                 ipAddress: fresh.lastKnownIP,
                 userId: match.candidateUserId,
-                reason: `Auto-ban via chargeback enforcement (source bans: ${match.sourceBanIds.join(",")})`,
+                reason: `Auto-ban via ban enforcement (source bans: ${match.sourceBanIds.join(",")})`,
               },
             });
           }
@@ -241,7 +288,7 @@ export async function POST(req: NextRequest) {
         bannedCount += 1;
         cronEnforceChargebackBansLogger.info(
           { candidate: match.candidateUserId, email: match.candidateEmail, signals: match.matchedSignals, sources: match.sourceBanIds },
-          "Auto-banned account via chargeback enforcement"
+          "Auto-banned account via ban enforcement"
         );
       } catch (err) {
         cronEnforceChargebackBansLogger.error(
@@ -256,6 +303,7 @@ export async function POST(req: NextRequest) {
       sourceBanCount: bannedUsers.length,
       matchedCount: matches.length,
       bannedCount,
+      skippedSharedIps: Array.from(sharedIps),
     });
   } catch (error) {
     cronEnforceChargebackBansLogger.error({ err: formatError(error) }, "Cron failed");
