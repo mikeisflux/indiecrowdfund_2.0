@@ -3,7 +3,13 @@ import type { NextRequest } from "next/server";
 import { auth } from "@/lib/auth";
 import { logger } from "@/lib/logger";
 import { formatError } from "@/lib/errors";
-import { wrapInEmailShell, looksLikeFullEmail } from "@/lib/ai/campaign-email-template";
+import {
+  wrapInEmailShell,
+  looksLikeFullEmail,
+  findCampaignTokens,
+  expandCampaignTokens,
+} from "@/lib/ai/campaign-email-template";
+import { db } from "@/lib/db";
 
 const formatEmailLogger = logger.child({ module: "ai-marketing-format-email" });
 
@@ -44,8 +50,47 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Expand any [[campaign:slug]] the operator inserted into the real project
+    // card. Done here rather than at insert time because the card is a table
+    // and the editor would flatten it; the token survives editing, the card is
+    // built once on the way out.
+    const slugs = findCampaignTokens(html);
+    let body = html;
+    if (slugs.length > 0) {
+      const projects = await db.project.findMany({
+        where: { slug: { in: slugs }, deletedAt: null },
+        select: {
+          title: true,
+          slug: true,
+          category: true,
+          shortDescription: true,
+          imageUrl: true,
+          creator: { select: { vanityUrl: true } },
+        },
+      });
+
+      const cards = new Map(
+        projects.map((p) => [
+          p.slug.toLowerCase(),
+          {
+            project: {
+              title: p.title,
+              url: p.creator?.vanityUrl
+                ? `/projects/${p.creator.vanityUrl}/${p.slug}`
+                : `/projects/${p.slug}`,
+              imageUrl: p.imageUrl,
+              category: p.category,
+            },
+            blurb: p.shortDescription || "",
+          },
+        ])
+      );
+
+      body = expandCampaignTokens(html, cards);
+    }
+
     return NextResponse.json({
-      html: wrapInEmailShell(html, {
+      html: wrapInEmailShell(body, {
         subject: typeof subject === "string" ? subject : "",
         preheader: typeof preheader === "string" ? preheader : "",
       }),

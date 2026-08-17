@@ -71,7 +71,7 @@ function resolveImage(url: string | null | undefined): string | null {
   return `{{SITE_URL}}${trimmed.startsWith("/") ? "" : "/"}${trimmed}`;
 }
 
-function renderProjectCard(project: CampaignEmailProject, reason: string, cta: string): string {
+export function renderProjectCard(project: CampaignEmailProject, reason: string, cta: string): string {
   const href = `{{SITE_URL}}${project.url}`;
   const img = resolveImage(project.imageUrl);
   const category = project.category && project.category !== "General" ? project.category : "";
@@ -403,4 +403,42 @@ export function wrapInEmailShell(
  *  templates), so the button can format rather than nest one shell in another. */
 export function looksLikeFullEmail(html: string): boolean {
   return /<!DOCTYPE html>|<body[\s>]/i.test(html);
+}
+
+// ---- Campaign placeholders in hand-written emails ----
+
+// Operators drop [[campaign:slug]] into the editor and it becomes the same
+// project card the AI emails use.
+//
+// A token rather than the card markup itself, because the card is a table and
+// the campaign editor has no table support — pasting one in would be flattened
+// to loose paragraphs the moment the editor parsed it. The token is plain text,
+// so it survives every edit, and is expanded once on the way out.
+export const CAMPAIGN_TOKEN = /\[\[campaign:([a-z0-9-]+)\]\]/gi;
+
+/** Every campaign slug referenced by a body, in order, without duplicates. */
+export function findCampaignTokens(html: string): string[] {
+  const slugs = new Set<string>();
+  for (const match of html.matchAll(CAMPAIGN_TOKEN)) {
+    slugs.add(match[1].toLowerCase());
+  }
+  return Array.from(slugs);
+}
+
+/**
+ * Replace each [[campaign:slug]] with its rendered card.
+ *
+ * A token whose slug no longer resolves — campaign deleted, slug changed — is
+ * removed rather than left in the email. Shipping "[[campaign:foo]]" to
+ * subscribers is worse than shipping one fewer card.
+ */
+export function expandCampaignTokens(
+  html: string,
+  cards: Map<string, { project: CampaignEmailProject; blurb: string }>
+): string {
+  return html.replace(CAMPAIGN_TOKEN, (_match, slug: string) => {
+    const entry = cards.get(String(slug).toLowerCase());
+    if (!entry) return "";
+    return renderProjectCard(entry.project, entry.blurb, "View campaign");
+  });
 }

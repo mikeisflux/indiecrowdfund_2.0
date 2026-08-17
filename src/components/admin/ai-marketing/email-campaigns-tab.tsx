@@ -4,7 +4,7 @@ import { apiFetch } from "@/lib/fetch-utils";
 import { toast } from "sonner";
 import { autoFormatEmailBody } from "@/lib/email/auto-format-body";
 import { sanitizeHtml } from "@/lib/utils/sanitize";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -70,6 +70,8 @@ import {
   Trash2,
   Loader2,
   Wand2,
+  LayoutGrid,
+  ChevronDown,
   StopCircle,
   Filter,
 } from "lucide-react";
@@ -166,6 +168,34 @@ export function EmailCampaignsTab({
   const [editSubject, setEditSubject] = useState("");
   const [editHtmlContent, setEditHtmlContent] = useState("");
   const [isFormatting, setIsFormatting] = useState(false);
+  const [liveCampaigns, setLiveCampaigns] = useState<
+    { slug: string; title: string; category: string | null }[]
+  >([]);
+
+  // Campaigns available to drop into an email. Loaded once when the editor is
+  // in use rather than on every render of the tab.
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/admin/ai-marketing/live-campaigns")
+      .then((res) => (res.ok ? res.json() : { campaigns: [] }))
+      .then((data) => {
+        if (!cancelled) setLiveCampaigns(data.campaigns || []);
+      })
+      .catch(() => {
+        // The dropdown simply stays empty; nothing else depends on this.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // Insert a token the operator can see and delete like any other text. It
+  // becomes the real project card when "Format as email" runs — the card is a
+  // table, and the editor would flatten it if it were inserted directly.
+  const insertCampaign = (slug: string, title: string) => {
+    setEditHtmlContent((current) => `${current}<p>[[campaign:${slug}]]</p>`);
+    toast.success(`${title} added — it becomes a card when you format the email.`);
+  };
 
   // "Format as email": wrap what is in the editor in the same branded shell the
   // AI campaigns use. The template lives on the server and is shared with the
@@ -843,6 +873,41 @@ export function EmailCampaignsTab({
                   <div className="space-y-2">
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <Label>Email Body Content</Label>
+                      <div className="flex items-center gap-2">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            disabled={liveCampaigns.length === 0}
+                            title={
+                              liveCampaigns.length === 0
+                                ? "No live campaigns to insert"
+                                : "Insert a campaign card"
+                            }
+                          >
+                            <LayoutGrid className="h-3.5 w-3.5 mr-2" />
+                            Insert campaign
+                            <ChevronDown className="h-3 w-3 ml-1 opacity-60" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" side="bottom" className="max-h-80 overflow-y-auto">
+                          {liveCampaigns.map((c) => (
+                            <DropdownMenuItem
+                              key={c.slug}
+                              onSelect={() => insertCampaign(c.slug, c.title)}
+                            >
+                              <span className="truncate">{c.title}</span>
+                              {c.category && (
+                                <span className="ml-2 text-xs text-muted-foreground">
+                                  {c.category}
+                                </span>
+                              )}
+                            </DropdownMenuItem>
+                          ))}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                       <Button
                         type="button"
                         variant="outline"
@@ -862,6 +927,7 @@ export function EmailCampaignsTab({
                           </>
                         )}
                       </Button>
+                      </div>
                     </div>
                     <p className="text-xs text-muted-foreground mb-2">
                       Edit your email content with rich formatting. Drag &amp; drop or paste images
