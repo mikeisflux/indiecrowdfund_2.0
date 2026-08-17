@@ -302,6 +302,50 @@ function refreshMaintenance(): Promise<void> {
   return maintenanceInFlight;
 }
 
+// Is the caller an admin? Cached per session token, and only ever consulted
+// while maintenance is on, so it costs nothing in normal operation.
+const ADMIN_CACHE_MS = 30_000;
+const adminSessionCache = new Map<string, { isAdmin: boolean; checkedAt: number }>();
+
+async function isAdminSession(req: NextRequest): Promise<boolean> {
+  const token = req.cookies.get("session_token")?.value;
+  if (!token) return false;
+
+  const cached = adminSessionCache.get(token);
+  if (cached && Date.now() - cached.checkedAt < ADMIN_CACHE_MS) {
+    return cached.isAdmin;
+  }
+
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (process.env.INTERNAL_API_SECRET) {
+    headers["x-internal-secret"] = process.env.INTERNAL_API_SECRET;
+  }
+
+  try {
+    const res = await fetch(`${getInternalApiUrl()}/api/internal/session-role`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ token }),
+      cache: "no-store",
+      // Bounded, for the same reason the maintenance fetch is: middleware must
+      // not be able to hang on an internal call.
+      signal: AbortSignal.timeout(2_000),
+    });
+    if (!res.ok) return false;
+    const data = await res.json();
+    const isAdmin = data.role === "ADMIN" || data.role === "SUPER_ADMIN";
+
+    // Bounded so a stream of stale tokens cannot grow this without limit.
+    if (adminSessionCache.size > 500) adminSessionCache.clear();
+    adminSessionCache.set(token, { isAdmin, checkedAt: Date.now() });
+    return isAdmin;
+  } catch {
+    // Fails closed: an unreachable check means "not an admin", so a visitor
+    // never slips past maintenance because an internal call timed out.
+    return false;
+  }
+}
+
 function isMaintenanceModeEnabled(pathname: string): boolean {
   // The env var stays as an override, so there is still a way to force the
   // site down when the database itself is the thing being worked on.
@@ -839,10 +883,12 @@ export async function proxy(req: NextRequest) {
       (route) => pathname.startsWith(route) || pathname === route
     );
 
-    // Allow admin routes during maintenance
+    // Allow admin routes during maintenance, and let a signed-in admin browse
+    // the whole site — checking that the page they just took down actually
+    // works means looking at the public pages, not only /admin.
     const isAdminAccess = pathname.startsWith("/admin") || pathname.startsWith("/api/admin");
 
-    if (!bypassMaintenance && !isAdminAccess) {
+    if (!bypassMaintenance && !isAdminAccess && !(await isAdminSession(req))) {
       // Rewrite to the static maintenance page, carrying the operator's
       // message and end time on the query string. The page is a plain file
       // with no database access, so this is how it learns what to say.

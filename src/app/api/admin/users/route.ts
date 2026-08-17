@@ -6,6 +6,7 @@ import { withCorrelation, CORRELATION_HEADER } from "@/lib/correlation";
 const adminUsersLogger = logger.child({ module: "admin-users" });
 import { auth, BCRYPT_COST } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { TERMS_VERSION } from "@/components/legal/terms-of-service";
 import bcrypt from "bcryptjs";
 import { sendPasswordResetEmail } from "@/lib/email";
 import { auditLog } from "@/lib/audit";
@@ -107,6 +108,14 @@ export async function GET(req: NextRequest) {
           lockedAt: true,
           lockedReason: true,
           divinityCoinBalance: true,
+          // Only the current version is fetched, so the presence of a row is
+          // the answer — no need to pull an acceptance history per user just
+          // to render a badge.
+          termsAcceptances: {
+            where: { version: TERMS_VERSION },
+            select: { acceptedAt: true },
+            take: 1,
+          },
           _count: {
             select: {
               createdProjects: true,
@@ -140,6 +149,8 @@ export async function GET(req: NextRequest) {
       lockedAt: user.lockedAt,
       lockedReason: user.lockedReason,
       divinityCoinBalance: Number(user.divinityCoinBalance),
+      termsAcceptedAt: user.termsAcceptances[0]?.acceptedAt ?? null,
+      termsVersion: TERMS_VERSION,
     }));
 
     // roleCounts: [USER, COOL_KIDS, CREATOR, ADMIN, SUPER_ADMIN]

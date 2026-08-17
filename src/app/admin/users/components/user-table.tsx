@@ -23,6 +23,8 @@ import {
   RefreshCw,
   Ban,
   UserCheck,
+  CheckCircle2,
+  MinusCircle,
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { User, Pagination } from "./types";
@@ -334,10 +336,10 @@ export function UserTable({
             emptyState
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[640px]">
+              <table className="w-full min-w-[760px]">
                 <thead>
                   <tr className="border-b bg-muted/50 dark:bg-zinc-800/60">
-                    {["User", "Role", "Projects", "Pledges", "Joined"].map((col) => (
+                    {["User", "Role", "Projects", "Pledges", "Joined", "Terms"].map((col) => (
                       <th
                         key={col}
                         className="p-4 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground dark:text-muted-foreground"
@@ -424,6 +426,40 @@ export function UserTable({
                           {user.createdAt
                             ? formatDistanceToNow(new Date(user.createdAt), { addSuffix: true })
                             : "N/A"}
+                        </td>
+
+                        {/* Current Terms accepted?
+                            A date rather than a tick, because "when" is the
+                            question that matters if an acceptance is ever
+                            disputed. Outstanding is muted, not red: most
+                            accounts simply have not signed in since the Terms
+                            last changed, which is not a problem to chase. */}
+                        <td className="p-4 text-sm">
+                          {user.termsAcceptedAt ? (
+                            <span
+                              className="inline-flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400"
+                              title={`Accepted ${new Date(user.termsAcceptedAt).toLocaleString()}${
+                                user.termsVersion ? ` (version ${user.termsVersion})` : ""
+                              }`}
+                            >
+                              <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />
+                              {formatDistanceToNow(new Date(user.termsAcceptedAt), {
+                                addSuffix: true,
+                              })}
+                            </span>
+                          ) : (
+                            <span
+                              className="inline-flex items-center gap-1.5 text-muted-foreground"
+                              title={
+                                user.termsVersion
+                                  ? `Has not accepted version ${user.termsVersion}`
+                                  : "Has not accepted the current Terms"
+                              }
+                            >
+                              <MinusCircle className="h-3.5 w-3.5 shrink-0" />
+                              Outstanding
+                            </span>
+                          )}
                         </td>
 
                         {/* Actions */}

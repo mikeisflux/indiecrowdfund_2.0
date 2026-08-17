@@ -10,6 +10,10 @@ export interface User {
   emailVerified: string | null;
   projectCount: number;
   pledgeCount: number;
+  /** When this user accepted the CURRENT Terms version; null if they have not. */
+  termsAcceptedAt?: string | Date | null;
+  /** The version that acceptance is measured against, for the tooltip. */
+  termsVersion?: string;
   lockedAt: string | null;
   lockedReason: string | null;
   divinityCoinBalance: number;
