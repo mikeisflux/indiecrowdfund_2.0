@@ -1,5 +1,7 @@
 /* eslint-disable react/no-unescaped-entities */
 
+import Link from "next/link";
+
 export function PrivacyPolicyContent() {
   return (
     <div className="prose prose-zinc dark:prose-invert max-w-none">
@@ -109,8 +111,17 @@ export function PrivacyPolicyContent() {
           <li>Project pages indefinitely for archival and legal compliance</li>
           <li>Account data while your account is active</li>
           <li>Payment records for as long as required by law</li>
+          <li>
+            A limited set of identifiers — email, phone, last known IP, device signals, and the enforcement record — where an account has been banned, suspended, or terminated for violating our Terms. These are kept for as long as the ban is in force so that the person cannot simply register again, and are used only for enforcement and fraud prevention, never for marketing. Section 6 of our{" "}
+            <Link href="/terms?tab=data-deletion" className="text-emerald-600 hover:underline">
+              Data Deletion Policy
+            </Link>{" "}
+            sets out the detail.
+          </li>
         </ul>
-        <p className="mb-6">Users may request account deletion at any time.</p>
+        <p className="mb-6">
+          Users may request account deletion at any time. Deleting an account does not lift a ban or end an enforcement action against the person who held it.
+        </p>
 
         <h3 className="text-xl font-semibold mt-8 mb-4">8. Children's Privacy</h3>
         <p className="mb-6">

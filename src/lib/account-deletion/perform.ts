@@ -56,6 +56,24 @@ const DELETED_ADDRESS_SENTINEL = {
 // account half-deleted. Throws on failure; callers map that to a response.
 export async function performAccountDeletion(userId: string): Promise<void> {
   await db.$transaction(async (tx) => {
+    // 0. Was this account banned on the way out?
+    //
+    // It matters before anything else is touched. Deletion used to null
+    // lockedAt / lockedReason / lockedById / lastKnownIP unconditionally,
+    // which handed every banned user a one-click way to erase their own
+    // enforcement record: press Delete Account and the ban goes with it.
+    //
+    // The damage went further than the row. enforce-chargeback-bans picks its
+    // source bans by looking for users whose lockedReason mentions a
+    // chargeback, so a banned user who deleted their account stopped
+    // propagating to new signups sharing their IP — the exact evasion the
+    // Terms say is not allowed.
+    const existing = await tx.user.findUnique({
+      where: { id: userId },
+      select: { lockedAt: true, lastKnownIP: true },
+    });
+    const wasBanned = !!existing?.lockedAt;
+
     // 1. Cancel PENDING pledges. These were never charged, so the
     // money side is a no-op — we just flip status and free the
     // reward slot back up so a new backer can claim it.
@@ -216,15 +234,38 @@ export async function performAccountDeletion(userId: string): Promise<void> {
         chatBannedAt: null,
         chatBannedById: null,
         chatBanReason: null,
-        lockedAt: null,
-        lockedReason: null,
-        lockedById: null,
-        lastKnownIP: null,
+        // A ban outlives the account that earned it. For an unbanned user
+        // these still clear, so an ordinary deletion drops the IP as it
+        // always did; for a banned one `undefined` leaves the enforcement
+        // record standing. See the note at the top of the transaction.
+        lockedAt: wasBanned ? undefined : null,
+        lockedReason: wasBanned ? undefined : null,
+        lockedById: wasBanned ? undefined : null,
+        lastKnownIP: wasBanned ? undefined : null,
         failedLoginAttempts: 0,
         lastFailedLoginAt: null,
         divinityCoinBalance: 0,
       },
     });
+
+    // 5. Pin a banned account's last IP into the blocklist.
+    //
+    // The User row is not a durable home for this: a later privacy sweep,
+    // or a hard delete, takes the ban enforcement with it. IPBlocklist is
+    // the table the signup path and enforce-chargeback-bans already consult,
+    // and it survives the user record. Same upsert shape the chargeback cron
+    // uses, so a row it already wrote is left alone.
+    if (wasBanned && existing?.lastKnownIP) {
+      await tx.iPBlocklist.upsert({
+        where: { ipAddress: existing.lastKnownIP },
+        update: {},
+        create: {
+          ipAddress: existing.lastKnownIP,
+          userId,
+          reason: "Banned account deleted — retained to prevent ban evasion",
+        },
+      });
+    }
   });
 
   log.info({ userId }, "Account deletion completed");

@@ -6,7 +6,7 @@ export function DataDeletionPolicyContent() {
       <div className="rounded-lg border bg-white dark:bg-zinc-900 p-6 md:p-8">
         <h2 className="text-2xl font-bold mb-2">IndieCrowdfund — Data Deletion Policy</h2>
         <p className="text-sm text-muted-foreground mb-8">
-          <strong>Last Updated:</strong> November 28, 2025
+          <strong>Last Updated:</strong> August 17, 2026
         </p>
 
         <p className="mb-6">
@@ -175,9 +175,77 @@ export function DataDeletionPolicyContent() {
           <li>Comply with legal inquiries</li>
           <li>Protect backers and creators</li>
         </ul>
-        <p className="mb-6">This data is restricted and not used for marketing.</p>
+        <p className="mb-4">This data is restricted and not used for marketing.</p>
+        <p className="mb-6">
+          Where an account was banned, suspended, or terminated for violating our Terms, additional identifiers are retained specifically to stop that person returning under a new account. Section 6 sets out exactly what those are and how long we keep them.
+        </p>
 
-        <h3 className="text-xl font-semibold mt-8 mb-4">6. How to Submit a Deletion Request</h3>
+        <h3 className="text-xl font-semibold mt-8 mb-4">6. Banned, Suspended, and Terminated Accounts</h3>
+        <div className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-lg p-4 mb-4">
+          <p className="text-red-800 dark:text-red-200 font-medium">
+            Deleting a banned account does not lift the ban, and does not entitle you to a new one.
+          </p>
+        </div>
+        <p className="mb-6">
+          A ban attaches to the person, not to the account record. If we banned, suspended, or terminated your account, deletion removes your data from the platform but does not end the enforcement action, restore your access, or give you a clean slate. Submitting a deletion request is not an appeal and does not reset your standing with us.
+        </p>
+
+        <h4 className="text-lg font-semibold mt-6 mb-3">A. What We Keep to Enforce a Ban</h4>
+        <p className="mb-2">
+          Where an account has been banned, suspended, or terminated for violating our Terms of Service or policies, we retain a limited set of identifiers for the specific purpose of recognizing that person if they attempt to return:
+        </p>
+        <ul className="list-disc pl-6 mb-4 space-y-2">
+          <li>The email address or addresses associated with the account</li>
+          <li>Any phone number provided for verification</li>
+          <li>The last known IP address or addresses used to access the account</li>
+          <li>Device and browser signals recorded at sign-up or sign-in</li>
+          <li>Payment identifiers associated with a chargeback, fraud, or abuse ban — these are processor-side references, not full card numbers</li>
+          <li>The enforcement record itself: the date of the ban, the reason, and the administrator who applied it</li>
+        </ul>
+        <p className="mb-6">
+          We retain these identifiers for as long as the enforcement action remains in force. Where the ban is permanent — including the automatic permanent ban for chargebacks described in Section 5a of our Terms of Service — the retention is indefinite.
+        </p>
+
+        <h4 className="text-lg font-semibold mt-6 mb-3">B. Creating a New Account After a Ban</h4>
+        <p className="mb-4">
+          Registering a new account after a ban, or asking another person to register one on your behalf, is itself a violation of our Terms of Service. Any account we identify as belonging to or acting for a banned person may be terminated without notice and without refund, and pledges placed through it may be cancelled.
+        </p>
+        <p className="mb-6">
+          The email address on a deleted account cannot be reused to register (Section 7.D), and that restriction applies to banned accounts regardless of any deletion request.
+        </p>
+
+        <h4 className="text-lg font-semibold mt-6 mb-3">C. How This Data Is and Is Not Used</h4>
+        <p className="mb-2">Identifiers retained under this Section are used only to:</p>
+        <ul className="list-disc pl-6 mb-4 space-y-2">
+          <li>Detect and block attempts to evade a ban</li>
+          <li>Enforce the original enforcement action</li>
+          <li>Protect backers, creators, and our payment processors from repeat abuse and fraud</li>
+          <li>Establish, exercise, or defend legal claims, and respond to lawful requests</li>
+        </ul>
+        <p className="mb-2">They are held under restricted access and are never used to:</p>
+        <ul className="list-disc pl-6 mb-4 space-y-2">
+          <li>Send marketing or promotional messages</li>
+          <li>Build advertising, personalization, or recommendation profiles</li>
+          <li>Populate creator-facing backer reports or exports</li>
+          <li>Sell, rent, or share with third parties for their own purposes</li>
+        </ul>
+        <p className="mb-6">
+          Everything else covered by Section 2 is still deleted or anonymized on the normal schedule. Retention under this Section is limited to the identifiers listed in 6.A, and nothing more.
+        </p>
+
+        <h4 className="text-lg font-semibold mt-6 mb-3">D. Your Rights, and How to Contest This</h4>
+        <p className="mb-4">
+          The right to erasure is not absolute. Our stated basis for this retention is our legitimate interest in the security and integrity of the platform and in preventing abuse and fraud, under Article 6(1)(f) and Article 17(3) of the GDPR, and the exceptions in California Civil Code § 1798.105(d) covering the detection of security incidents and protection against malicious, deceptive, fraudulent, or illegal activity. Equivalent provisions in other jurisdictions are applied the same way.
+        </p>
+        <p className="mb-6">
+          If you believe an enforcement action against you was wrong, or that we no longer have a reason to hold your identifiers, write to{" "}
+          <a href="mailto:privacy@indiecrowdfund.com" className="text-emerald-600 hover:underline">
+            privacy@indiecrowdfund.com
+          </a>
+          . We will review whether continued retention is still justified and respond in writing. Chargeback bans under Section 5a of the Terms of Service are not appealable, but you may still ask us to confirm what identifiers we hold.
+        </p>
+
+        <h3 className="text-xl font-semibold mt-8 mb-4">7. How to Submit a Deletion Request</h3>
         <p className="mb-4">You may request deletion through:</p>
 
         <h4 className="text-lg font-semibold mt-6 mb-3">A. Email</h4>
@@ -218,7 +286,7 @@ export function DataDeletionPolicyContent() {
           Your name and email address are retained on completed pledge records so creators keep an accurate accounting of who backed them. As a result, the email address on a deleted account cannot be used to register a new account.
         </p>
 
-        <h3 className="text-xl font-semibold mt-8 mb-4">7. Processing Time</h3>
+        <h3 className="text-xl font-semibold mt-8 mb-4">8. Processing Time</h3>
         <p className="mb-4">Deletion requests are processed within:</p>
         <ul className="list-disc pl-6 mb-4 space-y-2">
           <li><strong>30 days</strong> for standard requests</li>
@@ -226,18 +294,19 @@ export function DataDeletionPolicyContent() {
         </ul>
         <p className="mb-6">We will notify you if additional time is required.</p>
 
-        <h3 className="text-xl font-semibold mt-8 mb-4">8. Circumstances Where Deletion May Be Delayed or Denied</h3>
+        <h3 className="text-xl font-semibold mt-8 mb-4">9. Circumstances Where Deletion May Be Delayed or Denied</h3>
         <p className="mb-4">We may temporarily deny or delay deletion if:</p>
         <ul className="list-disc pl-6 mb-4 space-y-2">
           <li>You are a creator with unresolved backer obligations</li>
           <li>You are involved in an active dispute or investigation</li>
+          <li>Your account is under an open enforcement review, or is banned or suspended and the deletion would frustrate that enforcement (see Section 6)</li>
           <li>Deletion would violate legal or regulatory requirements</li>
           <li>Fraud indicators require retention</li>
           <li>Requests are incomplete or unverified</li>
         </ul>
         <p className="mb-6">When denial is necessary, we will provide a written explanation.</p>
 
-        <h3 className="text-xl font-semibold mt-8 mb-4">9. Deletion Requests for Creator Accounts</h3>
+        <h3 className="text-xl font-semibold mt-8 mb-4">10. Deletion Requests for Creator Accounts</h3>
         <p className="mb-4">Creators who delete their account must:</p>
         <ul className="list-disc pl-6 mb-4 space-y-2">
           <li>Resolve outstanding backer obligations before deletion</li>
@@ -249,12 +318,12 @@ export function DataDeletionPolicyContent() {
         </ul>
         <p className="mb-6 font-medium">Creator accounts are subject to additional verification.</p>
 
-        <h3 className="text-xl font-semibold mt-8 mb-4">10. Children's Data</h3>
+        <h3 className="text-xl font-semibold mt-8 mb-4">11. Children's Data</h3>
         <p className="mb-6">
           IndieCrowdfund does not knowingly collect data from children under 13. If such data is discovered, it will be deleted immediately upon verification.
         </p>
 
-        <h3 className="text-xl font-semibold mt-8 mb-4">11. Changes to This Policy</h3>
+        <h3 className="text-xl font-semibold mt-8 mb-4">12. Changes to This Policy</h3>
         <p className="mb-2">We may update this Policy from time to time.</p>
         <p className="mb-2">Major changes will be communicated via:</p>
         <ul className="list-disc pl-6 mb-4 space-y-2">
@@ -264,7 +333,7 @@ export function DataDeletionPolicyContent() {
         </ul>
         <p className="mb-6 font-medium">Continued use of the services after an update constitutes acceptance.</p>
 
-        <h3 className="text-xl font-semibold mt-8 mb-4">12. Contact Information</h3>
+        <h3 className="text-xl font-semibold mt-8 mb-4">13. Contact Information</h3>
         <div className="bg-zinc-50 dark:bg-zinc-800 rounded-lg p-4">
           <p className="font-semibold mb-2">IndieCrowdfund, Inc.</p>
           <p className="mb-1">
