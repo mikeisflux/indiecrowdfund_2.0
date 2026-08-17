@@ -64,12 +64,48 @@ const EmailHeading = Heading.extend({
   },
 });
 
-// Custom Image extension with inline centering styles for email compatibility
+// Custom Image extension honouring alignment, with email-safe inline styles.
+//
+// This used to hardcode `margin: 16px auto` and ignore alignment entirely, and
+// "image" was missing from the TextAlign type list — so with an image selected
+// the align buttons set no attribute and changed no output. They did nothing
+// at all, which is what a creator was reporting.
+//
+// Alignment is expressed as auto margins rather than float, so an image never
+// pulls following text up alongside it, and block images stay predictable in
+// the clients that matter. Outlook's Word engine ignores auto margins and will
+// left-align regardless; that was already true of the old centre-everything
+// style, so this is no worse there and correct everywhere else.
+const IMAGE_MARGINS: Record<string, string> = {
+  left: "16px auto 16px 0",
+  center: "16px auto",
+  right: "16px 0 16px auto",
+};
+
 const EmailImage = Image.extend({
-  renderHTML({ HTMLAttributes }) {
-    // Always center images using display:block + margin:auto
-    // This is the most reliable method for email clients
-    const imgStyle = "display: block; max-width: 100%; height: auto; border-radius: 8px; margin: 16px auto;";
+  addAttributes() {
+    return {
+      ...this.parent?.(),
+      // Alignment is round-tripped through an explicit data-align attribute
+      // rather than read back off the margin shorthand. Reading the margin
+      // looks tidier but does not survive the browser: it normalises `0` to
+      // `0px` on the way out, so "16px 0 16px auto" comes back as
+      // "16px 0px 16px auto" and a right-aligned image reloaded as centred.
+      // data-align is inert in every email client and says what it means.
+      textAlign: {
+        default: "center",
+        parseHTML: (element: HTMLElement) =>
+          element.getAttribute("data-align") || "center",
+        renderHTML: (attributes: Record<string, unknown>) => ({
+          "data-align": (attributes.textAlign as string) || "center",
+        }),
+      },
+    };
+  },
+  renderHTML({ node, HTMLAttributes }) {
+    const textAlign = (node.attrs.textAlign as string) || "center";
+    const margin = IMAGE_MARGINS[textAlign] || IMAGE_MARGINS.center;
+    const imgStyle = `display: block; max-width: 100%; height: auto; border-radius: 8px; margin: ${margin};`;
 
     return ["img", { ...HTMLAttributes, style: imgStyle }];
   },
@@ -167,7 +203,9 @@ export function EmailEditor({
         },
       }),
       TextAlign.configure({
-        types: ["heading", "paragraph"],
+        // "image" included so the align buttons reach a selected image rather
+        // than silently doing nothing.
+        types: ["heading", "paragraph", "image"],
         alignments: ["left", "center", "right"],
         defaultAlignment: "left",
       }),
