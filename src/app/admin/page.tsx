@@ -57,6 +57,7 @@ interface DashboardStats {
   totalPledges: number;
   completedPledgeCount: number;
   totalRevenue: number;
+  committedPending: number;
   revenueThisMonth: number;
   revenueGrowth: number;
   pendingReports: number;
@@ -268,9 +269,15 @@ export default function AdminDashboard() {
       icon: FolderKanban,
     },
     {
-      title: "Total Revenue",
+      // Collected, matching the homepage figure. Committed-but-uncharged is
+      // called out separately rather than folded in: adding it made this tile
+      // disagree with the public total with nothing to explain the gap.
+      title: "Revenue Collected",
       value: formatCurrency(stats.totalRevenue),
-      change: `${stats.revenueGrowth >= 0 ? "+" : ""}${stats.revenueGrowth.toFixed(1)}%`,
+      change:
+        stats.committedPending > 0
+          ? `+${formatCurrency(stats.committedPending)} committed`
+          : `${stats.revenueGrowth >= 0 ? "+" : ""}${stats.revenueGrowth.toFixed(1)}%`,
       trend: stats.revenueGrowth >= 0 ? "up" : "down",
       color: "violet",
       icon: DollarSign,

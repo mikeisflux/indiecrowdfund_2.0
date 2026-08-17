@@ -58,6 +58,7 @@ export async function GET() {
       // Revenue stats - from COMPLETED pledges only
       totalPledges,
       totalRevenueAgg,
+      committedPendingAgg,
       pledgesThisMonth,
       pledgesPrevMonth,
 
@@ -97,15 +98,27 @@ export async function GET() {
           ],
         },
       }),
-      // Total revenue including committed PENDING
+      // Collected revenue: COMPLETED only, the same rule getPlatformTotals
+      // uses for the homepage figure. This tile used to add committed PENDING
+      // on top, so the dashboard and the homepage disagreed by whatever had
+      // been authorised but not yet charged, with nothing on either to explain
+      // the gap. Money not yet taken is reported separately below.
       db.pledge.aggregate({
         where: {
           deletedAt: null,
+          status: "COMPLETED",
           project: { status: { in: ["LIVE", "FUNDED", "FAILED"] }, deletedAt: null },
-          OR: [
-            { status: "COMPLETED" },
-            { status: "PENDING", confirmationEmailSent: true },
-          ],
+        },
+        _sum: { amount: true },
+      }),
+      // Committed but not yet charged: vaulted pledges on live campaigns that
+      // the funded-cron will collect at close.
+      db.pledge.aggregate({
+        where: {
+          deletedAt: null,
+          status: "PENDING",
+          confirmationEmailSent: true,
+          project: { status: { in: ["LIVE", "FUNDED", "FAILED"] }, deletedAt: null },
         },
         _sum: { amount: true },
       }),
@@ -246,6 +259,7 @@ export async function GET() {
         totalPledges,
         completedPledgeCount: totalPledges,
         totalRevenue: Number(totalRevenueAgg._sum.amount || 0),
+        committedPending: Number(committedPendingAgg._sum.amount || 0),
         revenueThisMonth,
         revenueGrowth: Number(revenueGrowth),
         pendingReports,
