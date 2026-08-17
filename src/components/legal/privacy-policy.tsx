@@ -12,7 +12,7 @@ export function PrivacyPolicyContent() {
         </p>
 
         <p className="mb-8">
-          This Privacy Policy describes how IndieCrowdfund, Inc. ("IndieCrowdfund," "we," "our") collects, uses, stores, and protects your personal information when you visit IndieCrowdfund.com or use our Services.
+          This Privacy Policy describes how IndieCrowdfund, a DBA of Divinity Comics Inc. ("IndieCrowdfund," "we," "our") collects, uses, stores, and protects your personal information when you visit IndieCrowdfund.com or use our Services.
         </p>
 
         <h3 className="text-xl font-semibold mt-8 mb-4">1. Information We Collect</h3>
@@ -140,7 +140,7 @@ export function PrivacyPolicyContent() {
 
         <h3 className="text-xl font-semibold mt-8 mb-4">11. Contact Information</h3>
         <div className="bg-zinc-50 dark:bg-zinc-800 rounded-lg p-4">
-          <p className="font-semibold mb-2">IndieCrowdfund, Inc.</p>
+          <p className="font-semibold mb-2">IndieCrowdfund — a DBA of Divinity Comics Inc.</p>
           <p className="mb-1">
             Email:{" "}
             <a href="mailto:privacy@indiecrowdfund.com" className="text-emerald-600 hover:underline">

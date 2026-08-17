@@ -112,15 +112,30 @@ export function TermsOfServiceContent() {
           <p className="text-red-700 dark:text-red-300 text-sm mb-0">
             Rewards are not guaranteed, you back at your own risk, and a
             delayed or scaled-back campaign is <strong>not</strong> grounds
-            for a chargeback. The only carve-outs are actual unauthorized-use
-            fraud (your card was used by someone else) and regulator /
-            law-enforcement directives. See the full{" "}
+            for a chargeback. The carve-outs are actual unauthorized-use
+            fraud (your card was used by someone else), regulator /
+            law-enforcement directives, and any case where the law gives you
+            a right to dispute that you cannot waive. See the full{" "}
             <Link href="/terms?tab=chargebacks" className="underline">
               Chargeback Handling Policy
             </Link>
             .
           </p>
         </div>
+        <p className="mb-6">
+          Nothing in this section restricts, waives, or asks you to give up any right you have under
+          law to dispute a charge with your card issuer or bank — including your rights under the Fair
+          Credit Billing Act and Regulation Z — or to complain to a regulator. Those rights are yours
+          and we do not condition access to the Services on giving them up. This section describes the
+          consequences under our own Terms of using the dispute process in place of contacting us
+          first, in a program where contributions fund grants that have already been awarded and paid
+          out. Where a dispute falls within a carve-out above, no ban applies. If you think a charge is
+          wrong, email{" "}
+          <a href="mailto:support@indiecrowdfund.com" className="text-emerald-600 hover:underline">
+            support@indiecrowdfund.com
+          </a>{" "}
+          first — we would rather fix it than lose you.
+        </p>
 
         <h3 className="text-xl font-semibold mt-8 mb-4">6. Program Costs, Payments, and Campaign Types</h3>
         <p className="mb-4">
@@ -148,6 +163,28 @@ export function TermsOfServiceContent() {
           Creators are responsible for all taxes, shipping costs, duties, and regulatory compliance.
         </p>
 
+        <h3 className="text-xl font-semibold mt-8 mb-4">6a. Tax Treatment of Contributions</h3>
+        <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg p-4 mb-4">
+          <p className="text-amber-800 dark:text-amber-200 font-medium mb-0">
+            Contributions made through the Grant Program are not tax-deductible charitable donations.
+          </p>
+        </div>
+        <p className="mb-4">
+          Divinity Comics Inc. is a 501(c)(3) organization, but that status does not by itself make
+          every payment to it deductible. Backers receive rewards, access, or other benefits in return
+          for their contributions, and we do not represent any part of a contribution as a deductible
+          charitable gift. We do not issue charitable contribution receipts or written acknowledgments
+          under Internal Revenue Code sections 170(f)(8) or 6115 for pledges, and none should be
+          inferred from a payment confirmation or receipt.
+        </p>
+        <p className="mb-6">
+          If your circumstances differ — for example a genuine donation made without receiving anything
+          in return — contact us before assuming any tax treatment. Nothing on this platform is tax
+          advice; consult your own tax advisor. Creators receiving grants are separately responsible for
+          the tax treatment of what they receive, as set out in the{" "}
+          <Link href="/terms?tab=grant" className="underline">Grant Agreement</Link>.
+        </p>
+
         <h3 className="text-xl font-semibold mt-8 mb-4">7. Creator Verification & Due Diligence</h3>
         <p className="mb-4">
           IndieCrowdfund conducts thorough due diligence on all creators before approving campaigns, and continues to review creators and their campaigns while those campaigns are running. Our verification process includes:
@@ -155,7 +192,7 @@ export function TermsOfServiceContent() {
         <ul className="list-disc pl-6 mb-4 space-y-2">
           <li><strong>Identity Verification:</strong> New creators must provide a valid government-issued photo ID and a legitimate business filing from their state Secretary of State office. Returning creators with verified accounts may be exempt from re-submission.</li>
           <li><strong>Social Media & Online Presence Audit:</strong> We log and verify all social media accounts linked to the creator. Our team searches other crowdfunding platforms (Kickstarter, Indiegogo, GoFundMe, etc.) to review the creator&apos;s campaign history, including campaigns currently running as well as completed ones.</li>
-          <li><strong>Fulfillment History Review:</strong> We review backer comments, reviews, and public feedback on all of a creator&apos;s campaigns across all platforms — completed campaigns, campaigns currently running, and campaigns running concurrently on other platforms. This review is ongoing and is not limited to the period before approval. We contact creators directly when discrepancies or concerns are identified. We reserve the right to contact any creator by any means we see fit. Failure to respond to any communication will be considered campaign abandonment and will be dealt with accordingly.</li>
+          <li><strong>Fulfillment History Review:</strong> We review backer comments, reviews, and public feedback on all of a creator&apos;s campaigns across all platforms — completed campaigns, campaigns currently running, and campaigns running concurrently on other platforms. This review is ongoing and is not limited to the period before approval. We contact creators directly when discrepancies or concerns are identified. We reserve the right to contact any creator by any means we see fit, using any contact details you have given us or made public, and by consenting to these Terms you agree to be contacted at those details about your campaign, including by phone and text message where you have supplied a number. Failure to respond to any communication will be considered campaign abandonment and will be dealt with accordingly; before we treat a campaign as abandoned we will send a final written notice to the email address on your account and allow ten (10) days for a reply.</li>
           <li><strong>Internal Documentation:</strong> All verification findings, correspondence, and review decisions are documented internally and retained for compliance and audit purposes.</li>
           <li><strong>Payment Account Verification:</strong> Creators must add a valid PayPal payout email (for standard campaigns), complete bank account setup through Divinity Payments (for NSFW/adult content campaigns), or connect a Whop account (for Whop-processed campaigns) to receive payouts.</li>
         </ul>
@@ -370,7 +407,34 @@ export function TermsOfServiceContent() {
           <li>Promote and market the project on-site or via social channels</li>
           <li>Archive project pages permanently after campaigns end</li>
         </ul>
+        <p className="mb-4">
+          That licence is non-exclusive, worldwide, royalty-free, and sublicensable only to the hosting,
+          storage, content-delivery, and email providers we use to operate the Services. You keep
+          ownership, and you may take your content down at any time. Because project pages are archived
+          permanently as part of the public record of the Grant Program, the licence to host and display
+          material already published on a campaign page survives the end of your campaign and the
+          closure of your account; every other part of it ends when you remove the content. You confirm
+          you have the rights needed to grant this licence for everything you upload.
+        </p>
         <p className="mb-6">Users may not copy, steal, or misuse other creators' content.</p>
+
+        <h3 className="text-xl font-semibold mt-8 mb-4">10a. Copyright Complaints and Repeat Infringers</h3>
+        <p className="mb-4">
+          We respond to notices of claimed copyright infringement under the Digital Millennium Copyright
+          Act. Send notices, and counter-notices, to our designated copyright agent at{" "}
+          <a href="mailto:dmca@indiecrowdfund.com" className="text-emerald-600 hover:underline">
+            dmca@indiecrowdfund.com
+          </a>
+          . The procedure, and what a valid notice must contain, is set out in our{" "}
+          <Link href="/terms?tab=dmca" className="underline">DMCA Policy</Link>.
+        </p>
+        <p className="mb-6">
+          We have adopted and will reasonably implement a policy of terminating, in appropriate
+          circumstances, the accounts of users who are repeat infringers of copyright. Campaigns and
+          content removed following a valid notice count toward that assessment, and an account
+          terminated under this section is subject to Section 6 of our{" "}
+          <Link href="/terms?tab=data-deletion" className="underline">Data Deletion Policy</Link>.
+        </p>
 
         <h3 className="text-xl font-semibold mt-8 mb-4">11. Platform Rights</h3>
         <p className="mb-4">IndieCrowdfund may:</p>
@@ -383,35 +447,180 @@ export function TermsOfServiceContent() {
         </ul>
 
         <h3 className="text-xl font-semibold mt-8 mb-4">12. Disclaimers</h3>
-        <p className="mb-4 font-medium">IndieCrowdfund is provided "as is" without warranties.</p>
+        <p className="mb-4 font-semibold uppercase">
+          The Services are provided "as is" and "as available," without warranty of any kind. To the
+          fullest extent permitted by law, IndieCrowdfund disclaims all warranties, express, implied, and
+          statutory, including the implied warranties of merchantability, fitness for a particular
+          purpose, title, and non-infringement, and any warranties arising from course of dealing or
+          usage of trade.
+        </p>
         <p className="mb-4">We do not guarantee:</p>
         <ul className="list-disc pl-6 mb-4 space-y-2">
           <li>Project success</li>
           <li>Creator performance</li>
           <li>Reward delivery</li>
-          <li>Platform uptime</li>
+          <li>Platform uptime, or that the Services will be uninterrupted, secure, or error-free</li>
           <li>Accuracy of user-submitted information</li>
         </ul>
-        <p className="mb-6 font-medium">Use the platform at your own risk.</p>
+        <p className="mb-4 font-medium">Use the platform at your own risk.</p>
+        <p className="mb-6">
+          Some jurisdictions do not allow the exclusion of implied warranties, so some of the above may
+          not apply to you. Nothing in this section limits any warranty or right that cannot be excluded
+          or limited under the law that applies to you.
+        </p>
 
         <h3 className="text-xl font-semibold mt-8 mb-4">13. Limitation of Liability</h3>
-        <p className="mb-4">To the fullest extent permitted by law:</p>
+        <p className="mb-4 font-semibold uppercase">
+          To the fullest extent permitted by law, IndieCrowdfund will not be liable for any indirect,
+          incidental, special, consequential, exemplary, or punitive damages, or for lost profits,
+          revenue, data, goodwill, or business opportunity, arising out of or relating to the Services,
+          even if we have been advised of the possibility of those damages.
+        </p>
+        <p className="mb-4">Subject to the exceptions below, and to the fullest extent permitted by law:</p>
         <ul className="list-disc pl-6 mb-4 space-y-2">
-          <li>IndieCrowdfund is not liable for losses related to project failures, disputes, delays, or unfulfilled rewards</li>
-          <li>Our total aggregate liability shall not exceed the fees paid to IndieCrowdfund in the prior 12 months</li>
+          <li>
+            IndieCrowdfund is not liable for losses related to project failures, disputes, delays, or
+            unfulfilled rewards
+          </li>
+          <li>
+            Our total aggregate liability for all claims arising out of or relating to the Services will
+            not exceed the greater of (a) the total amount you paid to us in the twelve months before the
+            event giving rise to the claim, or (b) one hundred US dollars (US$100)
+          </li>
+        </ul>
+        <p className="mb-2 font-medium">What this section does not limit</p>
+        <p className="mb-4">
+          Nothing in these Terms excludes or limits our liability for fraud or fraudulent
+          misrepresentation, for gross negligence or willful misconduct, for death or personal injury
+          caused by our negligence, or for any other liability that cannot lawfully be excluded or
+          limited. Where a limitation in this section is held unenforceable as to a particular claim, it
+          continues to apply to every other claim.
+        </p>
+        <p className="mb-6">
+          Some jurisdictions do not allow certain limitations; in such cases, the limitations apply to
+          the maximum extent allowed, and your statutory rights as a consumer are unaffected.
+        </p>
+
+        <h3 className="text-xl font-semibold mt-8 mb-4">13a. Indemnification</h3>
+        <p className="mb-4">
+          You agree to indemnify and hold harmless IndieCrowdfund, Divinity Comics Inc., and their
+          officers, directors, employees, and agents from any third-party claim, demand, loss, or
+          expense, including reasonable legal fees, arising out of:
+        </p>
+        <ul className="list-disc pl-6 mb-4 space-y-2">
+          <li>Content you submit, publish, or distribute through the Services</li>
+          <li>Your breach of these Terms or of any law</li>
+          <li>Your infringement of anyone else's intellectual property or other rights</li>
+          <li>
+            For creators: your campaign, your use of grant funds, and your fulfillment of, or failure to
+            fulfill, rewards you offered
+          </li>
         </ul>
         <p className="mb-6">
-          Some jurisdictions do not allow certain limitations; in such cases, the limitations apply to the maximum extent allowed.
+          This does not apply to the extent the claim arises from our own gross negligence, willful
+          misconduct, or breach of these Terms. We will notify you promptly of any claim, let you control
+          the defense with counsel of your choosing, and cooperate at your expense; you may not settle a
+          claim in a way that imposes any obligation or admission on us without our written consent, and
+          we may participate at our own cost. Nothing here requires you to indemnify us for anything the
+          law does not permit.
         </p>
 
         <h3 className="text-xl font-semibold mt-8 mb-4">14. Dispute Resolution</h3>
-        <p className="mb-4">
-          You agree to resolve disputes through binding arbitration, not in court. Class actions are waived. Local consumer rights may apply based on your jurisdiction.
+        <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg p-4 mb-4">
+          <p className="text-amber-800 dark:text-amber-200 font-semibold uppercase mb-0">
+            This section requires most disputes to be resolved by individual binding arbitration rather
+            than in court, and waives your right to a jury trial and to participate in a class action.
+            You may opt out. Please read it.
+          </p>
+        </div>
+
+        <h4 className="text-lg font-semibold mt-6 mb-3">14.1 Talk to Us First</h4>
+        <p className="mb-6">
+          Before starting an arbitration or a lawsuit, send a written Notice of Dispute to{" "}
+          <a href="mailto:support@indiecrowdfund.com" className="text-emerald-600 hover:underline">
+            support@indiecrowdfund.com
+          </a>{" "}
+          describing the dispute and the relief you want. We will do the same for any dispute we have
+          with you. Both sides agree to try in good faith to resolve it for 60 days after the notice is
+          sent. This step is a condition of starting arbitration, and the deadline to bring a claim
+          pauses while it runs.
         </p>
 
-        <h3 className="text-xl font-semibold mt-8 mb-4">15. Governing Law</h3>
+        <h4 className="text-lg font-semibold mt-6 mb-3">14.2 Arbitration</h4>
+        <p className="mb-4">
+          If we cannot resolve it, the dispute will be settled by binding arbitration administered by the
+          American Arbitration Association under its Consumer Arbitration Rules, before a single
+          arbitrator, rather than in court. The Federal Arbitration Act governs this section. The
+          arbitrator decides all issues except those reserved to a court in 14.4, including the scope and
+          enforceability of this section.
+        </p>
+        <p className="mb-4">
+          You may choose to have the arbitration conducted by telephone or videoconference, on written
+          submissions, or in person in the county where you live. We will pay the arbitration filing,
+          administration, and arbitrator fees that exceed what it would have cost you to file the same
+          claim in court, except where the arbitrator finds your claim frivolous. Each side otherwise
+          bears its own legal costs, unless the law or the arbitrator's award provides otherwise.
+        </p>
+
+        <h4 className="text-lg font-semibold mt-6 mb-3">14.3 No Class Actions</h4>
+        <p className="mb-4">
+          Disputes must be brought individually. Neither side may bring a claim as a plaintiff or class
+          member in any class, collective, consolidated, or representative proceeding, and the arbitrator
+          may not consolidate more than one person's claims or preside over any representative
+          proceeding.
+        </p>
         <p className="mb-6">
-          These Terms are governed by the laws of the State of Indiana, without regard to conflicts of law.
+          If this paragraph 14.3 is found unenforceable as to a particular claim or request for relief,
+          then that claim or request must be brought in court and is severed from arbitration; the rest
+          of this Section 14 still applies to everything else. Nothing here waives a right to public
+          injunctive relief where that right cannot be waived by law.
+        </p>
+
+        <h4 className="text-lg font-semibold mt-6 mb-3">14.4 What Stays Out of Arbitration</h4>
+        <ul className="list-disc pl-6 mb-6 space-y-2">
+          <li>Claims that qualify for small-claims court, brought individually in that court</li>
+          <li>
+            Requests for temporary or preliminary injunctive relief to stop infringement or misuse of
+            intellectual property, which either side may bring in a court of competent jurisdiction
+          </li>
+          <li>
+            Any claim or remedy that applicable law says cannot be sent to arbitration, including
+            complaints to a government agency, which you may always make
+          </li>
+        </ul>
+
+        <h4 className="text-lg font-semibold mt-6 mb-3">14.5 Many Similar Claims</h4>
+        <p className="mb-6">
+          If 25 or more claims of a substantially similar kind are filed against us by or with help from
+          the same lawyers or coordinated group, the claims will be arbitrated in staged batches of no
+          more than 50, each batch before a single arbitrator, with the deadline to bring a claim paused
+          for every claim awaiting its batch. This keeps the process workable for both sides and does not
+          reduce anyone's right to have their own claim heard.
+        </p>
+
+        <h4 className="text-lg font-semibold mt-6 mb-3">14.6 How to Opt Out</h4>
+        <p className="mb-6">
+          You may reject this Section 14 by emailing{" "}
+          <a href="mailto:support@indiecrowdfund.com" className="text-emerald-600 hover:underline">
+            support@indiecrowdfund.com
+          </a>{" "}
+          with your name, the email address on your account, and a statement that you opt out of
+          arbitration. Send it within 30 days of first accepting these Terms, or within 30 days of the
+          date this section was added, whichever is later. Opting out affects nothing else in these
+          Terms, and we will not treat it as a reason to close your account or refuse you service.
+        </p>
+
+        <h3 className="text-xl font-semibold mt-8 mb-4">15. Governing Law and Venue</h3>
+        <p className="mb-4">
+          These Terms are governed by the laws of the State of Indiana, without regard to conflicts of
+          law. For any dispute not subject to arbitration under Section 14, you and IndieCrowdfund agree
+          to the exclusive jurisdiction and venue of the state and federal courts located in Indiana, and
+          each side waives any objection to that venue.
+        </p>
+        <p className="mb-6">
+          If you are a consumer resident in a jurisdiction whose law gives you rights that cannot be
+          waived by agreement, nothing in this section deprives you of those rights or of the protection
+          of the mandatory law of the place where you live.
         </p>
 
         <h3 className="text-xl font-semibold mt-8 mb-4">16. Changes to These Terms</h3>
@@ -457,9 +666,69 @@ export function TermsOfServiceContent() {
           your campaign or pledge on request.
         </p>
 
+        <h3 className="text-xl font-semibold mt-8 mb-4">16a. General Provisions</h3>
+        <ul className="list-disc pl-6 mb-6 space-y-2">
+          <li>
+            <strong>Severability.</strong> If any provision of these Terms is held invalid or
+            unenforceable, that provision is limited or removed to the minimum extent necessary and the
+            rest of these Terms stay in full force. Section 14.3 is the one exception, and is handled the
+            way that paragraph describes.
+          </li>
+          <li>
+            <strong>No waiver.</strong> If we do not enforce a provision, that is not a waiver of it, and
+            it does not stop us enforcing it later.
+          </li>
+          <li>
+            <strong>Assignment.</strong> You may not assign or transfer these Terms or your account
+            without our written consent. We may assign them to an affiliate or in connection with a
+            merger, acquisition, reorganization, or sale of assets, on notice to you.
+          </li>
+          <li>
+            <strong>Entire agreement.</strong> These Terms, together with the policies they link to —
+            including the Grant Agreement, Backer Agreement, Content Guidelines, Privacy Policy,
+            Chargeback Handling Policy, and Data Deletion Policy — are the entire agreement between you
+            and us about the Services, and replace any earlier understanding on the same subject. Where a
+            campaign-specific agreement conflicts with these Terms, that agreement controls for that
+            campaign.
+          </li>
+          <li>
+            <strong>Survival.</strong> Sections 5a, 6a, 10, 10a, 12, 13, 13a, 14, 15, and this section
+            survive the end of your account or of these Terms, along with anything else that by its
+            nature should.
+          </li>
+          <li>
+            <strong>Force majeure.</strong> Neither side is liable for a failure or delay caused by
+            events beyond its reasonable control, including natural disaster, war, civil unrest, labor
+            disputes, epidemic, failure of a payment processor or hosting provider, or government
+            action. This does not excuse any obligation to pay money already owed.
+          </li>
+          <li>
+            <strong>Notices and electronic communications.</strong> You consent to receive
+            communications, agreements, notices, and disclosures from us electronically — by email to the
+            address on your account, or by posting to the Services — and agree that these satisfy any
+            legal requirement that they be in writing. Legal notices to us go to{" "}
+            <a href="mailto:support@indiecrowdfund.com" className="text-emerald-600 hover:underline">
+              support@indiecrowdfund.com
+            </a>
+            . Keep your email address current; a notice sent to the address on your account is
+            effective when sent. You may withdraw consent to electronic delivery by writing to us, but
+            we may then have to close your account, because the Services are delivered electronically.
+          </li>
+          <li>
+            <strong>No third-party beneficiaries.</strong> These Terms do not give rights to anyone who
+            is not a party to them, except that Divinity Comics Inc. and the people listed in Section 13a
+            may enforce the provisions that benefit them.
+          </li>
+          <li>
+            <strong>Relationship.</strong> Nothing in these Terms creates a partnership, joint venture,
+            employment, or agency relationship between you and us. Creators are not our employees or
+            agents, and we do not control their projects.
+          </li>
+        </ul>
+
         <h3 className="text-xl font-semibold mt-8 mb-4">17. Contact Information</h3>
         <div className="bg-zinc-50 dark:bg-zinc-800 rounded-lg p-4">
-          <p className="font-semibold mb-2">IndieCrowdfund, Inc.</p>
+          <p className="font-semibold mb-2">IndieCrowdfund — a DBA of Divinity Comics Inc.</p>
           <p className="mb-1">
             Email:{" "}
             <a href="mailto:support@indiecrowdfund.com" className="text-emerald-600 hover:underline">
