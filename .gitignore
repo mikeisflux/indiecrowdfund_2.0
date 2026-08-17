@@ -42,3 +42,10 @@ next-env.d.ts
 # Staging builds
 .next-staging
 .next-old
+
+# build-and-swap.sh's working dirs on the deploy box. It builds into
+# .next-new and keeps the last two swapped-out builds as .next-backup-*,
+# so without these the production checkout always has untracked dirs.
+.next-new
+.next-backup-*
+.next-verify
