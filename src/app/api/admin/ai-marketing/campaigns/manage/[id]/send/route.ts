@@ -6,6 +6,7 @@ const adminAiMarketingCampaignsManageSendLogger = logger.child({ module: "admin-
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { queueEmail, EMAIL_PRIORITY, getUnsubscribeUrl, hasVisibleEmailContent } from "@/lib/email";
+import { MARKETING_RECIPIENT_WHERE } from "@/lib/email/marketing-eligibility";
 
 export const dynamic = "force-dynamic";
 
@@ -253,7 +254,7 @@ export async function POST(
           // Only include verified users if no specific segments are selected
           selectedSegmentIds.length === 0
             ? db.user.findMany({
-                where: { emailVerified: { not: null }, deletedAt: null },
+                where: { emailVerified: { not: null }, ...MARKETING_RECIPIENT_WHERE },
                 select: { email: true, name: true },
               })
             : Promise.resolve([]),

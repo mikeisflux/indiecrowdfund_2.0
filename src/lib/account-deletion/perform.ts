@@ -70,9 +70,10 @@ export async function performAccountDeletion(userId: string): Promise<void> {
     // Terms say is not allowed.
     const existing = await tx.user.findUnique({
       where: { id: userId },
-      select: { lockedAt: true, lastKnownIP: true },
+      select: { lockedAt: true, lastKnownIP: true, email: true },
     });
     const wasBanned = !!existing?.lockedAt;
+    const existingEmail = existing?.email ?? null;
 
     // 1. Cancel PENDING pledges. These were never charged, so the
     // money side is a no-op — we just flip status and free the
@@ -247,6 +248,20 @@ export async function performAccountDeletion(userId: string): Promise<void> {
         divinityCoinBalance: 0,
       },
     });
+
+    // 4b. Take the address off the newsletter list as well.
+    //
+    // emailUnsubscribedAt on the User row is the site-wide opt-out, but the
+    // platform newsletter is a separate NewsletterSubscriber row keyed by
+    // email, and nothing linked the two. Deleting an account therefore left
+    // any newsletter subscription running — the /unsubscribe route always
+    // updated both, and deletion updated only one.
+    if (existingEmail) {
+      await tx.newsletterSubscriber.updateMany({
+        where: { email: existingEmail.toLowerCase() },
+        data: { isActive: false, unsubscribedAt: new Date() },
+      });
+    }
 
     // 5. Pin a banned account's last IP into the blocklist.
     //

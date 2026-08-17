@@ -16,6 +16,7 @@ import {
 import {
   calculateProjectMatchScore,
 } from "@/lib/ai/user-interests";
+import { MARKETING_RECIPIENT_WHERE } from "@/lib/email/marketing-eligibility";
 
 export const dynamic = "force-dynamic";
 
@@ -71,7 +72,7 @@ export async function GET(
 
         const [verifiedUsers, newsletterSubs] = await Promise.all([
           db.user.findMany({
-            where: { emailVerified: { not: null }, deletedAt: null },
+            where: { emailVerified: { not: null }, ...MARKETING_RECIPIENT_WHERE },
             select: { id: true, email: true, name: true },
           }),
           db.newsletterSubscriber.findMany({
@@ -85,7 +86,7 @@ export async function GET(
 
         // Get backer emails for filtering newsletter subscribers
         const backerEmails = await db.user.findMany({
-          where: { id: { in: Array.from(backerUserIdSet) }, deletedAt: null },
+          where: { id: { in: Array.from(backerUserIdSet) }, ...MARKETING_RECIPIENT_WHERE },
           select: { email: true },
         });
         const backerEmailSet = new Set(backerEmails.map(b => b.email.toLowerCase()));
