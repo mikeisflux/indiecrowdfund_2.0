@@ -1,6 +1,8 @@
 "use client";
 
 import { apiFetch } from "@/lib/fetch-utils";
+import { toast } from "sonner";
+import { autoFormatEmailBody } from "@/lib/email/auto-format-body";
 import { sanitizeHtml } from "@/lib/utils/sanitize";
 import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -67,6 +69,7 @@ import {
   Copy,
   Trash2,
   Loader2,
+  Wand2,
   StopCircle,
   Filter,
 } from "lucide-react";
@@ -162,6 +165,35 @@ export function EmailCampaignsTab({
   const [editName, setEditName] = useState("");
   const [editSubject, setEditSubject] = useState("");
   const [editHtmlContent, setEditHtmlContent] = useState("");
+  const [isFormatting, setIsFormatting] = useState(false);
+
+  // "Format as email": wrap what is in the editor in the same branded shell the
+  // AI campaigns use. The template lives on the server and is shared with the
+  // AI renderers, so a hand-written campaign cannot drift into looking like a
+  // different product.
+  const handleFormatAsEmail = async () => {
+    setIsFormatting(true);
+    try {
+      // Two steps: style the blocks the operator typed, then wrap the result
+      // in the branded shell. The styling runs here because it needs a real
+      // DOM; the shell is server-side so it stays identical to the AI ones.
+      const body = autoFormatEmailBody(editHtmlContent);
+      const res = await apiFetch("/api/admin/ai-marketing/format-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ html: body, subject: editSubject }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Could not format the email");
+
+      setEditHtmlContent(data.html);
+      toast.success("Formatted. Save to keep it, or undo by re-editing.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not format the email");
+    } finally {
+      setIsFormatting(false);
+    }
+  };
 
   // Segment selection state
   const [availableSegments, setAvailableSegments] = useState<SubscriberSegment[]>([]);
@@ -809,9 +841,32 @@ export function EmailCampaignsTab({
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label>Email Body Content</Label>
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <Label>Email Body Content</Label>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={handleFormatAsEmail}
+                        disabled={isFormatting || !editHtmlContent.trim()}
+                      >
+                        {isFormatting ? (
+                          <>
+                            <Loader2 className="h-3.5 w-3.5 mr-2 animate-spin" />
+                            Formatting...
+                          </>
+                        ) : (
+                          <>
+                            <Wand2 className="h-3.5 w-3.5 mr-2" />
+                            Format as email
+                          </>
+                        )}
+                      </Button>
+                    </div>
                     <p className="text-xs text-muted-foreground mb-2">
-                      Edit your email content with rich formatting. Drag & drop or paste images directly.
+                      Edit your email content with rich formatting. Drag &amp; drop or paste images
+                      directly. &ldquo;Format as email&rdquo; wraps what you have written in the
+                      branded header, 600px card and footer the AI campaigns use.
                     </p>
                     <EmailEditor
                       value={editHtmlContent}

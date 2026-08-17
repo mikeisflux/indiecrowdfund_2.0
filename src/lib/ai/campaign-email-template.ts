@@ -324,3 +324,83 @@ ${cta}
     </html>
   `;
 }
+
+// ---- Manual composition: wrap hand-written content in the branded shell ----
+
+/**
+ * Wrap arbitrary body HTML in the same chrome the AI campaigns use.
+ *
+ * The editor on the campaign tab produces bare blocks — paragraphs, headings,
+ * lists, images. Sent as-is they arrive as unstyled black-on-white text with no
+ * header, no footer and no width limit, which on a phone is a single column of
+ * full-bleed prose. This is the "Format as email" button behind the scenes:
+ * same header, same 600px card, same footer as renderCampaignEmailHtml.
+ *
+ * The body is NOT escaped — it is HTML the operator authored in the editor,
+ * which is the whole point. It is written by admins only, and the editor's own
+ * schema constrains what can be produced.
+ *
+ * Placeholders {{SITE_URL}} and {{UNSUBSCRIBE_URL}} are resolved by the caller
+ * at send time, exactly as they are for the AI templates.
+ */
+export function wrapInEmailShell(
+  bodyHtml: string,
+  opts: { subject?: string; preheader?: string; footerNote?: string } = {}
+): string {
+  const { subject = "", preheader = "", footerNote } = opts;
+
+  return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>${esc(subject)}</title>
+    </head>
+    <body style="margin: 0; padding: 0; background: #f4f4f7; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #374151;">
+      <div style="display: none; max-height: 0; overflow: hidden;">${esc(preheader)}</div>
+
+      <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background: #f4f4f7;">
+        <tr>
+          <td align="center" style="padding: 24px 12px;">
+            <table role="presentation" cellpadding="0" cellspacing="0" width="600" style="max-width: 600px; width: 100%; background: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.06);">
+              <tr>
+                <td align="center" style="padding: 28px 24px; background: linear-gradient(135deg, #10b981 0%, #059669 100%); background-color: #10b981;">
+                  <h1 style="margin: 0; color: #ffffff; font-size: 26px; font-weight: 800; letter-spacing: -0.02em;">IndieCrowdfund</h1>
+                  <p style="margin: 6px 0 0 0; color: rgba(255,255,255,0.9); font-size: 13px;">Fund the comics and creators you love</p>
+                </td>
+              </tr>
+
+              <tr>
+                <!-- text-align: left so the operator's own alignment wins. The
+                     cell above centres its contents with align="center", which
+                     email clients cascade onto descendant text. -->
+                <td style="padding: 32px 24px; font-size: 16px; color: #374151; text-align: left;">
+                  ${bodyHtml}
+                </td>
+              </tr>
+
+              <tr>
+                <td style="padding: 16px 24px 32px 24px; border-top: 1px solid #e5e7eb; text-align: center;">
+                  <p style="color: #9ca3af; font-size: 12px; margin: 0;">
+                    ${esc(footerNote || "You are receiving this because you have an IndieCrowdfund account.")}
+                  </p>
+                  <p style="color: #9ca3af; font-size: 12px; margin: 8px 0 0 0;">
+                    <a href="{{UNSUBSCRIBE_URL}}" style="color: #9ca3af;">Unsubscribe</a>
+                  </p>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+    </body>
+    </html>
+  `;
+}
+
+/** True when this HTML has already been through wrapInEmailShell (or the AI
+ *  templates), so the button can format rather than nest one shell in another. */
+export function looksLikeFullEmail(html: string): boolean {
+  return /<!DOCTYPE html>|<body[\s>]/i.test(html);
+}
