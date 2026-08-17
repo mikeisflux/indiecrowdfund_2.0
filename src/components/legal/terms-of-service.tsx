@@ -446,6 +446,93 @@ export function TermsOfServiceContent() {
           <li>Refuse service at our discretion</li>
         </ul>
 
+        <h3 className="text-xl font-semibold mt-8 mb-4">
+          11a. Termination for Violation, Ban Evasion, and Retained Records
+        </h3>
+        <div className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-lg p-4 mb-4">
+          <p className="text-red-800 dark:text-red-200 font-medium mb-0">
+            If we terminate your account for violating these Terms, the ban applies to you as a person.
+            You agree that we may keep the limited information needed to enforce it, that deleting your
+            account will not remove that information, and that you will not create another account.
+          </p>
+        </div>
+        <p className="mb-6">
+          This section applies to any termination for breach of these Terms or our policies — including
+          fraud, harassment, prohibited content, misuse of grant funds, misrepresentation, or repeat
+          copyright infringement. It applies in addition to, and independently of, the chargeback ban in
+          Section 5a, and it applies whether or not a chargeback is involved.
+        </p>
+
+        <h4 className="text-lg font-semibold mt-6 mb-3">11a.1 A Ban Attaches to the Person</h4>
+        <p className="mb-6">
+          A ban is not merely the closing of an account record. Where we terminate an account for a
+          violation, you may not register, operate, or benefit from another account on IndieCrowdfund,
+          and you may not ask or pay another person to hold one for you. Creating or using a further
+          account after a ban is itself a breach of these Terms, and any such account may be terminated
+          without notice, with pledges made through it cancelled. Ending the ban requires our written
+          agreement.
+        </p>
+
+        <h4 className="text-lg font-semibold mt-6 mb-3">
+          11a.2 Records We Keep, and Which Deletion Does Not Remove
+        </h4>
+        <p className="mb-4">
+          A ban we cannot recognise is not a ban. You acknowledge and agree that, where your account has
+          been terminated for a violation, we may retain the following, and that a request to delete your
+          account or your personal data does not oblige us to erase it:
+        </p>
+        <ul className="list-disc pl-6 mb-4 space-y-2">
+          <li>The email address or addresses associated with the account</li>
+          <li>Any phone number provided for verification</li>
+          <li>The last known IP address or addresses used to access the account</li>
+          <li>Device and browser signals recorded at sign-up or sign-in</li>
+          <li>
+            Payment identifiers connected with the violation — processor-side references, never full card
+            numbers
+          </li>
+          <li>The enforcement record itself: the date, the reason, and who applied it</li>
+        </ul>
+        <p className="mb-4">
+          We keep these for as long as the ban remains in force, which for a permanent ban means
+          indefinitely. We keep nothing else for this purpose: everything outside this list is deleted or
+          anonymised on the ordinary schedule set out in our{" "}
+          <Link href="/terms?tab=data-deletion" className="underline">Data Deletion Policy</Link>, and
+          Section 6 of that Policy governs how these records are handled.
+        </p>
+        <p className="mb-6">
+          These records are held under restricted access and used only to detect and prevent ban evasion,
+          to enforce the original decision, to protect other users and our payment processors from repeat
+          abuse and fraud, and to establish, exercise, or defend legal claims. They are never used for
+          marketing, advertising, personalisation, or profiling, are never included in creator-facing
+          backer reports or exports, and are never sold or shared with third parties for their own
+          purposes.
+        </p>
+
+        <h4 className="text-lg font-semibold mt-6 mb-3">11a.3 Why We May Refuse Erasure</h4>
+        <p className="mb-6">
+          The right to erasure is not absolute, and our basis for declining it as to the records above is
+          our legitimate interest in the security and integrity of the platform and in preventing fraud
+          and repeat abuse — a purpose expressly recognised by Article 6(1)(f) and Recital 47 of the GDPR
+          — together with the exceptions in Article 17(3) covering legal obligations and the
+          establishment, exercise, or defence of legal claims, and the exceptions in California Civil
+          Code § 1798.105(d) covering the detection of security incidents and protection against
+          malicious, deceptive, fraudulent, or illegal activity. Comparable provisions in other
+          jurisdictions are applied the same way. Nothing in this section removes a right you hold that
+          cannot be waived by agreement, and your other data-subject rights are unaffected.
+        </p>
+
+        <h4 className="text-lg font-semibold mt-6 mb-3">11a.4 Contesting a Ban</h4>
+        <p className="mb-6">
+          If you believe a termination was wrong, or that we no longer have reason to hold your
+          identifiers, write to{" "}
+          <a href="mailto:support@indiecrowdfund.com" className="text-emerald-600 hover:underline">
+            support@indiecrowdfund.com
+          </a>{" "}
+          setting out why. We will review it and reply in writing. Where we agree, we lift the ban and
+          delete the records held under 11a.2. Chargeback bans under Section 5a follow the appeal rule
+          stated there.
+        </p>
+
         <h3 className="text-xl font-semibold mt-8 mb-4">12. Disclaimers</h3>
         <p className="mb-4 font-semibold uppercase">
           The Services are provided "as is" and "as available," without warranty of any kind. To the
@@ -692,7 +779,7 @@ export function TermsOfServiceContent() {
             campaign.
           </li>
           <li>
-            <strong>Survival.</strong> Sections 5a, 6a, 10, 10a, 12, 13, 13a, 14, 15, and this section
+            <strong>Survival.</strong> Sections 5a, 6a, 10, 10a, 11a, 12, 13, 13a, 14, 15, and this section
             survive the end of your account or of these Terms, along with anything else that by its
             nature should.
           </li>

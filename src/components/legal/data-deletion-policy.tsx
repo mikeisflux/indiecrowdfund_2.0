@@ -1,5 +1,7 @@
 /* eslint-disable react/no-unescaped-entities */
 
+import Link from "next/link";
+
 export function DataDeletionPolicyContent() {
   return (
     <div className="prose prose-zinc dark:prose-invert max-w-none">
@@ -208,7 +210,11 @@ export function DataDeletionPolicyContent() {
 
         <h4 className="text-lg font-semibold mt-6 mb-3">B. Creating a New Account After a Ban</h4>
         <p className="mb-4">
-          Registering a new account after a ban, or asking another person to register one on your behalf, is itself a violation of our Terms of Service. Any account we identify as belonging to or acting for a banned person may be terminated without notice and without refund, and pledges placed through it may be cancelled.
+          Registering a new account after a ban, or asking another person to register one on your behalf, is itself a violation of Section 11a of our{" "}
+          <Link href="/terms?tab=terms" className="text-emerald-600 hover:underline">
+            Terms of Service
+          </Link>
+          . Any account we identify as belonging to or acting for a banned person may be terminated without notice and without refund, and pledges placed through it may be cancelled.
         </p>
         <p className="mb-6">
           The email address on a deleted account cannot be reused to register (Section 7.D), and that restriction applies to banned accounts regardless of any deletion request.
