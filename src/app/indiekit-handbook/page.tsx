@@ -31,6 +31,7 @@ import {
   Search,
   Menu,
   X,
+  Send,
 } from 'lucide-react';
 import Link from 'next/link';
 import { Footer } from "@/components/footer";
@@ -111,6 +112,7 @@ const sections: SectionGroup[] = [
       { id: 'payments', label: 'Payments', icon: CreditCard },
       { id: 'digital-delivery', label: 'Digital Delivery', icon: Download },
       { id: 'physical-delivery', label: 'Physical Delivery', icon: Box },
+      { id: 'shipstation', label: 'ShipStation', icon: Send },
       { id: 'printing-comics', label: 'Printing Comics', icon: Truck },
     ],
   },
@@ -238,7 +240,7 @@ const tabContent: Record<string, TabContent> = {
     ],
     gotchas: [
       'Bulk "Charge Cards" can\'t un-do itself. Use the preview screen to verify the total before confirming.',
-      'Pushing to fulfillment before SKU mapping is set up causes errors — visit Settings to map SKUs first.',
+      'Pushing to Shopify before SKU mapping is set up causes errors — visit Settings to map SKUs first. SKU mapping does not apply to ShipStation, which generates its own SKUs; see the ShipStation section.',
     ],
   },
   'projects': {
@@ -474,6 +476,50 @@ const tabContent: Record<string, TabContent> = {
     gotchas: [
       'A push error on one order doesn\'t block the rest of the batch from pushing — they\'re processed independently.',
       'Marking an order as Delivered does NOT trigger another email; only Shipped does. Delivery notifications come from the carrier directly.',
+    ],
+  },
+
+  'shipstation': {
+    title: 'ShipStation — Connect It and Push Orders',
+    description: 'The complete walkthrough for shipping through ShipStation: getting your API keys, connecting IndieKit to the right ShipStation store, pushing backer orders across, reading what lands on the ShipStation side, fixing pushes that fail, and closing the loop once packages go out. Written for someone who has never touched IndieKit before — every click is spelled out. You do not need to be the campaign owner: the creator OR any accepted collaborator on the campaign can do all of this.',
+    howTo: [
+      { step: '1. Check you have what you need', detail: 'Three things. (a) A ShipStation account on a plan that exposes API keys — ShipStation gates the legacy V1 API IndieKit uses behind its paid tiers, so a free trial may not show the keys screen. (b) Access to the IndieCrowdfund campaign, either as the creator or as a collaborator who has ACCEPTED the invite (a pending invite is not enough). (c) At least one backer whose shipping address has been collected. If surveys have not gone out yet, there is nothing to push and you should stop here.' },
+      { step: '2. Generate your ShipStation API key and secret', detail: 'Log into ShipStation. Click the gear / Settings icon in the top-right. In the left menu go to Account → API Settings. Find the API Keys section and click "Generate API Keys" (if keys already exist, they are shown there — you do not need to regenerate, and regenerating will break anything else already using them). You get TWO values: an API Key and an API Secret. Copy both somewhere safe right now. ShipStation will not show the secret again in full.' },
+      { step: '3. Open IndieKit and pick the campaign', detail: 'Log into IndieCrowdfund. Click your profile picture in the top-right, choose Dashboard, then click "IndieKit" in the sidebar (direct link: /dashboard/indiekit). At the very top of IndieKit there is a campaign dropdown — select the campaign you are shipping for. This matters: the ShipStation connection is stored per campaign, not per account. If you skip this you will get the error "Select a campaign at the top of the page first".' },
+      { step: '4. Go to Settings → Integrations', detail: 'In the IndieKit left-hand navigation, click the Settings tab. Scroll to the "Integrations" card — it is headed "Connect third-party services for fulfillment". You will see a stack of tiles: Stripe, Shopify, ShipStation, Zapier, Easyship. Find the ShipStation row with the truck icon.' },
+      { step: '5. Click Connect and paste your keys', detail: 'The ShipStation tile has a "Connect" button on the right (it reads "Reconnect" instead if a previous connection went bad). Click it. A dialog titled "Connect ShipStation" opens with two fields: API Key and API Secret. Paste each value from step 2 into the matching field — key in the key box, secret in the secret box; swapping them is the single most common mistake here. Click Connect.' },
+      { step: '6. Choose which ShipStation store orders import into', detail: 'As soon as the keys are accepted, IndieKit asks ShipStation for your store list and opens a second dialog: "Choose a ShipStation store". Open the Store dropdown, pick the store these backer orders should land in, and save. You will see a confirmation reading "Orders will import into <your store name>". If your ShipStation account has only one store, pick that one — it still makes the behaviour explicit rather than implicit.' },
+      { step: '7. Confirm the tile shows the connected state', detail: 'The ShipStation tile should now show a green truck icon, the line "Orders import into <your store name>", a green "Connected" button, and a "Disconnect" link. If instead it reads "Connected · using your default ShipStation store", the keys are good but no store was chosen — click "Choose store" on that same line to pick one. If the tile still says "Connect", the connection did not save; re-check the key and secret.' },
+      { step: '8. Make sure the orders are actually ready to ship', detail: 'Before pushing anything, the backers you push need a shipping address on file. Addresses come from the fulfillment survey, so surveys must have been sent and completed. Ideally the campaign has also been through the Finalize tab (Lock Orders → Charge Cards → Lock Addresses) so nothing changes underneath you after the order is already in ShipStation. Pushing before addresses are locked is allowed, it just means a backer can still edit an address you have already printed a label for.' },
+      { step: '9. Open the Backers tab and select who to push', detail: 'Click the Backers tab in IndieKit. Use the search box and the filter pills at the top to narrow the list — filtering to "Survey Complete" is the usual starting point, since those are the backers who definitely have an address. Then tick the checkbox at the left of each row you want to ship. There is a checkbox in the header row that selects everything currently shown.' },
+      { step: '10. Push the selected orders', detail: 'With rows ticked, a teal button appears reading "Push N Orders" — click it. (The same action lives under the "Bulk Actions (N)" dropdown as "Push to Fulfillment" if you prefer menus.) IndieKit sends each order to ShipStation one at a time and then reports how many were pushed and how many failed.' },
+      { step: '11. Push a single backer instead', detail: 'To ship just one person, find their row in the Backers tab, click the "..." menu at the far right, and choose "Push to Fulfillment". Same result, one order. This is the fastest way to do a test run before committing to a big batch, and it is also how you re-push one backer after fixing their address.' },
+      { step: '12. Expect to push in batches of roughly 25–30', detail: 'ShipStation\'s API allows only 40 requests per minute, so IndieKit deliberately paces itself at about one order every 1.6 seconds rather than slamming the limit and having ShipStation reject the rest. A single push runs for up to 45 seconds, which works out to roughly 25–30 orders. If you selected more than that, the response tells you how many are still remaining — just click "Push N Orders" again to continue. Nothing is lost and nothing is duplicated; you are simply resuming.' },
+      { step: '13. Check the orders in ShipStation', detail: 'Switch to ShipStation and open the store you chose in step 6. The new orders appear under Awaiting Shipment. Each one is recognisable by an order number in the form ICF-XXXXXXXX. The customer email is the backer\'s email, the Ship To address is the address they gave in their survey, and the Internal Notes field reads "IndieCrowdfund · <campaign name> · Backer #<number>" so you can always trace an order back to a specific backer.' },
+      { step: '14. Understand the line items and SKUs', detail: 'Every order carries one line item for the backer\'s reward tier and one more for each add-on they bought, with the real reward/add-on name and the real dollar price. SKUs are generated automatically as REWARD-<id> for tiers and ADDON-<id> for add-ons. You do NOT need to set up SKU mapping for ShipStation — the SKU Mapping screen in IndieKit is for the Shopify integration and has no effect here. If you want ShipStation product records, inventory counts or automation rules to key off these orders, build them against those generated SKUs.' },
+      { step: '15. Deal with anything that failed to push', detail: 'The push result lists each failure with the reason. By far the most common is "No shipping address", which means that backer has not completed their survey or their address is incomplete — chase the survey, or open the backer in the Backers tab and fill the address in yourself, then push them again. Other failures show ShipStation\'s own error text (bad postal code, unsupported country, and so on). A failure on one backer never stops the rest of the batch; the others still go through.' },
+      { step: '16. Re-push freely — it updates, it does not duplicate', detail: 'Every order is sent with a stable key derived from the backer\'s pledge, so pushing the same backer a second time UPDATES the existing ShipStation order rather than creating a twin. This is the intended way to fix things: correct the address or the add-ons in IndieKit, push that backer again, and the ShipStation order corrects itself. Do not delete and recreate orders by hand in ShipStation to fix an address — fix it in IndieKit and re-push.' },
+      { step: '17. Ship the orders in ShipStation as normal', detail: 'From here it is ordinary ShipStation work: create batches, pick a carrier and service, buy and print labels, pack, hand off. IndieKit does not interfere with any of it. Nothing you do in ShipStation is pushed back to the campaign automatically, which is what the next step is for.' },
+      { step: '18. Close the loop back in IndieKit', detail: 'Once packages are actually out the door, tell the platform so backers see it. In the Backers tab, tick the backers you shipped, open "Bulk Actions" and choose "Mark as Shipped". That flips them to Shipped, moves them along the Dashboard\'s fulfillment pipeline, and triggers the backer-facing shipping notification. To record a tracking number for an individual backer, open their row and paste it in on the backer detail dialog.' },
+      { step: '19. Watch the Dashboard pipeline as your progress bar', detail: 'The IndieKit Dashboard tab has a Fulfillment Pipeline strip with four buckets: Not Pushed, Push Errored, Pushed, Shipped. Use it as your running scoreboard. The job is done when Not Pushed and Push Errored are both zero and everything has moved to Shipped.' },
+      { step: '20. Rotating keys, reconnecting, disconnecting', detail: 'If ShipStation keys are regenerated on their side, the tile will start showing a warning and the button becomes "Reconnect" — click it and paste the new key and secret; your store choice is remembered. "Disconnect" removes the stored credentials for that one campaign only and does not touch anything inside ShipStation itself. Because connections are per campaign, a second campaign shipping through the same ShipStation account needs its own connection: select that campaign at the top of IndieKit and repeat steps 4–7.' },
+    ],
+    tips: [
+      'Do a single-order test before your first big batch. Push one backer (step 11), find the ICF- order in ShipStation, and check the address, the line items and the prices look right. Five minutes here saves untangling 400 wrong orders later.',
+      'Filter the Backers tab to "Survey Complete" before selecting. Those backers are the ones guaranteed to have an address, so your push succeeds instead of returning a wall of "No shipping address".',
+      'Work in deliberate batches of about 25 and let each push finish. Selecting 500 at once is not faster — the rate limit sets the pace either way, and smaller batches make it much easier to see which orders had problems.',
+      'The Internal Notes line on every ShipStation order names the campaign and the backer number. When a backer emails asking where their package is, search that number in ShipStation and you have their order instantly.',
+      'Choose the store explicitly in step 6 even if you only have one. "Using your default ShipStation store" means ShipStation decides, and the default can change when someone adds a selling channel.',
+      'Push in the morning. If something goes wrong with a batch you want the rest of the day to fix and re-push it, not a discovery at 6pm.',
+    ],
+    gotchas: [
+      'Tracking numbers do NOT flow back from ShipStation automatically yet. Buying a label in ShipStation does not mark the backer as shipped on IndieCrowdfund — you must use "Mark as Shipped" in the Backers tab (step 18) or backers will keep seeing their order as unshipped.',
+      'The connection is stored per campaign, not per account. Connecting ShipStation on one campaign does nothing for the next one. Always check the campaign selector at the top of IndieKit before you connect or push.',
+      'SKU Mapping in IndieKit does not apply to ShipStation. ShipStation orders always use auto-generated REWARD-/ADDON- SKUs. Filling in the SKU Mapping screen will not change what ShipStation receives.',
+      'A push that reports "remaining" is not an error. It means the rate-limit budget for that request ran out. Click push again to continue — you will not create duplicates.',
+      'Pushing before addresses are locked in the Finalize tab means a backer can still change their address after you have printed a label. If you are shipping early, lock addresses first.',
+      'IndieKit uses ShipStation\'s legacy V1 API, which ShipStation has marked deprecated and restricts to higher-tier plans. If the API Keys section is missing from your ShipStation settings, that is a plan limitation on their side, not a fault in the connection.',
+      'Disconnecting clears the saved keys for that campaign. Orders already sitting in ShipStation stay exactly where they are — but you cannot push or update any more until you reconnect.',
     ],
   },
 
