@@ -83,12 +83,15 @@ export async function POST(
     const addonsWithQuantity: { id: string; quantity: number }[] = pendingItems.addons ||
       (pendingItems.addonIds ? pendingItems.addonIds.map(id => ({ id, quantity: 1 })) : []);
 
-    if (addonsWithQuantity.length === 0) {
-      return NextResponse.json({
-        success: true,
-        message: "No addons to process",
-      });
-    }
+    // An empty add-on list is NOT a no-op. "Add Additional Support" sends a
+    // bare top-up — money with nothing attached — and this used to return
+    // success here without verifying the payment, bumping Pledge.amount or
+    // bumping Project.currentAmount. On the DivinityCoin card path the
+    // backer had already been charged by that point, so the money was taken
+    // and nothing was credited. Everything below already tolerates an empty
+    // list (the addon loop simply doesn't run), so a top-up now takes the
+    // same verify → apply path as an add-on purchase.
+    const isDonationTopUp = addonsWithQuantity.length === 0;
 
     const addonIds = addonsWithQuantity.map(a => a.id);
     const quantityMap = new Map(addonsWithQuantity.map(a => [a.id, a.quantity]));
@@ -319,11 +322,17 @@ export async function POST(
       });
     }
 
-    pledgesConfirmAddItemsLogger.info(`[ConfirmAddItems] Successfully added ${totalQuantity} items (${addons.length} unique) to pledge ${pledgeId}, amount: $${pendingItems.amount}`);
+    if (isDonationTopUp) {
+      pledgesConfirmAddItemsLogger.info(`[ConfirmAddItems] Applied $${pendingItems.amount} additional support to pledge ${pledgeId}`);
+    } else {
+      pledgesConfirmAddItemsLogger.info(`[ConfirmAddItems] Successfully added ${totalQuantity} items (${addons.length} unique) to pledge ${pledgeId}, amount: $${pendingItems.amount}`);
+    }
 
     return NextResponse.json({
       success: true,
-      message: "Additional items added successfully",
+      message: isDonationTopUp
+        ? "Additional support added successfully"
+        : "Additional items added successfully",
       addedAmount: pendingItems.amount,
       addedItems: addons.map((a: { title: string }) => a.title),
     });

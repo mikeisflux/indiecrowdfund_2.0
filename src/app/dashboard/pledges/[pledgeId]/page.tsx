@@ -1,6 +1,7 @@
 "use client";
 
 import { apiFetch } from "@/lib/fetch-utils";
+import { TopUpDialog } from "./components/TopUpDialog";
 
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
@@ -123,6 +124,10 @@ export default function ManagePledgePage() {
   const [error, setError] = useState<string | null>(null);
   const [additionalAmount, setAdditionalAmount] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
+  // "Add Additional Support" on an already-charged pledge needs a payment
+  // step; TopUpDialog runs it and calls back once the money is applied.
+  const [topUpOpen, setTopUpOpen] = useState(false);
+  const [topUpAmount, setTopUpAmount] = useState(0);
   const [refundReason, setRefundReason] = useState("");
   const [refundDialogOpen, setRefundDialogOpen] = useState(false);
 
@@ -319,32 +324,18 @@ export default function ManagePledgePage() {
       }
 
       // Charged pledges can't be topped up by editing the amount — the extra
-      // has to be collected. The API hands back a top-up route; run it through
-      // the same add-items payment flow "Change Reward or Add-ons" uses, but
-      // with no add-ons, so a backer can simply give more.
-      if (data.requiresPayment && data.topUpUrl) {
-        const topUp = await apiFetch(data.topUpUrl, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ addons: [], amount: data.amount ?? amount }),
-        });
-        const topUpData = await topUp.json();
-        if (!topUp.ok) {
-          throw new Error(topUpData.error || "Couldn't start the additional payment");
-        }
-        // Send the backer to the pledge page to complete payment, the same
-        // destination the add-ons upcharge uses.
-        if (topUpData.checkoutUrl) {
-          window.location.href = topUpData.checkoutUrl;
-          return;
-        }
-        toast.success("Additional support added");
-        setAdditionalAmount("");
-        const refreshTopUp = await fetch(`/api/pledges/${pledgeId}`);
-        if (refreshTopUp.ok) {
-          const refreshed = await refreshTopUp.json();
-          setPledge(refreshed.pledge);
-        }
+      // has to be collected, which means showing a payment step. Open the
+      // top-up dialog; it drives add-items and whichever processor form the
+      // pledge needs, then confirms.
+      //
+      // This used to POST add-items here and look for a `checkoutUrl` on the
+      // response. No processor has ever returned one, so it always fell
+      // through to toast.success("Additional support added") — the backer was
+      // told it worked while no payment step appeared, nothing was charged,
+      // and the pledge total never moved.
+      if (data.requiresPayment) {
+        setTopUpAmount(data.amount ?? amount);
+        setTopUpOpen(true);
         return;
       }
 
@@ -1049,6 +1040,23 @@ export default function ManagePledgePage() {
           </CardContent>
         </Card>
       )}
+
+      <TopUpDialog
+        pledgeId={pledgeId}
+        amount={topUpAmount}
+        open={topUpOpen}
+        onOpenChange={setTopUpOpen}
+        onComplete={async () => {
+          setTopUpOpen(false);
+          setAdditionalAmount("");
+          toast.success("Additional support added");
+          const refreshed = await fetch(`/api/pledges/${pledgeId}`);
+          if (refreshed.ok) {
+            const refreshedData = await refreshed.json().catch(() => null);
+            if (refreshedData?.pledge) setPledge(refreshedData.pledge);
+          }
+        }}
+      />
     </div>
   );
 }
