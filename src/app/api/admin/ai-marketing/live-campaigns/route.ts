@@ -55,7 +55,11 @@ export async function GET() {
         category: true,
         status: true,
         prelaunchActive: true,
-        shortDescription: true,
+        // `subtitle`, not `shortDescription` — Project has no such column, and
+        // selecting it made Prisma reject the whole query, so this route 500'd
+        // on every call. That, not an empty result, is why Insert campaign had
+        // nothing to offer.
+        subtitle: true,
         imageUrl: true,
         creator: { select: { vanityUrl: true } },
       },
@@ -69,7 +73,7 @@ export async function GET() {
         title: p.title,
         category: p.category,
         imageUrl: p.imageUrl,
-        blurb: p.shortDescription || "",
+        blurb: p.subtitle || "",
         state,
         stateLabel: state === "live" ? "Live" : state === "funded" ? "Funded" : "Coming soon",
         url: p.creator?.vanityUrl

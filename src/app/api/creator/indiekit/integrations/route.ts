@@ -25,14 +25,31 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const projectId = searchParams.get("projectId");
 
-    // Get user's integration settings
+    // Get user's integration settings.
+    //
+    // Stripe account state lives on the StripeConfig relation, not on User —
+    // User has no stripeAccountId/stripeAccountStatus columns. Selecting them
+    // made Prisma reject the query outright ("Unknown field `stripeAccountId`
+    // for select statement on model `User`"), and because this runs before
+    // anything else, EVERY GET to this route 500'd. That is what took the
+    // whole Integrations panel down, not just the Stripe tile.
     const user = await db.user.findFirst({
       where: { id: session.user.id, deletedAt: null },
       select: {
-        stripeAccountId: true,
-        stripeAccountStatus: true,
+        stripeConfig: {
+          select: { stripeAccountId: true, isOnboarded: true, isActive: true },
+        },
       },
     });
+
+    const stripeConfig = user?.stripeConfig ?? null;
+    const stripeStatus = !stripeConfig
+      ? "not_connected"
+      : !stripeConfig.isActive
+        ? "inactive"
+        : stripeConfig.isOnboarded
+          ? "active"
+          : "pending";
 
     // Get project-specific integrations if projectId provided
     let projectIntegrations = null;
@@ -112,8 +129,8 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({
       stripe: {
-        connected: !!user?.stripeAccountId,
-        status: user?.stripeAccountStatus || "not_connected",
+        connected: !!stripeConfig?.stripeAccountId,
+        status: stripeStatus,
       },
       fulfillment: fulfillmentIntegrations,
       project: projectIntegrations,
