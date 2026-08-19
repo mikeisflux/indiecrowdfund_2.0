@@ -60,7 +60,7 @@ interface BanMatch {
 // not need changing; despite the name it is no longer chargeback-only.
 //
 // What this does on each run:
-//   1. Load every banned User (lockedAt set), whatever the reason.
+//   1. Load every banned User (bannedAt set), whatever the reason.
 //      These are the source bans we propagate from. (Bans are
 //      applied by the payment-processor dispute webhook handler or
 //      by SUPER_ADMIN action -- this cron does NOT create new
@@ -69,10 +69,11 @@ interface BanMatch {
 //        - canonical lowercased emails
 //        - lastKnownIP values (skip nulls and obvious shared
 //          NAT/CGNAT proxies if we later want to allow-list them)
-//   3. For every active User (lockedAt IS NULL AND deletedAt IS
+//   3. For every active User (bannedAt IS NULL AND deletedAt IS
 //      NULL) where the email or lastKnownIP intersects a banned
 //      signal:
-//        - Stamp lockedAt + lockedReason explaining the auto-ban
+//        - Stamp bannedAt + lockedAt (a ban also bars sign-in) with a
+//          reason explaining the auto-ban
 //        - Upsert the user's IP into IPBlocklist so future
 //          unauthenticated visits are blocked too
 //   4. Return counts for observability.
@@ -109,13 +110,13 @@ export async function POST(req: NextRequest) {
     // any violation, so the enforcement has to match.
     const bannedUsers = await db.user.findMany({
       where: {
-        lockedAt: { not: null },
+        NOT: { bannedAt: null },
       },
       select: {
         id: true,
         email: true,
         lastKnownIP: true,
-        lockedAt: true,
+        bannedAt: true,
       },
     });
 
@@ -134,7 +135,7 @@ export async function POST(req: NextRequest) {
       bannedUserId: u.id,
       email: u.email.trim().toLowerCase(),
       ip: u.lastKnownIP || null,
-      bannedAt: u.lockedAt as Date,
+      bannedAt: u.bannedAt as Date,
     }));
 
     const bannedEmails = Array.from(new Set(signals.map((s) => s.email)));
@@ -187,7 +188,7 @@ export async function POST(req: NextRequest) {
 
     const candidates = await db.user.findMany({
       where: {
-        lockedAt: null,
+        bannedAt: null,
         deletedAt: null,
         accountDeletedAt: null,
         OR: [
@@ -253,15 +254,17 @@ export async function POST(req: NextRequest) {
           // action may have already locked them.
           const fresh = await tx.user.findUnique({
             where: { id: match.candidateUserId },
-            select: { lockedAt: true, lastKnownIP: true },
+            select: { bannedAt: true, lastKnownIP: true },
           });
-          if (!fresh || fresh.lockedAt) return;
+          if (!fresh || fresh.bannedAt) return;
 
           await tx.user.update({
             where: { id: match.candidateUserId },
             data: {
               lockedAt: new Date(),
               lockedReason: reason,
+              bannedAt: new Date(),
+              bannedReason: reason,
             },
           });
 

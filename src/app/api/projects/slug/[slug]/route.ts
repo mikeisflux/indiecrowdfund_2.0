@@ -33,6 +33,11 @@ export async function GET(
             image: true,
             bio: true,
             location: true,
+            // Drives the BANNED stamp. This was missing from the select, so
+            // creatorBanned below read undefined and was permanently false on
+            // this route — Prisma's result types are erased by the
+            // $allOperations extension in lib/db, so nothing flagged it.
+            bannedAt: true,
             _count: {
               select: {
                 createdProjects: true,
@@ -215,7 +220,7 @@ export async function GET(
       // Creator
       creatorId: project.creatorId,
       creator: {
-        creatorBanned: !!project.creator.lockedAt,
+        creatorBanned: !!project.creator.bannedAt,
         id: project.creator.id,
         name: project.creator.name || "Creator",
         image: project.creator.image || "",

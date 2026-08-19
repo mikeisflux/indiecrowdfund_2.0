@@ -22,6 +22,7 @@ import {
   Store,
   RefreshCw,
   Ban,
+  Lock,
   UserCheck,
   CheckCircle2,
   MinusCircle,
@@ -51,10 +52,37 @@ interface UserTableProps {
 
 type ActionHandlers = Omit<UserTableProps, "users" | "isLoading" | "pagination" | "currentPage" | "onPageChange">;
 
-function avatarClasses(lockedAt: string | null) {
-  return lockedAt
-    ? "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300"
-    : "bg-muted text-muted-foreground dark:bg-zinc-700 dark:text-muted-foreground";
+// A ban and a lock are different things and must look different here. Every
+// locked account used to be tinted red and labelled "Banned", which is how a
+// routine administrative hold ended up reading as an expulsion.
+function avatarClasses(user: Pick<User, "lockedAt" | "bannedAt">) {
+  if (user.bannedAt) return "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300";
+  if (user.lockedAt) return "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300";
+  return "bg-muted text-muted-foreground dark:bg-zinc-700 dark:text-muted-foreground";
+}
+
+// Badge shown next to the name: "Banned" only when actually banned.
+function StatusBadge({ user }: { user: Pick<User, "lockedAt" | "bannedAt"> }) {
+  if (user.bannedAt) {
+    return (
+      <Badge variant="destructive" className="text-[10px] py-0 px-1.5 h-4 font-medium">
+        <Ban className="h-2.5 w-2.5 mr-0.5" />
+        Banned
+      </Badge>
+    );
+  }
+  if (user.lockedAt) {
+    return (
+      <Badge
+        variant="outline"
+        className="text-[10px] py-0 px-1.5 h-4 font-medium border-amber-400 text-amber-700 dark:border-amber-700 dark:text-amber-300"
+      >
+        <Lock className="h-2.5 w-2.5 mr-0.5" />
+        Locked
+      </Badge>
+    );
+  }
+  return null;
 }
 
 function UserActionsMenu({ user, handlers }: { user: User; handlers: ActionHandlers }) {
@@ -139,7 +167,10 @@ function UserActionsMenu({ user, handlers }: { user: User; handlers: ActionHandl
           Set Password
         </DropdownMenuItem>
         <DropdownMenuSeparator />
-        {user.lockedAt ? (
+        {/* Offer "Unban" only to someone actually banned. A locked-but-not-banned
+            account is still bannable, and calling the hold a ban here is what
+            made the two indistinguishable in the first place. */}
+        {user.bannedAt ? (
           <DropdownMenuItem
             className="text-green-600 focus:text-green-700 focus:bg-green-50"
             onClick={(e) => { e.stopPropagation(); onUnbanUser(user); }}
@@ -247,7 +278,7 @@ export function UserTable({
                   focus-visible:ring-2 focus-visible:ring-zinc-400
                   hover:bg-muted/50 dark:hover:bg-zinc-800/60
                   active:bg-muted dark:active:bg-zinc-800
-                  ${user.lockedAt ? "border-red-200 dark:border-red-900/60 bg-red-50/50 dark:bg-red-950/20" : ""}
+                  ${user.bannedAt ? "border-red-200 dark:border-red-900/60 bg-red-50/50 dark:bg-red-950/20" : user.lockedAt ? "border-amber-200 dark:border-amber-900/60 bg-amber-50/40 dark:bg-amber-950/15" : ""}
                 `}
                 onClick={() => onViewUser(user)}
                 onKeyDown={(e) => {
@@ -258,7 +289,7 @@ export function UserTable({
                   <div className="flex items-start gap-3">
                     {/* Avatar initial */}
                     <div
-                      className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-semibold ${avatarClasses(user.lockedAt)}`}
+                      className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-semibold ${avatarClasses(user)}`}
                     >
                       {initial}
                     </div>
@@ -276,15 +307,7 @@ export function UserTable({
                             aria-label="Email verified"
                           />
                         )}
-                        {user.lockedAt && (
-                          <Badge
-                            variant="destructive"
-                            className="text-[10px] py-0 px-1.5 h-4 font-medium"
-                          >
-                            <Ban className="h-2.5 w-2.5 mr-0.5" />
-                            Banned
-                          </Badge>
-                        )}
+                        <StatusBadge user={user} />
                       </div>
 
                       {/* Email */}
@@ -362,7 +385,7 @@ export function UserTable({
                       <tr
                         key={user.id}
                         className={`cursor-pointer transition-colors hover:bg-muted/50 dark:hover:bg-zinc-800/50 ${
-                          user.lockedAt ? "bg-red-50/50 dark:bg-red-950/20" : ""
+                          user.bannedAt ? "bg-red-50/50 dark:bg-red-950/20" : user.lockedAt ? "bg-amber-50/40 dark:bg-amber-950/15" : ""
                         }`}
                         onClick={() => onViewUser(user)}
                       >
@@ -370,7 +393,7 @@ export function UserTable({
                         <td className="p-4">
                           <div className="flex items-center gap-3">
                             <div
-                              className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-semibold ${avatarClasses(user.lockedAt)}`}
+                              className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-semibold ${avatarClasses(user)}`}
                             >
                               {initial}
                             </div>
@@ -385,15 +408,7 @@ export function UserTable({
                                     aria-label="Verified"
                                   />
                                 )}
-                                {user.lockedAt && (
-                                  <Badge
-                                    variant="destructive"
-                                    className="text-[10px] py-0 px-1.5 h-4"
-                                  >
-                                    <Ban className="h-2.5 w-2.5 mr-0.5" />
-                                    Banned
-                                  </Badge>
-                                )}
+                                <StatusBadge user={user} />
                               </div>
                               <p className="text-xs text-muted-foreground truncate mt-0.5">
                                 {user.email}

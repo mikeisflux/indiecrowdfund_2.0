@@ -107,6 +107,8 @@ export async function GET(req: NextRequest) {
           emailVerified: true,
           lockedAt: true,
           lockedReason: true,
+          bannedAt: true,
+          bannedReason: true,
           divinityCoinBalance: true,
           // Only the current version is fetched, so the presence of a row is
           // the answer — no need to pull an acceptance history per user just
@@ -148,6 +150,10 @@ export async function GET(req: NextRequest) {
       pledgeCount: user._count.pledges,
       lockedAt: user.lockedAt,
       lockedReason: user.lockedReason,
+      // Sent separately from lockedAt so the admin table can show a hold and an
+      // expulsion as different things rather than calling every lock a ban.
+      bannedAt: user.bannedAt,
+      bannedReason: user.bannedReason,
       divinityCoinBalance: Number(user.divinityCoinBalance),
       termsAcceptedAt: user.termsAcceptances[0]?.acceptedAt ?? null,
       termsVersion: TERMS_VERSION,
@@ -210,6 +216,7 @@ export async function PATCH(req: NextRequest) {
         role: true,
         lastKnownIP: true,
         lockedAt: true,
+        bannedAt: true,
       },
     });
 
@@ -407,6 +414,9 @@ export async function PATCH(req: NextRequest) {
             { status: 400 }
           );
         }
+        // A lock bars sign-in. It is deliberately NOT a ban: bannedAt is left
+        // untouched so nothing public says this creator was banned. Locking an
+        // already-banned account keeps the ban.
         updateData.lockedAt = new Date();
         updateData.lockedReason = data?.reason || "Account locked by administrator";
         updateData.lockedById = authResult.user.id;
@@ -420,9 +430,17 @@ export async function PATCH(req: NextRequest) {
             { status: 403 }
           );
         }
+        // Restores sign-in. A banned account stays banned — lifting the ban is
+        // UNBAN_USER, which clears both. Without this the two actions would
+        // disagree: the account could sign in while still publicly stamped.
         updateData.lockedAt = null;
         updateData.lockedReason = null;
         updateData.lockedById = null;
+        if (user.bannedAt) {
+          updateData.bannedAt = null;
+          updateData.bannedReason = null;
+          updateData.bannedById = null;
+        }
         break;
 
       case "BAN_USER":
@@ -448,10 +466,14 @@ export async function PATCH(req: NextRequest) {
           );
         }
 
-        // Lock the account
+        // A ban both locks the account and records the expulsion. bannedAt is
+        // the flag anything public reads; lockedAt only governs sign-in.
         updateData.lockedAt = new Date();
         updateData.lockedReason = data?.reason || "Account banned by administrator";
         updateData.lockedById = authResult.user.id;
+        updateData.bannedAt = new Date();
+        updateData.bannedReason = data?.reason || "Account banned by administrator";
+        updateData.bannedById = authResult.user.id;
 
         // If user has a known IP, add it to blocklist
         if (user.lastKnownIP) {
@@ -497,6 +519,9 @@ export async function PATCH(req: NextRequest) {
         updateData.lockedAt = null;
         updateData.lockedReason = null;
         updateData.lockedById = null;
+        updateData.bannedAt = null;
+        updateData.bannedReason = null;
+        updateData.bannedById = null;
 
         // Optionally remove IP from blocklist if requested
         if (data?.removeIPBlock && user.lastKnownIP) {
@@ -529,6 +554,8 @@ export async function PATCH(req: NextRequest) {
         emailVerified: true,
         lockedAt: true,
         lockedReason: true,
+        bannedAt: true,
+        bannedReason: true,
       }
     });
 

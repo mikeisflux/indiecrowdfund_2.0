@@ -78,7 +78,7 @@ export async function POST(req: NextRequest) {
       const target = await db.user.findFirst({
         where: {
           email: { equals: body.attempted_email, mode: "insensitive" },
-          lockedAt: null,
+          bannedAt: null,
           deletedAt: null,
           accountDeletedAt: null,
         },
@@ -89,7 +89,12 @@ export async function POST(req: NextRequest) {
         await db.$transaction(async (tx) => {
           await tx.user.update({
             where: { id: target.id },
-            data: { lockedAt: new Date(), lockedReason: reason },
+            data: {
+              lockedAt: new Date(),
+              lockedReason: reason,
+              bannedAt: new Date(),
+              bannedReason: reason,
+            },
           });
           await tx.session.deleteMany({ where: { userId: target.id } });
           const ip = target.lastKnownIP || body.attempted_ip;

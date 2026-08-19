@@ -14,8 +14,13 @@ export interface User {
   termsAcceptedAt?: string | Date | null;
   /** The version that acceptance is measured against, for the tooltip. */
   termsVersion?: string;
+  /** Barred from signing in. Set by BOTH a lock and a ban — on its own it does
+   *  NOT mean the account was banned, and must never be labelled as such. */
   lockedAt: string | null;
   lockedReason: string | null;
+  /** Expelled. The only field that may be presented as a ban. */
+  bannedAt: string | null;
+  bannedReason: string | null;
   divinityCoinBalance: number;
 }
 

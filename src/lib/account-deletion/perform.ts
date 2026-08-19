@@ -70,9 +70,12 @@ export async function performAccountDeletion(userId: string): Promise<void> {
     // Terms say is not allowed.
     const existing = await tx.user.findUnique({
       where: { id: userId },
-      select: { lockedAt: true, lastKnownIP: true, email: true },
+      select: { bannedAt: true, lastKnownIP: true, email: true },
     });
-    const wasBanned = !!existing?.lockedAt;
+    // A ban, not merely a lock. Deleting an account that was only on an
+    // administrative hold should clear the hold along with everything else;
+    // only an expulsion is worth preserving past the account.
+    const wasBanned = !!existing?.bannedAt;
     const existingEmail = existing?.email ?? null;
 
     // 1. Cancel PENDING pledges. These were never charged, so the
@@ -242,6 +245,9 @@ export async function performAccountDeletion(userId: string): Promise<void> {
         lockedAt: wasBanned ? undefined : null,
         lockedReason: wasBanned ? undefined : null,
         lockedById: wasBanned ? undefined : null,
+        bannedAt: wasBanned ? undefined : null,
+        bannedReason: wasBanned ? undefined : null,
+        bannedById: wasBanned ? undefined : null,
         lastKnownIP: wasBanned ? undefined : null,
         failedLoginAttempts: 0,
         lastFailedLoginAt: null,

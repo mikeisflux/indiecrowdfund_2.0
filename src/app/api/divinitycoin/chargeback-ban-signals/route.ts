@@ -95,14 +95,17 @@ export async function GET(req: NextRequest) {
   try {
     const banned = await db.user.findMany({
       where: {
-        lockedAt: { not: null },
-        lockedReason: { contains: CHARGEBACK_REASON_MARKER, mode: "insensitive" },
+        // bannedAt, not lockedAt. This feed tells DivinityCoin whose charges to
+        // pre-block, which is ban enforcement — an account merely on an
+        // administrative hold has not earned that and must not be exported.
+        NOT: { bannedAt: null },
+        bannedReason: { contains: CHARGEBACK_REASON_MARKER, mode: "insensitive" },
       },
       select: {
         id: true,
         email: true,
-        lockedAt: true,
-        lockedReason: true,
+        bannedAt: true,
+        bannedReason: true,
         lastKnownIP: true,
         pledges: {
           select: {
@@ -145,7 +148,7 @@ export async function GET(req: NextRequest) {
 
       return {
         source_user_id: u.id,
-        banned_at: (u.lockedAt as Date).toISOString(),
+        banned_at: (u.bannedAt as Date).toISOString(),
         // Always "chargeback" for now -- the lockedReason text is the
         // gate. Reserved for future ban-class differentiation per
         // spec.

@@ -128,11 +128,29 @@ model User {
   changelogEntries     ChangelogEntry[]        @relation("ChangelogAuthor")
   companyProfile       CompanyProfile?
 
-  // Account locking (for fraud/abuse)
+  // Account locking (for fraud/abuse).
+  //
+  // A lock is an administrative hold: the account can't sign in. It is NOT a
+  // public judgement, and nothing user-facing may say so. Both LOCK_ACCOUNT
+  // and BAN_USER set these, so lockedAt on its own does not mean "banned".
   lockedAt          DateTime?  // When account was locked
   lockedReason      String?    @db.Text  // Admin notes on why account was locked
   lockedById        String?    // Admin who locked the account
   lastKnownIP       String?    // Last known IP address for ban enforcement
+
+  // Ban (expulsion) — strictly narrower than a lock, and the only thing that
+  // may be stated publicly. Set by BAN_USER and the automated chargeback /
+  // ban-evasion enforcement; never by LOCK_ACCOUNT. A ban always locks the
+  // account too, so lockedAt is set alongside these.
+  //
+  // These exist because the public BANNED stamp on campaign pages was keyed
+  // off lockedAt, which meant putting a creator on a routine administrative
+  // hold published an accusation of being banned across all of their
+  // campaigns. Anything user-visible must read bannedAt; anything about
+  // sign-in access reads lockedAt.
+  bannedAt          DateTime?  // When the account was banned (expelled)
+  bannedReason      String?    @db.Text  // Why the account was banned
+  bannedById        String?    // Admin who banned the account
 
   // Failed login tracking (brute-force detection / admin security stats)
   failedLoginAttempts Int       @default(0)
@@ -164,6 +182,7 @@ model User {
   @@index([creatorEmailHandle])
   @@index([deletedAt])  // For soft delete filtering
   @@index([lockedAt])   // For locked account filtering
+  @@index([bannedAt])   // For banned account filtering + ban-evasion lookups
   @@index([accountDeletedAt])  // For filtering deleted accounts from search/listing
 }
 

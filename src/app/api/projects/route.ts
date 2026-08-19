@@ -167,7 +167,7 @@ export async function GET(req: NextRequest) {
               image: true,
               vanityUrl: true,
               // Drives the BANNED stamp on project tiles.
-              lockedAt: true,
+              bannedAt: true,
             },
           },
           _count: {
@@ -221,7 +221,7 @@ export async function GET(req: NextRequest) {
           id: project.creator.id,
           name: project.creator.name || "Creator",
           image: project.creator.image,
-          creatorBanned: !!project.creator.lockedAt,
+          creatorBanned: !!project.creator.bannedAt,
         },
         goalAmount: Number(project.goalAmount),
         currentAmount: liveStats.currentAmount,

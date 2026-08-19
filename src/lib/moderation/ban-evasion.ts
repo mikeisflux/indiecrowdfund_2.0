@@ -20,6 +20,11 @@ const log = logger.child({ module: "ban-evasion" });
 //      between banning someone and any blocklist write, and covers bans
 //      applied by paths that never wrote a row.
 //
+// Signal 2 matches on bannedAt, not lockedAt. A lock is an administrative hold
+// — a payout investigation, a security freeze — and someone sharing an IP with
+// a held account has not evaded anything. Only an expulsion justifies refusing
+// a stranger's sign-up.
+//
 // Deliberately NOT matched on: email. A banned user's email is already
 // rejected by the "already registered" check, and near-miss matching on
 // addresses (dots, plus-addressing) produces false positives on shared
@@ -57,8 +62,8 @@ export async function checkBanEvasion(ip: string | null): Promise<BanEvasionVerd
         select: { id: true, reason: true, expiresAt: true },
       }),
       db.user.findFirst({
-        where: { lastKnownIP: ip, lockedAt: { not: null } },
-        select: { id: true, lockedReason: true },
+        where: { lastKnownIP: ip, NOT: { bannedAt: null } },
+        select: { id: true, bannedReason: true },
       }),
     ]);
 
@@ -73,7 +78,7 @@ export async function checkBanEvasion(ip: string | null): Promise<BanEvasionVerd
       return {
         blocked: true,
         reason: `Banned account ${bannedSharingIp.id} shares this IP${
-          bannedSharingIp.lockedReason ? `: ${bannedSharingIp.lockedReason}` : ""
+          bannedSharingIp.bannedReason ? `: ${bannedSharingIp.bannedReason}` : ""
         }`,
       };
     }
