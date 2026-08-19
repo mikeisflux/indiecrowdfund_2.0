@@ -82,7 +82,11 @@ export async function POST(req: NextRequest) {
         data: {
           surveyId: data.surveyId,
           pledgeId: data.pledgeId,
-          responses: data.responses as object,
+          // `backerResponses` is the column; there is no `responses`. The
+          // submitted shape is Record<questionId, answer>, which is what
+          // backerResponses documents, so this was only ever a wrong name —
+          // but it threw, so no survey submitted through this route was saved.
+          backerResponses: data.responses as object,
         },
       });
 

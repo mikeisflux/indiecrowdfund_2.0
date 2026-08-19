@@ -1,23 +1,4 @@
 {
   "note": "Known-invalid Prisma field references, recorded so the deploy gate fails on NEW ones only. Fix an entry and delete its line — it can never regress after that. Regenerate with `node scripts/validate-prisma-queries.cjs --update-baseline`.",
-  "known": [
-    "src/app/api/admin/ai-marketing/format-email/route.ts :: select: `shortDescription` is not a field on model Project",
-    "src/app/api/admin/cleanup-duplicate-rewards/route.ts :: where: `deletedAt` is not a field on model Reward",
-    "src/app/api/admin/media/scan/route.ts :: select: `imageUrl` is not a field on model Update",
-    "src/app/api/admin/media/scan/route.ts :: where: `imageUrl` is not a field on model Update",
-    "src/app/api/admin/retailers/surveys/route.ts :: select: `price` is not a field on model Reward",
-    "src/app/api/admin/retailers/surveys/route.ts :: select: `vanityUrl` is not a field on model Project",
-    "src/app/api/admin/users/route.ts :: where: `file` is not a field on model DigitalDistribution",
-    "src/app/api/admin/users/route.ts :: where: `projectId` is not a field on model BackerNote",
-    "src/app/api/admin/users/route.ts :: where: `projectId` is not a field on model CustomPage",
-    "src/app/api/admin/users/route.ts :: where: `projectId` is not a field on model EmailCampaign",
-    "src/app/api/admin/users/route.ts :: where: `projectId` is not a field on model MediaFile",
-    "src/app/api/admin/users/route.ts :: where: `surveyItemQuestion` is not a field on model SurveyItemVariant",
-    "src/app/api/admin/users/route.ts :: where: `survey` is not a field on model SurveyItemCustomQuestion",
-    "src/app/api/creator/indiekit/integrations/route.ts :: select: `stripeProductId` is not a field on model Project",
-    "src/app/api/creator/indiekit/modifiers/route.ts :: where: `deletedAt` is not a field on model Reward",
-    "src/app/api/creator/indiekit/products/route.ts :: where: `deletedAt` is not a field on model FulfillmentProduct",
-    "src/app/api/creator/indiekit/settings/route.ts :: select: `shortDescription` is not a field on model Project",
-    "src/app/api/surveys/route.ts :: data: `responses` is not a field on model SurveyResponse"
-  ]
+  "known": []
 }

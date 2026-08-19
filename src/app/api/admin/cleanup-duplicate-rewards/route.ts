@@ -23,7 +23,9 @@ export async function GET(req: NextRequest) {
 
     // Find duplicate addons grouped by title + amount
     const allAddons = await db.reward.findMany({
-      where: { projectId, type: "ADDON", deletedAt: null },
+      // Reward has no deletedAt — it uses isEnded/endedAt. Filtering on a
+      // column that does not exist made this query throw outright.
+      where: { projectId, type: "ADDON" },
       include: {
         _count: { select: { pledges: true } },
       },
@@ -79,7 +81,7 @@ export async function POST(req: NextRequest) {
 
     // Find duplicate addons grouped by title + amount
     const allAddons = await db.reward.findMany({
-      where: { projectId, type: "ADDON", deletedAt: null },
+      where: { projectId, type: "ADDON" },
       include: {
         _count: { select: { pledges: true } },
         pledges: { select: { id: true } },

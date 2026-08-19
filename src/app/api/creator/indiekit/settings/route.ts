@@ -36,7 +36,7 @@ export async function GET(req: NextRequest) {
         status: true,
         imageUrl: true,
         description: true,
-        shortDescription: true,
+        subtitle: true,
         category: true,
         goalAmount: true,
         endDate: true,
@@ -86,7 +86,9 @@ export async function POST(req: NextRequest) {
 
     if (action === "update_field" && field) {
       // Only allow updating certain fields
-      const allowedFields = ["title", "description", "shortDescription", "category"];
+      // "subtitle" is the real column; "shortDescription" does not exist, so an
+      // update naming it threw instead of saving.
+      const allowedFields = ["title", "description", "subtitle", "category"];
       if (!allowedFields.includes(field)) {
         return NextResponse.json({ error: "Field not allowed" }, { status: 400 });
       }

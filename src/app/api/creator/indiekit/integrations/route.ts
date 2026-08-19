@@ -84,7 +84,8 @@ export async function GET(req: NextRequest) {
         },
         select: {
           id: true,
-          stripeProductId: true,
+          // No stripeProductId here: Project has no such column. It was
+          // selected and echoed back, and nothing ever read it.
           fulfillmentIntegrations: {
             select: {
               provider: true,
@@ -123,7 +124,7 @@ export async function GET(req: NextRequest) {
       // Only the two harmless fields. `project` used to be the raw rows,
       // encrypted API keys and all, handed straight to the client.
       projectIntegrations = project
-        ? { id: project.id, stripeProductId: project.stripeProductId }
+        ? { id: project.id }
         : null;
     }
 

@@ -96,9 +96,12 @@ export async function GET(request: NextRequest) {
               select: {
                 id: true,
                 title: true,
-                vanityUrl: true,
                 slug: true,
                 imageUrl: true,
+                // vanityUrl belongs to the creator, not the project. It is
+                // flattened back onto the project below so the response shape
+                // the client reads is unchanged.
+                creator: { select: { vanityUrl: true } },
               },
             },
           },
@@ -107,14 +110,19 @@ export async function GET(request: NextRequest) {
         // Get the reward info if available
         let rewardInfo = null;
         if (retailerPledge?.rewardId) {
-          rewardInfo = await db.reward.findUnique({
+          // Reward's column is `amount`; there is no `price`. Mapped back to
+          // `price` so the response keeps the shape the client expects.
+          const reward = await db.reward.findUnique({
             where: { id: retailerPledge.rewardId },
             select: {
               id: true,
               title: true,
-              price: true,
+              amount: true,
             },
           });
+          rewardInfo = reward
+            ? { id: reward.id, title: reward.title, price: Number(reward.amount) }
+            : null;
         }
 
         return {
@@ -127,7 +135,12 @@ export async function GET(request: NextRequest) {
                 totalAmount: retailerPledge.totalAmount,
                 status: retailerPledge.status,
                 invoiceNumber: retailerPledge.invoiceNumber,
-                project: retailerPledge.project,
+                project: retailerPledge.project
+                  ? {
+                      ...retailerPledge.project,
+                      vanityUrl: retailerPledge.project.creator?.vanityUrl ?? null,
+                    }
+                  : null,
                 reward: rewardInfo,
               }
             : null,

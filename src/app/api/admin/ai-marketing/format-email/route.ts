@@ -63,7 +63,7 @@ export async function POST(req: NextRequest) {
           title: true,
           slug: true,
           category: true,
-          shortDescription: true,
+          subtitle: true,
           imageUrl: true,
           creator: { select: { vanityUrl: true } },
         },
@@ -81,7 +81,7 @@ export async function POST(req: NextRequest) {
               imageUrl: p.imageUrl,
               category: p.category,
             },
-            blurb: p.shortDescription || "",
+            blurb: p.subtitle || "",
           },
         ])
       );

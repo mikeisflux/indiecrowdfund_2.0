@@ -428,8 +428,8 @@ export async function POST(req: NextRequest) {
       // Verify addon exists and belongs to this project
       const addon = await db.reward.findFirst({
         where: {
+          // No deletedAt on Reward; see cleanup-duplicate-rewards.
           id: addonId,
-          deletedAt: null,
           projectId,
           type: "ADDON",
         },

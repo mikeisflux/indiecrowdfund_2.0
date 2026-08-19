@@ -10,6 +10,30 @@ import path from "path";
 import { existsSync } from "fs";
 
 // Force dynamic - this route uses auth/headers
+
+interface UpdateRow {
+  id: string;
+  title: string;
+  content: string;
+  project: { creatorId: string };
+}
+
+/**
+ * Pull locally-hosted image URLs out of an update's HTML body.
+ *
+ * Only /api/uploads/ paths matter here — the scan is looking for files it
+ * hosts, and an external URL is not something it could ever orphan. Both
+ * quote styles, because the editor emits either.
+ */
+function extractImageUrls(html: string | null | undefined): string[] {
+  if (!html) return [];
+  const found = new Set<string>();
+  const re = /["'(](\/api\/uploads\/[^"')\s]+)["')]/g;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(html)) !== null) found.add(m[1]);
+  return [...found];
+}
+
 export const dynamic = "force-dynamic";
 
 // Helper to check admin role
@@ -134,11 +158,20 @@ export async function GET(req: NextRequest) {
       select: { id: true, title: true, imageUrl: true, creatorId: true }
     });
 
-    // Get image URLs from updates
-    const updateImages = await db.update.findMany({
-      where: { NOT: { imageUrl: null } },
-      select: { id: true, title: true, imageUrl: true, project: { select: { creatorId: true } } }
+    // Get image URLs from updates. See the note on the other call site: an
+    // update's images live in its HTML content, not in a column.
+    const updateRows = await db.update.findMany({
+      where: { content: { contains: "/api/uploads/" } },
+      select: { id: true, title: true, content: true, project: { select: { creatorId: true } } }
     });
+    const updateImages = updateRows.flatMap((u: UpdateRow) =>
+      extractImageUrls(u.content).map((url) => ({
+        id: u.id,
+        title: u.title,
+        imageUrl: url,
+        project: u.project,
+      }))
+    );
 
     // Get image URLs from rewards
     const rewardImages = await db.reward.findMany({
@@ -287,11 +320,23 @@ export async function POST(req: NextRequest) {
         select: { id: true, title: true, imageUrl: true, creatorId: true }
       });
 
-      // Get image URLs from updates
-      const updateImages = await db.update.findMany({
-        where: { NOT: { imageUrl: null } },
-        select: { id: true, title: true, imageUrl: true, project: { select: { creatorId: true } } }
+      // Get image URLs from updates. Update has no imageUrl column — an
+      // update's images are embedded in its HTML content — so this used to
+      // throw, and before that it silently contributed nothing. Either way
+      // images referenced only by an update were not counted as "in use",
+      // which is dangerous in a tool whose job is deciding what is orphaned.
+      const updateRows = await db.update.findMany({
+        where: { content: { contains: "/api/uploads/" } },
+        select: { id: true, title: true, content: true, project: { select: { creatorId: true } } }
       });
+      const updateImages = updateRows.flatMap((u: UpdateRow) =>
+        extractImageUrls(u.content).map((url) => ({
+          id: u.id,
+          title: u.title,
+          imageUrl: url,
+          project: u.project,
+        }))
+      );
 
       // Get image URLs from rewards
       const rewardImages = await db.reward.findMany({

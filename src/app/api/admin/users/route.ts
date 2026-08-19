@@ -824,7 +824,7 @@ export async function DELETE(req: NextRequest) {
 
         // Delete survey item variants
         await tx.surveyItemVariant.deleteMany({
-          where: { surveyItemQuestion: { survey: { projectId: { in: projectIds } } } }
+          where: { itemQuestion: { survey: { projectId: { in: projectIds } } } }
         });
 
         // Delete survey item questions
@@ -832,9 +832,11 @@ export async function DELETE(req: NextRequest) {
           where: { survey: { projectId: { in: projectIds } } }
         });
 
-        // Delete survey item custom questions
+        // Delete survey item custom questions. These belong to a
+        // SurveyItemQuestion, not to the Survey directly — there is no
+        // `survey` relation on this model.
         await tx.surveyItemCustomQuestion.deleteMany({
-          where: { survey: { projectId: { in: projectIds } } }
+          where: { itemQuestion: { survey: { projectId: { in: projectIds } } } }
         });
 
         // Delete survey backer questions
@@ -854,7 +856,7 @@ export async function DELETE(req: NextRequest) {
 
         // Delete digital distributions
         await tx.digitalDistribution.deleteMany({
-          where: { file: { projectId: { in: projectIds } } }
+          where: { digitalFile: { projectId: { in: projectIds } } }
         });
 
         // Delete pledge addons (must be before rewards due to addonId FK)
@@ -931,20 +933,29 @@ export async function DELETE(req: NextRequest) {
           where: { projectId: { in: projectIds } }
         });
 
-        // Delete media files for projects
-        await tx.mediaFile.deleteMany({
-          where: { projectId: { in: projectIds } }
-        });
+        // MediaFile is NOT deleted here. It has no projectId — it belongs to
+        // an uploader, and that relation is onDelete: SetNull precisely so
+        // the media library survives the account that uploaded it. Deleting
+        // by project was never a valid query; deleting by uploader instead
+        // would contradict the schema's stated intent.
 
         // Delete messages related to projects
         await tx.message.deleteMany({
           where: { projectId: { in: projectIds } }
         });
 
-        // Delete backer notes
-        await tx.backerNote.deleteMany({
-          where: { projectId: { in: projectIds } }
+        // Delete backer notes. Scoped to a pledge, and BackerNote carries a
+        // bare pledgeId with no relation field to filter through, so the
+        // pledge ids have to be resolved first.
+        const notePledges = await tx.pledge.findMany({
+          where: { projectId: { in: projectIds } },
+          select: { id: true },
         });
+        if (notePledges.length > 0) {
+          await tx.backerNote.deleteMany({
+            where: { pledgeId: { in: notePledges.map((p: { id: string }) => p.id) } },
+          });
+        }
 
         // Delete notification preferences for these projects
         await tx.projectNotificationPreference.deleteMany({
@@ -976,23 +987,22 @@ export async function DELETE(req: NextRequest) {
           where: { projectId: { in: projectIds } }
         });
 
-        // Delete email campaigns
-        await tx.emailCampaignClick.deleteMany({
-          where: { campaign: { projectId: { in: projectIds } } }
-        });
-        await tx.emailCampaign.deleteMany({
-          where: { projectId: { in: projectIds } }
-        });
+        // EmailCampaign is NOT deleted here. It has no projectId: campaigns
+        // are platform-level marketing sends with a plain string createdBy,
+        // not project content. Deleting a creator's projects must not destroy
+        // send history, and the clicks cascade from the campaign anyway.
+        // (EmailCampaignClick.user is optional and defaults to SetNull, so
+        // removing the user does not orphan a row or fail a constraint.)
 
         // Delete project collection items
         await tx.projectCollectionItem.deleteMany({
           where: { projectId: { in: projectIds } }
         });
 
-        // Delete custom pages
-        await tx.customPage.deleteMany({
-          where: { projectId: { in: projectIds } }
-        });
+        // CustomPage is NOT deleted here. It has no projectId — these are
+        // site pages like /about, keyed by slug with a plain string createdBy.
+        // Deleting them along with a user's projects would take down parts of
+        // the public site.
 
         // Finally delete the projects
         await tx.project.deleteMany({

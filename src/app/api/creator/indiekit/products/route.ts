@@ -232,8 +232,8 @@ export async function PATCH(req: NextRequest) {
     // Verify access
     const product = await db.fulfillmentProduct.findFirst({
       where: {
+        // FulfillmentProduct has no deletedAt column either.
         id: productId,
-        deletedAt: null,
         projectId,
       },
     });
