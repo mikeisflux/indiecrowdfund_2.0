@@ -261,7 +261,6 @@ export default function IndieKitPage() {
   const [editingAddon, setEditingAddon] = useState<SurveyAddon | null>(null);
   const [isDistributionDialogOpen, setIsDistributionDialogOpen] = useState(false);
   const [isNPSDialogOpen, setIsNPSDialogOpen] = useState(false);
-  const [isChargePreviewOpen, setIsChargePreviewOpen] = useState(false);
   const [confirmStepId, setConfirmStepId] = useState<string | null>(null);
 
   // Computed
@@ -440,11 +439,6 @@ export default function IndieKitPage() {
   // Workflow action handler - dispatches based on the step.
   const handleWorkflowAction = async (stepId: string) => {
     if (!selectedProjectId || workflowActionLoading) return;
-
-    if (stepId === "charge_cards") {
-      setIsChargePreviewOpen(true);
-      return;
-    }
 
     if (stepId === "surveys") {
       setActiveSection("always");
@@ -860,7 +854,6 @@ export default function IndieKitPage() {
               {activeSection === "phase" && activePhaseTab === "payments" && (
                 <PaymentsTab
                   stats={stats}
-                  onOpenChargePreview={() => setIsChargePreviewOpen(true)}
                 />
               )}
 
@@ -986,220 +979,6 @@ export default function IndieKitPage() {
         }}
       />
 
-      {/* Charge Cards Preview Dialog */}
-      <Dialog open={isChargePreviewOpen} onOpenChange={setIsChargePreviewOpen}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <CreditCard className="h-5 w-5 text-teal-600" />
-              Charge Cards Preview
-            </DialogTitle>
-            <DialogDescription>
-              Review additional charges before processing.
-            </DialogDescription>
-          </DialogHeader>
-
-          {(() => {
-            // Filter to backers who actually owe more than was already
-            // collected — survey-time add-ons / shipping upgrades.
-            // The old filter (`addons.length > 0 && chargeStatus !==
-            // "charged"`) was way too loose — every backer who had
-            // ever ordered an add-on matched, including the ones who
-            // paid for those add-ons at original pledge time. On the
-            // Mandawhorian campaign this turned a "Charge 2 Cards"
-            // button into a 28-backer / $3325 confirmation dialog,
-            // and clicking it would have routed 51 abandoned-cart
-            // PENDING DC pledges through chargeSavedPledge, which
-            // marks rows with no saved payment method as FAILED,
-            // decrements project totals, and emails backers.
-            // Now we mirror chargeStats.notCharged exactly: filter
-            // strictly on balanceDue > 0 (the same value the
-            // "Charge N Cards" button label is computed from).
-            const backersToCharge = backers.filter(
-              (b) => b.chargeStatus !== "charged" && b.balance.balanceDue > 0
-            );
-            const totalAddonsAmount = backersToCharge.reduce(
-              (sum, b) => sum + b.balance.balanceDue,
-              0
-            );
-
-            if (backersToCharge.length === 0) {
-              return (
-                <div className="py-8 text-center">
-                  <div className="mx-auto w-12 h-12 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center mb-4">
-                    <Check className="h-6 w-6 text-green-600" />
-                  </div>
-                  <h3 className="font-semibold mb-2">No Additional Charges Needed</h3>
-                  <p className="text-sm text-muted-foreground">All backers have been charged or no add-ons purchased.</p>
-                </div>
-              );
-            }
-
-            return (
-              <div className="space-y-4">
-                <div className="rounded-lg border p-4 bg-muted/30">
-                  <div className="grid grid-cols-3 gap-4 text-center">
-                    <div>
-                      <p className="text-2xl font-bold">{backersToCharge.length}</p>
-                      <p className="text-xs text-muted-foreground">Backers to Charge</p>
-                    </div>
-                    <div>
-                      <p className="text-2xl font-bold">
-                        {/*
-                          Sum addon QUANTITIES, not entry count. "2x Upgrade
-                          to Foil" should count as 2 items, not 1.
-                        */}
-                        {backersToCharge.reduce(
-                          (sum, b) =>
-                            sum +
-                            (b.addons?.reduce(
-                              (s, a) => s + (Number(a.quantity) || 0),
-                              0
-                            ) || 0),
-                          0
-                        )}
-                      </p>
-                      <p className="text-xs text-muted-foreground">Total Add-ons</p>
-                    </div>
-                    <div>
-                      <p className="text-2xl font-bold text-teal-600">${totalAddonsAmount.toFixed(2)}</p>
-                      <p className="text-xs text-muted-foreground">Total to Charge</p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-2 p-3 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg text-sm">
-                  <AlertCircle className="h-4 w-4 text-blue-600 mt-0.5 shrink-0" />
-                  <p className="text-blue-800 dark:text-blue-300">Only add-ons purchased through the survey. Original pledge amounts were already collected.</p>
-                </div>
-
-                <div className="border rounded-lg overflow-hidden">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Backer</TableHead>
-                        <TableHead>Add-ons</TableHead>
-                        <TableHead className="text-right">Amount</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {backersToCharge.map((backer) => {
-                        // Surface a line for every contributor to the
-                        // balance, not just addons. If the balance is
-                        // sourced from a shipping upgrade or a reward-
-                        // tier change (legitimate IndieKit edit), show
-                        // it so the creator isn't staring at a blank
-                        // "Add-ons" column wondering where the dollar
-                        // amount came from.
-                        const addonsTotal = (backer.addons || []).reduce(
-                          (s, a) => s + Number(a.amount) * Number(a.quantity || 1),
-                          0
-                        );
-                        const nonAddonBalance =
-                          Math.round((backer.balance.balanceDue - addonsTotal) * 100) / 100;
-                        return (
-                          <TableRow key={backer.id}>
-                            <TableCell>
-                              <div>
-                                <p className="font-medium">{backer.name}</p>
-                                <p className="text-xs text-muted-foreground">{backer.email}</p>
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              <div className="text-sm">
-                                {backer.addons?.map((addon, idx) => (
-                                  <div key={idx} className="text-muted-foreground">
-                                    {addon.quantity}x {addon.name}
-                                  </div>
-                                ))}
-                                {nonAddonBalance > 0.005 && (
-                                  <div className="text-muted-foreground italic">
-                                    Other charges (reward / shipping): ${nonAddonBalance.toFixed(2)}
-                                  </div>
-                                )}
-                                {(backer.addons || []).length === 0 &&
-                                  nonAddonBalance <= 0.005 && (
-                                    <div className="text-muted-foreground italic">
-                                      (No itemized detail)
-                                    </div>
-                                  )}
-                              </div>
-                            </TableCell>
-                            <TableCell className="text-right font-medium">
-                              ${backer.balance.balanceDue.toFixed(2)}
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })}
-                    </TableBody>
-                  </Table>
-                </div>
-              </div>
-            );
-          })()}
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsChargePreviewOpen(false)}>Cancel</Button>
-            <Button
-              className="bg-teal-600 hover:bg-teal-700"
-              onClick={async () => {
-                // Use the SAME filter as the preview popup so the
-                // confirm action can never charge more pledges than
-                // the dialog promised. balanceDue > 0 is the only
-                // valid signal that a backer actually owes more.
-                const backersToCharge = backers.filter(
-                  (b) => b.chargeStatus !== "charged" && b.balance.balanceDue > 0
-                );
-                if (backersToCharge.length === 0) {
-                  setIsChargePreviewOpen(false);
-                  return;
-                }
-
-                setWorkflowActionLoading("charge_cards");
-                try {
-                  const res = await apiFetch("/api/creator/indiekit/backers", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json", },
-                    body: JSON.stringify({
-                      action: "charge_cards",
-                      pledgeIds: backersToCharge.map(b => b.id),
-                      projectId: selectedProjectId,
-                      idempotencyKey: uuidv4(),
-                    }),
-                  });
-
-                  const data = await res.json();
-                  if (!res.ok) throw new Error(data.error || "Failed to charge cards");
-
-                  toast.success(`Successfully charged ${data.results?.success || backersToCharge.length} backers`);
-                  fetchData();
-                } catch (error) {
-                  toast.error(error instanceof Error ? error.message : "Failed to charge cards");
-                } finally {
-                  setWorkflowActionLoading(null);
-                  setIsChargePreviewOpen(false);
-                }
-              }}
-              disabled={
-                workflowActionLoading === "charge_cards" ||
-                backers.filter((b) => b.chargeStatus !== "charged" && b.balance.balanceDue > 0).length === 0
-              }
-            >
-              {workflowActionLoading === "charge_cards" ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Processing...
-                </>
-              ) : (
-                <>
-                  <CreditCard className="h-4 w-4 mr-2" />
-                  Confirm & Charge
-                </>
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       {/* Lock-step confirmation */}
       <AlertDialog

@@ -43,7 +43,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Progress } from "@/components/ui/progress";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Search,
@@ -55,7 +54,6 @@ import {
   Mail,
   Check,
   Clock,
-  CreditCard,
   Lock,
   MapPin,
   ChevronDown,
@@ -121,9 +119,6 @@ export function BackersTab({
   totalCount,
   onPageChange,
 }: BackersTabProps) {
-  const [showChargeDialog, setShowChargeDialog] = useState(false);
-  const [isCharging, setIsCharging] = useState(false);
-  const [chargeProgress, setChargeProgress] = useState(0);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isSyncingTracking, setIsSyncingTracking] = useState(false);
 
@@ -352,47 +347,6 @@ export function BackersTab({
 
   // Calculate stats for selected backers
   const selectedBackerData = backers.filter(b => selectedBackers.includes(b.id));
-  const totalToCharge = selectedBackerData.reduce((sum, b) => sum + (b.balance?.balanceDue || 0), 0);
-  const backersNeedingCharge = selectedBackerData.filter(b => (b.balance?.balanceDue || 0) > 0).length;
-
-  // Handle bulk charge cards
-  const handleChargeCards = async () => {
-    if (!projectId) {
-      toast.error("No project selected");
-      return;
-    }
-
-    setIsCharging(true);
-    setChargeProgress(10);
-
-    try {
-      const res = await apiFetch("/api/creator/indiekit/backers", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", },
-        body: JSON.stringify({
-          action: "charge_cards",
-          pledgeIds: selectedBackers,
-          projectId,
-        }),
-      });
-
-      setChargeProgress(50);
-      const data = await res.json();
-      setChargeProgress(100);
-
-      if (!res.ok) {
-        throw new Error(data.error || "Charge failed");
-      }
-
-      toast.success(`Successfully charged ${data.results?.success || backersNeedingCharge} backers`);
-      onRefresh?.();
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to charge cards");
-    } finally {
-      setIsCharging(false);
-      setShowChargeDialog(false);
-    }
-  };
 
   // Handle bulk send survey reminder
   const handleSendSurveyReminder = async () => {
@@ -590,10 +544,6 @@ export function BackersTab({
                   <DropdownMenuItem onClick={handleSendSurveyReminder}>
                     <Mail className="h-4 w-4 mr-2" />
                     Send Survey Reminder
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setShowChargeDialog(true)}>
-                    <CreditCard className="h-4 w-4 mr-2" />
-                    Charge Cards
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={handleLockOrders}>
@@ -965,87 +915,6 @@ export function BackersTab({
       )}
 
       {/* Card Charging Dialog */}
-      <Dialog open={showChargeDialog} onOpenChange={setShowChargeDialog}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <CreditCard className="h-5 w-5 text-teal-600" />
-              Charge Cards
-            </DialogTitle>
-            <DialogDescription>
-              Review and process card charges for selected backers
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4 py-4">
-            {/* Charge Summary */}
-            <div className="rounded-lg border p-4 space-y-3">
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Selected Backers</span>
-                <span className="font-medium">{selectedBackers.length}</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Backers with Balance Due</span>
-                <span className="font-medium">{backersNeedingCharge}</span>
-              </div>
-              <div className="flex justify-between text-sm border-t pt-3">
-                <span className="font-medium">Total to Charge</span>
-                <span className="font-bold text-lg text-teal-600">${totalToCharge.toFixed(2)}</span>
-              </div>
-            </div>
-
-            {/* Warning */}
-            {backersNeedingCharge === 0 ? (
-              <div className="flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm">
-                <AlertCircle className="h-4 w-4 text-amber-600 mt-0.5" />
-                <p className="text-amber-800">No selected backers have a balance due.</p>
-              </div>
-            ) : (
-              <div className="flex items-start gap-2 p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm">
-                <AlertCircle className="h-4 w-4 text-blue-600 mt-0.5" />
-                <p className="text-blue-800">
-                  Cards will be charged for add-ons, shipping, and any balance adjustments.
-                  Backers will receive email receipts.
-                </p>
-              </div>
-            )}
-
-            {/* Progress */}
-            {isCharging && (
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span>Processing charges...</span>
-                  <span>{chargeProgress}%</span>
-                </div>
-                <Progress value={chargeProgress} className="h-2" />
-              </div>
-            )}
-          </div>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowChargeDialog(false)} disabled={isCharging}>
-              Cancel
-            </Button>
-            <Button
-              className="bg-teal-600 hover:bg-teal-700"
-              onClick={handleChargeCards}
-              disabled={isCharging || backersNeedingCharge === 0}
-            >
-              {isCharging ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Processing...
-                </>
-              ) : (
-                <>
-                  <CreditCard className="h-4 w-4 mr-2" />
-                  Charge ${totalToCharge.toFixed(2)}
-                </>
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       {/* Backers Table */}
       <Card>

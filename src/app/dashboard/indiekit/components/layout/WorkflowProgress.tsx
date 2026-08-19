@@ -11,7 +11,11 @@ import type { WorkflowStep, Backer, FulfillmentStats } from "../../types";
 // Plain-language explanations for each workflow action button.
 const ACTION_TOOLTIPS: Record<string, string> = {
   lock_orders: "Finalize backer reward and add-on selections — they can no longer change their order.",
-  charge_cards: "Charge backers for add-ons or balances owed beyond their original pledge.",
+  // No action here on purpose. There is no creator-initiated bulk charge on
+  // this platform — backers pay add-on and balance amounts themselves
+  // through the survey, and the API rejects charge_cards outright. The
+  // step stays as a count so the money owed is still visible.
+  charge_cards: "Backers pay these balances themselves when they complete their survey.",
   lock_addresses: "Finalize backer shipping addresses so they can no longer be changed.",
   start_shipping: "Push these orders into your fulfillment workflow.",
   shipped: "Mark these orders as shipped to backers.",
@@ -71,7 +75,7 @@ export function WorkflowProgress({
             })();
             const isClickable = step.status !== "locked";
             const isLoading = workflowActionLoading === step.id;
-            const hasAction = ["lock_orders", "charge_cards", "lock_addresses", "start_shipping", "shipped"].includes(step.id);
+            const hasAction = ["lock_orders", "lock_addresses", "start_shipping", "shipped"].includes(step.id);
 
             return (
               <div key={step.id} className="space-y-1">
@@ -148,7 +152,6 @@ export function WorkflowProgress({
                     ) : (
                       <>
                         {step.id === "lock_orders" && `Lock ${actionCount} Orders`}
-                        {step.id === "charge_cards" && `Charge ${actionCount} Cards`}
                         {step.id === "lock_addresses" && `Lock ${actionCount} Addresses`}
                         {step.id === "start_shipping" && `Push ${actionCount} to Fulfillment`}
                         {step.id === "shipped" && `Mark ${actionCount} Shipped`}

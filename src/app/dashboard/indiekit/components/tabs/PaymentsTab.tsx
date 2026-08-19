@@ -8,13 +8,18 @@ import type { FulfillmentStats } from "../../types";
 
 interface PaymentsTabProps {
   stats: FulfillmentStats | null;
-  onOpenChargePreview: () => void;
 }
 
 /**
- * Payments Tab - Charge Cards overview
+ * Payments Tab — a read-only view of what backers have paid.
+ *
+ * There is no creator-initiated charge here, and the button that used to
+ * open one has gone: the API rejects bulk charging outright, so it could
+ * only ever fail. Backers pay add-on and balance amounts themselves when
+ * they complete their survey. The figures stay because knowing how much is
+ * uncollected is still worth seeing.
  */
-export function PaymentsTab({ stats, onOpenChargePreview }: PaymentsTabProps) {
+export function PaymentsTab({ stats }: PaymentsTabProps) {
   const chargeStats = stats?.chargeStats;
 
   return (
@@ -80,16 +85,22 @@ export function PaymentsTab({ stats, onOpenChargePreview }: PaymentsTabProps) {
             </Badge>
           </div>
 
-          {/* Charge action */}
+          {/* Where the "Charge N Cards" button used to be. It opened a
+              preview whose Confirm always failed, because the API has no
+              creator-initiated bulk charge. Saying who still owes, and how
+              they pay, is the honest version of the same information. */}
           {(chargeStats?.notCharged || 0) > 0 && (
-            <button
-              onClick={onOpenChargePreview}
-              className="w-full rounded-lg border-2 border-dashed border-teal-300 dark:border-teal-700 p-6 text-center hover:bg-teal-50 dark:hover:bg-teal-950/30 transition-colors cursor-pointer"
-            >
-              <CreditCard className="h-8 w-8 mx-auto text-teal-600 mb-2" />
-              <p className="font-medium text-teal-700 dark:text-teal-300">Charge {chargeStats?.notCharged} Cards</p>
-              <p className="text-sm text-muted-foreground mt-1">Click to preview and confirm charges</p>
-            </button>
+            <div className="rounded-lg border border-dashed p-5 text-sm text-muted-foreground">
+              <p className="font-medium text-foreground">
+                {chargeStats?.notCharged} backer
+                {chargeStats?.notCharged === 1 ? "" : "s"} still owe a balance
+              </p>
+              <p className="mt-1">
+                Backers pay add-on and shipping balances themselves when they complete
+                their survey — there is no charge to run from here. Chase anyone
+                outstanding with a survey reminder from the Backers tab.
+              </p>
+            </div>
           )}
         </CardContent>
       </Card>
