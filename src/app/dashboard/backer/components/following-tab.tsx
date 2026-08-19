@@ -98,10 +98,12 @@ export function FollowingTab() {
   const handleUnfollow = async (creatorId: string) => {
     setUnfollowing(creatorId);
     try {
-      const response = await apiFetch(`/api/backer/following/${creatorId}`, {
-        method: "DELETE",
-        
-      });
+      // There is no /api/backer/following/[creatorId] route — this 404'd, so
+      // unfollow never worked. DELETE takes the creator as a query param.
+      const response = await apiFetch(
+        `/api/backer/following?creatorId=${encodeURIComponent(creatorId)}`,
+        { method: "DELETE" }
+      );
 
       if (!response.ok) throw new Error("Failed to unfollow");
       toast.success("Unfollowed creator");
@@ -122,10 +124,12 @@ export function FollowingTab() {
 
     setUpdating(creatorId);
     try {
-      const response = await apiFetch(`/api/backer/following/${creatorId}`, {
+      // Same missing route. PATCH delegates to POST, which dispatches on an
+      // `action` and reads creatorId from the body.
+      const response = await apiFetch("/api/backer/following", {
         method: "PATCH",
-        headers: { "Content-Type": "application/json", },
-        body: JSON.stringify({ [key]: value }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "updatePreferences", creatorId, [key]: value }),
       });
 
       if (!response.ok) throw new Error("Failed to update preference");

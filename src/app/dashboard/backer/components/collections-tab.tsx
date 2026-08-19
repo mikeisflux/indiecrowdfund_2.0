@@ -207,9 +207,13 @@ export function CollectionsTab() {
 
   const handleRemoveProject = async (collectionId: string, projectId: string) => {
     try {
-      const response = await apiFetch(`/api/backer/collections/${collectionId}/projects/${projectId}`, {
-        method: "DELETE",
-        
+      // There is no /api/backer/collections/[id]/projects/[projectId] route —
+      // this 404'd, so removing a project from a collection never worked.
+      // The collection PATCH handles it via an action.
+      const response = await apiFetch(`/api/backer/collections/${collectionId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "removeProject", projectId }),
       });
 
       if (!response.ok) throw new Error("Failed to remove project");

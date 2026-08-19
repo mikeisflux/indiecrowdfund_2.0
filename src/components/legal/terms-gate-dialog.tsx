@@ -19,10 +19,33 @@ import { TermsOfServiceContent, TERMS_VERSION } from "./terms-of-service";
 //
 // There is no dismiss control on purpose. The way out is to accept, or to
 // leave via Sign out / the public site.
-export function TermsGateDialog({ signOutHref = "/api/auth/signout" }: { signOutHref?: string }) {
+// Sign-out used to be an <a href="/api/auth/signout">. That route does not
+// exist on this app, and the one that does — /api/auth/logout — is POST-only,
+// so a link could never have worked either way. A creator who did not want to
+// accept the new Terms had no way out of the gate at all. It is a real POST
+// now, with a fallback to the home page if the request fails.
+export function TermsGateDialog({ signOutHref }: { signOutHref?: string }) {
   const router = useRouter();
   const [agreed, setAgreed] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
+
+  const signOut = async () => {
+    if (signingOut) return;
+    setSigningOut(true);
+    // An override is treated as a plain destination, so callers can still send
+    // someone somewhere specific.
+    if (signOutHref) {
+      window.location.href = signOutHref;
+      return;
+    }
+    try {
+      await apiFetch("/api/auth/logout", { method: "POST" });
+    } catch {
+      // Leaving matters more than a clean response — fall through and go.
+    }
+    window.location.href = "/";
+  };
 
   const accept = async () => {
     setSaving(true);
@@ -95,8 +118,20 @@ export function TermsGateDialog({ signOutHref = "/api/auth/signout" }: { signOut
               .
             </p>
             <div className="flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:gap-3">
-              <Button variant="outline" asChild className="w-full sm:w-auto">
-                <a href={signOutHref}>Sign out</a>
+              <Button
+                variant="outline"
+                onClick={signOut}
+                disabled={signingOut}
+                className="w-full sm:w-auto"
+              >
+                {signingOut ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Signing out…
+                  </>
+                ) : (
+                  "Sign out"
+                )}
               </Button>
               <Button
                 onClick={accept}

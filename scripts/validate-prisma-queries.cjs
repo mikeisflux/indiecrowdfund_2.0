@@ -217,10 +217,20 @@ function checkWhere(model, node, file, sf, label) {
     if (related && ts.isObjectLiteralExpression(p.initializer)) {
       const child = byModelName.get(related);
       if (!child) continue;
-      for (const q of p.initializer.properties) {
-        if (!ts.isPropertyAssignment(q)) continue;
-        const k = propName(q);
-        if (RELATION_FILTER.has(k)) checkWhere(child, q.initializer, file, sf, `${label}.${key}.${k}`);
+      const nested = p.initializer.properties.filter((q) => ts.isPropertyAssignment(q));
+      const usesFilter = nested.some((q) => RELATION_FILTER.has(propName(q)));
+      if (usesFilter) {
+        for (const q of nested) {
+          const k = propName(q);
+          if (RELATION_FILTER.has(k)) checkWhere(child, q.initializer, file, sf, `${label}.${key}.${k}`);
+        }
+      } else {
+        // A to-one relation can be filtered directly — `where: { campaign:
+        // { projectId } }` is shorthand for an implicit `is`. Skipping this
+        // shape left a hole: an EmailCampaignClick query filtering on
+        // campaign.projectId went unreported even though EmailCampaign has
+        // no projectId.
+        checkWhere(child, p.initializer, file, sf, `${label}.${key}`);
       }
     }
   }
