@@ -171,6 +171,34 @@ else
     exit 1
 fi
 
+# Step 4c: Prisma query pre-flight.
+# Same class of problem as Step 4b, different mechanism. An invalid field in
+# a Prisma select/where type-checks clean — a probe of
+#   db.user.findFirst({ select: { totallyBogusFieldXyz: true } })
+# passes tsconfig.build.json — so the build succeeds and the route then throws
+# PrismaClientValidationError on every request. That is how the IndieKit
+# Integrations panel and the admin Insert-campaign menu both shipped broken.
+# This checks field names against the generated client's schema before deploy.
+# Only NEW problems fail; the pre-existing ones live in
+# scripts/prisma-query-baseline.json.
+echo ""
+echo "🗄️  Step 4c: Validating Prisma queries..."
+if node scripts/validate-prisma-queries.cjs; then
+    :
+else
+    PRISMA_CHECK_EXIT=$?
+    if [ $PRISMA_CHECK_EXIT -eq 2 ]; then
+        echo -e "${YELLOW}   Could not run the Prisma query check — continuing${NC}"
+    else
+        echo -e "${RED}❌ ERROR: Invalid Prisma field(s) found!${NC}"
+        echo ""
+        echo "These pass the type checker but fail at runtime on every request."
+        echo "Fix them, or re-baseline with:"
+        echo "   node scripts/validate-prisma-queries.cjs --update-baseline"
+        exit 1
+    fi
+fi
+
 # Step 5: Clean up any previous failed build attempts
 echo ""
 echo "🧹 Step 5: Cleaning up previous build attempts..."
