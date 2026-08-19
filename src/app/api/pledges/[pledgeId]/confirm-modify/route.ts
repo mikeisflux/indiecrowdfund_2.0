@@ -205,6 +205,7 @@ export async function POST(
         });
 
         // Create new addon associations
+        let newAddonsAmount = 0;
         if (addonsWithQuantity.length > 0) {
           const addonRecords = await tx.reward.findMany({
             where: { id: { in: addonIdList }, type: "ADDON" },
@@ -214,18 +215,41 @@ export async function POST(
             addonRecords.map((a: { id: string; amount: number }) => [a.id, Number(a.amount)])
           );
 
-          await tx.pledgeAddon.createMany({
-            data: addonsWithQuantity.map((addon) => ({
-              pledgeId,
-              addonId: addon.id,
-              quantity: addon.quantity,
-              amount: (addonPriceMap.get(addon.id) ?? 0) * addon.quantity,
-            })),
-          });
+          const addonRows = addonsWithQuantity.map((addon) => ({
+            pledgeId,
+            addonId: addon.id,
+            quantity: addon.quantity,
+            amount: (addonPriceMap.get(addon.id) ?? 0) * addon.quantity,
+          }));
+          newAddonsAmount = addonRows.reduce((sum, a) => sum + a.amount, 0);
+
+          await tx.pledgeAddon.createMany({ data: addonRows });
         }
 
-        // Update the pledge amount and flip pendingModification →
-        // completedModifications. This is what blocks subsequent lock
+        // Re-derive the amount breakdown to match the rows we just wrote.
+        //
+        // This block used to set `amount` alone and leave rewardAmount /
+        // addonsAmount / shippingAmount at whatever they were before the
+        // modification. They are a denormalized snapshot, not decoration:
+        // the IndieKit creator dashboard and the backer CSV export total
+        // add-on revenue from `addonsAmount` rather than the PledgeAddon
+        // join (deliberately — see compute-stats.ts), and /api/pay/balance
+        // derives the balance owed from
+        // rewardAmount + addonsAmount + shippingAmount. Leaving them stale
+        // under-reported add-on revenue, and in the other direction — a
+        // backer downgrading their reward — inflated the derived total and
+        // could invent a balance due that nobody actually owed.
+        //
+        // Shipping is preserved rather than recomputed, matching how the
+        // modify route builds newAmount in the first place.
+        const modifiedReward =
+          rewardId && rewardId !== "no-reward"
+            ? await tx.reward.findFirst({ where: { id: rewardId }, select: { amount: true } })
+            : null;
+        const newRewardAmount = modifiedReward ? Number(modifiedReward.amount) : 0;
+
+        // Update the pledge amount + breakdown and flip pendingModification
+        // → completedModifications. That flip is what blocks subsequent lock
         // acquirers from re-processing.
         const currentMetadata = (typeof freshMeta === "object" && freshMeta !== null)
           ? { ...freshMeta as Record<string, unknown> }
@@ -237,6 +261,8 @@ export async function POST(
           data: {
             rewardId: rewardId === "no-reward" ? null : rewardId || null,
             amount: pending.newAmount,
+            rewardAmount: newRewardAmount,
+            addonsAmount: newAddonsAmount,
             metadata: {
               ...currentMetadata,
               completedModifications: [
