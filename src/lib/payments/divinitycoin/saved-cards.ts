@@ -7,6 +7,8 @@ import type {
   DetachPaymentMethodResult,
   ChargeSavedPaymentMethodInput,
   ChargeSavedPaymentMethodResult,
+  DcPaymentAttempt,
+  LookupPaymentResult,
 } from "./types";
 
 // DivinityCoin saved-card / off-session charge helpers (added 2026-05-05).
@@ -21,9 +23,10 @@ import type {
 // publishable key. We only ever store the resulting `pm_...` id.
 //
 // Wire-level reference: see DC partner docs "Saved Cards & Off-Session
-// Charges" (the section partner@ emailed 2026-05-05). Idempotency is
-// keyed on `pledgeId` so retrying a charge with the same pledgeId is
-// safe — the second call returns the original PaymentIntent.
+// Charges" (the section partner@ emailed 2026-05-05), as amended by
+// partner@ on 2026-08-19 with the `idempotencyKey` field and the
+// `lookup-payment` action. See chargeDcSavedPaymentMethod for what
+// changed and why it matters.
 
 /**
  * Create a SetupIntent on DC for saving a card under a platform user.
@@ -110,9 +113,27 @@ export async function detachDcPaymentMethod(input: {
  *   - Add-ons: charge an additional amount for a backer-confirmed
  *     add-on without re-prompting for card.
  *
- * Idempotency: pass the local pledge / charge id as `pledgeId`. DC
- * dedupes on (partner, pledgeId), so retrying with the same id returns
- * the same PaymentIntent rather than double-charging.
+ * Idempotency — read this before adding a retry.
+ *
+ * Idempotency is enforced by Stripe, not by DC, and Stripe caches the
+ * FIRST result for a key for 24 hours *including card declines*. With no
+ * `idempotencyKey` the key is derived from `pledgeId`, so a retry inside
+ * that window replays the cached response without the bank ever being
+ * contacted. Our funded-campaign backoff was [1h, 6h, 24h, 72h, 168h] and
+ * the first two were therefore guaranteed no-ops; the 24h one sits on the
+ * boundary and is nondeterministic. (Confirmed by DC partner@ 2026-08-19.)
+ *
+ * The rule that follows from that:
+ *
+ *   - A DECLINE is a definitive answer. To genuinely re-ask the bank, the
+ *     next attempt must carry a NEW `idempotencyKey` ("attempt-2", …).
+ *   - A NETWORK ERROR / TIMEOUT is not an answer. We don't know whether the
+ *     capture landed, so the next attempt must REUSE the same key — inside
+ *     24h that is guaranteed to return the original PaymentIntent instead of
+ *     charging twice. Past 24h the key has been pruned and a blind retry
+ *     WILL double-charge, so call `lookupDcPayment` first.
+ *
+ * `pledgeId` is never part of that knob — see the type's comment.
  *
  * Decline shape: HTTP 402 from DC turns into `{ success: false }` here
  * with `code` / `declineCode` populated so the caller can surface the
@@ -128,6 +149,10 @@ export async function chargeDcSavedPaymentMethod(
     currency: input.currency || "usd",
     pledgeId: input.pledgeId,
   };
+  // Omitted entirely when absent — DC documents "omit it and you get today's
+  // behaviour exactly", so sending an explicit undefined/null is not the same
+  // thing and must not leak into the JSON body.
+  if (input.idempotencyKey) payload.idempotencyKey = input.idempotencyKey;
   if (input.projectId) payload.projectId = input.projectId;
   if (input.description) payload.description = input.description;
   if (input.statement_descriptor) payload.statement_descriptor = input.statement_descriptor;
@@ -195,6 +220,53 @@ export async function verifyDcPayment(
     status,
     amount: typeof data.amount === "number" ? data.amount : undefined,
     dcStatus: typeof data.dcStatus === "string" ? data.dcStatus : undefined,
+  };
+}
+
+/**
+ * Every charge attempt DC has on record for a pledge, with live processor
+ * status, plus DC's own `hasSuccessfulCharge` verdict.
+ *
+ * This is the answer to "my charge call timed out — did the money move?".
+ * `verifyDcPayment` cannot answer it: that takes a PaymentIntent id, and the
+ * whole problem with a timeout is that we never received one. Ask this before
+ * re-charging a pledge whose previous attempt ended in an uncertain state,
+ * rather than retrying blind and risking a double charge once Stripe has
+ * pruned the idempotency key at 24h.
+ *
+ * Unresolvable calls return `success: false`, which callers must treat as
+ * "still don't know" — never as "no charge exists".
+ */
+export async function lookupDcPayment(pledgeId: string): Promise<LookupPaymentResult> {
+  const result = await callDivinityCoinAPI("lookup-payment", { pledgeId });
+  if (!result.success || !result.data) {
+    return { success: false, error: result.error || "Failed to look up payment" };
+  }
+  const data = result.data as Record<string, unknown>;
+
+  // Only a literal true counts. A missing field means DC didn't tell us, and
+  // treating that as "no successful charge" is exactly the assumption that
+  // double-charges someone.
+  if (typeof data.hasSuccessfulCharge !== "boolean") {
+    log.warn({ pledgeId, keys: Object.keys(data) }, "[DivinityCoin] lookup-payment returned no hasSuccessfulCharge");
+    return { success: false, error: "DivinityCoin returned an incomplete payment lookup" };
+  }
+
+  const attempts: DcPaymentAttempt[] = Array.isArray(data.attempts)
+    ? (data.attempts as DcPaymentAttempt[])
+    : [];
+
+  // Prefer a top-level PI if DC supplies one, else the succeeded attempt's.
+  const succeeded = attempts.find((a) => a?.status === "succeeded");
+  const paymentIntentId =
+    (typeof data.paymentIntentId === "string" ? data.paymentIntentId : null) ??
+    (typeof succeeded?.paymentIntentId === "string" ? succeeded.paymentIntentId : null);
+
+  return {
+    success: true,
+    hasSuccessfulCharge: data.hasSuccessfulCharge,
+    paymentIntentId,
+    attempts,
   };
 }
 

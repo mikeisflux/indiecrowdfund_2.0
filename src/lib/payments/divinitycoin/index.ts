@@ -16,6 +16,8 @@ export type {
   DetachPaymentMethodResult,
   ChargeSavedPaymentMethodInput,
   ChargeSavedPaymentMethodResult,
+  DcPaymentAttempt,
+  LookupPaymentResult,
   // White-label hosted checkout types (DC partner API 2026-05-15)
   DcCheckoutMode,
   DcCheckoutStatus,
@@ -70,8 +72,19 @@ export {
   detachDcPaymentMethod,
   chargeDcSavedPaymentMethod,
   verifyDcPayment,
+  lookupDcPayment,
   getDcSetupIntent,
 } from "./saved-cards";
+
+// Retry bookkeeping for off-session charges. Read charge-attempts.ts before
+// touching any DC retry path — which idempotency key the next attempt uses
+// decides whether it reaches the bank or replays a cached decline.
+export {
+  readDcChargeState,
+  nextAttemptKey,
+  withDcChargeState,
+} from "./charge-attempts";
+export type { DcChargeAttemptState } from "./charge-attempts";
 
 export { formatDeclineReason } from "./decline-reasons";
 

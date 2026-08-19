@@ -255,18 +255,23 @@ export async function POST(
     // immediately, KIA pledges, or backers who paid before the saved-
     // card flow shipped).
     if (paymentProcessor === "DIVINITYCOIN" && pledge.divinityCoinPaymentMethodId) {
-      // Use a fresh idempotency key per upcharge so the existing
-      // pledgeId-keyed initial charge doesn't dedupe with us. Pattern:
-      // `${pledgeId}-addon-${timestamp}`. Same key on retry of the same
-      // upcharge by including the existing pendingAdditionalItems.id.
-      const upchargeIdempotencyKey = `${pledge.id}-addon-${Date.now()}`;
+      // A fresh idempotency key per upcharge, so this charge doesn't dedupe
+      // against the pledge's original one. It goes in `idempotencyKey`, NOT
+      // in `pledgeId`: this used to send `${pledge.id}-addon-${timestamp}` as
+      // the pledgeId, and DC persists that value and echoes it back in
+      // payment.* webhooks — so every upcharge webhook arrived naming a
+      // pledge that doesn't exist, and reconciliation had nothing to match on
+      // at either end. The double-charge guard for this path is the
+      // pendingAdditionalItems row lock taken above, not the key.
+      const upchargeIdempotencyKey = `addon-${Date.now()}`;
       try {
         const charge = await chargeDcSavedPaymentMethod({
           platformUserId: session.user.id,
           paymentMethodId: pledge.divinityCoinPaymentMethodId,
           amount: Math.round(amount * 100),
           currency: "usd",
-          pledgeId: upchargeIdempotencyKey,
+          pledgeId: pledge.id,
+          idempotencyKey: upchargeIdempotencyKey,
           projectId: pledge.projectId,
           description: "Add-on items for existing pledge",
         });

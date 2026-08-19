@@ -142,18 +142,51 @@ export type DetachPaymentMethodResult =
   | { success: true }
   | { success: false; error?: string };
 
-// /charge-saved-payment-method input — `pledgeId` doubles as the
-// idempotency key (partner-side stable id), so retries are safe.
+// /charge-saved-payment-method input.
+//
+// `pledgeId` is the reconciliation id, NOT a free-form idempotency knob. DC
+// persists it and echoes it back in payment.* webhooks, so it must always be
+// the real local pledge id — mutating or suffixing it breaks reconciliation
+// on both sides (and makes handlePaymentSucceeded fail to find the pledge).
+//
+// `idempotencyKey` is the knob. Omit it and DC keys idempotency on pledgeId
+// alone, which is what you want for the first attempt. Pass a distinct value
+// ("attempt-2", "addon-<id>") when you deliberately want a NEW authorization
+// against the same pledge. See the note on chargeDcSavedPaymentMethod for why
+// a decline retry needs one and a network-error retry must not.
 export interface ChargeSavedPaymentMethodInput {
   platformUserId: string;
   paymentMethodId: string;     // pm_... from list-payment-methods
   amount: number;              // cents
-  pledgeId: string;            // local id; idempotency key on DC's side
+  pledgeId: string;            // local pledge id — reconciliation key, never mangled
+  idempotencyKey?: string;     // omit for the first attempt; see above
   currency?: string;           // default "usd"
   projectId?: string;          // links the charge to the campaign on DC's reporting
   description?: string;        // shows up on DC's dashboard
   statement_descriptor?: string; // ≤22 chars; shows on the cardholder's statement
 }
+
+// One prior charge attempt against a pledge, from /lookup-payment. DC returns
+// live processor status rather than its own cached copy, so this is the
+// authority on "did the money actually move".
+export interface DcPaymentAttempt {
+  paymentIntentId?: string;
+  status?: string;             // "succeeded" | "failed" | "processing" | …
+  amount?: number;             // cents
+  createdAt?: string;
+  [key: string]: unknown;
+}
+
+export type LookupPaymentResult =
+  | { success: false; error: string }
+  | {
+      success: true;
+      /** DC's own verdict. Authoritative — do not re-derive it from attempts. */
+      hasSuccessfulCharge: boolean;
+      /** PI of the successful attempt, when there is one. */
+      paymentIntentId: string | null;
+      attempts: DcPaymentAttempt[];
+    };
 
 // /charge-saved-payment-method normalized result. On success, status is
 // typically "succeeded" and `paymentIntentId` is set. On a soft decline

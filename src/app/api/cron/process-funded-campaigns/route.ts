@@ -5,7 +5,16 @@ import { logger } from "@/lib/logger";
 const cronProcessFundedCampaignsLogger = logger.child({ module: "cron-process-funded-campaigns" });
 import { db } from "@/lib/db";
 import { captureAuthorizedPaypalPledges } from "@/lib/payments/paypal";
-import { chargeDcSavedPaymentMethod, verifyDcPayment, handlePaymentSucceeded, formatDeclineReason } from "@/lib/payments/divinitycoin";
+import {
+  chargeDcSavedPaymentMethod,
+  verifyDcPayment,
+  lookupDcPayment,
+  handlePaymentSucceeded,
+  formatDeclineReason,
+  readDcChargeState,
+  nextAttemptKey,
+  withDcChargeState,
+} from "@/lib/payments/divinitycoin";
 import { distributeReadyFilesForProject } from "@/lib/fulfillment/auto-distribute";
 
 // Charge all PENDING DivinityCoin pledges with a saved card (pm_...)
@@ -14,9 +23,14 @@ import { distributeReadyFilesForProject } from "@/lib/fulfillment/auto-distribut
 // off-session, then COMPLETE on success or roll back the claim +
 // schedule a backoff retry on decline.
 //
-// Idempotency is keyed on pledge.id (also passed to DC as `pledgeId`),
-// so a duplicate run for the same pledge returns the original
-// PaymentIntent rather than double-charging.
+// Retries carry an explicit idempotencyKey. Without one, DC keys
+// idempotency on pledgeId and Stripe replays the cached result for 24
+// hours — declines included — so the 1h and 6h retries below never
+// reached the bank at all and the 24h one landed on the boundary. A
+// decline is a definitive answer and earns a fresh key; a network error
+// is not an answer and must reuse the old one, or a retry could capture
+// a second time on top of one that actually succeeded. See
+// lib/payments/divinitycoin/charge-attempts.ts.
 async function captureDcPendingPledges(projectId: string): Promise<{
   total: number;
   successful: number;
@@ -41,6 +55,7 @@ async function captureDcPendingPledges(projectId: string): Promise<{
       userId: true,
       amount: true,
       retryCount: true,
+      metadata: true,
       divinityCoinPaymentMethodId: true,
       project: { select: { title: true } },
     },
@@ -73,6 +88,66 @@ async function captureDcPendingPledges(projectId: string): Promise<{
       continue;
     }
 
+    const chargeState = readDcChargeState(p.metadata);
+
+    // A previous attempt ended without a verdict, so we do not know whether
+    // the card was charged. Ask DC before charging again: inside 24h the
+    // idempotency key would have protected us, but past that Stripe has
+    // pruned it and a blind retry captures a second time.
+    if (chargeState.uncertainSince) {
+      const lookup = await lookupDcPayment(p.id).catch(() => null);
+      if (!lookup || !lookup.success) {
+        // Still don't know. Release the claim and leave the uncertain flag
+        // set so the next tick asks again — never fall through to a charge.
+        cronProcessFundedCampaignsLogger.warn(
+          { pledgeId: p.id, uncertainSince: chargeState.uncertainSince },
+          "[Cron] Could not confirm a prior uncertain DC charge; deferring rather than retrying blind"
+        );
+        await db.pledge
+          .updateMany({
+            where: { id: p.id, status: "PENDING", divinityCoinPaymentId: null },
+            data: { chargedImmediately: false, nextRetryAt: new Date(Date.now() + 60 * 60 * 1000) },
+          })
+          .catch(() => null);
+        continue;
+      }
+      if (lookup.hasSuccessfulCharge) {
+        if (!lookup.paymentIntentId) {
+          // The money moved but DC gave us no PaymentIntent to record. We
+          // must not charge again and cannot complete cleanly, so leave the
+          // claim held (nothing else will touch it) and escalate.
+          cronProcessFundedCampaignsLogger.error(
+            { pledgeId: p.id },
+            "[Cron] DC lookup-payment reports a successful charge with no PaymentIntent id — needs manual reconcile"
+          );
+          continue;
+        }
+        // Recovered: the earlier attempt did land. Finish it through the
+        // webhook's completion path, which is CAS-guarded and idempotent.
+        await handlePaymentSucceeded({ pledgeId: p.id, paymentId: lookup.paymentIntentId });
+        await db.pledge
+          .update({
+            where: { id: p.id },
+            data: {
+              retryCount: 0,
+              nextRetryAt: null,
+              metadata: withDcChargeState(p.metadata, null),
+            },
+          })
+          .catch(() => null);
+        cronProcessFundedCampaignsLogger.info(
+          { pledgeId: p.id, paymentIntentId: lookup.paymentIntentId },
+          "[Cron] Recovered a DC charge whose response was lost; completed without re-charging"
+        );
+        result.successful++;
+        continue;
+      }
+      // Definitively no charge landed — the earlier attempt is resolved, so
+      // stop looking it up. The key itself is unchanged: that attempt was
+      // never answered by the bank, so it does not count as a decline.
+      chargeState.uncertainSince = undefined;
+    }
+
     try {
       const charge = await chargeDcSavedPaymentMethod({
         platformUserId: p.userId,
@@ -80,6 +155,7 @@ async function captureDcPendingPledges(projectId: string): Promise<{
         amount: Math.round(Number(p.amount) * 100),
         currency: "usd",
         pledgeId: p.id,
+        idempotencyKey: chargeState.attemptKey,
         projectId,
         description: `Pledge to ${p.project.title}`,
       });
@@ -91,6 +167,7 @@ async function captureDcPendingPledges(projectId: string): Promise<{
             divinityCoinPaymentId: charge.paymentIntentId,
             retryCount: 0,
             nextRetryAt: null,
+            metadata: withDcChargeState(p.metadata, null),
           },
         });
         result.successful++;
@@ -110,6 +187,8 @@ async function captureDcPendingPledges(projectId: string): Promise<{
               retryCount: newRetryCount,
               nextRetryAt: null,
               lastFailureReason: `${reason} (after ${newRetryCount} attempts)`,
+              // Terminal — nothing will retry, so drop the scaffolding.
+              metadata: withDcChargeState(p.metadata, null),
             },
           });
         } else {
@@ -122,6 +201,11 @@ async function captureDcPendingPledges(projectId: string): Promise<{
               retryCount: newRetryCount,
               nextRetryAt,
               lastFailureReason: reason,
+              // The bank answered. Advance the key so the next attempt is a
+              // real authorization rather than a replay of this decline.
+              metadata: withDcChargeState(p.metadata, {
+                attemptKey: nextAttemptKey(chargeState.attemptKey),
+              }),
             },
           });
         }
@@ -132,9 +216,11 @@ async function captureDcPendingPledges(projectId: string): Promise<{
         { err: err instanceof Error ? err.message : String(err), pledgeId: p.id },
         "[Cron] DC charge error"
       );
-      // Network / HTTP error: uncertain whether DC captured. Don't mark
-      // FAILED (idempotency on pledgeId means a retry returns the same
-      // PI if it succeeded). Roll the claim back and schedule a retry.
+      // Network / HTTP error: we never learned whether DC captured. Don't
+      // mark FAILED. Hold the idempotency key exactly as it is — advancing
+      // it here would turn a retry of a charge that may have succeeded into
+      // a second, genuinely new authorization — and flag the pledge so the
+      // next tick confirms via lookup-payment before charging again.
       const newRetryCount = (p.retryCount || 0) + 1;
       const backoffHours =
         BACKOFF_HOURS[Math.min(newRetryCount - 1, BACKOFF_HOURS.length - 1)];
@@ -146,6 +232,10 @@ async function captureDcPendingPledges(projectId: string): Promise<{
             chargedImmediately: false,
             retryCount: newRetryCount,
             nextRetryAt,
+            metadata: withDcChargeState(p.metadata, {
+              attemptKey: chargeState.attemptKey,
+              uncertainSince: chargeState.uncertainSince ?? new Date().toISOString(),
+            }),
           },
         })
         .catch(() => null);

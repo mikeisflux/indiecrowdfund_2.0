@@ -4,7 +4,13 @@ import { db } from "@/lib/db";
 import { logger } from "@/lib/logger";
 import { formatError } from "@/lib/errors";
 import { z } from "zod";
-import { chargeDcSavedPaymentMethod, handlePaymentSucceeded } from "@/lib/payments/divinitycoin";
+import {
+  chargeDcSavedPaymentMethod,
+  handlePaymentSucceeded,
+  readDcChargeState,
+  nextAttemptKey,
+  withDcChargeState,
+} from "@/lib/payments/divinitycoin";
 import { distributeReadyFilesForProject } from "@/lib/fulfillment/auto-distribute";
 
 const log = logger.child({ module: "backer-lock-order" });
@@ -141,6 +147,11 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ ple
         data: { chargedImmediately: true },
       });
       if (claim.count === 1) {
+        // Same idempotency contract as the funded-campaign cron: Stripe
+        // caches a decline for 24h against the key, so whatever happens here
+        // decides whether the cron's next attempt reaches the bank. Advance
+        // the key on a decline, hold it on a thrown error.
+        const chargeState = readDcChargeState(pledge.metadata);
         try {
           const charge = await chargeDcSavedPaymentMethod({
             platformUserId: pledge.userId,
@@ -148,6 +159,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ ple
             amount: Math.round(Number(pledge.amount) * 100),
             currency: "usd",
             pledgeId: pledge.id,
+            idempotencyKey: chargeState.attemptKey,
             projectId: pledge.projectId,
             description: `Order lock — ${pledge.project.title}`,
           });
@@ -158,9 +170,24 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ ple
               paymentId: charge.paymentIntentId,
             } as Parameters<typeof handlePaymentSucceeded>[0]);
             charged = true;
+            await db.pledge
+              .update({
+                where: { id: pledge.id },
+                data: { metadata: withDcChargeState(pledge.metadata, null) },
+              })
+              .catch(() => null);
           } else {
-            // Roll the claim back so the cron can retry later.
-            await db.pledge.updateMany({ where: { id: pledge.id }, data: { chargedImmediately: false } });
+            // Roll the claim back so the cron can retry later — with a fresh
+            // key, or it would just replay this same cached decline.
+            await db.pledge.updateMany({
+              where: { id: pledge.id },
+              data: {
+                chargedImmediately: false,
+                metadata: withDcChargeState(pledge.metadata, {
+                  attemptKey: nextAttemptKey(chargeState.attemptKey),
+                }),
+              },
+            });
             return NextResponse.json(
               { error: charge.error || "Your card was declined. Please update your payment method and try again." },
               { status: 402 }
@@ -168,8 +195,19 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ ple
           }
         } catch (chargeErr) {
           // On a thrown error the charge may or may not have landed — do NOT
-          // mark failed; release the claim and let the cron reconcile.
-          await db.pledge.updateMany({ where: { id: pledge.id }, data: { chargedImmediately: false } });
+          // mark failed and do NOT advance the key; release the claim, record
+          // that the outcome is unknown, and let the cron confirm via
+          // lookup-payment before it charges anything again.
+          await db.pledge.updateMany({
+            where: { id: pledge.id },
+            data: {
+              chargedImmediately: false,
+              metadata: withDcChargeState(pledge.metadata, {
+                attemptKey: chargeState.attemptKey,
+                uncertainSince: chargeState.uncertainSince ?? new Date().toISOString(),
+              }),
+            },
+          });
           log.error({ err: String(chargeErr), pledgeId: pledge.id }, "DC lock charge threw");
           return NextResponse.json({ error: "Payment could not be processed right now. Please try again shortly." }, { status: 502 });
         }
