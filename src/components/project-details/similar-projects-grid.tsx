@@ -21,7 +21,19 @@ export function SimilarProjectsGrid({ projects }: SimilarProjectsGridProps) {
   if (projects.length === 0) return null;
 
   return (
-    <div>
+    // These are OTHER creators' books, so nothing overlaying the campaign is
+    // allowed to paint onto them. The banned-creator stamp on the project page
+    // is `sticky` inside the whole main-content section, which means it travels
+    // the full height of the tab — including down here — and parks itself over
+    // this grid. On a short mobile viewport that reads as though these unrelated
+    // campaigns are the banned ones.
+    //
+    // `relative z-40` puts the grid above the stamp's z-30, an opaque
+    // background stops it showing through, and `isolate` gives the grid its own
+    // stacking context so the stamp's mix-blend-multiply can't blend into these
+    // covers. Any future block appended after the campaign body needs the same
+    // treatment.
+    <div className="relative z-40 isolate bg-background">
       <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
         <h3 className="text-lg font-semibold">Similar projects to check out</h3>
         <Button variant="outline" size="sm">
