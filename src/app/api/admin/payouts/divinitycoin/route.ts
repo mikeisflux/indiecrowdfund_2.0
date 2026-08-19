@@ -7,6 +7,12 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { sendPayoutCreatedEmail } from "@/lib/notifications/email-templates";
 import { calculateInternationalFees } from "@/lib/payouts/international-fees";
+import {
+  calculateDivinityCoinOwed,
+  remainingToSettle,
+  COMMITTED_SETTLEMENT_STATUSES,
+  SETTLEMENT_ROUNDING_TOLERANCE,
+} from "@/lib/payouts/divinitycoin-owed";
 
 // Force dynamic - this route uses auth/headers
 export const dynamic = "force-dynamic";
@@ -637,8 +643,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Calculate fee breakdown for the email
-    const [totalRaised] = await Promise.all([
+    // Fee breakdown for the email, and the inputs to the payout ceiling below.
+    const [totalRaised, backerCount, partialRefundActivities] = await Promise.all([
       db.pledge.aggregate({
         where: { projectId, status: "COMPLETED", deletedAt: null },
         _sum: { amount: true },
@@ -646,8 +652,24 @@ export async function POST(request: NextRequest) {
       db.pledge.count({
         where: { projectId, status: "COMPLETED", deletedAt: null },
       }),
+      // Partial refunds do not change pledge status, so they have to be
+      // deducted separately — same source the GET projection reads.
+      db.fulfillmentActivity.findMany({
+        where: { projectId, type: "REFUND_ISSUED" },
+        select: { metadata: true },
+      }),
     ]);
     const grossAmount = Number(totalRaised._sum.amount || 0);
+
+    const partialRefundTotal = (partialRefundActivities as { metadata: unknown }[]).reduce(
+      (sum, activity) => {
+        const meta = activity.metadata as Record<string, unknown> | null;
+        if (!meta?.isPartialRefund) return sum;
+        const amount = Number(meta.refundAmount || 0);
+        return amount > 0 ? sum + amount : sum;
+      },
+      0
+    );
     const payoutPlatformSettings = await db.platformSettings.findUnique({
       where: { id: "default" },
       select: { platformFee: true },
@@ -660,27 +682,60 @@ export async function POST(request: NextRequest) {
     const platformFee = Math.round(grossAmount * payoutPlatformFeeRate * 100) / 100;
 
     // Create the DivinityCoin settlement record as COMPLETED.
-    // Guarded by a transaction-scoped advisory lock keyed to the
-    // projectId so a double-click can't create two concurrent
-    // COMPLETED settlement rows + two creator payout emails for
-    // the same payout. We reject within the lock if there's already
-    // a fresh (<60s old) settlement — that would only happen on a
-    // retry within a second, which is always a duplicate attempt.
+    //
+    // Guarded by a transaction-scoped advisory lock keyed to the projectId,
+    // and — inside that lock — by a ceiling on how much this project may be
+    // paid in total.
+    //
+    // The ceiling is the fix for a real hole. The only previous guard rejected
+    // a settlement of the *identical amount* created in the last 60 seconds,
+    // on the reasoning that a retry "would only happen within a second". That
+    // is not true of an admin who does not see the first one land and tries
+    // again a minute later, of two admins on the same project, or of a stale
+    // page re-submitted. Past 60 seconds nothing stopped a second full payout,
+    // and the amount was never checked against what had already been sent —
+    // the "already settled" subtraction lived only in the GET that draws the
+    // screen. Paying a creator twice is money out to a third party and far
+    // harder to recover than a double charge.
+    //
+    // Deliberately a budget rather than a blanket "one payout per project" the
+    // way PayPal and Whop work: DC tracks a remaining balance and partial
+    // settlements are a supported flow. So multiple settlements stay legal,
+    // and the invariant enforced is the one that matters — the total paid can
+    // never exceed the total owed.
+    const owed = calculateDivinityCoinOwed({
+      totalRaised: grossAmount,
+      partialRefundTotal,
+      backerCount,
+      platformFeeRate: payoutPlatformFeeRate,
+      bankCountry: bankAccount.bankCountry,
+    });
+
+
     let settlement;
     try {
       settlement = await db.$transaction(async (tx) => {
         await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`dc-settle-${projectId}`}))`;
 
-        const recent = await tx.divinityCoinSettlement.findFirst({
+        // Read committed settlements INSIDE the lock — reading before it would
+        // let two requests both see the same total and both pass.
+        const committed = await tx.divinityCoinSettlement.aggregate({
           where: {
             projectId,
-            createdAt: { gt: new Date(Date.now() - 60_000) },
+            status: { in: [...COMMITTED_SETTLEMENT_STATUSES] },
           },
-          orderBy: { createdAt: "desc" },
-          select: { id: true, amount: true },
+          _sum: { amount: true },
         });
-        if (recent && Number(recent.amount) === Number(amount)) {
-          throw new Error("DUPLICATE_SETTLEMENT");
+        const alreadyCommitted = Number(committed._sum.amount || 0);
+        const remaining = remainingToSettle(owed.amountOwed, alreadyCommitted);
+
+        if (remaining <= 0) {
+          throw new Error("ALREADY_SETTLED");
+        }
+        if (Number(amount) > remaining + SETTLEMENT_ROUNDING_TOLERANCE) {
+          throw new Error(
+            `EXCEEDS_REMAINING:${remaining.toFixed(2)}:${alreadyCommitted.toFixed(2)}`
+          );
         }
 
         return tx.divinityCoinSettlement.create({
@@ -697,6 +752,28 @@ export async function POST(request: NextRequest) {
         });
       });
     } catch (err) {
+      if (err instanceof Error && err.message === "ALREADY_SETTLED") {
+        return NextResponse.json(
+          {
+            error:
+              "This campaign has already been settled in full. Nothing further is owed.",
+          },
+          { status: 409 }
+        );
+      }
+      if (err instanceof Error && err.message.startsWith("EXCEEDS_REMAINING:")) {
+        const [, remaining, settled] = err.message.split(":");
+        return NextResponse.json(
+          {
+            error:
+              `That amount is more than this campaign has left to pay. ` +
+              `$${settled} has already been sent; $${remaining} remains.`,
+            remaining: Number(remaining),
+            alreadySettled: Number(settled),
+          },
+          { status: 409 }
+        );
+      }
       if (err instanceof Error && err.message === "DUPLICATE_SETTLEMENT") {
         return NextResponse.json(
           { error: "A settlement for this project and amount was just created. Please refresh before creating another." },

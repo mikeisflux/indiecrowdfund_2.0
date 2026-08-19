@@ -8,6 +8,13 @@ import { db } from "@/lib/db";
 import { isAdmin } from "@/lib/auth-helpers";
 
 // GET - Fetch DivinityCoin settlements with pagination and filtering
+import {
+  loadDivinityCoinOwed,
+  committedSettlementTotal,
+  remainingToSettle,
+  SETTLEMENT_ROUNDING_TOLERANCE,
+} from "@/lib/payouts/divinitycoin-owed";
+
 export async function GET(req: NextRequest) {
   try {
     if (!(await isAdmin())) {
@@ -184,6 +191,29 @@ export async function POST(req: NextRequest) {
         throw new Error("DUPLICATE_SETTLEMENT");
       }
 
+      // When the settlement is attributed to a project, it is bound by the
+      // same ceiling the project payouts screen enforces — otherwise this
+      // route is a way around it, and a project could be paid twice by using
+      // one screen and then the other. Read inside the lock so two concurrent
+      // requests cannot both see the same committed total.
+      //
+      // With no project there is no budget to check against: that is a
+      // free-form manual transfer an admin has decided on, and the
+      // sub-minute duplicate guard above is the only thing that applies.
+      if (projectId) {
+        const owedBreakdown = await loadDivinityCoinOwed(projectId, bankAccount.bankCountry);
+        const alreadyCommitted = await committedSettlementTotal(projectId);
+        const remaining = remainingToSettle(owedBreakdown.amountOwed, alreadyCommitted);
+        if (remaining <= 0) {
+          throw new Error("ALREADY_SETTLED");
+        }
+        if (amountFloat > remaining + SETTLEMENT_ROUNDING_TOLERANCE) {
+          throw new Error(
+            `EXCEEDS_REMAINING:${remaining.toFixed(2)}:${alreadyCommitted.toFixed(2)}`
+          );
+        }
+      }
+
       return tx.divinityCoinSettlement.create({
         data: {
           bankAccountId,
@@ -195,8 +225,13 @@ export async function POST(req: NextRequest) {
         },
       });
     }).catch((err) => {
-      if (err instanceof Error && err.message === "DUPLICATE_SETTLEMENT") {
-        throw new Error("DUPLICATE_SETTLEMENT");
+      if (
+        err instanceof Error &&
+        (err.message === "DUPLICATE_SETTLEMENT" ||
+          err.message === "ALREADY_SETTLED" ||
+          err.message.startsWith("EXCEEDS_REMAINING:"))
+      ) {
+        throw err;
       }
       throw err;
     });
