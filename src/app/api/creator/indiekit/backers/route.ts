@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { z } from "zod";
 import crypto from "crypto";
 import { pushOrdersToShopify } from "@/lib/shopify-push";
+import { syncShopifyTracking } from "@/lib/shopify-push";
 import { decryptCredential } from "@/lib/encryption";
 import { logger } from "@/lib/logger";
 import { sendSurveyAvailableEmail } from "@/lib/email";
@@ -21,6 +22,7 @@ const bulkActionSchema = z.object({
     "lock_addresses",
     "push_to_fulfillment",
     "mark_shipped",
+    "sync_tracking",
   ]),
   pledgeIds: z.array(z.string()).optional(),
   sendToAll: z.boolean().optional(),
@@ -29,6 +31,16 @@ const bulkActionSchema = z.object({
 });
 
 // POST - Perform bulk actions on backers
+// Carrier routes that accept { projectId, action: "sync_tracking" }. Shopify
+// is absent on purpose — it is not a carrier and its tracking comes from a
+// completed order rather than a shipments endpoint, so it has its own path.
+const PROVIDER_SYNC_ENDPOINTS: Record<string, string> = {
+  SHIPSTATION: "/api/creator/indiekit/shipstation",
+  SHIPPO: "/api/creator/indiekit/shippo",
+  EASYPOST: "/api/creator/indiekit/easypost",
+  STAMPS: "/api/creator/indiekit/stamps",
+};
+
 export async function POST(req: NextRequest) {
   try {
     const session = await auth();
@@ -40,7 +52,11 @@ export async function POST(req: NextRequest) {
     const { action, pledgeIds: rawPledgeIds, sendToAll, projectId, idempotencyKey } = bulkActionSchema.parse(body);
 
     // For non-survey actions, pledgeIds is required
-    if (action !== "send_survey_reminder" && (!rawPledgeIds || rawPledgeIds.length === 0)) {
+    // sync_tracking is campaign-wide: it asks the carriers which shipments
+    // have tracking now, and there is no sensible way to select that in
+    // advance. Everything else operates on a chosen set of backers.
+    const ACTIONS_WITHOUT_PLEDGE_IDS = new Set(["send_survey_reminder", "sync_tracking"]);
+    if (!ACTIONS_WITHOUT_PLEDGE_IDS.has(action) && (!rawPledgeIds || rawPledgeIds.length === 0)) {
       return NextResponse.json({ error: "pledgeIds is required for this action" }, { status: 400 });
     }
 
@@ -502,6 +518,118 @@ export async function POST(req: NextRequest) {
         });
 
         break;
+      }
+
+      case "sync_tracking": {
+        // Pull tracking numbers back from whichever carriers this campaign is
+        // connected to, and write them onto the pledges so backers can see
+        // them. Nothing called this before: the per-provider sync endpoints
+        // existed but had no button and no cron, so a creator could buy a
+        // hundred labels and every backer would still read "not shipped".
+        //
+        // Unlike push_to_fulfillment this takes no pledge selection — there is
+        // no sensible partial answer to "which shipments have tracking yet".
+        const integrations = await db.fulfillmentIntegration.findMany({
+          where: { projectId, status: "CONNECTED" },
+        });
+
+        if (integrations.length === 0) {
+          return NextResponse.json({
+            success: true,
+            synced: 0,
+            message: "No fulfillment service is connected to this campaign.",
+          });
+        }
+
+        let totalSynced = 0;
+        let totalRemaining = 0;
+        let totalAwaiting = 0;
+        const syncedProviders: string[] = [];
+        const syncErrors: string[] = [];
+
+        for (const integration of integrations) {
+          try {
+            if (integration.provider === "SHOPIFY") {
+              const result = await syncShopifyTracking(projectId);
+              totalSynced += result.synced;
+              totalRemaining += result.remaining;
+              totalAwaiting += result.awaitingCompletion;
+              if (result.errors) syncErrors.push(...result.errors.map((e) => `Shopify: ${e}`));
+              if (result.success) syncedProviders.push("Shopify");
+              continue;
+            }
+
+            // The carrier routes each expose the same sync_tracking action.
+            const endpoint = PROVIDER_SYNC_ENDPOINTS[integration.provider];
+            if (!endpoint) continue;
+
+            const response = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || ""}${endpoint}`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Cookie: req.headers.get("cookie") || "",
+              },
+              body: JSON.stringify({ projectId, action: "sync_tracking" }),
+            });
+            const data = await response.json().catch(() => ({}));
+            if (response.ok) {
+              totalSynced += data.synced || 0;
+              totalRemaining += data.remaining || 0;
+              syncedProviders.push(integration.provider);
+            } else {
+              syncErrors.push(`${integration.provider}: ${data.error || "Sync failed"}`);
+            }
+          } catch (providerError) {
+            const message = providerError instanceof Error ? providerError.message : "Unknown error";
+            syncErrors.push(`${integration.provider}: ${message}`);
+            backersLogger.error({ provider: integration.provider, err: message }, "Tracking sync failed");
+          }
+        }
+
+        if (totalSynced > 0) {
+          await db.fulfillmentActivity.create({
+            data: {
+              projectId,
+              // ORDER_SHIPPED rather than a new enum member: tracking
+              // arriving IS the order shipping, and adding a value to a
+              // Postgres enum would mean another migration for no gain.
+              type: "ORDER_SHIPPED",
+              title: `Tracking synced for ${totalSynced} order(s)`,
+              affectedCount: totalSynced,
+              metadata: {
+                providers: syncedProviders,
+                synced: totalSynced,
+                remaining: totalRemaining,
+                awaitingCompletion: totalAwaiting,
+                errors: syncErrors.slice(0, 20),
+              },
+            },
+          });
+        }
+
+        const parts = [
+          totalSynced > 0
+            ? `Tracking updated for ${totalSynced} order(s).`
+            : "No new tracking numbers were available.",
+        ];
+        if (totalAwaiting > 0) {
+          parts.push(
+            `${totalAwaiting} Shopify draft order(s) still need completing before they can be fulfilled.`
+          );
+        }
+        if (totalRemaining > 0) {
+          parts.push(`${totalRemaining} order(s) not checked yet — run it again to continue.`);
+        }
+
+        return NextResponse.json({
+          success: true,
+          synced: totalSynced,
+          remaining: totalRemaining,
+          awaitingCompletion: totalAwaiting,
+          providers: syncedProviders,
+          errors: syncErrors.length > 0 ? syncErrors.slice(0, 10) : undefined,
+          message: parts.join(" "),
+        });
       }
 
       case "mark_shipped": {

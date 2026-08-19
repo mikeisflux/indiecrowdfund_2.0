@@ -11,6 +11,7 @@ import { z } from "zod";
 import { circuitBreaker } from "@/lib/circuit-breaker";
 import { resolvePledgeShippingAddress } from "@/lib/fulfillment/shipping-address";
 import { resolveShipStationCredentials } from "@/lib/fulfillment/shipstation-credentials";
+import { syncShipStationTracking } from "@/lib/fulfillment/shipstation-tracking";
 
 const actionSchema = z.object({
   projectId: z.string(),
@@ -304,70 +305,16 @@ export async function POST(req: NextRequest) {
       }
 
       case "sync_tracking": {
-        // Sync tracking information from ShipStation.
-        // Prisma 7 rejects `{ field: { not: null } }` on nullable string
-        // fields at runtime — use `NOT: { field: null }` wrapper instead.
-        const pledgesWithOrders = await db.pledge.findMany({
-          where: {
-            projectId,
-            NOT: { externalOrderId: null },
-            fulfillmentStatus: { in: ["IN_PROGRESS", "PROCESSING"] },
-          },
-        });
-
-        const updated = [];
-        const startedAt = Date.now();
-        let remaining = 0;
-
-        for (const pledge of pledgesWithOrders) {
-          if (Date.now() - startedAt > PUSH_BUDGET_MS) {
-            remaining = pledgesWithOrders.length - updated.length;
-            break;
-          }
-          try {
-            // Tracking comes from the shipments endpoint, not the order.
-            //
-            // This used to GET /orders/{orderId} and read `order.shipments`.
-            // A V1 order object carries no shipments array, so the check was
-            // always false: tracking numbers were never written and nothing
-            // was ever marked SHIPPED, no matter how much had gone out. That
-            // is why a fulfilment partner could not signal shipped status back
-            // to the platform for backers to see.
-            const response = await shipStationFetch(
-              `https://ssapi.shipstation.com/shipments?orderId=${encodeURIComponent(
-                String(pledge.externalOrderId)
-              )}`,
-              { headers: { Authorization: authHeader } }
-            );
-
-            if (response.ok) {
-              const body = await response.json();
-              // Voided shipments are returned by default and must be skipped,
-              // or a cancelled label would mark the pledge shipped.
-              const shipment = (body.shipments || []).find(
-                (s: { voided?: boolean; trackingNumber?: string | null }) =>
-                  !s.voided && s.trackingNumber
-              );
-              if (shipment) {
-                await db.pledge.update({
-                  where: { id: pledge.id },
-                  data: {
-                    trackingNumber: shipment.trackingNumber,
-                    fulfillmentStatus: "SHIPPED",
-                  },
-                });
-                updated.push(pledge.id);
-              }
-            }
-          } catch {
-            // Continue with other pledges
-          }
+        // Delegates to the shared library so the unattended cron can run the
+        // same sync — it has no session and cannot come through this route.
+        const result = await syncShipStationTracking(projectId, project.creatorId);
+        if (!result.success) {
+          return NextResponse.json({ error: result.error }, { status: 400 });
         }
-
         return NextResponse.json({
-          synced: updated.length,
-          pledgeIds: updated,
-          remaining,
+          synced: result.synced,
+          pledgeIds: result.pledgeIds,
+          remaining: result.remaining,
         });
       }
 

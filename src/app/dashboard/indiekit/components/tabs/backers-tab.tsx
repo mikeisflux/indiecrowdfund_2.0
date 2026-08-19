@@ -48,6 +48,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Search,
   Download,
+  RefreshCw,
   Send,
   MoreHorizontal,
   Eye,
@@ -124,6 +125,7 @@ export function BackersTab({
   const [isCharging, setIsCharging] = useState(false);
   const [chargeProgress, setChargeProgress] = useState(0);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isSyncingTracking, setIsSyncingTracking] = useState(false);
 
   // SKU Mappings state
   const [skuMappings, setSkuMappings] = useState<SkuMapping[]>([]);
@@ -432,6 +434,38 @@ export function BackersTab({
     await performBulkAction("mark_shipped", "Marked {count} orders as shipped");
   };
 
+  // Pull tracking back from the connected carriers. Deliberately not a bulk
+  // action on selected rows: the question is "which shipments have tracking
+  // now", and that isn't something you can select in advance.
+  const handleSyncTracking = async () => {
+    if (!projectId) {
+      toast.error("No project selected");
+      return;
+    }
+    setIsSyncingTracking(true);
+    try {
+      const res = await apiFetch("/api/creator/indiekit/backers", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "sync_tracking", projectId }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Sync failed");
+      if (data.synced > 0) {
+        toast.success(data.message);
+      } else {
+        // Nothing new is a normal outcome, not a failure — say so without
+        // dressing it up as success.
+        toast.info(data.message || "No new tracking numbers were available.");
+      }
+      onRefresh?.();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to sync tracking");
+    } finally {
+      setIsSyncingTracking(false);
+    }
+  };
+
   // Handle export
   const handleExport = async () => {
     if (!projectId) {
@@ -596,6 +630,19 @@ export function BackersTab({
               </Button>
             </>
           )}
+          <Button
+            variant="outline"
+            onClick={handleSyncTracking}
+            disabled={isSyncingTracking}
+            title="Fetch tracking numbers from your connected fulfillment services"
+          >
+            {isSyncingTracking ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <RefreshCw className="h-4 w-4 mr-2" />
+            )}
+            Sync Tracking
+          </Button>
           <Button variant="outline" onClick={handleExport}>
             <Download className="h-4 w-4 mr-2" />
             Export

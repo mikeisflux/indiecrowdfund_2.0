@@ -752,3 +752,188 @@ export async function pushOrdersToShopify(
     errors: errors.length > 0 ? errors.slice(0, 5) : undefined,
   };
 }
+
+// ── Tracking sync ───────────────────────────────────────────────────────────
+
+interface ShopifyFulfillment {
+  id: number;
+  status: string | null;
+  shipment_status: string | null;
+  tracking_number: string | null;
+  tracking_company: string | null;
+  tracking_url: string | null;
+  tracking_urls?: string[] | null;
+  created_at?: string | null;
+}
+
+export interface SyncShopifyTrackingResult {
+  success: boolean;
+  message: string;
+  /** Orders that gained (or changed) a tracking number this run. */
+  synced: number;
+  /** Rows whose draft order has not been completed in Shopify yet. */
+  awaitingCompletion: number;
+  /** Not looked at this run because the time budget ran out. */
+  remaining: number;
+  errors?: string[];
+}
+
+// Orders are pushed to Shopify as DRAFT orders and left for the creator to
+// review. A draft has no fulfillments — it has to be completed into a real
+// order first — so the tracking number lives on the completed order, one hop
+// away from the id we stored.
+//
+// ShopifyFulfillmentOrder.shopifyOrderId holds the DRAFT id, and there is no
+// column for the completed order's id. Rather than add one, this reads
+// draft_order.order_id on each pass. That costs one extra call per unshipped
+// order and none at all once a row reaches SHIPPED, since shipped rows are
+// not polled again.
+const SYNC_BUDGET_MS = 45_000;
+
+export async function syncShopifyTracking(projectId: string): Promise<SyncShopifyTrackingResult> {
+  const integration = await db.fulfillmentIntegration.findUnique({
+    where: { projectId_provider: { projectId, provider: "SHOPIFY" } },
+  });
+
+  if (!integration || integration.status !== "CONNECTED") {
+    return {
+      success: false,
+      message: "Shopify not connected",
+      synced: 0,
+      awaitingCompletion: 0,
+      remaining: 0,
+      errors: ["Shopify integration not found or not connected"],
+    };
+  }
+
+  const credentials = integration.credentials as { shopDomain: string; accessToken: string };
+  if (!credentials?.shopDomain || !credentials?.accessToken) {
+    return {
+      success: false,
+      message: "Shopify credentials incomplete",
+      synced: 0,
+      awaitingCompletion: 0,
+      remaining: 0,
+      errors: ["Shopify credentials are missing a shop domain or access token"],
+    };
+  }
+
+  // Anything already SHIPPED or DELIVERED is done, and CANCELLED will never
+  // ship. Everything else is worth a look.
+  const rows = await db.shopifyFulfillmentOrder.findMany({
+    where: {
+      projectId,
+      status: { notIn: ["SHIPPED", "DELIVERED", "CANCELLED"] },
+    },
+    orderBy: { pushedAt: "asc" },
+  });
+
+  const errors: string[] = [];
+  let synced = 0;
+  let awaitingCompletion = 0;
+  let remaining = 0;
+  const startedAt = Date.now();
+
+  for (const [index, row] of rows.entries()) {
+    if (Date.now() - startedAt > SYNC_BUDGET_MS) {
+      remaining = rows.length - index;
+      break;
+    }
+
+    try {
+      // 1. Has the draft been completed into a real order yet?
+      const draft = await shopifyFetch<{ draft_order: { id: number; order_id: number | null } }>(
+        credentials.shopDomain,
+        credentials.accessToken,
+        `draft_orders/${encodeURIComponent(row.shopifyOrderId)}.json`
+      );
+
+      const realOrderId = draft.draft_order?.order_id;
+      if (!realOrderId) {
+        awaitingCompletion++;
+        continue;
+      }
+
+      // 2. Read that order's fulfillments.
+      const result = await shopifyFetch<{ fulfillments: ShopifyFulfillment[] }>(
+        credentials.shopDomain,
+        credentials.accessToken,
+        `orders/${realOrderId}/fulfillments.json`
+      );
+
+      // A cancelled fulfillment is a voided label — treating one as shipped
+      // would tell a backer their parcel is on its way when it is not.
+      const fulfillment = (result.fulfillments || [])
+        .filter((f) => f.status !== "cancelled" && f.status !== "error")
+        .find((f) => f.tracking_number);
+
+      if (!fulfillment) continue;
+
+      const trackingUrl =
+        fulfillment.tracking_url || fulfillment.tracking_urls?.[0] || null;
+      const delivered = fulfillment.shipment_status === "delivered";
+
+      await db.$transaction(async (tx) => {
+        await tx.shopifyFulfillmentOrder.update({
+          where: { id: row.id },
+          data: {
+            shopifyFulfillmentId: String(fulfillment.id),
+            trackingNumber: fulfillment.tracking_number,
+            trackingCompany: fulfillment.tracking_company,
+            trackingUrl,
+            status: delivered ? "DELIVERED" : "SHIPPED",
+            fulfilledAt: row.fulfilledAt ?? new Date(),
+            shippedAt: row.shippedAt ?? new Date(),
+            ...(delivered && !row.deliveredAt ? { deliveredAt: new Date() } : {}),
+            lastError: null,
+          },
+        });
+
+        // The backer reads the pledge, not the Shopify record.
+        await tx.pledge.update({
+          where: { id: row.pledgeId },
+          data: {
+            trackingNumber: fulfillment.tracking_number,
+            fulfillmentStatus: delivered ? "DELIVERED" : "SHIPPED",
+          },
+        });
+      });
+
+      synced++;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unknown error";
+      errors.push(`Pledge ${row.pledgeId}: ${message}`);
+      await db.shopifyFulfillmentOrder
+        .update({
+          where: { id: row.id },
+          data: { lastError: message.slice(0, 500), errorCount: { increment: 1 } },
+        })
+        .catch(() => null);
+    }
+  }
+
+  await db.fulfillmentIntegration
+    .update({
+      where: { projectId_provider: { projectId, provider: "SHOPIFY" } },
+      data: { lastSyncAt: new Date(), lastSyncError: errors[0]?.slice(0, 500) ?? null },
+    })
+    .catch(() => null);
+
+  shopifyPushLogger.info(
+    { projectId, synced, awaitingCompletion, remaining, errorCount: errors.length },
+    "Shopify tracking sync completed"
+  );
+
+  return {
+    success: true,
+    message:
+      `Synced tracking for ${synced} order(s).` +
+      (awaitingCompletion > 0
+        ? ` ${awaitingCompletion} still awaiting completion in Shopify — a draft order has to be completed before it can be fulfilled.`
+        : ""),
+    synced,
+    awaitingCompletion,
+    remaining,
+    errors: errors.length > 0 ? errors.slice(0, 5) : undefined,
+  };
+}
