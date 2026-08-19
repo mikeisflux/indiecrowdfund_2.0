@@ -286,25 +286,10 @@ export function PaymentStep() {
     }
   };
 
-  // Check Stripe connection status - DISABLED: Stripe replaced by PayPal
-  // useEffect(() => {
-  //   async function checkStripeStatus() {
-  //     try {
-  //       const response = await fetch("/api/stripe/connect");
-  //       const data = await response.json();
-  //       if (!response.ok) {
-  //         setStripeStatus({ connected: false, onboarded: false, loading: false, error: data.error || "Failed to check status" });
-  //         return;
-  //       }
-  //       setStripeStatus({ connected: data.connected || false, onboarded: data.onboarded || false, loading: false, error: null });
-  //     } catch (error) {
-  //       console.error("Failed to check Stripe status:", error);
-  //       setStripeStatus({ connected: false, onboarded: false, loading: false, error: "Network error checking status" });
-  //     }
-  //   }
-  //   checkStripeStatus();
-  // }, []);
-
+  // Stripe Connect was removed: the /api/stripe/connect endpoints it
+  // called never existed on this app, and payouts run through
+  // DivinityCoin / PayPal / Whop. The commented-out status check that
+  // used to sit here was deleted with the rest of that UI.
   const goalAmount = Number(basics.goalAmount) || 10000;
   const hasAdultContent = payment.hasAdultContent || payment.hasRiskyContent;
 
