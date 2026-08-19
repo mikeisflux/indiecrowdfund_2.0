@@ -252,6 +252,25 @@ export async function lookupDcPayment(pledgeId: string): Promise<LookupPaymentRe
     return { success: false, error: "DivinityCoin returned an incomplete payment lookup" };
   }
 
+  // `reconciled: false` means DC could not reach Stripe for at least one
+  // attempt, so `hasSuccessfulCharge: false` means "unknown", not "nothing
+  // was charged". That distinction is the whole safety margin here, so it is
+  // enforced in the helper rather than left to each caller to remember: the
+  // one dangerous combination never escapes as a success. An absent field is
+  // treated as reconciled — older responses predate it — but an explicit
+  // false is honoured.
+  const reconciled = data.reconciled !== false;
+  if (!reconciled && !data.hasSuccessfulCharge) {
+    log.warn(
+      { pledgeId },
+      "[DivinityCoin] lookup-payment could not reconcile every attempt against Stripe; treating as unknown"
+    );
+    return {
+      success: false,
+      error: "DivinityCoin could not confirm every attempt against Stripe",
+    };
+  }
+
   const attempts: DcPaymentAttempt[] = Array.isArray(data.attempts)
     ? (data.attempts as DcPaymentAttempt[])
     : [];
@@ -265,6 +284,7 @@ export async function lookupDcPayment(pledgeId: string): Promise<LookupPaymentRe
   return {
     success: true,
     hasSuccessfulCharge: data.hasSuccessfulCharge,
+    reconciled,
     paymentIntentId,
     attempts,
   };

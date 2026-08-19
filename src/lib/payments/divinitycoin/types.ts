@@ -181,8 +181,18 @@ export type LookupPaymentResult =
   | { success: false; error: string }
   | {
       success: true;
-      /** DC's own verdict. Authoritative — do not re-derive it from attempts. */
+      /**
+       * DC's own verdict. Authoritative — do not re-derive it from attempts.
+       *
+       * Only meaningful when `reconciled` is true. DC returns
+       * `reconciled: false` when it could not reach Stripe for at least one
+       * attempt, and in that case a `false` here means "unknown", not "no
+       * charge exists". lookupDcPayment refuses to return that combination
+       * at all, so any caller holding a `success: true` result can trust it.
+       */
       hasSuccessfulCharge: boolean;
+      /** False when DC could not confirm every attempt against live Stripe. */
+      reconciled: boolean;
       /** PI of the successful attempt, when there is one. */
       paymentIntentId: string | null;
       attempts: DcPaymentAttempt[];
