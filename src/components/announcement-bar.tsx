@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { usePathname } from "next/navigation";
 import { X } from "lucide-react";
+import { readStorage, removeStorage, writeStorage } from "@/lib/safe-storage";
 
 interface AnnouncementBarData {
   id: string;
@@ -21,19 +22,15 @@ interface AnnouncementBarProps {
 const DISMISSED_KEY_PREFIX = "announcement_dismissed_";
 
 function isDismissedInStorage(id: string): boolean {
-  try {
-    const dismissedTime = localStorage.getItem(`${DISMISSED_KEY_PREFIX}${id}`);
-    if (dismissedTime) {
-      const dismissedAt = parseInt(dismissedTime, 10);
-      const now = Date.now();
-      const twentyFourHours = 24 * 60 * 60 * 1000;
-      if (now - dismissedAt < twentyFourHours) {
-        return true;
-      }
-      localStorage.removeItem(`${DISMISSED_KEY_PREFIX}${id}`);
+  const dismissedTime = readStorage("local", `${DISMISSED_KEY_PREFIX}${id}`);
+  if (dismissedTime) {
+    const dismissedAt = parseInt(dismissedTime, 10);
+    const now = Date.now();
+    const twentyFourHours = 24 * 60 * 60 * 1000;
+    if (now - dismissedAt < twentyFourHours) {
+      return true;
     }
-  } catch {
-    // localStorage may not be available
+    removeStorage("local", `${DISMISSED_KEY_PREFIX}${id}`);
   }
   return false;
 }
@@ -48,7 +45,15 @@ function SingleAnnouncementBar({ announcement }: { announcement: AnnouncementBar
   }, [announcement.id]);
 
   const handleDismiss = useCallback(() => {
-    localStorage.setItem(`${DISMISSED_KEY_PREFIX}${announcement.id}`, Date.now().toString());
+    // Guarded for the same reason the read above is. In an Android WebView
+    // with storage disabled, `localStorage` is null rather than throwing on
+    // access, so this was an uncaught "Cannot read properties of null
+    // (reading 'setItem')" that aborted the handler before setIsDismissed —
+    // the bar refused to close and the reader just kept tapping the X.
+    //
+    // Dismissal has to happen whether or not it can be remembered: closing
+    // the bar is what the reader asked for, persisting it is the nicety.
+    writeStorage("local", `${DISMISSED_KEY_PREFIX}${announcement.id}`, Date.now().toString());
     setIsDismissed(true);
   }, [announcement.id]);
 

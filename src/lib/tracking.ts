@@ -4,6 +4,7 @@
 // Respects user consent preferences from the consent banner
 
 import { getConsentPreferences } from "@/lib/consent";
+import { readStorage, writeStorage } from "@/lib/safe-storage";
 
 type EventType =
   | "PAGE_VIEW"
@@ -68,10 +69,14 @@ interface TrackingEvent {
 function getSessionId(): string {
   if (typeof window === "undefined") return "";
 
-  let sessionId = sessionStorage.getItem("tracking_session_id");
+  // Unguarded sessionStorage access here would throw on every page view in a
+  // WebView with storage disabled, taking the whole tracking call with it.
+  // Without storage the id simply doesn't persist across navigations, which
+  // costs some session stitching and breaks nothing.
+  let sessionId = readStorage("session", "tracking_session_id");
   if (!sessionId) {
     sessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    sessionStorage.setItem("tracking_session_id", sessionId);
+    writeStorage("session", "tracking_session_id", sessionId);
   }
   return sessionId;
 }
