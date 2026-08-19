@@ -199,6 +199,12 @@ export async function GET(
         canRequestRefund: !locked && pledge.status === "COMPLETED" && campaignClosed && !pledge.refundRequest,
         canModify: !locked && campaignActive && (pledge.status === "PENDING" || pledge.status === "COMPLETED"),
         canIncrease: !locked && campaignActive,
+        // Tracking, so the backer can follow their own parcel from the page
+        // they already open to check on their pledge.
+        fulfillmentStatus: pledge.fulfillmentStatus,
+        trackingNumber: pledge.trackingNumber,
+        trackingCarrier: pledge.trackingCarrier,
+        trackingUrl: pledge.trackingUrl,
         locked,
         isFunded,
         campaignClosed,

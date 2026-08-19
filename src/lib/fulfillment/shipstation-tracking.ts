@@ -3,6 +3,7 @@ import { logger } from "@/lib/logger";
 import { formatError } from "@/lib/errors";
 import { circuitBreaker } from "@/lib/circuit-breaker";
 import { resolveShipStationCredentials } from "@/lib/fulfillment/shipstation-credentials";
+import { normalizeCarrier } from "@/lib/fulfillment/tracking-url";
 
 const log = logger.child({ module: "shipstation-tracking" });
 
@@ -110,9 +111,22 @@ export async function syncShipStationTracking(
       );
       if (!shipment) continue;
 
+      // carrierCode is what ShipStation calls the carrier ("ups", "fedex",
+      // "stamps_com"). Storing it lets the backer dashboard build a real
+      // tracking link instead of guessing from the number's shape.
+      const carrierCode: string | null = shipment.carrierCode ?? null;
+      const carrier = normalizeCarrier(carrierCode);
+
       await db.pledge.update({
         where: { id: pledge.id },
-        data: { trackingNumber: shipment.trackingNumber, fulfillmentStatus: "SHIPPED" },
+        data: {
+          trackingNumber: shipment.trackingNumber,
+          trackingCarrier: carrierCode,
+          trackingUrl: carrier
+            ? carrier.url(encodeURIComponent(String(shipment.trackingNumber)))
+            : null,
+          fulfillmentStatus: "SHIPPED",
+        },
       });
       updated.push(pledge.id);
     } catch (error) {

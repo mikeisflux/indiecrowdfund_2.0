@@ -110,6 +110,9 @@ interface BackedProject {
   };
   estimatedDelivery: string | null;
   fulfillmentStatus: string;
+  trackingNumber: string | null;
+  trackingCarrier: string | null;
+  trackingUrl: string | null;
   surveyCompleted: boolean;
   hasSurvey: boolean;
   updates: number;
@@ -171,6 +174,8 @@ interface ReviewData {
   reviewTitle: string | null;
   reviewBody: string | null;
 }
+
+import { TrackingLink } from "@/components/fulfillment/tracking-link";
 
 export default function BackerDashboard() {
   const searchParams = useSearchParams();
@@ -969,6 +974,16 @@ export default function BackerDashboard() {
                                   <span className="text-muted-foreground">Reward:</span>
                                   <span className="font-semibold">{project.pledge.reward}</span>
                                 </div>
+                                {project.trackingNumber && (
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-muted-foreground">Tracking:</span>
+                                    <TrackingLink
+                                      trackingNumber={project.trackingNumber}
+                                      trackingCarrier={project.trackingCarrier}
+                                      trackingUrl={project.trackingUrl}
+                                    />
+                                  </div>
+                                )}
                                 {project.estimatedDelivery && (
                                   <div className="flex items-center gap-2">
                                     <Calendar className="h-4 w-4 text-blue-500" />
@@ -1303,11 +1318,20 @@ export default function BackerDashboard() {
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium truncate group-hover:text-primary transition-colors">{project.title}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {project.estimatedDelivery
-                              ? `Est. ${new Date(project.estimatedDelivery).toLocaleDateString("en-US", { month: "short", year: "numeric" })}`
-                              : "Delivery TBD"}
-                          </p>
+                          {project.trackingNumber ? (
+                            <TrackingLink
+                              compact
+                              trackingNumber={project.trackingNumber}
+                              trackingCarrier={project.trackingCarrier}
+                              trackingUrl={project.trackingUrl}
+                            />
+                          ) : (
+                            <p className="text-xs text-muted-foreground">
+                              {project.estimatedDelivery
+                                ? `Est. ${new Date(project.estimatedDelivery).toLocaleDateString("en-US", { month: "short", year: "numeric" })}`
+                                : "Delivery TBD"}
+                            </p>
+                          )}
                         </div>
                       </div>
                     ))

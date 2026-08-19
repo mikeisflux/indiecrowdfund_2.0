@@ -254,6 +254,11 @@ export async function GET() {
         },
         estimatedDelivery: pledge.reward?.estimatedDelivery || null,
         fulfillmentStatus: pledge.fulfillmentStatus,
+        // Tracking, so a backer can follow their own parcel instead of
+        // emailing the creator to ask where it is.
+        trackingNumber: pledge.trackingNumber,
+        trackingCarrier: pledge.trackingCarrier,
+        trackingUrl: pledge.trackingUrl,
         surveyCompleted: pledge.surveyCompleted,
         hasSurvey: projectsWithSurveys.has(pledge.project.id),
         updates: pledge.project._count.updates,

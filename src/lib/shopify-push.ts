@@ -894,6 +894,10 @@ export async function syncShopifyTracking(projectId: string): Promise<SyncShopif
           where: { id: row.pledgeId },
           data: {
             trackingNumber: fulfillment.tracking_number,
+            // Shopify hands back both, so the backer's link is the carrier's
+            // own URL rather than one built from a guess.
+            trackingCarrier: fulfillment.tracking_company,
+            trackingUrl,
             fulfillmentStatus: delivered ? "DELIVERED" : "SHIPPED",
           },
         });

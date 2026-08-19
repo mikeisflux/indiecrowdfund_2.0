@@ -113,6 +113,13 @@ model Pledge {
   // so Prisma rejected the query and each push failed before it started.
   externalOrderId String?
   trackingNumber  String?
+  // Who is carrying it, and where to look. Stored rather than guessed from
+  // the number's shape: Shopify hands back a tracking_url outright and
+  // ShipStation names the carrier, and a link built from what the carrier
+  // actually said beats one inferred from a digit pattern. Both optional —
+  // a number with no carrier still renders, just as plain text.
+  trackingCarrier String?
+  trackingUrl     String?
 
   // When we LAST sent the "rate your creator" nudge. The nudge re-sends on
   // a weekly cadence (see RATING_REMINDER_* in rating-request.ts) until the
