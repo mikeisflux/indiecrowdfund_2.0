@@ -3,50 +3,50 @@
 // ============================================
 
 model PlatformSettings {
-  id                    String   @id @default("default")
+  id String @id @default("default")
 
   // General Settings
-  siteName              String   @default("IndieCrowdfund")
-  siteDescription       String?  @db.Text
-  supportEmail          String   @default("support@indiecrowdfund.com")
-  timezone              String   @default("America/New_York")
-  currency              String   @default("USD")
-  platformFee           Float    @default(5)
-  maintenanceMode       Boolean  @default(false)
+  siteName            String    @default("IndieCrowdfund")
+  siteDescription     String?   @db.Text
+  supportEmail        String    @default("support@indiecrowdfund.com")
+  timezone            String    @default("America/New_York")
+  currency            String    @default("USD")
+  platformFee         Float     @default(5)
+  maintenanceMode     Boolean   @default(false)
   // Scheduled maintenance. When a window is set, the site goes down at
   // maintenanceStartsAt and comes back on its own at maintenanceEndsAt without
   // anyone needing to be awake to flip the switch back. maintenanceMode on its
   // own (no window) is an immediate, open-ended outage.
-  maintenanceStartsAt   DateTime?
-  maintenanceEndsAt     DateTime?
-  maintenanceMessage    String?  @db.Text
-  logoUrl               String?
-  faviconUrl            String?
+  maintenanceStartsAt DateTime?
+  maintenanceEndsAt   DateTime?
+  maintenanceMessage  String?   @db.Text
+  logoUrl             String?
+  faviconUrl          String?
 
   // API Keys (encrypted in production)
-  googlePlacesApiKey    String?
+  googlePlacesApiKey String?
 
   // Stripe Settings
-  stripeEnabled         Boolean  @default(true)
-  stripeSecretKey       String?  @db.Text
-  stripePublishableKey  String?
-  stripeWebhookSecret   String?
-  stripeConnectWebhookSecret String?  // Separate webhook secret for Stripe Connect events
+  stripeEnabled              Boolean @default(true)
+  stripeSecretKey            String? @db.Text
+  stripePublishableKey       String?
+  stripeWebhookSecret        String?
+  stripeConnectWebhookSecret String? // Separate webhook secret for Stripe Connect events
 
   // DivinityCoin Settings - Universal credit redemption payment solution
-  divinityCoinEnabled   Boolean  @default(false)
-  divinityCoinApiKey    String?
-  divinityCoinWebhookSecret String?
-  divinityCoinPartnerId String?
-  divinityCoinSettlementFrequency String @default("weekly")
-  divinityCoinStripePublishableKey String?  // DC's Stripe publishable key for rendering card form
+  divinityCoinEnabled              Boolean @default(false)
+  divinityCoinApiKey               String?
+  divinityCoinWebhookSecret        String?
+  divinityCoinPartnerId            String?
+  divinityCoinSettlementFrequency  String  @default("weekly")
+  divinityCoinStripePublishableKey String? // DC's Stripe publishable key for rendering card form
 
   // PayPal Settings
-  paypalEnabled         Boolean  @default(false)
-  paypalClientId        String?
-  paypalClientSecret    String?  @db.Text
-  paypalWebhookId       String?
-  paypalMode            String   @default("live")  // "live" or "sandbox"
+  paypalEnabled      Boolean @default(false)
+  paypalClientId     String?
+  paypalClientSecret String? @db.Text
+  paypalWebhookId    String?
+  paypalMode         String  @default("live") // "live" or "sandbox"
 
   // PayPal Connect Settings (Complete Payments Platform / multiparty marketplace).
   // SEPARATE credentials + webhook from standard PayPal above — the platform's
@@ -59,187 +59,187 @@ model PlatformSettings {
   paypalConnectBnCode            String?
   paypalConnectPartnerMerchantId String?
   paypalConnectWebhookId         String?
-  paypalConnectMode              String  @default("live")  // "live" or "sandbox"
+  paypalConnectMode              String  @default("live") // "live" or "sandbox"
 
   // Whop Settings
-  whopEnabled           Boolean  @default(false)
-  whopApiKey            String?
-  whopPlanId            String?
-  whopCompanyId         String?
-  whopWebhookSecret     String?
-  whopEnvironment       String   @default("production")  // "production" or "sandbox"
+  whopEnabled       Boolean @default(false)
+  whopApiKey        String?
+  whopPlanId        String?
+  whopCompanyId     String?
+  whopWebhookSecret String?
+  whopEnvironment   String  @default("production") // "production" or "sandbox"
 
   // NMI Settings (Network Merchants Inc — direct-post gateway)
   // Used for goal-based all-or-nothing via Customer Vault tokenize-on-pledge,
   // charge-on-success pattern. Lives alongside Stripe etc.; selection is
   // per-creator/per-project via PaymentProcessor enum.
-  nmiEnabled            Boolean  @default(false)
-  nmiSecurityKey        String?  @db.Text   // Server-side API key (encrypted at rest)
-  nmiPublicKey          String?  @db.Text   // Public key for Collect.js / Hosted Fields
-  nmiWebhookSecret      String?  @db.Text   // Webhook signature secret (when configured)
-  nmiEnvironment        String   @default("production")  // "production" or "sandbox"
-  nmiGatewayUrlOverride String?             // For white-label resellers proxying NMI on a custom host
+  nmiEnabled            Boolean @default(false)
+  nmiSecurityKey        String? @db.Text // Server-side API key (encrypted at rest)
+  nmiPublicKey          String? @db.Text // Public key for Collect.js / Hosted Fields
+  nmiWebhookSecret      String? @db.Text // Webhook signature secret (when configured)
+  nmiEnvironment        String  @default("production") // "production" or "sandbox"
+  nmiGatewayUrlOverride String? // For white-label resellers proxying NMI on a custom host
   // Per-transaction gateway fee charged by PaymentCloud (in USD). Subtracted
   // from creator payouts at fee-calculation time. The default 0.25
   // matches the rate on the production merchant account; admins
   // adjust here if their account negotiates a different rate.
-  nmiPerTransactionFee  Float    @default(0.25)
+  nmiPerTransactionFee  Float   @default(0.25)
   // Percentage fee charged by PaymentCloud (decimal, not percentage —
   // 0.04 = 4%). Default is the rate on the production merchant
   // account; admins adjust if their account negotiates a different rate.
-  nmiPercentageFee      Float    @default(0.04)
+  nmiPercentageFee      Float   @default(0.04)
 
   // Payout Settings
-  autoPayouts           Boolean  @default(false)
+  autoPayouts Boolean @default(false)
 
   // Email Settings
-  emailProvider         String   @default("sendgrid")
-  smtpHost              String?
-  smtpPort              Int      @default(587)
-  smtpUser              String?
-  smtpPassword          String?
-  smtpFromEmail         String?
-  smtpFromName          String?
-  smtpReplyToEmail      String?
-  sendgridApiKey        String?
-  sendgridWebhookVerificationKey String?  // ECDSA public key for verifying SendGrid event webhooks
-  mailgunApiKey         String?
-  mailgunDomain         String?
-  mailgunWebhookSigningKey String?  // Mailgun webhook signing key for verifying event webhooks
-  emailVerificationRequired Boolean @default(false)
-  welcomeEmailEnabled   Boolean  @default(true)
-  pledgeConfirmationEnabled Boolean @default(true)
-  projectUpdateNotifications Boolean @default(true)
+  emailProvider                  String  @default("sendgrid")
+  smtpHost                       String?
+  smtpPort                       Int     @default(587)
+  smtpUser                       String?
+  smtpPassword                   String?
+  smtpFromEmail                  String?
+  smtpFromName                   String?
+  smtpReplyToEmail               String?
+  sendgridApiKey                 String?
+  sendgridWebhookVerificationKey String? // ECDSA public key for verifying SendGrid event webhooks
+  mailgunApiKey                  String?
+  mailgunDomain                  String?
+  mailgunWebhookSigningKey       String? // Mailgun webhook signing key for verifying event webhooks
+  emailVerificationRequired      Boolean @default(false)
+  welcomeEmailEnabled            Boolean @default(true)
+  pledgeConfirmationEnabled      Boolean @default(true)
+  projectUpdateNotifications     Boolean @default(true)
 
   // Email Queue Settings
-  emailQueueEnabled     Boolean  @default(true)  // Enable/disable email queue processing
-  emailQueuePausedAt    DateTime?  // Timestamp when queue was paused
+  emailQueueEnabled  Boolean   @default(true) // Enable/disable email queue processing
+  emailQueuePausedAt DateTime? // Timestamp when queue was paused
 
   // Social Settings
-  twitterHandle         String?
-  facebookUrl           String?
-  instagramHandle       String?
-  youtubeUrl            String?
-  discordUrl            String?
+  twitterHandle   String?
+  facebookUrl     String?
+  instagramHandle String?
+  youtubeUrl      String?
+  discordUrl      String?
 
   // Social OAuth Settings
-  facebookAppId         String?
-  facebookAppSecret     String?
+  facebookAppId           String?
+  facebookAppSecret       String?
   facebookPageAccessToken String?
-  youtubeClientId       String?
-  youtubeClientSecret   String?
-  youtubeApiKey         String?
-  twitterApiKey         String?
-  twitterApiSecret      String?
-  twitterBearerToken    String?
-  twitterAccessToken    String?
-  twitterAccessSecret   String?
+  youtubeClientId         String?
+  youtubeClientSecret     String?
+  youtubeApiKey           String?
+  twitterApiKey           String?
+  twitterApiSecret        String?
+  twitterBearerToken      String?
+  twitterAccessToken      String?
+  twitterAccessSecret     String?
 
   // Image Generation API Keys
-  dalleApiKey           String?  // Deprecated - kept for DB compatibility
-  stabilityApiKey       String?
+  dalleApiKey     String? // Deprecated - kept for DB compatibility
+  stabilityApiKey String?
 
   // Social Auto-Posting Settings
-  autoPostEnabled       Boolean  @default(false)
-  postApprovalRequired  Boolean  @default(true)
+  autoPostEnabled      Boolean @default(false)
+  postApprovalRequired Boolean @default(true)
 
   // AI Settings
-  aiProvider            String   @default("anthropic")
-  openaiApiKey          String?  // Deprecated - kept for DB compatibility
-  anthropicApiKey       String?
-  aiAutoModeration      Boolean  @default(false)
-  aiAutoTagging         Boolean  @default(false)
-  aiContentGeneration   Boolean  @default(false)
-  aiFraudDetection      Boolean  @default(true)
+  aiProvider          String  @default("anthropic")
+  openaiApiKey        String? // Deprecated - kept for DB compatibility
+  anthropicApiKey     String?
+  aiAutoModeration    Boolean @default(false)
+  aiAutoTagging       Boolean @default(false)
+  aiContentGeneration Boolean @default(false)
+  aiFraudDetection    Boolean @default(true)
 
   // AI Marketing Settings
-  aiAutoTagConfidence   Int      @default(75)
-  aiMaxTags             Int      @default(5)
+  aiAutoTagConfidence    Int     @default(75)
+  aiMaxTags              Int     @default(5)
   aiEmailPersonalization Boolean @default(false)
-  aiBehaviorTracking    Boolean  @default(false)
-  aiPredictiveAnalytics Boolean  @default(false)
-  aiSmartSegmentation   Boolean  @default(false)
-  aiAutoOptimization    Boolean  @default(false)
+  aiBehaviorTracking     Boolean @default(false)
+  aiPredictiveAnalytics  Boolean @default(false)
+  aiSmartSegmentation    Boolean @default(false)
+  aiAutoOptimization     Boolean @default(false)
   aiSendTimeOptimization Boolean @default(false)
-  aiContentOptimization Boolean  @default(false)
-  aiAbTesting           Boolean  @default(false)
-  aiEmailFrequencyCap   Int      @default(3)
-  aiDailyEmailLimit     Int      @default(500)
-  aiQuietHoursStart     String   @default("22:00")
-  aiQuietHoursEnd       String   @default("08:00")
-  aiCronSchedules       String?  @db.Text // JSON string for cron job schedules
+  aiContentOptimization  Boolean @default(false)
+  aiAbTesting            Boolean @default(false)
+  aiEmailFrequencyCap    Int     @default(3)
+  aiDailyEmailLimit      Int     @default(500)
+  aiQuietHoursStart      String  @default("22:00")
+  aiQuietHoursEnd        String  @default("08:00")
+  aiCronSchedules        String? @db.Text // JSON string for cron job schedules
 
   // Behavior Tracking Settings
-  aiTrackPageViews      Boolean  @default(true)
-  aiTrackScrollDepth    Boolean  @default(false)
-  aiTrackTimeOnPage     Boolean  @default(true)
-  aiTrackClicks         Boolean  @default(true)
-  aiTrackHovers         Boolean  @default(false)
-  aiTrackFormInteractions Boolean @default(false)
-  aiTrackVideoEngagement Boolean @default(false)
+  aiTrackPageViews         Boolean @default(true)
+  aiTrackScrollDepth       Boolean @default(false)
+  aiTrackTimeOnPage        Boolean @default(true)
+  aiTrackClicks            Boolean @default(true)
+  aiTrackHovers            Boolean @default(false)
+  aiTrackFormInteractions  Boolean @default(false)
+  aiTrackVideoEngagement   Boolean @default(false)
   aiTrackRewardComparisons Boolean @default(false)
-  aiTrackAbandonedCarts Boolean  @default(true)
-  aiSessionRecording    Boolean  @default(false)
-  aiHeatmaps            Boolean  @default(false)
-  aiFunnelAnalysis      Boolean  @default(true)
-  aiRetentionDays       Int      @default(90)
+  aiTrackAbandonedCarts    Boolean @default(true)
+  aiSessionRecording       Boolean @default(false)
+  aiHeatmaps               Boolean @default(false)
+  aiFunnelAnalysis         Boolean @default(true)
+  aiRetentionDays          Int     @default(90)
 
   // ID Verification Settings (Shufti Pro)
-  idVerificationEnabled Boolean  @default(false)
+  idVerificationEnabled Boolean @default(false)
   shuftiClientId        String?
   shuftiSecretKey       String?
   shuftiCallbackUrl     String?
   shuftiRedirectUrl     String?
-  idVerificationMinAge  Int      @default(18)
-  idVerificationMode    String   @default("production") // "sandbox" or "production"
+  idVerificationMinAge  Int     @default(18)
+  idVerificationMode    String  @default("production") // "sandbox" or "production"
 
   // Security Settings
-  twoFactorRequired     Boolean  @default(false)
-  sessionTimeout        Int      @default(7)
-  maxLoginAttempts      Int      @default(5)
-  passwordMinLength     Int      @default(8)
-  requireSpecialChars   Boolean  @default(true)
+  twoFactorRequired              Boolean @default(false)
+  sessionTimeout                 Int     @default(7)
+  maxLoginAttempts               Int     @default(5)
+  passwordMinLength              Int     @default(8)
+  requireSpecialChars            Boolean @default(true)
   // Global Rate Limiting (for general API requests)
-  globalRateLimitEnabled    Boolean  @default(true)
-  globalRateLimitRequests   Int      @default(100)
-  globalRateLimitWindow     Int      @default(60)
+  globalRateLimitEnabled         Boolean @default(true)
+  globalRateLimitRequests        Int     @default(100)
+  globalRateLimitWindow          Int     @default(60)
   // Login/Sensitive Endpoint Rate Limiting
-  loginRateLimitEnabled     Boolean  @default(true)
-  loginRateLimitRequests    Int      @default(5)
-  loginRateLimitWindow      Int      @default(300)
+  loginRateLimitEnabled          Boolean @default(true)
+  loginRateLimitRequests         Int     @default(5)
+  loginRateLimitWindow           Int     @default(300)
   // Password Reset Rate Limiting
-  passwordResetRateLimitRequests  Int  @default(3)
-  passwordResetRateLimitWindow    Int  @default(900)
+  passwordResetRateLimitRequests Int     @default(3)
+  passwordResetRateLimitWindow   Int     @default(900)
   // Legacy fields (kept for backwards compatibility)
-  ipRateLimitEnabled    Boolean  @default(true)
-  ipRateLimitRequests   Int      @default(100)
-  ipRateLimitWindow     Int      @default(60)
-  csrfProtection        Boolean  @default(true)
-  contentSecurityPolicy Boolean  @default(true)
+  ipRateLimitEnabled             Boolean @default(true)
+  ipRateLimitRequests            Int     @default(100)
+  ipRateLimitWindow              Int     @default(60)
+  csrfProtection                 Boolean @default(true)
+  contentSecurityPolicy          Boolean @default(true)
 
   // reCAPTCHA Bot Protection
-  recaptchaEnabled      Boolean  @default(false)
-  recaptchaSiteKey      String?
-  recaptchaSecretKey    String?
+  recaptchaEnabled   Boolean @default(false)
+  recaptchaSiteKey   String?
+  recaptchaSecretKey String?
 
   // Google Analytics / Tag Manager
-  gaEnabled             Boolean  @default(false)
-  googleAnalyticsId     String?  // GA4 Measurement ID (G-XXXXXXXXXX)
-  gtmEnabled            Boolean  @default(false)
-  googleTagManagerId    String?  // GTM Container ID (GTM-XXXXXXX)
+  gaEnabled          Boolean @default(false)
+  googleAnalyticsId  String? // GA4 Measurement ID (G-XXXXXXXXXX)
+  gtmEnabled         Boolean @default(false)
+  googleTagManagerId String? // GTM Container ID (GTM-XXXXXXX)
 
   // Theme Settings
-  primaryColor          String   @default("#0066FF")
-  secondaryColor        String   @default("#6366F1")
-  accentColor           String   @default("#F59E0B")
-  backgroundColor       String   @default("#FFFFFF")
-  textColor             String   @default("#1F2937")
-  fontFamily            String   @default("Inter")
-  borderRadius          String   @default("8")
+  primaryColor    String @default("#0066FF")
+  secondaryColor  String @default("#6366F1")
+  accentColor     String @default("#F59E0B")
+  backgroundColor String @default("#FFFFFF")
+  textColor       String @default("#1F2937")
+  fontFamily      String @default("Inter")
+  borderRadius    String @default("8")
 
   // Klipy GIF Settings (powers GIF picker in chat)
-  klipyEnabled          Boolean  @default(false)
-  klipyApiKey           String?
+  klipyEnabled Boolean @default(false)
+  klipyApiKey  String?
 
   // Cloudflare Stream — powers RTMP launch parties on creator chat
   // rooms. Creators paste the ingest URL + stream key we mint into
@@ -247,25 +247,25 @@ model PlatformSettings {
   // through Cloudflare's CDN inside our embedded player.
   cloudflareStreamEnabled       Boolean @default(false)
   cloudflareAccountId           String?
-  cloudflareStreamApiToken      String?  @db.Text
+  cloudflareStreamApiToken      String? @db.Text
   cloudflareStreamWebhookSecret String?
   // The customer-{xxxx} subdomain shown in the Stream dashboard.
   // Required to build playback manifest URLs.
   cloudflareCustomerId          String?
 
   // Cloudflare R2 Storage Settings
-  r2Enabled             Boolean  @default(false)
-  r2AccountId           String?
-  r2AccessKeyId         String?
-  r2SecretAccessKey     String?
-  r2BucketName          String?
-  r2PublicDomain        String?
-  r2Region              String   @default("auto")
-  maxFileSizeMB         Int      @default(50)
-  maxProjectStorageMB   Int      @default(200)
-  allowedFileTypes      String   @default("pdf,epub,zip,mp3")
-  digitalDownloadsEnabled Boolean @default(false)
-  signedUrlExpirationMinutes Int @default(60)
+  r2Enabled                  Boolean @default(false)
+  r2AccountId                String?
+  r2AccessKeyId              String?
+  r2SecretAccessKey          String?
+  r2BucketName               String?
+  r2PublicDomain             String?
+  r2Region                   String  @default("auto")
+  maxFileSizeMB              Int     @default(50)
+  maxProjectStorageMB        Int     @default(200)
+  allowedFileTypes           String  @default("pdf,epub,zip,mp3")
+  digitalDownloadsEnabled    Boolean @default(false)
+  signedUrlExpirationMinutes Int     @default(60)
 
   // Printing Comics fulfillment integration. The provider's developer
   // docs aren't published yet (printingcomics.com/developers is locked
@@ -274,9 +274,9 @@ model PlatformSettings {
   // between any future sandbox + prod hosts, and a webhook secret
   // slot for whenever they expose order-status callbacks. Add more
   // fields here as the API ships.
-  printingComicsApiKey        String?  @db.Text   // Server-side API key (encrypted at rest)
-  printingComicsWebhookSecret String?  @db.Text   // Webhook signature secret (when exposed)
-  printingComicsEnvironment   String   @default("production") // "production" or "sandbox"
+  printingComicsApiKey        String? @db.Text // Server-side API key (encrypted at rest)
+  printingComicsWebhookSecret String? @db.Text // Webhook signature secret (when exposed)
+  printingComicsEnvironment   String  @default("production") // "production" or "sandbox"
 
   // 24h cache of USD-to-X exchange rates, keyed by ISO currency code.
   // Each entry: { rate: number, fetchedAt: ISO string }. Refreshed
@@ -284,10 +284,10 @@ model PlatformSettings {
   // here rather than in a dedicated FxRate table to skip a migration
   // — there's at most ~30 entries (one per supported creator-country
   // currency) so a JSON blob is fine.
-  fxRatesUsd            Json?
+  fxRatesUsd Json?
 
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 // ============================================
@@ -295,34 +295,34 @@ model PlatformSettings {
 // ============================================
 
 model BlockedIP {
-  id            String   @id @default(cuid())
-  ipAddress     String   @unique
-  reason        String
-  violationCount Int     @default(1)
-  blockedAt     DateTime @default(now())
-  expiresAt     DateTime
+  id             String   @id @default(cuid())
+  ipAddress      String   @unique
+  reason         String
+  violationCount Int      @default(1)
+  blockedAt      DateTime @default(now())
+  expiresAt      DateTime
 
   // Metadata for debugging
   lastUserAgent String?
   lastPath      String?
   lastActionId  String?
 
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([ipAddress])
   @@index([expiresAt])
 }
 
 model SuspiciousActivity {
-  id            String   @id @default(cuid())
-  ipAddress     String
-  reason        String
-  actionId      String?
-  path          String?
-  userAgent     String?
+  id        String  @id @default(cuid())
+  ipAddress String
+  reason    String
+  actionId  String?
+  path      String?
+  userAgent String?
 
-  createdAt     DateTime @default(now())
+  createdAt DateTime @default(now())
 
   @@index([ipAddress])
   @@index([createdAt])
@@ -333,33 +333,33 @@ model SuspiciousActivity {
 // ============================================
 
 model Report {
-  id            String       @id @default(cuid())
+  id            String  @id @default(cuid())
   reporterId    String?
   reporterEmail String?
 
   // What is being reported
-  targetType    ReportTarget
-  targetId      String
-  projectId     String?
-  userId        String?
+  targetType ReportTarget
+  targetId   String
+  projectId  String?
+  userId     String?
 
   // Report details
-  reason        ReportReason
-  description   String       @db.Text
-  evidence      String[]
+  reason      ReportReason
+  description String       @db.Text
+  evidence    String[]
 
   // Status
-  status        ReportStatus @default(PENDING)
-  priority      ReportPriority @default(MEDIUM)
+  status   ReportStatus   @default(PENDING)
+  priority ReportPriority @default(MEDIUM)
 
   // Resolution
-  resolvedBy    String?
-  resolvedAt    DateTime?
-  resolution    String?      @db.Text
-  actionTaken   ReportAction?
+  resolvedBy  String?
+  resolvedAt  DateTime?
+  resolution  String?       @db.Text
+  actionTaken ReportAction?
 
-  createdAt     DateTime     @default(now())
-  updatedAt     DateTime     @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([status, priority])
   @@index([targetType, targetId])
@@ -418,22 +418,22 @@ enum ReportAction {
 // ============================================
 
 model Notification {
-  id          String             @id @default(cuid())
-  userId      String
-  type        NotificationType
-  title       String
-  message     String
-  read        Boolean            @default(false)
-  actionUrl   String?
+  id        String           @id @default(cuid())
+  userId    String
+  type      NotificationType
+  title     String
+  message   String
+  read      Boolean          @default(false)
+  actionUrl String?
 
   // Related entities (optional)
-  projectId   String?
-  senderId    String?            // For collaborator invites, this would be the project creator
+  projectId String?
+  senderId  String? // For collaborator invites, this would be the project creator
 
-  user        User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  createdAt   DateTime           @default(now())
-  readAt      DateTime?
+  createdAt DateTime  @default(now())
+  readAt    DateTime?
 
   @@index([userId, read])
   @@index([userId, createdAt])
@@ -479,39 +479,39 @@ enum NotificationType {
 // ============================================
 
 model BugReport {
-  id            String           @id @default(cuid())
+  id String @id @default(cuid())
 
   // Reporter info
-  userId        String?          // Optional - can be anonymous
-  name          String?
-  email         String
+  userId String? // Optional - can be anonymous
+  name   String?
+  email  String
 
   // Bug details
-  title         String
-  description   String           @db.Text
-  category      BugCategory      @default(OTHER)
-  severity      BugSeverity      @default(MEDIUM)
-  pageUrl       String?          // URL where bug occurred
-  browser       String?          // Browser info
-  device        String?          // Device info
-  steps         String?          @db.Text // Steps to reproduce
-  expectedBehavior String?       @db.Text
-  actualBehavior   String?       @db.Text
-  screenshot    String?          // URL to screenshot
+  title            String
+  description      String      @db.Text
+  category         BugCategory @default(OTHER)
+  severity         BugSeverity @default(MEDIUM)
+  pageUrl          String? // URL where bug occurred
+  browser          String? // Browser info
+  device           String? // Device info
+  steps            String?     @db.Text // Steps to reproduce
+  expectedBehavior String?     @db.Text
+  actualBehavior   String?     @db.Text
+  screenshot       String? // URL to screenshot
 
   // Status tracking
-  status        BugStatus        @default(NEW)
-  priority      BugPriority      @default(MEDIUM)
-  assignedTo    String?          // Admin user ID
-  resolution    String?          @db.Text
+  status     BugStatus   @default(NEW)
+  priority   BugPriority @default(MEDIUM)
+  assignedTo String? // Admin user ID
+  resolution String?     @db.Text
 
   // Timestamps
-  createdAt     DateTime         @default(now())
-  updatedAt     DateTime         @updatedAt
-  resolvedAt    DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  resolvedAt DateTime?
 
   // Relations
-  user          User?            @relation(fields: [userId], references: [id], onDelete: SetNull)
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@index([status])
   @@index([category])
@@ -560,32 +560,32 @@ enum BugPriority {
 // ============================================
 
 model MediaFile {
-  id            String     @id @default(cuid())
-  uploaderId    String?
-  uploader      User?      @relation(fields: [uploaderId], references: [id], onDelete: SetNull)
+  id         String  @id @default(cuid())
+  uploaderId String?
+  uploader   User?   @relation(fields: [uploaderId], references: [id], onDelete: SetNull)
 
-  filename      String
-  originalName  String
-  mimeType      String
-  size          Int
-  url           String
-  thumbnailUrl  String?
+  filename     String
+  originalName String
+  mimeType     String
+  size         Int
+  url          String
+  thumbnailUrl String?
 
   // Metadata
-  width         Int?
-  height        Int?
-  duration      Int?
+  width    Int?
+  height   Int?
+  duration Int?
 
   // Organization
-  folder        String     @default("uploads")
-  tags          String[]
-  altText       String?
+  folder  String   @default("uploads")
+  tags    String[]
+  altText String?
 
   // Usage tracking
-  usageCount    Int        @default(0)
+  usageCount Int @default(0)
 
-  createdAt     DateTime   @default(now())
-  updatedAt     DateTime   @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([uploaderId])
   @@index([folder])
@@ -597,27 +597,27 @@ model MediaFile {
 // ============================================
 
 model CustomPage {
-  id            String     @id @default(cuid())
-  slug          String     @unique
-  title         String
-  description   String?
+  id          String  @id @default(cuid())
+  slug        String  @unique
+  title       String
+  description String?
 
   // Page content (JSON structure)
-  content       Json
+  content Json
 
   // SEO
-  metaTitle     String?
+  metaTitle       String?
   metaDescription String?
-  ogImage       String?
+  ogImage         String?
 
   // Status
-  isPublished   Boolean    @default(false)
-  publishedAt   DateTime?
+  isPublished Boolean   @default(false)
+  publishedAt DateTime?
 
-  createdBy     String?
+  createdBy String?
 
-  createdAt     DateTime   @default(now())
-  updatedAt     DateTime   @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([slug])
   @@index([isPublished])
@@ -628,33 +628,33 @@ model CustomPage {
 // ============================================
 
 model ApiKey {
-  id            String        @id @default(cuid())
+  id String @id @default(cuid())
 
   // Key details
-  name          String        // Display name for the key
-  key           String        @unique // The actual API key (hashed prefix for display)
-  keyHash       String        // Hashed version of the full key for verification
-  prefix        String        // First 8 chars for identification (e.g., "sk_live_")
+  name    String // Display name for the key
+  key     String @unique // The actual API key (hashed prefix for display)
+  keyHash String // Hashed version of the full key for verification
+  prefix  String // First 8 chars for identification (e.g., "sk_live_")
 
   // Environment
-  environment   ApiEnvironment @default(PRODUCTION)
+  environment ApiEnvironment @default(PRODUCTION)
 
   // Status
-  status        ApiKeyStatus  @default(ACTIVE)
+  status ApiKeyStatus @default(ACTIVE)
 
   // Usage tracking
-  lastUsedAt    DateTime?
-  usageCount    Int           @default(0)
+  lastUsedAt DateTime?
+  usageCount Int       @default(0)
 
   // Timestamps
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
-  expiresAt     DateTime?     // Optional expiration
-  revokedAt     DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  expiresAt DateTime? // Optional expiration
+  revokedAt DateTime?
 
   // Created by admin
-  createdById   String?
-  createdBy     User?         @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  createdById String?
+  createdBy   User?   @relation(fields: [createdById], references: [id], onDelete: SetNull)
 
   @@index([key])
   @@index([prefix])
@@ -679,37 +679,37 @@ enum ApiKeyStatus {
 // ============================================
 
 model IDVerification {
-  id                String                 @id @default(cuid())
-  userId            String
+  id     String @id @default(cuid())
+  userId String
 
   // Shufti Reference
-  shuftiReference   String                 @unique
-  verificationUrl   String?
+  shuftiReference String  @unique
+  verificationUrl String?
 
   // Verification Status
-  status            IDVerificationStatus   @default(PENDING)
+  status IDVerificationStatus @default(PENDING)
 
   // Results
-  isDocumentValid   Boolean?
-  isFaceMatch       Boolean?
-  isAgeVerified     Boolean?
-  detectedAge       Int?
-  documentType      String?
-  documentCountry   String?
+  isDocumentValid Boolean?
+  isFaceMatch     Boolean?
+  isAgeVerified   Boolean?
+  detectedAge     Int?
+  documentType    String?
+  documentCountry String?
 
   // Decline info
-  declineReason     String?
-  declineCodes      String[]
+  declineReason String?
+  declineCodes  String[]
 
   // Raw response (for debugging)
-  rawResponse       Json?
+  rawResponse Json?
 
   // Timestamps
-  requestedAt       DateTime              @default(now())
-  completedAt       DateTime?
-  expiresAt         DateTime?
+  requestedAt DateTime  @default(now())
+  completedAt DateTime?
+  expiresAt   DateTime?
 
-  user              User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([shuftiReference])
@@ -730,13 +730,13 @@ enum IDVerificationStatus {
 // ============================================
 
 model FeatureFlag {
-  id          String   @id @default(cuid())
-  name        String   @unique
-  enabled     Boolean  @default(false)
+  id          String  @id @default(cuid())
+  name        String  @unique
+  enabled     Boolean @default(false)
   description String?
 
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([name])
 }
@@ -746,17 +746,17 @@ model FeatureFlag {
 // ============================================
 
 model DataExportRequest {
-  id          String              @id @default(cuid())
+  id          String           @id @default(cuid())
   userId      String
-  status      DataExportStatus    @default(PENDING)
-  format      String              @default("json") // "json" or "csv"
-  downloadUrl String?             // Signed URL to download the export
-  expiresAt   DateTime?           // When the download link expires
+  status      DataExportStatus @default(PENDING)
+  format      String           @default("json") // "json" or "csv"
+  downloadUrl String? // Signed URL to download the export
+  expiresAt   DateTime? // When the download link expires
   completedAt DateTime?
   error       String?
 
-  createdAt   DateTime            @default(now())
-  updatedAt   DateTime            @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([userId])
   @@index([status])
@@ -775,18 +775,18 @@ enum DataExportStatus {
 // ============================================
 
 model DataDeletionRequest {
-  id              String                @id @default(cuid())
-  userId          String
-  userEmail       String                // Preserved for audit even after user deletion
-  status          DataDeletionStatus    @default(PENDING)
-  reason          String?
-  scheduledFor    DateTime              // When the deletion will be executed (grace period)
-  executedAt      DateTime?
-  cancelledAt     DateTime?
-  auditLog        Json?                 // Summary of what was deleted
+  id           String             @id @default(cuid())
+  userId       String
+  userEmail    String // Preserved for audit even after user deletion
+  status       DataDeletionStatus @default(PENDING)
+  reason       String?
+  scheduledFor DateTime // When the deletion will be executed (grace period)
+  executedAt   DateTime?
+  cancelledAt  DateTime?
+  auditLog     Json? // Summary of what was deleted
 
-  createdAt       DateTime              @default(now())
-  updatedAt       DateTime              @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([userId])
   @@index([status])
@@ -806,16 +806,16 @@ enum DataDeletionStatus {
 // ============================================
 
 model CcpaOptOut {
-  id          String   @id @default(cuid())
-  userId      String?  // Null for anonymous opt-outs
-  email       String?  // For verification
-  ipAddress   String?  // For anonymous opt-outs
-  optOutType  String   @default("analytics") // "analytics", "sale", "all"
-  optedOutAt  DateTime @default(now())
+  id           String    @id @default(cuid())
+  userId       String? // Null for anonymous opt-outs
+  email        String? // For verification
+  ipAddress    String? // For anonymous opt-outs
+  optOutType   String    @default("analytics") // "analytics", "sale", "all"
+  optedOutAt   DateTime  @default(now())
   reinstatedAt DateTime?
 
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([userId])
   @@index([email])

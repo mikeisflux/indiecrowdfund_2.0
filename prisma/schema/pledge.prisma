@@ -3,32 +3,32 @@
 // ============================================
 
 model Pledge {
-  id                    String       @id @default(cuid())
-  userId                String
-  projectId             String
-  rewardId              String?      // Optional - null for "pledge without reward"
+  id        String  @id @default(cuid())
+  userId    String
+  projectId String
+  rewardId  String? // Optional - null for "pledge without reward"
 
   // Backer number - order in which they backed this project (assigned on successful payment)
-  backerNumber          Int?
+  backerNumber Int?
 
   // Amounts
-  amount                Decimal      @db.Decimal(10, 2)
-  rewardAmount          Decimal      @default(0) @db.Decimal(10, 2)
-  addonsAmount          Decimal      @default(0) @db.Decimal(10, 2)
-  shippingAmount        Decimal      @default(0) @db.Decimal(10, 2)
+  amount         Decimal @db.Decimal(10, 2)
+  rewardAmount   Decimal @default(0) @db.Decimal(10, 2)
+  addonsAmount   Decimal @default(0) @db.Decimal(10, 2)
+  shippingAmount Decimal @default(0) @db.Decimal(10, 2)
 
   // Payment
-  status                PledgeStatus
-  paymentProcessor      PaymentProcessor
+  status           PledgeStatus
+  paymentProcessor PaymentProcessor
 
   // Stripe fields
-  stripePaymentIntentId String?      @unique
-  stripeSetupIntentId   String?      @unique
+  stripePaymentIntentId String? @unique
+  stripeSetupIntentId   String? @unique
   stripePaymentMethodId String?
   stripeCustomerId      String?
 
   // DivinityCoin fields
-  divinityCoinPaymentId String?      @unique
+  divinityCoinPaymentId         String? @unique
   // AoN saved-card flow (DC partner API 2026-05-05): when an AoN
   // campaign hasn't hit its goal yet, we save the card via DC's
   // /create-setup-intent and store the resulting `pm_...` here. The
@@ -36,8 +36,8 @@ model Pledge {
   // with this pm + pledge.id (idempotency key) to capture the funds.
   // Null on KIA pledges, on legacy DC pledges that charged immediately,
   // and on non-DC pledges.
-  divinityCoinSetupIntentId    String?  @unique
-  divinityCoinPaymentMethodId  String?
+  divinityCoinSetupIntentId     String? @unique
+  divinityCoinPaymentMethodId   String?
   // White-label hosted checkout (DC partner API 2026-05-15): when set,
   // this pledge was created through DC's hosted card-capture page at
   // divinitycoin.com/checkout/cs_... instead of inline Stripe Elements
@@ -45,25 +45,25 @@ model Pledge {
   // DIVINITYCOIN_HOSTED_CHECKOUT flag is on (Phase 2+). The
   // checkout.completed webhook + the user's return-from-DC callback
   // both look up the pledge by this id.
-  divinityCoinCheckoutSessionId String?  @unique
+  divinityCoinCheckoutSessionId String? @unique
 
   // PayPal fields
-  paypalOrderId            String?      @unique
-  paypalAuthorizationId    String?      @unique  // Set when intent=AUTHORIZE (deferred capture)
+  paypalOrderId         String? @unique
+  paypalAuthorizationId String? @unique // Set when intent=AUTHORIZE (deferred capture)
 
   // PayPal Connect (Complete Payments Platform / multiparty marketplace) fields.
   // Kept SEPARATE from the standard PayPal columns above so the two processors
   // never share state. Populated only when paymentProcessor = PAYPAL_CONNECT.
   // The order is routed to the creator's own PayPal account (payee.merchant_id)
   // with the platform fee taken via payment_instruction.platform_fees.
-  paypalConnectOrderId          String?  @unique
-  paypalConnectCaptureId        String?  @unique
-  paypalConnectAuthorizationId  String?  @unique  // Set when intent=AUTHORIZE (deferred capture)
-  paypalConnectSellerMerchantId String?           // Creator's merchantIdInPayPal (payee)
+  paypalConnectOrderId          String? @unique
+  paypalConnectCaptureId        String? @unique
+  paypalConnectAuthorizationId  String? @unique // Set when intent=AUTHORIZE (deferred capture)
+  paypalConnectSellerMerchantId String? // Creator's merchantIdInPayPal (payee)
 
   // Whop fields
-  whopCheckoutId        String?      @unique
-  whopPaymentId         String?      @unique  // Whop payment ID for refunds (from payment.succeeded webhook)
+  whopCheckoutId String? @unique
+  whopPaymentId  String? @unique // Whop payment ID for refunds (from payment.succeeded webhook)
 
   // PaymentCloud (NMI white-label) fields. The Customer Vault token is the
   // stable handle used to charge the saved card on campaign success
@@ -71,87 +71,103 @@ model Pledge {
   // a successful sale; the initial transaction id is the first sale we
   // ever ran on this vault entry, used for CIT/MIT credential-on-file
   // chains on subsequent charges (rare for crowdfunding but cheap to keep).
-  nmiCustomerVaultId      String?    @unique
+  nmiCustomerVaultId      String? @unique
   nmiInitialTransactionId String?
-  nmiTransactionId        String?    @unique
+  nmiTransactionId        String? @unique
 
   // Payment retry tracking
-  retryCount            Int          @default(0)
-  nextRetryAt           DateTime?
-  lastFailureReason     String?
-  chargedImmediately    Boolean      @default(false)  // True if campaign was already funded when pledge was made
+  retryCount         Int       @default(0)
+  nextRetryAt        DateTime?
+  lastFailureReason  String?
+  chargedImmediately Boolean   @default(false) // True if campaign was already funded when pledge was made
 
   // Survey
-  surveyCompleted       Boolean      @default(false)
-  shippingAddress       Json?
-  surveyResponses       Json?
+  surveyCompleted Boolean         @default(false)
+  shippingAddress Json?
+  surveyResponses Json?
+  // The backer's SurveyResponse row. SurveyResponse.pledgeId was already
+  // unique but neither side declared the relation, so `include:
+  // { surveyResponse: true }` — which every fulfillment push route uses to
+  // get the shipping address — was not a valid query.
+  surveyResponse  SurveyResponse?
 
   // Order lock — per-backer "confirm & lock your order" handshake the
   // creator can send (even during a live campaign). On approval the backer
   // confirms address + selections, we (optionally) charge, and the order is
   // frozen from further edits so it can be printed/shipped.
-  orderLockStatus       OrderLockStatus @default(UNLOCKED)
-  orderLockRequestedAt  DateTime?
-  orderLockedAt         DateTime?
-  orderLockDeclinedAt   DateTime?
+  orderLockStatus      OrderLockStatus @default(UNLOCKED)
+  orderLockRequestedAt DateTime?
+  orderLockedAt        DateTime?
+  orderLockDeclinedAt  DateTime?
 
   // Fulfillment
-  fulfillmentStatus     FulfillmentStatus @default(NOT_STARTED)
+  fulfillmentStatus FulfillmentStatus @default(NOT_STARTED)
+
+  // The order's id in whichever fulfillment service it was pushed to
+  // (ShipStation, Shippo, EasyPost, Stamps), and the tracking number that
+  // service reports back. Real columns rather than a corner of `metadata`
+  // because both are queried directly — tracking sync looks pledges up by
+  // externalOrderId — and a JSON path cannot be indexed for that.
+  //
+  // Every push route already read and wrote these. They were never declared,
+  // so Prisma rejected the query and each push failed before it started.
+  externalOrderId String?
+  trackingNumber  String?
 
   // When we LAST sent the "rate your creator" nudge. The nudge re-sends on
   // a weekly cadence (see RATING_REMINDER_* in rating-request.ts) until the
   // backer leaves a rating or the reminder cap is hit.
-  ratingRequestSentAt   DateTime?
+  ratingRequestSentAt DateTime?
   // THE metric for "this backer left a star rating" (null = hasn't). Set
   // when a review with an overallRating is submitted; stops the reminders.
-  reviewSubmittedAt     DateTime?
+  reviewSubmittedAt   DateTime?
   // How many rating nudges we've sent for this pledge (caps the persist
   // loop at RATING_REMINDER_MAX so we never nag forever).
-  ratingReminderCount   Int       @default(0)
+  ratingReminderCount Int       @default(0)
 
   // Modifier addon assignments
-  needsModifierAssignment Boolean     @default(false)  // True if backer has ambiguous modifier addon assignments
+  needsModifierAssignment Boolean @default(false) // True if backer has ambiguous modifier addon assignments
 
   // Email tracking
-  confirmationEmailSent Boolean      @default(false)
+  confirmationEmailSent Boolean @default(false)
   metadata              Json?
 
   // Conversion tracking - which email campaign led to this pledge
-  sourceCampaignId      String?
-  sourceCampaign        EmailCampaign? @relation("CampaignConversions", fields: [sourceCampaignId], references: [id])
+  sourceCampaignId String?
+  sourceCampaign   EmailCampaign? @relation("CampaignConversions", fields: [sourceCampaignId], references: [id])
 
   // Relations
-  user                  User         @relation(fields: [userId], references: [id])
-  project               Project      @relation(fields: [projectId], references: [id])
-  reward                Reward?      @relation(fields: [rewardId], references: [id])
-  addons                PledgeAddon[]
-  modifierAssignments   PledgeModifierAssignment[]
+  user                     User                       @relation(fields: [userId], references: [id])
+  project                  Project                    @relation(fields: [projectId], references: [id])
+  reward                   Reward?                    @relation(fields: [rewardId], references: [id])
+  addons                   PledgeAddon[]
+  modifierAssignments      PledgeModifierAssignment[]
   divinityCoinTransactions DivinityCoinTransaction[]
-  emailLogs             EmailLog[]
-  refundRequest         RefundRequest?
-  review                BackerReview?
-  createdAt             DateTime     @default(now())
-  updatedAt             DateTime     @updatedAt
-  deletedAt             DateTime?    // Soft delete timestamp
+  emailLogs                EmailLog[]
+  refundRequest            RefundRequest?
+  review                   BackerReview?
+  createdAt                DateTime                   @default(now())
+  updatedAt                DateTime                   @updatedAt
+  deletedAt                DateTime? // Soft delete timestamp
 
   @@index([projectId, status])
   @@index([userId])
   @@index([rewardId])
-  @@index([status, nextRetryAt])  // For retry job queries
+  @@index([status, nextRetryAt]) // For retry job queries
   @@index([sourceCampaignId])
-  @@index([deletedAt])  // For soft delete filtering
-  @@index([needsModifierAssignment])  // For finding backers needing modifier assignment
+  @@index([deletedAt]) // For soft delete filtering
+  @@index([needsModifierAssignment]) // For finding backers needing modifier assignment
 }
 
 model PledgeAddon {
-  id        String @id @default(cuid())
-  pledgeId  String
-  addonId   String
-  quantity  Int    @default(1)
-  amount    Decimal @db.Decimal(10, 2)
+  id       String  @id @default(cuid())
+  pledgeId String
+  addonId  String
+  quantity Int     @default(1)
+  amount   Decimal @db.Decimal(10, 2)
 
-  pledge    Pledge @relation(fields: [pledgeId], references: [id], onDelete: Cascade)
-  addon     Reward @relation(fields: [addonId], references: [id], onDelete: Cascade)
+  pledge Pledge @relation(fields: [pledgeId], references: [id], onDelete: Cascade)
+  addon  Reward @relation(fields: [addonId], references: [id], onDelete: Cascade)
 
   @@unique([pledgeId, addonId])
   @@index([pledgeId])
@@ -161,21 +177,21 @@ model PledgeAddon {
 // Example: Backer has Cover A, Cover B + Upgrade to Metal, Upgrade to Foil
 // This table stores: Cover A -> Metal, Cover B -> Foil
 model PledgeModifierAssignment {
-  id              String    @id @default(cuid())
+  id              String @id @default(cuid())
   pledgeId        String
-  rewardId        String    // The base reward being modified (e.g., Cover A)
-  modifierAddonId String    // The modifier addon being applied (e.g., Upgrade to Metal)
+  rewardId        String // The base reward being modified (e.g., Cover A)
+  modifierAddonId String // The modifier addon being applied (e.g., Upgrade to Metal)
 
   // Whether this was auto-assigned (simple case) or manually assigned
-  isAutoAssigned  Boolean   @default(false)
-  assignedBy      String?   // User ID if manually assigned by creator
+  isAutoAssigned Boolean @default(false)
+  assignedBy     String? // User ID if manually assigned by creator
 
-  pledge          Pledge    @relation(fields: [pledgeId], references: [id], onDelete: Cascade)
+  pledge Pledge @relation(fields: [pledgeId], references: [id], onDelete: Cascade)
 
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  @@unique([pledgeId, modifierAddonId])  // Each modifier can only be assigned once per pledge
+  @@unique([pledgeId, modifierAddonId]) // Each modifier can only be assigned once per pledge
   @@index([pledgeId])
   @@index([rewardId])
 }
@@ -183,10 +199,10 @@ model PledgeModifierAssignment {
 // Maps reward + modifier addon combinations to specific SKUs
 // Example: Cover A + Upgrade to Metal = SKU-COVER-A-METAL
 model ModifierSkuMapping {
-  id                 String    @id @default(cuid())
-  projectId          String
-  baseRewardId       String    // The base reward (e.g., Cover A tier)
-  modifierAddonId    String    // The modifier addon (e.g., Upgrade to Metal)
+  id              String @id @default(cuid())
+  projectId       String
+  baseRewardId    String // The base reward (e.g., Cover A tier)
+  modifierAddonId String // The modifier addon (e.g., Upgrade to Metal)
 
   // The resulting SKU when this combination is fulfilled
   shopifySku         String
@@ -194,8 +210,8 @@ model ModifierSkuMapping {
   shopifyVariantId   String?
   shopifyProductName String?
 
-  createdAt          DateTime  @default(now())
-  updatedAt          DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@unique([projectId, baseRewardId, modifierAddonId])
   @@index([projectId])
@@ -218,8 +234,8 @@ enum FulfillmentStatus {
 }
 
 enum OrderLockStatus {
-  UNLOCKED        // no lock request outstanding
-  LOCK_REQUESTED  // creator asked; awaiting backer approval
-  LOCKED          // backer approved; order frozen (and charged, if enabled)
-  DECLINED        // backer declined the request
+  UNLOCKED // no lock request outstanding
+  LOCK_REQUESTED // creator asked; awaiting backer approval
+  LOCKED // backer approved; order frozen (and charged, if enabled)
+  DECLINED // backer declined the request
 }

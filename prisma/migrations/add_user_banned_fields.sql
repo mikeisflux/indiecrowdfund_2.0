@@ -9,11 +9,23 @@
 -- Run on the production server (auth via ~/.pgpass — never put the password here):
 --   psql -h localhost -U indieuser -d indiecrowdfund -f prisma/migrations/add_user_banned_fields.sql
 
+-- Safe on a live site: the three columns are nullable with no default, which
+-- Postgres 11+ applies as a catalog update rather than a table rewrite, and
+-- the index is built CONCURRENTLY so User stays writable (sign-ins and
+-- registrations keep working). lock_timeout stops a statement that cannot get
+-- its lock from queueing and blocking every other write behind it.
+--
+-- Not wrapped in a transaction: CREATE INDEX CONCURRENTLY cannot run inside
+-- one. Every statement is independently re-runnable.
+SET lock_timeout = '3s';
+
 ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "bannedAt"     TIMESTAMP(3);
 ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "bannedReason" TEXT;
 ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "bannedById"   TEXT;
 
-CREATE INDEX IF NOT EXISTS "User_bannedAt_idx" ON "User"("bannedAt");
+SET lock_timeout = 0;
+CREATE INDEX CONCURRENTLY IF NOT EXISTS "User_bannedAt_idx" ON "User"("bannedAt");
+SET lock_timeout = '3s';
 
 -- Backfill. Every ban the platform issues writes a reason containing "ban":
 --   BAN_USER default ............ 'Account banned by administrator'
@@ -27,6 +39,8 @@ CREATE INDEX IF NOT EXISTS "User_bannedAt_idx" ON "User"("bannedAt");
 -- admin re-bans it. The opposite error — marking a merely-locked creator as
 -- banned — is the bug this migration exists to fix, so it must not be
 -- reintroduced by a greedy backfill.
+-- Touches only rows that are already locked; cannot affect pledges, campaigns
+-- or payouts. Fully reversible by dropping the three columns.
 UPDATE "User"
 SET "bannedAt"     = "lockedAt",
     "bannedReason" = "lockedReason",

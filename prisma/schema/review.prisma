@@ -4,20 +4,20 @@
 
 model BackerReview {
   id        String @id @default(cuid())
-  pledgeId  String @unique   // One review per pledge (enforces no duplicates)
-  userId    String           // The backer leaving the review
-  projectId String           // The project being reviewed
-  creatorId String           // The creator being rated
+  pledgeId  String @unique // One review per pledge (enforces no duplicates)
+  userId    String // The backer leaving the review
+  projectId String // The project being reviewed
+  creatorId String // The creator being rated
 
   // Fulfillment acknowledgement — backer confirms they received their order
-  markedReceived    Boolean   @default(false)
-  markedReceivedAt  DateTime?
+  markedReceived   Boolean   @default(false)
+  markedReceivedAt DateTime?
 
   // Star ratings (1–5, null = not yet provided)
-  overallRating         Int?
-  deliveryRating        Int?
-  qualityRating         Int?
-  communicationRating   Int?
+  overallRating       Int?
+  deliveryRating      Int?
+  qualityRating       Int?
+  communicationRating Int?
 
   // Written review (both optional)
   reviewTitle String? @db.VarChar(200)
@@ -25,7 +25,7 @@ model BackerReview {
 
   // Moderation
   isPublished Boolean @default(true)
-  isHidden    Boolean @default(false)  // Admins can hide abusive reviews
+  isHidden    Boolean @default(false) // Admins can hide abusive reviews
 
   // Relations
   pledge  Pledge  @relation(fields: [pledgeId], references: [id])

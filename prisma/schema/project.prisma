@@ -3,47 +3,47 @@
 // ============================================
 
 model Project {
-  id                    String        @id @default(cuid())
-  creatorId             String
+  id        String @id @default(cuid())
+  creatorId String
 
   // Basics
-  title                 String
-  subtitle              String?
-  slug                  String        @unique
-  category              String
-  subcategory           String?
-  secondaryCategory     String?
-  secondarySubcategory  String?
-  location              String?
-  imageUrl              String?
-  videoUrl              String?
-  goalAmount            Decimal       @db.Decimal(10, 2)
-  currency              String        @default("USD")
+  title                String
+  subtitle             String?
+  slug                 String  @unique
+  category             String
+  subcategory          String?
+  secondaryCategory    String?
+  secondarySubcategory String?
+  location             String?
+  imageUrl             String?
+  videoUrl             String?
+  goalAmount           Decimal @db.Decimal(10, 2)
+  currency             String  @default("USD")
 
   // Duration
-  durationType          DurationType
-  durationDays          Int?
-  endDate               DateTime?
-  launchDate            DateTime?
+  durationType DurationType
+  durationDays Int?
+  endDate      DateTime?
+  launchDate   DateTime?
 
   // Story
-  description           String        @db.Text
-  risks                 String        @db.Text
-  usesAI                Boolean       @default(false)
-  faqs                  Json?
+  description String  @db.Text
+  risks       String  @db.Text
+  usesAI      Boolean @default(false)
+  faqs        Json?
 
   // Payment
-  contactEmail          String
-  projectType           ProjectType
-  paymentProcessor      PaymentProcessor @default(STRIPE)
-  campaignType          CampaignType  @default(ALL_OR_NOTHING)
-  hasAdultContent       Boolean       @default(false)
-  hasRiskyContent       Boolean       @default(false)
-  promoContentSfw       Boolean       @default(true)  // Agrees promotional materials (video, image, title) are SFW
-  bankAccountId         String?
+  contactEmail     String
+  projectType      ProjectType
+  paymentProcessor PaymentProcessor @default(STRIPE)
+  campaignType     CampaignType     @default(ALL_OR_NOTHING)
+  hasAdultContent  Boolean          @default(false)
+  hasRiskyContent  Boolean          @default(false)
+  promoContentSfw  Boolean          @default(true) // Agrees promotional materials (video, image, title) are SFW
+  bankAccountId    String?
 
   // Stripe
-  stripeAccountId       String?
+  stripeAccountId String?
 
   // Promotion
   prelaunchActive       Boolean         @default(false)
@@ -56,66 +56,66 @@ model Project {
   metaConversionsToken  String?
 
   // Retailer Settings
-  allowRetailerPledges  Boolean       @default(false)
-  retailerDiscount      Float         @default(50)
-  retailerMinQuantity   Int           @default(1)
-  retailerMaxQuantity   Int?
+  allowRetailerPledges Boolean @default(false)
+  retailerDiscount     Float   @default(50)
+  retailerMinQuantity  Int     @default(1)
+  retailerMaxQuantity  Int?
 
   // Status
-  status                ProjectStatus @default(DRAFT)
-  currentAmount         Decimal       @default(0) @db.Decimal(10, 2)
-  backerCount           Int           @default(0)
-  followerCount         Int           @default(0)
-  isStaffPick           Boolean       @default(false)
+  status        ProjectStatus @default(DRAFT)
+  currentAmount Decimal       @default(0) @db.Decimal(10, 2)
+  backerCount   Int           @default(0)
+  followerCount Int           @default(0)
+  isStaffPick   Boolean       @default(false)
 
   // AI-generated tags for matching
-  tags                  String[]
+  tags String[]
 
   // Relations
-  creator               User          @relation("ProjectCreator", fields: [creatorId], references: [id])
-  projectItems          ProjectItem[]
-  rewards               Reward[]
-  pledges               Pledge[]
-  backerReviews         BackerReview[]
-  updates               Update[]
-  collaborators         ProjectCollaborator[]
-  messages              Message[]
-  analytics             AnalyticsEvent[]
-  comments              Comment[]
-  payouts               Payout[]
-  grantAgreement        GrantAgreement?
-  behaviors             UserBehavior[]
-  emailLogs             EmailLog[]
-  projectSimilarities   ProjectSimilarity[] @relation("ProjectSimilarities")
-  similarProjects       ProjectSimilarity[] @relation("SimilarProjects")
-  followers             ProjectFollower[]
-  retailerPledges       RetailerPledge[]
+  creator                 User                            @relation("ProjectCreator", fields: [creatorId], references: [id])
+  projectItems            ProjectItem[]
+  rewards                 Reward[]
+  pledges                 Pledge[]
+  backerReviews           BackerReview[]
+  updates                 Update[]
+  collaborators           ProjectCollaborator[]
+  messages                Message[]
+  analytics               AnalyticsEvent[]
+  comments                Comment[]
+  payouts                 Payout[]
+  grantAgreement          GrantAgreement?
+  behaviors               UserBehavior[]
+  emailLogs               EmailLog[]
+  projectSimilarities     ProjectSimilarity[]             @relation("ProjectSimilarities")
+  similarProjects         ProjectSimilarity[]             @relation("SimilarProjects")
+  followers               ProjectFollower[]
+  retailerPledges         RetailerPledge[]
   divinityCoinSettlements DivinityCoinSettlement[]
   whopSettlements         WhopSettlement[]
   refundRequests          RefundRequest[]
   paypalPayouts           PayPalPayout[]
-  digitalFiles          DigitalFile[]
-  collectionItems       ProjectCollectionItem[]
-  notificationPrefs     ProjectNotificationPreference[]
+  digitalFiles            DigitalFile[]
+  collectionItems         ProjectCollectionItem[]
+  notificationPrefs       ProjectNotificationPreference[]
   fulfillmentIntegrations FulfillmentIntegration[]
-  chargebackCard        CreatorChargebackCard?
-  printOrders           ProjectPrintOrder[]
+  chargebackCard          CreatorChargebackCard?
+  printOrders             ProjectPrintOrder[]
 
   // PaymentCloud rolling reserve. Projects raising over $2,500 auto-
   // trigger; new / high-risk creators are toggled by admins on a
   // case-by-case basis. 10% of gross is held in escrow for 180 days
   // before processor + platform fees are deducted.
-  rollingReserveSubject  Boolean   @default(false)  // admin manual override
-  rollingReserveAuto     Boolean   @default(false)  // auto-set when funded > threshold
-  rollingReserveAmount   Decimal   @default(0) @db.Decimal(10, 2)
-  rollingReserveHeldAt   DateTime?
-  rollingReserveReleaseAt DateTime?
-  rollingReserveReleased  Boolean  @default(false)
+  rollingReserveSubject    Boolean   @default(false) // admin manual override
+  rollingReserveAuto       Boolean   @default(false) // auto-set when funded > threshold
+  rollingReserveAmount     Decimal   @default(0) @db.Decimal(10, 2)
+  rollingReserveHeldAt     DateTime?
+  rollingReserveReleaseAt  DateTime?
+  rollingReserveReleased   Boolean   @default(false)
   rollingReserveReleasedAt DateTime?
 
-  createdAt             DateTime      @default(now())
-  updatedAt             DateTime      @updatedAt
-  launchedAt            DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  launchedAt DateTime?
 
   // Which campaign-page layout this project renders with.
   //   1 = the original three-column layout (2 / 6 / 4): reward-category rail,
@@ -127,7 +127,7 @@ model Project {
   // on launchedAt would flip a v2 campaign back to v1 the moment it went live,
   // which is the opposite of the intent. Every project that had already
   // launched was backfilled to 1 by the migration; new projects default to 2.
-  layoutVersion         Int           @default(2)
+  layoutVersion Int @default(2)
 
   // Interior preview: a PDF of the pages the creator wants backers to flip
   // through on the campaign page (layout v2). Rasterised in the browser by
@@ -138,16 +138,16 @@ model Project {
   // is a file a browser has fetched — so the rule the builder states plainly
   // is that the uploaded PDF must BE the preview (only the pages the creator
   // is happy to publish), never the finished book.
-  previewPdfUrl         String?
-  fundedAt              DateTime?
-  deletedAt             DateTime?     // Soft delete timestamp
+  previewPdfUrl String?
+  fundedAt      DateTime?
+  deletedAt     DateTime? // Soft delete timestamp
 
   @@index([creatorId])
   @@index([status])
   @@index([category])
   @@index([slug])
-  @@index([deletedAt])  // For soft delete filtering
-  @@index([status, deletedAt])  // Common query pattern
+  @@index([deletedAt]) // For soft delete filtering
+  @@index([status, deletedAt]) // Common query pattern
   // Account-deletion eligibility asks "has this creator ever launched?" on
   // every open of the delete-account dialog. Created by
   // migrations/add_account_deletion_requests.sql — declared here so the
@@ -157,15 +157,15 @@ model Project {
 }
 
 model ProjectFollower {
-  id          String   @id @default(cuid())
+  id          String  @id @default(cuid())
   projectId   String
   userId      String?
   email       String?
-  isPrelaunch Boolean  @default(false)
+  isPrelaunch Boolean @default(false)
 
-  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
-  createdAt   DateTime @default(now())
+  createdAt DateTime @default(now())
 
   @@unique([projectId, userId])
   @@unique([projectId, email])
@@ -220,21 +220,21 @@ enum CampaignType {
 // ============================================
 
 model ProjectItem {
-  id          String  @id @default(cuid())
-  projectId   String
-  title       String
-  sku         String? // Editable SKU for fulfillment, defaults to item title in UI
-  inStock     Boolean @default(false) // Whether this item has been produced/received
-  description String? @db.Text
-  imageUrl    String?
-  endedAt     DateTime? // If set, item is no longer available for new pledges
+  id           String    @id @default(cuid())
+  projectId    String
+  title        String
+  sku          String? // Editable SKU for fulfillment, defaults to item title in UI
+  inStock      Boolean   @default(false) // Whether this item has been produced/received
+  description  String?   @db.Text
+  imageUrl     String?
+  endedAt      DateTime? // If set, item is no longer available for new pledges
   // Creator-chosen order from the builder's Items tab (drag, or a chosen
   // sort written through). Null = never ordered -> fall back to createdAt.
   displayOrder Int?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 
-  project     Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  project     Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
   rewardItems RewardItem[]
 
   @@index([projectId])
@@ -251,8 +251,8 @@ model ProjectView {
   views       Int      @default(0)
   uniqueViews Int      @default(0)
 
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@unique([projectId, date])
   @@index([projectId, date])
@@ -269,8 +269,8 @@ model ReferralTracker {
   pledges      Int      @default(0)
   pledgeAmount Decimal  @default(0) @db.Decimal(10, 2)
 
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@unique([projectId, referrer, date])
   @@index([projectId, date])
@@ -282,39 +282,39 @@ model ReferralTracker {
 // ============================================
 
 model ProjectReview {
-  id              String              @id @default(cuid())
-  projectId       String
-  reviewerId      String?
-  reviewerEmail   String?
+  id            String  @id @default(cuid())
+  projectId     String
+  reviewerId    String?
+  reviewerEmail String?
 
   // Review action
-  action          ReviewAction
-  previousStatus  ProjectStatus
-  newStatus       ProjectStatus
+  action         ReviewAction
+  previousStatus ProjectStatus
+  newStatus      ProjectStatus
 
   // Feedback
-  notes           String?             @db.Text
-  internalNotes   String?             @db.Text
+  notes           String?                @db.Text
+  internalNotes   String?                @db.Text
   rejectionReason ReviewRejectionReason?
 
   // Auto-review flags
-  flagsRaised     String[]
+  flagsRaised       String[]
   aiConfidenceScore Float?
 
-  createdAt       DateTime            @default(now())
+  createdAt DateTime @default(now())
 
   @@index([projectId, createdAt])
   @@index([reviewerId])
 }
 
 model ProjectTag {
-  id          String   @id @default(cuid())
-  projectId   String
-  tag         String
-  confidence  Float    @default(1.0)
-  source      TagSource @default(MANUAL)
+  id         String    @id @default(cuid())
+  projectId  String
+  tag        String
+  confidence Float     @default(1.0)
+  source     TagSource @default(MANUAL)
 
-  createdAt   DateTime @default(now())
+  createdAt DateTime @default(now())
 
   @@unique([projectId, tag])
   @@index([projectId])
@@ -357,25 +357,25 @@ enum TagSource {
 // ============================================
 
 model ProjectCollaborator {
-  id                        String             @id @default(cuid())
-  projectId                 String
-  userId                    String?            // Optional - linked when user accepts invite
-  email                     String             // Required - used to identify the collaborator
-  title                     String?
+  id        String  @id @default(cuid())
+  projectId String
+  userId    String? // Optional - linked when user accepts invite
+  email     String // Required - used to identify the collaborator
+  title     String?
 
   // Permissions
-  canEditProject            Boolean            @default(false)
-  canManageCommunity        Boolean            @default(false)
-  canCoordinateFulfillment  Boolean            @default(false)
-  canConfigurePledgeManager Boolean            @default(false)
+  canEditProject            Boolean @default(false)
+  canManageCommunity        Boolean @default(false)
+  canCoordinateFulfillment  Boolean @default(false)
+  canConfigurePledgeManager Boolean @default(false)
 
-  status                    CollaboratorStatus @default(PENDING)
+  status CollaboratorStatus @default(PENDING)
 
-  project                   Project            @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  user                      User?              @relation(fields: [userId], references: [id])
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user    User?   @relation(fields: [userId], references: [id])
 
-  invitedAt                 DateTime           @default(now())
-  acceptedAt                DateTime?
+  invitedAt  DateTime  @default(now())
+  acceptedAt DateTime?
 
   @@unique([projectId, email])
   @@index([projectId])
@@ -402,27 +402,27 @@ enum CollaboratorStatus {
 // Out-of-band path: mark paid at create with markAsPaid:true, or
 // after the fact via POST /mark-paid.
 model ProjectPrintOrder {
-  id                          String    @id @default(cuid())
-  projectId                   String
-  submittedById               String
+  id            String @id @default(cuid())
+  projectId     String
+  submittedById String
 
   // PrintingComics-side identifiers + status, kept in sync via the
   // /api/webhooks/printingcomics receiver.
-  printingComicsOrderId       String?   @unique
-  printingComicsOrderNumber   String?
-  status                      String    @default("DRAFT")  // DRAFT (local) | PENDING | PAID | IN_PRODUCTION | SHIPPED | DELIVERED | CANCELLED | REFUNDED | FAILED
-  trackingNumber              String?
-  shippingMethod              String?
-  lastSyncedAt                DateTime?
+  printingComicsOrderId     String?   @unique
+  printingComicsOrderNumber String?
+  status                    String    @default("DRAFT") // DRAFT (local) | PENDING | PAID | IN_PRODUCTION | SHIPPED | DELIVERED | CANCELLED | REFUNDED | FAILED
+  trackingNumber            String?
+  shippingMethod            String?
+  lastSyncedAt              DateTime?
 
   // Hard proofing (Printing Comics). When a proof is requested, the
   // printer uploads a proof and webhooks us; we notify the creator to
   // review + approve (or request changes) via the tokenized reviewUrl.
-  proofStatus                 String?   // requested | awaiting_upload | awaiting_approval | approved | changes_requested
-  proofUrl                    String?   // the proof PDF (fileUrl)
-  proofReviewUrl              String?   // tokenized approve/request-changes link on Printing Comics
-  proofVersion                Int?
-  proofUpdatedAt              DateTime?
+  proofStatus    String? // requested | awaiting_upload | awaiting_approval | approved | changes_requested
+  proofUrl       String? // the proof PDF (fileUrl)
+  proofReviewUrl String? // tokenized approve/request-changes link on Printing Comics
+  proofVersion   Int?
+  proofUpdatedAt DateTime?
 
   // What we sent to the printer.
   // The legacy single-item fields (productSlug/quantity/options/files)
@@ -430,27 +430,27 @@ model ProjectPrintOrder {
   // dashboard, webhook receiver, and orders list still read them.
   // New orders that include multiple line items (e.g. 6 different
   // cover variants for one print run) store the full array in `items`.
-  productSlug                 String
-  quantity                    Int
-  options                     Json      // configurator key→value map
-  files                       Json      // [{uploadId, purpose}]
+  productSlug String
+  quantity    Int
+  options     Json // configurator key→value map
+  files       Json // [{uploadId, purpose}]
   // Per-product line items: [{productSlug, quantity, options, files}].
   // Null on legacy rows — read those via the flat fields above.
-  items                       Json?
+  items       Json?
 
   // Where the cartons ship TO (creator's warehouse / home — NOT
   // the backer). Stored as a flat object so we can render it in the
   // dashboard without joining anything.
-  shippingAddress             Json
-  email                       String    // contact for the printer
+  shippingAddress Json
+  email           String // contact for the printer
 
   // Cost breakdown returned by Printing Comics on create.
-  subtotalCents               Int?
-  shippingCents               Int?
-  taxCents                    Int?
-  discountCents               Int?
-  totalCents                  Int?
-  currency                    String?   @default("USD")
+  subtotalCents Int?
+  shippingCents Int?
+  taxCents      Int?
+  discountCents Int?
+  totalCents    Int?
+  currency      String? @default("USD")
 
   // Payment state. paymentApprovalUrl is a PayPal-hosted checkout
   // URL the creator clicks to pay; expires ~3h after issuance and is
@@ -458,17 +458,17 @@ model ProjectPrintOrder {
   // → PrintingComics' POST /orders/:id/payment-link.
   paymentApprovalUrl          String?
   paymentApprovalUrlExpiresAt DateTime?
-  paymentProvider             String?   // "paypal" | "manual" | null
-  paymentReference            String?   // PayPal capture id once paid; ref string for manual settlement
+  paymentProvider             String? // "paypal" | "manual" | null
+  paymentReference            String? // PayPal capture id once paid; ref string for manual settlement
   paidAt                      DateTime?
 
-  notes                       String?
+  notes String?
 
-  createdAt                   DateTime  @default(now())
-  updatedAt                   DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  project                     Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  submittedBy                 User      @relation("PrintOrderSubmitter", fields: [submittedById], references: [id])
+  project     Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  submittedBy User    @relation("PrintOrderSubmitter", fields: [submittedById], references: [id])
 
   @@index([projectId])
   @@index([submittedById])

@@ -2,63 +2,63 @@
 // Tracks audits, page overrides, keyword rankings, and cron logs
 
 model SeoPageMeta {
-  id              String    @id @default(cuid())
-  path            String    @unique // URL path like "/about-us"
-  title           String?
-  description     String?   @db.Text
-  ogTitle         String?
-  ogDescription   String?   @db.Text
-  ogImage         String?
-  twitterTitle    String?
-  twitterDesc     String?   @db.Text
-  canonicalUrl    String?
-  noIndex         Boolean   @default(false)
-  noFollow        Boolean   @default(false)
-  keywords        String[]  @default([])
-  jsonLd          String?   @db.Text // Custom JSON-LD structured data
-  lastAuditScore  Int?      // 0-100
-  updatedAt       DateTime  @updatedAt
-  createdAt       DateTime  @default(now())
+  id             String   @id @default(cuid())
+  path           String   @unique // URL path like "/about-us"
+  title          String?
+  description    String?  @db.Text
+  ogTitle        String?
+  ogDescription  String?  @db.Text
+  ogImage        String?
+  twitterTitle   String?
+  twitterDesc    String?  @db.Text
+  canonicalUrl   String?
+  noIndex        Boolean  @default(false)
+  noFollow       Boolean  @default(false)
+  keywords       String[] @default([])
+  jsonLd         String?  @db.Text // Custom JSON-LD structured data
+  lastAuditScore Int? // 0-100
+  updatedAt      DateTime @updatedAt
+  createdAt      DateTime @default(now())
 
   @@index([path])
   @@index([lastAuditScore])
 }
 
 model SeoAudit {
-  id              String    @id @default(cuid())
-  runType         String    @default("manual") // manual | cron | ai
-  status          String    @default("running") // running | completed | failed
-  totalPages      Int       @default(0)
-  pagesAudited    Int       @default(0)
-  overallScore    Int?      // 0-100
-  issuesFound     Int       @default(0)
-  criticalIssues  Int       @default(0)
-  warnings        Int       @default(0)
-  passed          Int       @default(0)
-  results         Json?     // Full audit results
-  summary         String?   @db.Text
-  duration        Int?      // Duration in ms
-  triggeredBy     String?   // userId or "cron"
-  completedAt     DateTime?
-  createdAt       DateTime  @default(now())
+  id             String    @id @default(cuid())
+  runType        String    @default("manual") // manual | cron | ai
+  status         String    @default("running") // running | completed | failed
+  totalPages     Int       @default(0)
+  pagesAudited   Int       @default(0)
+  overallScore   Int? // 0-100
+  issuesFound    Int       @default(0)
+  criticalIssues Int       @default(0)
+  warnings       Int       @default(0)
+  passed         Int       @default(0)
+  results        Json? // Full audit results
+  summary        String?   @db.Text
+  duration       Int? // Duration in ms
+  triggeredBy    String? // userId or "cron"
+  completedAt    DateTime?
+  createdAt      DateTime  @default(now())
 
   @@index([createdAt])
   @@index([status])
 }
 
 model SeoKeyword {
-  id              String    @id @default(cuid())
-  keyword         String    @unique
-  category        String?   // "primary" | "secondary" | "long-tail"
-  targetPages     String[]  @default([]) // paths this keyword targets
-  currentRank     Int?      // Simulated/tracked rank
-  previousRank    Int?
-  searchVolume    Int?      // Estimated monthly searches
-  difficulty      Int?      // 0-100
-  isTracked       Boolean   @default(true)
-  notes           String?   @db.Text
-  updatedAt       DateTime  @updatedAt
-  createdAt       DateTime  @default(now())
+  id           String   @id @default(cuid())
+  keyword      String   @unique
+  category     String? // "primary" | "secondary" | "long-tail"
+  targetPages  String[] @default([]) // paths this keyword targets
+  currentRank  Int? // Simulated/tracked rank
+  previousRank Int?
+  searchVolume Int? // Estimated monthly searches
+  difficulty   Int? // 0-100
+  isTracked    Boolean  @default(true)
+  notes        String?  @db.Text
+  updatedAt    DateTime @updatedAt
+  createdAt    DateTime @default(now())
 
   @@index([keyword])
   @@index([isTracked])
@@ -66,31 +66,31 @@ model SeoKeyword {
 }
 
 model SeoCronLog {
-  id              String    @id @default(cuid())
-  status          String    // success | error | partial
-  auditId         String?   // Related audit ID
-  pagesProcessed  Int       @default(0)
-  issuesFound     Int       @default(0)
-  autoFixed       Int       @default(0)
-  errors          String[]  @default([])
-  duration        Int?      // Duration in ms
-  output          String?   @db.Text // Full log output
-  createdAt       DateTime  @default(now())
+  id             String   @id @default(cuid())
+  status         String // success | error | partial
+  auditId        String? // Related audit ID
+  pagesProcessed Int      @default(0)
+  issuesFound    Int      @default(0)
+  autoFixed      Int      @default(0)
+  errors         String[] @default([])
+  duration       Int? // Duration in ms
+  output         String?  @db.Text // Full log output
+  createdAt      DateTime @default(now())
 
   @@index([createdAt])
   @@index([status])
 }
 
 model SeoRedirect {
-  id              String    @id @default(cuid())
-  fromPath        String    @unique
-  toPath          String
-  statusCode      Int       @default(301) // 301 or 302
-  isActive        Boolean   @default(true)
-  hitCount        Int       @default(0)
-  lastHitAt       DateTime?
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  id         String    @id @default(cuid())
+  fromPath   String    @unique
+  toPath     String
+  statusCode Int       @default(301) // 301 or 302
+  isActive   Boolean   @default(true)
+  hitCount   Int       @default(0)
+  lastHitAt  DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
 
   @@index([fromPath])
   @@index([isActive])

@@ -3,140 +3,140 @@
 // ============================================
 
 model User {
-  id                String    @id @default(cuid())
-  email             String    @unique
-  emailVerified     DateTime?
-  name              String?
-  image             String?
-  heroImage         String?   // Profile banner/hero image
-  password          String?
-  bio               String?   @db.Text
-  location          String?
-  timezone          String?
-  vanityUrl         String?   @unique
-  websites          String[]
-  socialLinks       Json?     // { twitter: "", instagram: "", youtube: "", etc }
-  showNameOnly      Boolean   @default(false)
-  role              UserRole  @default(USER)
-  retailerAccess    Boolean   @default(false)
+  id             String    @id @default(cuid())
+  email          String    @unique
+  emailVerified  DateTime?
+  name           String?
+  image          String?
+  heroImage      String? // Profile banner/hero image
+  password       String?
+  bio            String?   @db.Text
+  location       String?
+  timezone       String?
+  vanityUrl      String?   @unique
+  websites       String[]
+  socialLinks    Json? // { twitter: "", instagram: "", youtube: "", etc }
+  showNameOnly   Boolean   @default(false)
+  role           UserRole  @default(USER)
+  retailerAccess Boolean   @default(false)
 
   // Creator email address (e.g., "mike" for mike@indiecrowdfund.com)
-  creatorEmailHandle String?  @unique
-  stripeCustomerId  String?   @unique  // Stripe Customer ID for payment methods
+  creatorEmailHandle String? @unique
+  stripeCustomerId   String? @unique // Stripe Customer ID for payment methods
 
   // Shopify Integration (per-creator, not per-project)
-  shopifyApiKey     String?   // Shopify app Client ID
-  shopifyApiSecret  String?   // Shopify app Client Secret
-  shopifyAccessToken String?  // OAuth access token for connected store
-  shopifyShopDomain String?   // Connected store domain (e.g., "my-store.myshopify.com")
+  shopifyApiKey      String? // Shopify app Client ID
+  shopifyApiSecret   String? // Shopify app Client Secret
+  shopifyAccessToken String? // OAuth access token for connected store
+  shopifyShopDomain  String? // Connected store domain (e.g., "my-store.myshopify.com")
 
   // ShipStation Integration (per-creator, not per-project)
-  shipstationApiKey    String?   // ShipStation API Key
-  shipstationApiSecret String?   // ShipStation API Secret
+  shipstationApiKey    String? // ShipStation API Key
+  shipstationApiSecret String? // ShipStation API Secret
 
   // Shippo Integration (per-creator, not per-project)
-  shippoApiToken       String?   // Shippo API Token (single token auth)
+  shippoApiToken String? // Shippo API Token (single token auth)
 
   // EasyPost Integration (per-creator, not per-project)
-  easypostApiKey       String?   // EasyPost API Key
+  easypostApiKey String? // EasyPost API Key
 
   // Stamps.com Integration (per-creator, not per-project)
-  stampsIntegrationId  String?   // Stamps.com Integration ID
-  stampsUsername       String?   // Stamps.com Username
-  stampsPassword       String?   // Stamps.com Password (encrypted)
+  stampsIntegrationId String? // Stamps.com Integration ID
+  stampsUsername      String? // Stamps.com Username
+  stampsPassword      String? // Stamps.com Password (encrypted)
 
   // Email preferences
-  emailUnsubscribedAt DateTime?  // Global email unsubscribe timestamp
+  emailUnsubscribedAt DateTime? // Global email unsubscribe timestamp
 
   // ID Verification
-  idVerified        Boolean   @default(false)
-  idVerifiedAt      DateTime?
-  idVerificationId  String?   // Shufti reference ID
-  dateOfBirth       DateTime?
+  idVerified       Boolean   @default(false)
+  idVerifiedAt     DateTime?
+  idVerificationId String? // Shufti reference ID
+  dateOfBirth      DateTime?
 
   // Chat Moderation
-  chatBannedAt      DateTime?   // When user was banned from chat
-  chatBannedById    String?     // Admin who banned the user
-  chatBanReason     String?     // Reason for the ban
+  chatBannedAt   DateTime? // When user was banned from chat
+  chatBannedById String? // Admin who banned the user
+  chatBanReason  String? // Reason for the ban
 
   // Auth
-  accounts          Account[]
-  sessions          Session[]
+  accounts Account[]
+  sessions Session[]
 
   // Relations
-  createdProjects   Project[] @relation("ProjectCreator")
-  grantAgreements   GrantAgreement[] @relation("GrantAgreements")
-  termsAcceptances  TermsAcceptance[] @relation("TermsAcceptances")
-  collaborations    ProjectCollaborator[]
-  pledges           Pledge[]
-  printOrdersSubmitted ProjectPrintOrder[] @relation("PrintOrderSubmitter")
-  sentMessages      Message[] @relation("MessageSender")
-  receivedMessages  Message[] @relation("MessageRecipient")
-  chatMessages      ChatMessage[] @relation("ChatMessages")
-  chatPresence      ChatPresence[]
-  chatRoomMemberships ChatRoomMember[] @relation("ChatRoomMembers")
-  comments          Comment[]
-  behaviors         UserBehavior[]
-  preferences       UserPreference?
-  interestProfile   UserInterestProfile?
-  marketingScore    UserMarketingScore?
-  emailLogs         EmailLog[]
-  stripeConfig      StripeConfig?
-  divinityCoinBankAccount DivinityCoinBankAccount?
-  paypalBankAccount   PayPalBankAccount?
-  whopBankAccount     WhopBankAccount?
-  paymentCloudBankAccount PaymentCloudBankAccount?
-  marketplaceChargebackCard CreatorMarketplaceChargebackCard?
-  paypalPayoutConfig PayPalPayoutConfig?
-  paypalConnectAccount PayPalConnectAccount?
-  divinityCoinBalance Decimal @default(0) @db.Decimal(10, 2)
-  divinityCoinRedemptions DivinityCoinRedemption[]
-  divinityCoinTransactions DivinityCoinTransaction[]
-  refundRequests    RefundRequest[]
-  achievements      UserAchievement[]
-  redemptionBonusLedgers RedemptionBonusLedger[]
+  createdProjects             Project[]                         @relation("ProjectCreator")
+  grantAgreements             GrantAgreement[]                  @relation("GrantAgreements")
+  termsAcceptances            TermsAcceptance[]                 @relation("TermsAcceptances")
+  collaborations              ProjectCollaborator[]
+  pledges                     Pledge[]
+  printOrdersSubmitted        ProjectPrintOrder[]               @relation("PrintOrderSubmitter")
+  sentMessages                Message[]                         @relation("MessageSender")
+  receivedMessages            Message[]                         @relation("MessageRecipient")
+  chatMessages                ChatMessage[]                     @relation("ChatMessages")
+  chatPresence                ChatPresence[]
+  chatRoomMemberships         ChatRoomMember[]                  @relation("ChatRoomMembers")
+  comments                    Comment[]
+  behaviors                   UserBehavior[]
+  preferences                 UserPreference?
+  interestProfile             UserInterestProfile?
+  marketingScore              UserMarketingScore?
+  emailLogs                   EmailLog[]
+  stripeConfig                StripeConfig?
+  divinityCoinBankAccount     DivinityCoinBankAccount?
+  paypalBankAccount           PayPalBankAccount?
+  whopBankAccount             WhopBankAccount?
+  paymentCloudBankAccount     PaymentCloudBankAccount?
+  marketplaceChargebackCard   CreatorMarketplaceChargebackCard?
+  paypalPayoutConfig          PayPalPayoutConfig?
+  paypalConnectAccount        PayPalConnectAccount?
+  divinityCoinBalance         Decimal                           @default(0) @db.Decimal(10, 2)
+  divinityCoinRedemptions     DivinityCoinRedemption[]
+  divinityCoinTransactions    DivinityCoinTransaction[]
+  refundRequests              RefundRequest[]
+  achievements                UserAchievement[]
+  redemptionBonusLedgers      RedemptionBonusLedger[]
   redemptionBonusApplications RedemptionBonusApplication[]
-  idVerifications   IDVerification[]
-  notifications     Notification[]
-  bugReports        BugReport[]
-  mediaFiles        MediaFile[]
-  apiKeys           ApiKey[]
-  backerNotes       BackerNote[]
-  emailCampaignClicks EmailCampaignClick[]
-  uploadedDigitalFiles DigitalFile[]
+  idVerifications             IDVerification[]
+  notifications               Notification[]
+  bugReports                  BugReport[]
+  mediaFiles                  MediaFile[]
+  apiKeys                     ApiKey[]
+  backerNotes                 BackerNote[]
+  emailCampaignClicks         EmailCampaignClick[]
+  uploadedDigitalFiles        DigitalFile[]
   // Backer dashboard enhancements
-  savedAddresses    UserAddress[]
-  projectCollections ProjectCollection[]
-  projectNotificationPrefs ProjectNotificationPreference[]
-  following         CreatorFollow[] @relation("Followers")
-  followers         CreatorFollow[] @relation("Following")
+  savedAddresses              UserAddress[]
+  projectCollections          ProjectCollection[]
+  projectNotificationPrefs    ProjectNotificationPreference[]
+  following                   CreatorFollow[]                   @relation("Followers")
+  followers                   CreatorFollow[]                   @relation("Following")
 
   // Creator email list (per-user subscriber list)
   emailListSubscribers EmailListSubscriber[] @relation("CreatorEmailList")
 
   // Backer reviews
-  backerReviews       BackerReview[] @relation("ReviewAuthor")
-  receivedReviews     BackerReview[] @relation("CreatorReviews")
+  backerReviews   BackerReview[] @relation("ReviewAuthor")
+  receivedReviews BackerReview[] @relation("CreatorReviews")
 
   // Marketplace relations
-  marketplaceBooks     MarketplaceBook[]     @relation("MarketplaceCreator")
-  marketplaceAlbums    MarketplaceAlbum[]    @relation("MarketplaceAlbumCreator")
-  marketplacePurchases MarketplacePurchase[] @relation("MarketplaceBuyer")
-  marketplaceReviews   MarketplaceBookReview[] @relation("MarketplaceReviewer")
-  marketplaceDiscountCodes MarketplaceDiscountCode[] @relation("MarketplaceDiscountCreator")
+  marketplaceBooks           MarketplaceBook[]           @relation("MarketplaceCreator")
+  marketplaceAlbums          MarketplaceAlbum[]          @relation("MarketplaceAlbumCreator")
+  marketplacePurchases       MarketplacePurchase[]       @relation("MarketplaceBuyer")
+  marketplaceReviews         MarketplaceBookReview[]     @relation("MarketplaceReviewer")
+  marketplaceDiscountCodes   MarketplaceDiscountCode[]   @relation("MarketplaceDiscountCreator")
   marketplaceCodeRedemptions MarketplaceCodeRedemption[] @relation("MarketplaceCodeCustomer")
-  changelogEntries     ChangelogEntry[]        @relation("ChangelogAuthor")
-  companyProfile       CompanyProfile?
+  changelogEntries           ChangelogEntry[]            @relation("ChangelogAuthor")
+  companyProfile             CompanyProfile?
 
   // Account locking (for fraud/abuse).
   //
   // A lock is an administrative hold: the account can't sign in. It is NOT a
   // public judgement, and nothing user-facing may say so. Both LOCK_ACCOUNT
   // and BAN_USER set these, so lockedAt on its own does not mean "banned".
-  lockedAt          DateTime?  // When account was locked
-  lockedReason      String?    @db.Text  // Admin notes on why account was locked
-  lockedById        String?    // Admin who locked the account
-  lastKnownIP       String?    // Last known IP address for ban enforcement
+  lockedAt     DateTime? // When account was locked
+  lockedReason String?   @db.Text // Admin notes on why account was locked
+  lockedById   String? // Admin who locked the account
+  lastKnownIP  String? // Last known IP address for ban enforcement
 
   // Ban (expulsion) — strictly narrower than a lock, and the only thing that
   // may be stated publicly. Set by BAN_USER and the automated chargeback /
@@ -148,17 +148,17 @@ model User {
   // hold published an accusation of being banned across all of their
   // campaigns. Anything user-visible must read bannedAt; anything about
   // sign-in access reads lockedAt.
-  bannedAt          DateTime?  // When the account was banned (expelled)
-  bannedReason      String?    @db.Text  // Why the account was banned
-  bannedById        String?    // Admin who banned the account
+  bannedAt     DateTime? // When the account was banned (expelled)
+  bannedReason String?   @db.Text // Why the account was banned
+  bannedById   String? // Admin who banned the account
 
   // Failed login tracking (brute-force detection / admin security stats)
   failedLoginAttempts Int       @default(0)
   lastFailedLoginAt   DateTime?
 
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
-  deletedAt         DateTime?  // Moderator-initiated soft delete
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime? // Moderator-initiated soft delete
 
   // User-initiated permanent account deletion. When set:
   //   - User cannot log in (auth flow rejects)
@@ -172,7 +172,7 @@ model User {
   //     PledgeAddon quantities are zeroed
   // Distinct from deletedAt (moderator-initiated soft delete with
   // potential to restore). accountDeletedAt is irreversible.
-  accountDeletedAt  DateTime?
+  accountDeletedAt DateTime?
 
   accountDeletionRequests  AccountDeletionRequest[] @relation("DeletionRequester")
   reviewedDeletionRequests AccountDeletionRequest[] @relation("DeletionReviewer")
@@ -180,10 +180,10 @@ model User {
   @@index([email])
   @@index([vanityUrl])
   @@index([creatorEmailHandle])
-  @@index([deletedAt])  // For soft delete filtering
-  @@index([lockedAt])   // For locked account filtering
-  @@index([bannedAt])   // For banned account filtering + ban-evasion lookups
-  @@index([accountDeletedAt])  // For filtering deleted accounts from search/listing
+  @@index([deletedAt]) // For soft delete filtering
+  @@index([lockedAt]) // For locked account filtering
+  @@index([bannedAt]) // For banned account filtering + ban-evasion lookups
+  @@index([accountDeletedAt]) // For filtering deleted accounts from search/listing
 }
 
 // Account deletion requests from creators who have ever taken a campaign
@@ -193,23 +193,23 @@ model User {
 // because deletion releases creators from fulfillment obligations and we
 // need a human to confirm nothing is owed before that becomes irreversible.
 model AccountDeletionRequest {
-  id          String                       @id @default(cuid())
-  userId      String
-  status      AccountDeletionRequestStatus @default(PENDING)
+  id     String                       @id @default(cuid())
+  userId String
+  status AccountDeletionRequestStatus @default(PENDING)
 
   // Snapshot of the fulfillment picture at request time. Stored rather
   // than recomputed so the reviewer sees what the creator saw, and so the
   // record survives the project data being changed afterwards.
-  launchedProjectCount Int    @default(0)
-  unfulfilledCount     Int    @default(0)
-  fulfilledCount       Int    @default(0)
+  launchedProjectCount Int   @default(0)
+  unfulfilledCount     Int   @default(0)
+  fulfilledCount       Int   @default(0)
   snapshot             Json?
 
   // Consent captured at request time — deletion waives reward
   // entitlements, refunds, and chargebacks under the Data Deletion Policy.
-  acknowledgedAt DateTime @default(now())
-  requestIp      String?
-  requestUserAgent String? @db.Text
+  acknowledgedAt   DateTime @default(now())
+  requestIp        String?
+  requestUserAgent String?  @db.Text
 
   reviewedById String?
   reviewedAt   DateTime?
@@ -234,13 +234,13 @@ enum AccountDeletionRequestStatus {
 
 // IP Blocklist for banned users
 model IPBlocklist {
-  id          String    @id @default(cuid())
-  ipAddress   String
-  userId      String?   // User who triggered the ban (if any)
-  reason      String?   @db.Text
-  bannedById  String?   // Admin who added the block
-  createdAt   DateTime  @default(now())
-  expiresAt   DateTime? // Optional expiration for temporary bans
+  id         String    @id @default(cuid())
+  ipAddress  String
+  userId     String? // User who triggered the ban (if any)
+  reason     String?   @db.Text
+  bannedById String? // Admin who added the block
+  createdAt  DateTime  @default(now())
+  expiresAt  DateTime? // Optional expiration for temporary bans
 
   @@unique([ipAddress])
   @@index([ipAddress])
@@ -269,7 +269,7 @@ model Account {
   id_token          String? @db.Text
   session_state     String?
 
-  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([provider, providerAccountId])
   @@index([userId])

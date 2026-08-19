@@ -171,8 +171,8 @@ async function gatherUserData(userId: string) {
       select: {
         id: true,
         fullName: true,
-        addressLine1: true,
-        addressLine2: true,
+        line1: true,
+        line2: true,
         city: true,
         state: true,
         postalCode: true,
@@ -187,7 +187,10 @@ async function gatherUserData(userId: string) {
     }),
     db.userBehavior.findMany({
       where: { userId },
-      select: { eventType: true, page: true, createdAt: true, metadata: true },
+      // `path` and `timestamp` are the real column names — the export asked
+      // for `page` and `createdAt`, which do not exist on this model, so the
+      // whole query threw and the export returned nothing.
+      select: { eventType: true, path: true, timestamp: true, metadata: true },
       take: 1000,
     }),
     db.userPreference.findUnique({
@@ -200,7 +203,7 @@ async function gatherUserData(userId: string) {
     }),
     db.emailLog.findMany({
       where: { userId },
-      select: { id: true, type: true, subject: true, status: true, createdAt: true },
+      select: { id: true, type: true, subject: true, sentAt: true, openedAt: true, clickedAt: true },
       take: 500,
     }),
   ]);

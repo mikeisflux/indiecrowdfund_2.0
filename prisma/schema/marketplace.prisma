@@ -3,99 +3,99 @@
 // ============================================
 
 model MarketplaceBook {
-  id                String   @id @default(cuid())
-  creatorId         String
-  creator           User     @relation("MarketplaceCreator", fields: [creatorId], references: [id])
+  id        String @id @default(cuid())
+  creatorId String
+  creator   User   @relation("MarketplaceCreator", fields: [creatorId], references: [id])
 
   // Basic Info
-  title             String
-  slug              String
-  description       String   @db.Text  // Rich text HTML
-  shortDescription  String?  @db.VarChar(300)
+  title            String
+  slug             String
+  description      String  @db.Text // Rich text HTML
+  shortDescription String? @db.VarChar(300)
 
   // Media
-  coverImageUrl     String?
-  promoVideoUrl     String?
-  galleryImages     Json?    // Array of image URLs
+  coverImageUrl String?
+  promoVideoUrl String?
+  galleryImages Json? // Array of image URLs
 
   // Pricing
-  price             Decimal  @db.Decimal(10, 2)
-  currency          String   @default("USD")
+  price    Decimal @db.Decimal(10, 2)
+  currency String  @default("USD")
 
   // Digital File (comics/books)
-  pdfFileUrl        String   @default("") // R2 storage URL
-  pdfFileName       String?
-  pdfFileSize       Int?     // In bytes
+  pdfFileUrl  String  @default("") // R2 storage URL
+  pdfFileName String?
+  pdfFileSize Int? // In bytes
 
   // PDF Cover Extraction
-  pdfCoverImageUrl  String?  // Auto-extracted first page as cover
-  pdfCoverExtractedAt DateTime?
-  pdfCoverExtractionFailed Boolean @default(false)
-  pdfTotalPages     Int?     // Total page count
+  pdfCoverImageUrl         String? // Auto-extracted first page as cover
+  pdfCoverExtractedAt      DateTime?
+  pdfCoverExtractionFailed Boolean   @default(false)
+  pdfTotalPages            Int? // Total page count
 
   // Audio File (music)
-  audioFileUrl      String?  // R2 storage URL for audio
-  audioFileName     String?
-  audioFileSize     Int?     // In bytes
-  audioDuration     Int?     // Duration in seconds
-  audioStreamUrl    String?  // Public streaming URL (lower quality)
+  audioFileUrl   String? // R2 storage URL for audio
+  audioFileName  String?
+  audioFileSize  Int? // In bytes
+  audioDuration  Int? // Duration in seconds
+  audioStreamUrl String? // Public streaming URL (lower quality)
 
   // Video File (movies)
-  videoFileUrl      String?  // R2 storage URL for video
-  videoFileName     String?
-  videoFileSize     BigInt?  // In bytes (BigInt for large files)
-  videoDuration     Int?     // Duration in seconds
-  videoStreamUrl    String?  // Public streaming URL
-  videoResolution   String?  // e.g. "1080p", "4K"
+  videoFileUrl    String? // R2 storage URL for video
+  videoFileName   String?
+  videoFileSize   BigInt? // In bytes (BigInt for large files)
+  videoDuration   Int? // Duration in seconds
+  videoStreamUrl  String? // Public streaming URL
+  videoResolution String? // e.g. "1080p", "4K"
 
   // Album (music)
-  albumId           String?
-  album             MarketplaceAlbum? @relation(fields: [albumId], references: [id])
-  trackNumber       Int?     // Position in album
+  albumId     String?
+  album       MarketplaceAlbum? @relation(fields: [albumId], references: [id])
+  trackNumber Int? // Position in album
 
   // Content Flags
-  hasAdultContent   Boolean  @default(false)
-  hasRiskyContent   Boolean  @default(false)
-  promoContentSfw   Boolean  @default(true)
-  paymentProcessor  PaymentProcessor @default(NMI)
+  hasAdultContent  Boolean          @default(false)
+  hasRiskyContent  Boolean          @default(false)
+  promoContentSfw  Boolean          @default(true)
+  paymentProcessor PaymentProcessor @default(NMI)
 
   // Status & Moderation
-  status            MarketplaceBookStatus @default(DRAFT)
-  submittedAt       DateTime?
-  approvedAt        DateTime?
-  rejectedAt        DateTime?
-  rejectionReason   String?
-  deactivatedAt     DateTime?
+  status             MarketplaceBookStatus @default(DRAFT)
+  submittedAt        DateTime?
+  approvedAt         DateTime?
+  rejectedAt         DateTime?
+  rejectionReason    String?
+  deactivatedAt      DateTime?
   deactivationReason String?
 
   // Featured/Curated
-  isFeatured        Boolean  @default(false)
-  isStaffPick       Boolean  @default(false)
-  featuredOrder     Int?
-  staffPickOrder    Int?
+  isFeatured     Boolean @default(false)
+  isStaffPick    Boolean @default(false)
+  featuredOrder  Int?
+  staffPickOrder Int?
 
   // Categorization
-  mediaCategory     String   @default("comics") // Top-level: comics, music, movies
-  category          String?
-  tags              String[] @default([])
+  mediaCategory String   @default("comics") // Top-level: comics, music, movies
+  category      String?
+  tags          String[] @default([])
 
   // Stats
-  purchaseCount     Int      @default(0)
-  viewCount         Int      @default(0)
+  purchaseCount Int @default(0)
+  viewCount     Int @default(0)
 
   // Timestamps
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
-  publishedAt       DateTime?
-  deletedAt         DateTime?  // Soft delete
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  publishedAt DateTime?
+  deletedAt   DateTime? // Soft delete
 
   // Relations
-  purchases         MarketplacePurchase[]
-  reviews           MarketplaceBookReview[]
-  codeRedemptions   MarketplaceCodeRedemption[]
-  discountCodes     MarketplaceDiscountCode[] @relation("MarketplaceDiscountBook")
-  companyId         String?
-  company           CompanyProfile? @relation(fields: [companyId], references: [id])
+  purchases       MarketplacePurchase[]
+  reviews         MarketplaceBookReview[]
+  codeRedemptions MarketplaceCodeRedemption[]
+  discountCodes   MarketplaceDiscountCode[]   @relation("MarketplaceDiscountBook")
+  companyId       String?
+  company         CompanyProfile?             @relation(fields: [companyId], references: [id])
 
   @@unique([creatorId, slug])
   @@index([status])
@@ -113,42 +113,42 @@ model MarketplaceBook {
 // ============================================
 
 model MarketplaceAlbum {
-  id                String   @id @default(cuid())
-  creatorId         String
-  creator           User     @relation("MarketplaceAlbumCreator", fields: [creatorId], references: [id])
+  id        String @id @default(cuid())
+  creatorId String
+  creator   User   @relation("MarketplaceAlbumCreator", fields: [creatorId], references: [id])
 
   // Basic Info
-  title             String
-  slug              String
-  description       String?  @db.Text
+  title       String
+  slug        String
+  description String? @db.Text
 
   // Media
-  coverImageUrl     String?
+  coverImageUrl String?
 
   // Categorization
-  category          String?  // Genre
-  tags              String[] @default([])
+  category String? // Genre
+  tags     String[] @default([])
 
   // Album type
-  albumType         String   @default("album") // album, single, ep
+  albumType String @default("album") // album, single, ep
 
   // Status
-  isPublished       Boolean  @default(false)
-  publishedAt       DateTime?
+  isPublished Boolean   @default(false)
+  publishedAt DateTime?
 
   // Stats
-  totalTracks       Int      @default(0)
-  totalDuration     Int      @default(0) // Total seconds
+  totalTracks   Int @default(0)
+  totalDuration Int @default(0) // Total seconds
 
   // Timestamps
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
-  deletedAt         DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
 
   // Relations
-  tracks            MarketplaceBook[]
-  companyId         String?
-  company           CompanyProfile? @relation(fields: [companyId], references: [id])
+  tracks    MarketplaceBook[]
+  companyId String?
+  company   CompanyProfile?   @relation(fields: [companyId], references: [id])
 
   @@unique([creatorId, slug])
   @@index([creatorId])
@@ -168,97 +168,97 @@ enum MarketplaceBookStatus {
 }
 
 model CompanyProfile {
-  id                String   @id @default(cuid())
-  userId            String   @unique
-  user              User     @relation(fields: [userId], references: [id])
+  id     String @id @default(cuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id])
 
   // Profile Info
-  name              String
-  slug              String   @unique
-  tagline           String?  @db.VarChar(200)
-  about             String?  @db.Text  // Rich text HTML
+  name    String
+  slug    String  @unique
+  tagline String? @db.VarChar(200)
+  about   String? @db.Text // Rich text HTML
 
   // Media
-  bannerImageUrl    String?
-  logoUrl           String?
+  bannerImageUrl String?
+  logoUrl        String?
 
   // Contact & Social
-  website           String?
-  socialLinks       Json?    // { twitter, facebook, instagram, etc. }
-  physicalMediaUrl  String?  // Link to order physical copies (books, merch, etc.)
+  website          String?
+  socialLinks      Json? // { twitter, facebook, instagram, etc. }
+  physicalMediaUrl String? // Link to order physical copies (books, merch, etc.)
 
   // Status
-  isActive          Boolean  @default(true)
-  isVerified        Boolean  @default(false)
+  isActive   Boolean @default(true)
+  isVerified Boolean @default(false)
 
   // Stats
-  bookCount         Int      @default(0)
-  totalSales        Int      @default(0)
+  bookCount  Int @default(0)
+  totalSales Int @default(0)
 
   // Timestamps
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relations
-  books             MarketplaceBook[]
-  albums            MarketplaceAlbum[]
+  books  MarketplaceBook[]
+  albums MarketplaceAlbum[]
 
   @@index([slug])
   @@index([isActive])
 }
 
 model MarketplacePurchase {
-  id                String   @id @default(cuid())
-  bookId            String
-  book              MarketplaceBook @relation(fields: [bookId], references: [id])
-  buyerId           String
-  buyer             User     @relation("MarketplaceBuyer", fields: [buyerId], references: [id])
+  id      String          @id @default(cuid())
+  bookId  String
+  book    MarketplaceBook @relation(fields: [bookId], references: [id])
+  buyerId String
+  buyer   User            @relation("MarketplaceBuyer", fields: [buyerId], references: [id])
 
   // Transaction
-  amount            Decimal  @db.Decimal(10, 2)
-  platformFee       Decimal  @default(0) @db.Decimal(10, 2)
-  creatorPayout     Decimal  @default(0) @db.Decimal(10, 2)
-  currency          String   @default("USD")
-  paymentProcessor  PaymentProcessor
-  transactionId     String?  // Stripe or DivinityCoin transaction ID
+  amount           Decimal          @db.Decimal(10, 2)
+  platformFee      Decimal          @default(0) @db.Decimal(10, 2)
+  creatorPayout    Decimal          @default(0) @db.Decimal(10, 2)
+  currency         String           @default("USD")
+  paymentProcessor PaymentProcessor
+  transactionId    String? // Stripe or DivinityCoin transaction ID
 
   // Stripe fields
-  stripePaymentIntentId    String?  @unique
-  stripeCheckoutSessionId  String?  @unique
-  stripeCustomerId         String?
+  stripePaymentIntentId   String? @unique
+  stripeCheckoutSessionId String? @unique
+  stripeCustomerId        String?
 
   // DivinityCoin fields
-  divinityCoinPaymentId String?  @unique
+  divinityCoinPaymentId String? @unique
 
   // PayPal fields
-  paypalOrderId         String?  @unique
+  paypalOrderId String? @unique
 
   // PaymentCloud (NMI) fields. Customer Vault token is the saved
   // card; transactionId is the sale record we use for refunds.
-  nmiCustomerVaultId    String?  @unique
-  nmiTransactionId      String?  @unique
+  nmiCustomerVaultId String? @unique
+  nmiTransactionId   String? @unique
 
   // Status
-  status            MarketplacePurchaseStatus @default(PENDING)
-  completedAt       DateTime?
-  refundedAt        DateTime?
-  refundReason      String?
+  status       MarketplacePurchaseStatus @default(PENDING)
+  completedAt  DateTime?
+  refundedAt   DateTime?
+  refundReason String?
 
   // Delivery
-  deliveredAt       DateTime?
-  downloadCount     Int      @default(0)
-  lastDownloadedAt  DateTime?
+  deliveredAt      DateTime?
+  downloadCount    Int       @default(0)
+  lastDownloadedAt DateTime?
 
   // Reading Progress (synced from Digital Library)
-  readingProgress   Json?    // { currentPage: number, totalPages: number }
-  lastReadAt        DateTime?
+  readingProgress Json? // { currentPage: number, totalPages: number }
+  lastReadAt      DateTime?
 
   // Discount code relation
-  codeRedemption    MarketplaceCodeRedemption?
+  codeRedemption MarketplaceCodeRedemption?
 
   // Timestamps
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([buyerId])
   @@index([bookId])
@@ -273,26 +273,26 @@ enum MarketplacePurchaseStatus {
 }
 
 model MarketplaceBookReview {
-  id                String   @id @default(cuid())
-  bookId            String
-  book              MarketplaceBook @relation(fields: [bookId], references: [id])
-  reviewerId        String
-  reviewer          User     @relation("MarketplaceReviewer", fields: [reviewerId], references: [id])
+  id         String          @id @default(cuid())
+  bookId     String
+  book       MarketplaceBook @relation(fields: [bookId], references: [id])
+  reviewerId String
+  reviewer   User            @relation("MarketplaceReviewer", fields: [reviewerId], references: [id])
 
   // Review Content
-  action            MarketplaceReviewAction
-  previousStatus    MarketplaceBookStatus?
-  newStatus         MarketplaceBookStatus
-  notes             String?  @db.Text
-  internalNotes     String?  @db.Text
-  rejectionReason   String?
+  action          MarketplaceReviewAction
+  previousStatus  MarketplaceBookStatus?
+  newStatus       MarketplaceBookStatus
+  notes           String?                 @db.Text
+  internalNotes   String?                 @db.Text
+  rejectionReason String?
 
   // AI Analysis
   flagsRaised       String[] @default([])
   aiConfidenceScore Float?
 
   // Timestamps
-  createdAt         DateTime @default(now())
+  createdAt DateTime @default(now())
 
   @@index([bookId])
   @@index([reviewerId])
@@ -313,36 +313,36 @@ enum MarketplaceReviewAction {
 // ============================================
 
 model MarketplaceDiscountCode {
-  id                String   @id @default(cuid())
-  creatorId         String
-  creator           User     @relation("MarketplaceDiscountCreator", fields: [creatorId], references: [id])
+  id        String @id @default(cuid())
+  creatorId String
+  creator   User   @relation("MarketplaceDiscountCreator", fields: [creatorId], references: [id])
 
   // Specific book this code applies to
-  bookId            String?
-  book              MarketplaceBook? @relation("MarketplaceDiscountBook", fields: [bookId], references: [id])
+  bookId String?
+  book   MarketplaceBook? @relation("MarketplaceDiscountBook", fields: [bookId], references: [id])
 
   // Code details
-  code              String   @unique
-  type              MarketplaceDiscountType @default(FREE_BOOK)
+  code String                  @unique
+  type MarketplaceDiscountType @default(FREE_BOOK)
 
   // Validity period (monthly)
-  validFrom         DateTime
-  validUntil        DateTime
+  validFrom  DateTime
+  validUntil DateTime
 
   // Usage limits
-  maxRedemptions    Int      @default(0)  // Max times this code can be used (0 = unlimited)
-  maxPerCustomer    Int      @default(1)  // Max times per customer
-  usageCount        Int      @default(0)  // Current usage count
+  maxRedemptions Int @default(0) // Max times this code can be used (0 = unlimited)
+  maxPerCustomer Int @default(1) // Max times per customer
+  usageCount     Int @default(0) // Current usage count
 
   // Status
-  isActive          Boolean  @default(true)
+  isActive Boolean @default(true)
 
   // Timestamps
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relations
-  redemptions       MarketplaceCodeRedemption[]
+  redemptions MarketplaceCodeRedemption[]
 
   @@index([creatorId])
   @@index([bookId])
@@ -352,21 +352,21 @@ model MarketplaceDiscountCode {
 }
 
 model MarketplaceCodeRedemption {
-  id                String   @id @default(cuid())
-  codeId            String
-  code              MarketplaceDiscountCode @relation(fields: [codeId], references: [id])
-  customerId        String
-  customer          User     @relation("MarketplaceCodeCustomer", fields: [customerId], references: [id])
-  bookId            String
-  book              MarketplaceBook @relation(fields: [bookId], references: [id])
-  purchaseId        String?  @unique
-  purchase          MarketplacePurchase? @relation(fields: [purchaseId], references: [id])
+  id         String                  @id @default(cuid())
+  codeId     String
+  code       MarketplaceDiscountCode @relation(fields: [codeId], references: [id])
+  customerId String
+  customer   User                    @relation("MarketplaceCodeCustomer", fields: [customerId], references: [id])
+  bookId     String
+  book       MarketplaceBook         @relation(fields: [bookId], references: [id])
+  purchaseId String?                 @unique
+  purchase   MarketplacePurchase?    @relation(fields: [purchaseId], references: [id])
 
   // Amount saved
-  discountAmount    Decimal  @db.Decimal(10, 2)
+  discountAmount Decimal @db.Decimal(10, 2)
 
   // Timestamps
-  redeemedAt        DateTime @default(now())
+  redeemedAt DateTime @default(now())
 
   @@unique([codeId, customerId, bookId])
   @@index([codeId])
@@ -375,7 +375,7 @@ model MarketplaceCodeRedemption {
 }
 
 enum MarketplaceDiscountType {
-  FREE_BOOK         // 100% off one book
-  PERCENTAGE        // Future: percentage discount
-  FIXED_AMOUNT      // Future: fixed dollar amount off
+  FREE_BOOK // 100% off one book
+  PERCENTAGE // Future: percentage discount
+  FIXED_AMOUNT // Future: fixed dollar amount off
 }

@@ -8,7 +8,7 @@
 // this week, or in the future. Not user-visible.
 
 model DevCalendarEntry {
-  id              String                  @id @default(cuid())
+  id String @id @default(cuid())
 
   // What kind of entry this is. NOTE = freeform engineering note
   // pinned to a date. REMINDER = one-off thing to do on a date
@@ -16,37 +16,37 @@ model DevCalendarEntry {
   // documents a cron job that runs on a recurring cadence -- the
   // cronExpression field stores the schedule for reference (we
   // don't execute it; it's documentation of what's deployed).
-  type            DevCalendarEntryType    @default(NOTE)
+  type DevCalendarEntryType @default(NOTE)
 
-  title           String
-  description     String?                 @db.Text
+  title       String
+  description String? @db.Text
 
   // When this entry is relevant. For REMINDER/NOTE: the date it
   // should appear on. For JOB_SCHEDULE: the first/next expected
   // run timestamp (informational only).
-  scheduledFor    DateTime?
+  scheduledFor DateTime?
 
   // Cron-format schedule for JOB_SCHEDULE entries (e.g. "*/10 * * * *").
   // Free text -- we don't parse it.
-  cronExpression  String?
+  cronExpression String?
 
   // Optional URL link (PR, doc, dashboard, etc.).
-  link            String?
+  link String?
 
   // Soft status flow. PENDING -> DONE / SKIPPED. IN_PROGRESS for
   // ongoing initiatives.
-  status          DevCalendarEntryStatus  @default(PENDING)
+  status DevCalendarEntryStatus @default(PENDING)
 
   // Free-form tags for filtering ("chargeback", "deploy", "ops",
   // etc.).
-  tags            String[]
+  tags String[]
 
   // Audit trail
-  createdById     String?
-  completedAt     DateTime?
+  createdById String?
+  completedAt DateTime?
 
-  createdAt       DateTime                @default(now())
-  updatedAt       DateTime                @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([scheduledFor])
   @@index([status])

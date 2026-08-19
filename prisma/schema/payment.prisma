@@ -12,12 +12,12 @@ model RefundRequest {
   creatorNote String?             @db.Text
   processedAt DateTime?
 
-  pledge      Pledge   @relation(fields: [pledgeId], references: [id])
-  user        User     @relation(fields: [userId], references: [id])
-  project     Project  @relation(fields: [projectId], references: [id])
+  pledge  Pledge  @relation(fields: [pledgeId], references: [id])
+  user    User    @relation(fields: [userId], references: [id])
+  project Project @relation(fields: [projectId], references: [id])
 
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([projectId])
   @@index([userId])
@@ -35,16 +35,16 @@ enum RefundRequestStatus {
 // ============================================
 
 model StripeConfig {
-  id              String   @id @default(cuid())
-  userId          String   @unique
-  stripeAccountId String   @unique
-  isOnboarded     Boolean  @default(false)
-  isActive        Boolean  @default(true)
+  id              String  @id @default(cuid())
+  userId          String  @unique
+  stripeAccountId String  @unique
+  isOnboarded     Boolean @default(false)
+  isActive        Boolean @default(true)
 
-  user            User     @relation(fields: [userId], references: [id])
+  user User @relation(fields: [userId], references: [id])
 
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([userId])
 }
@@ -58,38 +58,38 @@ model StripeConfig {
 // PayPal email for manual platform-initiated payouts). A creator can have
 // either/both; nothing here touches the standard PayPal flow.
 model PayPalConnectAccount {
-  id                 String   @id @default(cuid())
-  userId             String   @unique
+  id     String @id @default(cuid())
+  userId String @unique
 
   // Creator's PayPal merchant id (a.k.a. merchantIdInPayPal / payer id).
   // This is the `payee.merchant_id` we send on every order. Nullable until
   // the seller returns from onboarding.
-  merchantIdInPayPal String?  @unique
+  merchantIdInPayPal String? @unique
 
   // Our tracking_id passed to the Partner Referrals API (we use the userId).
-  trackingId         String?
+  trackingId String?
 
   // HATEOAS self link returned by Partner Referrals — GET it to refresh the
   // single-use action_url without generating a whole new referral.
-  referralSelfLink   String?  @db.Text
+  referralSelfLink String? @db.Text
 
-  onboardingStatus   PayPalConnectOnboardingStatus @default(NOT_STARTED)
+  onboardingStatus PayPalConnectOnboardingStatus @default(NOT_STARTED)
 
   // Gate flags confirmed via GET merchant-integrations before we let the
   // creator take live pledges. Both must be true to be "ready".
-  paymentsReceivable Boolean  @default(false)
-  emailConfirmed     Boolean  @default(false)
+  paymentsReceivable Boolean @default(false)
+  emailConfirmed     Boolean @default(false)
 
   // OAuth third-party scopes the seller granted us (informational/debug).
-  scopesGranted      String[] @default([])
+  scopesGranted String[] @default([])
 
   // sandbox vs live (mirrors the platform PPCP app the referral was made on).
-  isLive             Boolean  @default(false)
+  isLive Boolean @default(false)
 
-  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([userId])
   @@index([merchantIdInPayPal])
@@ -97,10 +97,10 @@ model PayPalConnectAccount {
 
 enum PayPalConnectOnboardingStatus {
   NOT_STARTED
-  STARTED    // referral link generated, creator redirected to PayPal
-  PENDING    // returned from PayPal but not yet receivable/email-confirmed
-  COMPLETED  // MERCHANT.ONBOARDING.COMPLETED + receivable checks pass
-  REVOKED    // MERCHANT.PARTNER-CONSENT.REVOKED — creator pulled our permissions
+  STARTED // referral link generated, creator redirected to PayPal
+  PENDING // returned from PayPal but not yet receivable/email-confirmed
+  COMPLETED // MERCHANT.ONBOARDING.COMPLETED + receivable checks pass
+  REVOKED // MERCHANT.PARTNER-CONSENT.REVOKED — creator pulled our permissions
 }
 
 // Creator chargeback protection card.
@@ -117,40 +117,40 @@ enum PayPalConnectOnboardingStatus {
 // Migrate-then-drop the encrypted columns once all live cards have been
 // re-tokenized.
 model CreatorChargebackCard {
-  id                    String   @id @default(cuid())
-  projectId             String   @unique
+  id        String @id @default(cuid())
+  projectId String @unique
 
   // PaymentCloud (NMI) Customer Vault id — preferred storage for new
   // chargeback cards. Nullable for legacy rows that still use the
   // encrypted PAN columns below.
-  nmiCustomerVaultId    String?  @unique
+  nmiCustomerVaultId String? @unique
 
   // Encrypted card details (AES-256). DEPRECATED — only present for
   // legacy rows. New saves leave these null and use nmiCustomerVaultId.
-  cardNumberEncrypted   String?  @db.Text
-  expMonthEncrypted     String?  @db.Text
-  expYearEncrypted      String?  @db.Text
-  cvcEncrypted          String?  @db.Text
+  cardNumberEncrypted String? @db.Text
+  expMonthEncrypted   String? @db.Text
+  expYearEncrypted    String? @db.Text
+  cvcEncrypted        String? @db.Text
 
   // Encrypted billing address (legacy)
-  billingNameEncrypted  String?  @db.Text
-  billingLine1Encrypted String?  @db.Text
-  billingLine2Encrypted String?  @db.Text
-  billingCityEncrypted  String?  @db.Text
-  billingStateEncrypted String?  @db.Text
-  billingZipEncrypted   String?  @db.Text
+  billingNameEncrypted    String? @db.Text
+  billingLine1Encrypted   String? @db.Text
+  billingLine2Encrypted   String? @db.Text
+  billingCityEncrypted    String? @db.Text
+  billingStateEncrypted   String? @db.Text
+  billingZipEncrypted     String? @db.Text
   billingCountryEncrypted String? @db.Text
 
   // Non-sensitive display data (used by both flows)
-  cardLastFour          String   // e.g., "4242"
-  cardBrand             String?  // e.g., "Visa", "Mastercard"
-  expMonth              Int
-  expYear               Int
+  cardLastFour String // e.g., "4242"
+  cardBrand    String? // e.g., "Visa", "Mastercard"
+  expMonth     Int
+  expYear      Int
 
-  project               Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([projectId])
 }
@@ -163,18 +163,18 @@ model CreatorChargebackCard {
 // is captured here too so we have a full KYC record alongside the
 // chargeback card.
 model DivinityCoinBankAccount {
-  id                    String   @id @default(cuid())
-  userId                String   @unique
+  id     String @id @default(cuid())
+  userId String @unique
 
   // Encrypted bank details (AES-256 encrypted)
-  bankNameEncrypted     String   @db.Text
+  bankNameEncrypted               String  @db.Text
   // Legacy combined "first last" field. New saves leave it null and
   // populate the split fields below; kept nullable for back-compat.
-  accountHolderEncrypted String? @db.Text
+  accountHolderEncrypted          String? @db.Text
   accountHolderFirstNameEncrypted String? @db.Text
   accountHolderLastNameEncrypted  String? @db.Text
-  accountNumberEncrypted String  @db.Text
-  routingNumberEncrypted String  @db.Text
+  accountNumberEncrypted          String  @db.Text
+  routingNumberEncrypted          String  @db.Text
 
   // Encrypted billing address (collected on the same campaign-creation
   // payments screen as the bank account so we can reconcile KYC data
@@ -191,28 +191,28 @@ model DivinityCoinBankAccount {
   // validation, and the destination ACH/Faster Payments rail. Defaults
   // to "US" — every pre-international row predates this column and was
   // a US ACH account by definition.
-  bankCountry           String   @default("US")
+  bankCountry String @default("US")
 
   // Optional payout-contact phone. UK banks require a phone number on
   // the payee record before they'll add it as a recipient; US ACH
   // doesn't. Encrypted at rest like the rest of the payee identity.
-  payoutPhoneEncrypted  String?  @db.Text
+  payoutPhoneEncrypted String? @db.Text
 
   // Non-sensitive display data
-  bankNameDisplay       String?  // e.g., "Chase Bank"
-  accountLastFour       String?  // e.g., "4567"
-  accountType           String   @default("checking") // checking or savings
+  bankNameDisplay String? // e.g., "Chase Bank"
+  accountLastFour String? // e.g., "4567"
+  accountType     String  @default("checking") // checking or savings
 
   // Verification status
-  isVerified            Boolean  @default(false)
-  verifiedAt            DateTime?
-  verificationMethod    String?  // e.g., "micro_deposits", "instant"
+  isVerified         Boolean   @default(false)
+  verifiedAt         DateTime?
+  verificationMethod String? // e.g., "micro_deposits", "instant"
 
-  user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  settlements           DivinityCoinSettlement[]
+  user        User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  settlements DivinityCoinSettlement[]
 
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([userId])
 }
@@ -222,18 +222,18 @@ model DivinityCoinBankAccount {
 // platform's PaymentCloud merchant; we settle creators out of that
 // pool by ACH to the bank account stored here.
 model PaymentCloudBankAccount {
-  id                    String   @id @default(cuid())
-  userId                String   @unique
+  id     String @id @default(cuid())
+  userId String @unique
 
-  bankNameEncrypted     String   @db.Text
+  bankNameEncrypted               String @db.Text
   accountHolderFirstNameEncrypted String @db.Text
   accountHolderLastNameEncrypted  String @db.Text
-  accountNumberEncrypted String  @db.Text
+  accountNumberEncrypted          String @db.Text
   // For US accounts this stores the 9-digit ABA routing number. For
   // non-US (e.g. UK) it stores the local-format routing identifier —
   // for UK it's the 6-digit Sort Code (e.g. 60-06-39 → 600639).
   // Country-specific labels + validation are driven by bankCountry.
-  routingNumberEncrypted String  @db.Text
+  routingNumberEncrypted          String @db.Text
 
   // Billing address (encrypted — captured on the same payments screen
   // for KYC parity with the chargeback card).
@@ -251,26 +251,26 @@ model PaymentCloudBankAccount {
   // currency the bank settles in, and the destination ACH/SEPA rail.
   // Defaults to "US" — every pre-international row predates this
   // column and was a US ACH account by definition.
-  bankCountry           String   @default("US")
+  bankCountry String @default("US")
 
   // Optional payout-contact phone. UK banks require a phone number on
   // the payee record before they'll add it as a recipient (Barclays /
   // HSBC / Lloyds all enforce this); US ACH doesn't. Encrypted at
   // rest like the rest of the payee identity fields.
-  payoutPhoneEncrypted  String?  @db.Text
+  payoutPhoneEncrypted String? @db.Text
 
-  bankNameDisplay       String?
-  accountLastFour       String?
-  accountType           String   @default("checking")
+  bankNameDisplay String?
+  accountLastFour String?
+  accountType     String  @default("checking")
 
-  isVerified            Boolean  @default(false)
-  verifiedAt            DateTime?
-  verificationMethod    String?
+  isVerified         Boolean   @default(false)
+  verifiedAt         DateTime?
+  verificationMethod String?
 
-  user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([userId])
 }
@@ -283,48 +283,48 @@ model PaymentCloudBankAccount {
 // never touches our DB — only the PaymentCloud Customer Vault id +
 // display data.
 model CreatorMarketplaceChargebackCard {
-  id                    String   @id @default(cuid())
-  userId                String   @unique
+  id     String @id @default(cuid())
+  userId String @unique
 
-  nmiCustomerVaultId    String   @unique
+  nmiCustomerVaultId String @unique
 
-  cardLastFour          String
-  cardBrand             String?
-  expMonth              Int
-  expYear               Int
+  cardLastFour String
+  cardBrand    String?
+  expMonth     Int
+  expYear      Int
 
-  user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([userId])
 }
 
 // PayPal bank account for creator payouts (separate from DivinityCoin)
 model PayPalBankAccount {
-  id                    String   @id @default(cuid())
-  userId                String   @unique
+  id     String @id @default(cuid())
+  userId String @unique
 
   // Encrypted bank details (AES-256 encrypted)
-  bankNameEncrypted     String   @db.Text
-  accountHolderEncrypted String  @db.Text
-  accountNumberEncrypted String  @db.Text
+  bankNameEncrypted      String @db.Text
+  accountHolderEncrypted String @db.Text
+  accountNumberEncrypted String @db.Text
   // US accounts: 9-digit ABA routing number. UK accounts: 6-digit Sort
   // Code. Country-specific labels + validation are driven by bankCountry.
-  routingNumberEncrypted String  @db.Text
+  routingNumberEncrypted String @db.Text
 
   // ISO 3166-1 alpha-2 country code that drives the payout flow:
   // routing-format selection (US 9-digit ABA vs UK 6-digit Sort Code),
   // validation, and the destination ACH/Faster Payments rail. Defaults
   // to "US" — every pre-international row predates this column and was
   // a US ACH account by definition.
-  bankCountry           String   @default("US")
+  bankCountry String @default("US")
 
   // Optional payout-contact phone. UK banks require a phone number on
   // the payee record before they'll add it as a recipient; US ACH
   // doesn't. Encrypted at rest like the rest of the payee identity.
-  payoutPhoneEncrypted  String?  @db.Text
+  payoutPhoneEncrypted String? @db.Text
 
   // Encrypted billing address (KYC + chargeback reconciliation parity
   // with DivinityCoinBankAccount / PaymentCloudBankAccount). Optional
@@ -338,74 +338,74 @@ model PayPalBankAccount {
   billingCountryEncrypted String? @db.Text
 
   // Non-sensitive display data
-  bankNameDisplay       String?  // e.g., "Chase Bank"
-  accountLastFour       String?  // e.g., "4567"
-  accountType           String   @default("checking") // checking or savings
+  bankNameDisplay String? // e.g., "Chase Bank"
+  accountLastFour String? // e.g., "4567"
+  accountType     String  @default("checking") // checking or savings
 
   // Verification status
-  isVerified            Boolean  @default(false)
-  verifiedAt            DateTime?
-  verificationMethod    String?  // e.g., "micro_deposits", "instant"
+  isVerified         Boolean   @default(false)
+  verifiedAt         DateTime?
+  verificationMethod String? // e.g., "micro_deposits", "instant"
 
-  user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  payouts               PayPalPayout[]
+  user    User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  payouts PayPalPayout[]
 
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([userId])
 }
 
 // PayPal payout config per creator (their PayPal email for receiving payouts)
 model PayPalPayoutConfig {
-  id              String   @id @default(cuid())
-  userId          String   @unique
-  paypalEmail     String   // Creator's PayPal email to receive payouts
-  isVerified      Boolean  @default(false)
-  verifiedAt      DateTime?
+  id          String    @id @default(cuid())
+  userId      String    @unique
+  paypalEmail String // Creator's PayPal email to receive payouts
+  isVerified  Boolean   @default(false)
+  verifiedAt  DateTime?
 
-  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  payouts         PayPalPayout[]
+  user    User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  payouts PayPalPayout[]
 
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([userId])
 }
 
 // PayPal payout settlement record (per project/per creator)
 model PayPalPayout {
-  id                  String   @id @default(cuid())
-  payoutConfigId      String?  // Legacy: PayPal email payout config (nullable for bank account payouts)
-  paypalBankAccountId String?  // Creator's bank account for direct deposit payouts
+  id                  String  @id @default(cuid())
+  payoutConfigId      String? // Legacy: PayPal email payout config (nullable for bank account payouts)
+  paypalBankAccountId String? // Creator's bank account for direct deposit payouts
   projectId           String?
-  projectName         String?  // Denormalized
+  projectName         String? // Denormalized
 
   // Payout details
-  grossAmount     Decimal  @db.Decimal(10, 2)  // Total collected
-  platformFee     Decimal  @db.Decimal(10, 2)  // Platform's 3%
-  netAmount       Decimal  @db.Decimal(10, 2)  // What creator receives
-  currency        String   @default("USD")
+  grossAmount Decimal @db.Decimal(10, 2) // Total collected
+  platformFee Decimal @db.Decimal(10, 2) // Platform's 3%
+  netAmount   Decimal @db.Decimal(10, 2) // What creator receives
+  currency    String  @default("USD")
 
   // PayPal tracking (for PayPal-initiated payouts)
-  paypalBatchId   String?  // PayPal payout batch ID
-  paypalItemId    String?  // Individual item ID within batch
-  status          PayPalPayoutStatus @default(PENDING)
+  paypalBatchId String? // PayPal payout batch ID
+  paypalItemId  String? // Individual item ID within batch
+  status        PayPalPayoutStatus @default(PENDING)
 
   // Processing
-  initiatedAt     DateTime?
-  completedAt     DateTime?
-  failedAt        DateTime?
-  failureReason   String?
-  adminNotes      String?  @db.Text
-  processedBy     String?
+  initiatedAt   DateTime?
+  completedAt   DateTime?
+  failedAt      DateTime?
+  failureReason String?
+  adminNotes    String?   @db.Text
+  processedBy   String?
 
-  payoutConfig        PayPalPayoutConfig?  @relation(fields: [payoutConfigId], references: [id])
-  paypalBankAccount   PayPalBankAccount?   @relation(fields: [paypalBankAccountId], references: [id])
-  project             Project?             @relation(fields: [projectId], references: [id])
+  payoutConfig      PayPalPayoutConfig? @relation(fields: [payoutConfigId], references: [id])
+  paypalBankAccount PayPalBankAccount?  @relation(fields: [paypalBankAccountId], references: [id])
+  project           Project?            @relation(fields: [projectId], references: [id])
 
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([payoutConfigId])
   @@index([paypalBankAccountId])
@@ -423,38 +423,38 @@ enum PayPalPayoutStatus {
 
 // DivinityCoin settlement tracking for admin payouts
 model DivinityCoinSettlement {
-  id                    String   @id @default(cuid())
-  bankAccountId         String
+  id            String @id @default(cuid())
+  bankAccountId String
 
   // Settlement details
-  amount                Decimal  @db.Decimal(10, 2) // Amount in USD
-  currency              String   @default("USD")
-  status                DivinityCoinSettlementStatus @default(PENDING)
+  amount   Decimal                      @db.Decimal(10, 2) // Amount in USD
+  currency String                       @default("USD")
+  status   DivinityCoinSettlementStatus @default(PENDING)
 
   // Project reference (optional - for project-specific settlements)
-  projectId             String?
-  projectName           String?  // Denormalized for history
+  projectId   String?
+  projectName String? // Denormalized for history
 
   // DivinityCoin reference
-  divinitySettlementId  String?  @unique // External settlement ID from DivinityCoin
-  divinityBatchId       String?  // Batch ID if part of a batch settlement
+  divinitySettlementId String? @unique // External settlement ID from DivinityCoin
+  divinityBatchId      String? // Batch ID if part of a batch settlement
 
   // Processing details
-  initiatedAt           DateTime?
-  processedAt           DateTime?
-  completedAt           DateTime?
-  failedAt              DateTime?
-  failureReason         String?
+  initiatedAt   DateTime?
+  processedAt   DateTime?
+  completedAt   DateTime?
+  failedAt      DateTime?
+  failureReason String?
 
   // Admin notes
-  adminNotes            String?  @db.Text
-  processedBy           String?  // Admin user ID who processed it
+  adminNotes  String? @db.Text
+  processedBy String? // Admin user ID who processed it
 
-  bankAccount           DivinityCoinBankAccount @relation(fields: [bankAccountId], references: [id])
-  project               Project? @relation(fields: [projectId], references: [id])
+  bankAccount DivinityCoinBankAccount @relation(fields: [bankAccountId], references: [id])
+  project     Project?                @relation(fields: [projectId], references: [id])
 
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([bankAccountId])
   @@index([projectId])
@@ -463,38 +463,38 @@ model DivinityCoinSettlement {
 }
 
 enum DivinityCoinSettlementStatus {
-  PENDING     // Awaiting processing
-  INITIATED   // Wire transfer initiated
-  PROCESSING  // In progress
-  COMPLETED   // Successfully delivered
-  FAILED      // Failed to process
-  CANCELLED   // Cancelled by admin
+  PENDING // Awaiting processing
+  INITIATED // Wire transfer initiated
+  PROCESSING // In progress
+  COMPLETED // Successfully delivered
+  FAILED // Failed to process
+  CANCELLED // Cancelled by admin
 }
 
 // Whop bank account for creator payouts
 model WhopBankAccount {
-  id                    String   @id @default(cuid())
-  userId                String   @unique
+  id     String @id @default(cuid())
+  userId String @unique
 
   // Encrypted bank details (AES-256 encrypted)
-  bankNameEncrypted     String   @db.Text
-  accountHolderEncrypted String  @db.Text
-  accountNumberEncrypted String  @db.Text
+  bankNameEncrypted      String @db.Text
+  accountHolderEncrypted String @db.Text
+  accountNumberEncrypted String @db.Text
   // US accounts: 9-digit ABA routing number. UK accounts: 6-digit Sort
   // Code. Country-specific labels + validation are driven by bankCountry.
-  routingNumberEncrypted String  @db.Text
+  routingNumberEncrypted String @db.Text
 
   // ISO 3166-1 alpha-2 country code that drives the payout flow:
   // routing-format selection (US 9-digit ABA vs UK 6-digit Sort Code),
   // validation, and the destination ACH/Faster Payments rail. Defaults
   // to "US" — every pre-international row predates this column and was
   // a US ACH account by definition.
-  bankCountry           String   @default("US")
+  bankCountry String @default("US")
 
   // Optional payout-contact phone. UK banks require a phone number on
   // the payee record before they'll add it as a recipient; US ACH
   // doesn't. Encrypted at rest like the rest of the payee identity.
-  payoutPhoneEncrypted  String?  @db.Text
+  payoutPhoneEncrypted String? @db.Text
 
   // Encrypted billing address (KYC + chargeback reconciliation parity
   // with DivinityCoinBankAccount / PaymentCloudBankAccount). Optional
@@ -508,49 +508,49 @@ model WhopBankAccount {
   billingCountryEncrypted String? @db.Text
 
   // Non-sensitive display data
-  bankNameDisplay       String?  // e.g., "Chase Bank"
-  accountLastFour       String?  // e.g., "4567"
-  accountType           String   @default("checking") // checking or savings
+  bankNameDisplay String? // e.g., "Chase Bank"
+  accountLastFour String? // e.g., "4567"
+  accountType     String  @default("checking") // checking or savings
 
   // Verification status
-  isVerified            Boolean  @default(false)
-  verifiedAt            DateTime?
+  isVerified Boolean   @default(false)
+  verifiedAt DateTime?
 
-  user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  settlements           WhopSettlement[]
+  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  settlements WhopSettlement[]
 
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([userId])
 }
 
 // Whop settlement tracking for admin payouts
 model WhopSettlement {
-  id              String   @id @default(cuid())
-  bankAccountId   String
-  projectId       String?
-  projectName     String?  // Denormalized for history
+  id            String  @id @default(cuid())
+  bankAccountId String
+  projectId     String?
+  projectName   String? // Denormalized for history
 
   // Settlement details
-  amount          Decimal  @db.Decimal(10, 2)
-  currency        String   @default("USD")
-  status          WhopSettlementStatus @default(PENDING)
+  amount   Decimal              @db.Decimal(10, 2)
+  currency String               @default("USD")
+  status   WhopSettlementStatus @default(PENDING)
 
   // Processing
-  initiatedAt     DateTime?
-  processedAt     DateTime?
-  completedAt     DateTime?
-  failedAt        DateTime?
-  failureReason   String?
-  adminNotes      String?  @db.Text
-  processedBy     String?
+  initiatedAt   DateTime?
+  processedAt   DateTime?
+  completedAt   DateTime?
+  failedAt      DateTime?
+  failureReason String?
+  adminNotes    String?   @db.Text
+  processedBy   String?
 
-  bankAccount     WhopBankAccount @relation(fields: [bankAccountId], references: [id])
-  project         Project?        @relation(fields: [projectId], references: [id])
+  bankAccount WhopBankAccount @relation(fields: [bankAccountId], references: [id])
+  project     Project?        @relation(fields: [projectId], references: [id])
 
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([bankAccountId])
   @@index([projectId])
@@ -566,15 +566,14 @@ enum WhopSettlementStatus {
   CANCELLED
 }
 
-
 model DivinityCoinRedemption {
-  id              String   @id @default(cuid())
-  code            String   @unique // The redemption code
-  userId          String
-  amount          Decimal  @db.Decimal(10, 2) // Amount in USD
-  redeemedAt      DateTime @default(now())
+  id         String   @id @default(cuid())
+  code       String   @unique // The redemption code
+  userId     String
+  amount     Decimal  @db.Decimal(10, 2) // Amount in USD
+  redeemedAt DateTime @default(now())
 
-  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([code])
@@ -582,18 +581,18 @@ model DivinityCoinRedemption {
 
 // DivinityCoin transaction history with audit logging
 model DivinityCoinTransaction {
-  id              String   @id @default(cuid())
-  userId          String
-  pledgeId        String?
-  amount          Decimal  @db.Decimal(10, 2) // Positive for credits, negative for payments
-  type            String   // REDEMPTION, PAYMENT, REFUND, REFUND_DEDUCTION
-  description     String?
-  metadata        String?  @db.Text // JSON audit data: requestId, IP, previous/new balance, timestamps
+  id          String  @id @default(cuid())
+  userId      String
+  pledgeId    String?
+  amount      Decimal @db.Decimal(10, 2) // Positive for credits, negative for payments
+  type        String // REDEMPTION, PAYMENT, REFUND, REFUND_DEDUCTION
+  description String?
+  metadata    String? @db.Text // JSON audit data: requestId, IP, previous/new balance, timestamps
 
-  createdAt       DateTime @default(now())
+  createdAt DateTime @default(now())
 
-  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  pledge          Pledge?  @relation(fields: [pledgeId], references: [id])
+  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  pledge Pledge? @relation(fields: [pledgeId], references: [id])
 
   @@index([userId])
   @@index([pledgeId])
