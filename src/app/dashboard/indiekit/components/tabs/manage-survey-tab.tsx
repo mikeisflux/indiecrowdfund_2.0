@@ -13,6 +13,7 @@ import {
   MapPin,
   Send,
   Lock,
+  LockOpen,
   Eye,
   RefreshCw,
   Package,
@@ -88,6 +89,8 @@ export function ManageSurveyTab({ projectId }: ManageSurveyTabProps) {
   // Lock survey
   const [lockConfirm, setLockConfirm] = useState(false);
   const [isLocking, setIsLocking] = useState(false);
+  const [unlockConfirm, setUnlockConfirm] = useState(false);
+  const [isUnlocking, setIsUnlocking] = useState(false);
   const [isBackfilling, setIsBackfilling] = useState(false);
   const [isRemindingPending, setIsRemindingPending] = useState(false);
 
@@ -287,6 +290,31 @@ export function ManageSurveyTab({ projectId }: ManageSurveyTabProps) {
     }
   };
 
+  const unlockSurvey = async () => {
+    if (!projectId) return;
+
+    setIsUnlocking(true);
+    try {
+      const response = await apiFetch(`/api/projects/${projectId}/survey/unlock`, {
+        method: "POST",
+      });
+
+      const data = await response.json().catch(() => ({}));
+      if (response.ok) {
+        toast.success("Survey unlocked. Backers can submit and edit responses again.");
+        fetchSurvey();
+      } else {
+        toast.error(data.error || "Failed to unlock survey");
+      }
+    } catch (error) {
+      console.error("Error unlocking survey:", error);
+      toast.error("Failed to unlock survey");
+    } finally {
+      setIsUnlocking(false);
+      setUnlockConfirm(false);
+    }
+  };
+
   const canDelete = survey && survey.status !== "LOCKED";
 
   if (isLoading) {
@@ -448,6 +476,24 @@ export function ManageSurveyTab({ projectId }: ManageSurveyTabProps) {
                 </Button>
               </>
             )}
+            {survey.status === "LOCKED" && (
+              <>
+                <div className="hidden sm:block h-6 w-px bg-border mx-1" aria-hidden />
+                <Button
+                  variant="outline"
+                  className="text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 border-emerald-200"
+                  onClick={() => setUnlockConfirm(true)}
+                  disabled={isUnlocking}
+                >
+                  {isUnlocking ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <LockOpen className="h-4 w-4 mr-2" />
+                  )}
+                  Unlock Survey
+                </Button>
+              </>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -584,7 +630,10 @@ export function ManageSurveyTab({ projectId }: ManageSurveyTabProps) {
               <div>
                 <p className="font-medium text-amber-800">Survey is Locked</p>
                 <p className="text-sm text-amber-700">
-                  Questions cannot be deleted from a locked survey.
+                  No backer can submit or edit a response while the survey is
+                  locked — including backers who never replied. Questions
+                  can&apos;t be deleted either. Use Unlock Survey above to
+                  reopen it.
                 </p>
               </div>
             </div>
@@ -619,11 +668,21 @@ export function ManageSurveyTab({ projectId }: ManageSurveyTabProps) {
         open={lockConfirm}
         onOpenChange={setLockConfirm}
         title="Lock Survey?"
-        description="This will lock the survey and all backer responses. Backers will no longer be able to edit their survey responses or shipping addresses. This is typically done when you're ready to go to print or begin fulfillment. This action cannot be easily undone."
+        description="This will lock the survey and all backer responses. No backer will be able to submit or edit — including backers who never replied, who will be shut out of the survey entirely. This is typically done when you're ready to go to print or begin fulfillment. You can unlock it again afterwards."
         confirmText="Lock Survey"
         variant="destructive"
         onConfirm={lockSurvey}
         loading={isLocking}
+      />
+
+      <ConfirmDialog
+        open={unlockConfirm}
+        onOpenChange={setUnlockConfirm}
+        title="Unlock Survey?"
+        description="Backers will be able to submit and edit their responses again, including backers who never replied. Shipping addresses are reopened for anyone who hasn't completed their survey; already-completed responses stay as they are. Lock it again once the stragglers are in."
+        confirmText="Unlock Survey"
+        onConfirm={unlockSurvey}
+        loading={isUnlocking}
       />
 
       <ConfirmDialog

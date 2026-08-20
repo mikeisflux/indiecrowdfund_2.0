@@ -118,6 +118,10 @@ enum ActivityType {
   SURVEY_REMINDER
   SURVEY_COMPLETED
   ORDERS_LOCKED
+  // Reversal of ORDERS_LOCKED. Locking a survey shuts out backers who never
+  // responded, so it needs to be undoable — and an undo of something the UI
+  // calls irreversible has to leave a trace of its own.
+  ORDERS_UNLOCKED
   ADDRESSES_LOCKED
   ORDER_LOCK_REQUESTED
   ORDER_LOCK_APPROVED

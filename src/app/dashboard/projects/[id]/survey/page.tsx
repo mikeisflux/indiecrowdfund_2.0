@@ -37,6 +37,7 @@ import {
   MapPin,
   Send,
   Lock,
+  LockOpen,
   Eye,
   RefreshCw,
   AlertCircle,
@@ -139,6 +140,7 @@ export default function SurveyBuilderPage() {
   // Dialogs
   const [showSendDialog, setShowSendDialog] = useState(false);
   const [showLockDialog, setShowLockDialog] = useState(false);
+  const [showUnlockDialog, setShowUnlockDialog] = useState(false);
 
   // Delete confirmation dialogs
   const [deleteItemConfirm, setDeleteItemConfirm] = useState<{ open: boolean; questionId: string }>({
@@ -276,6 +278,26 @@ export default function SurveyBuilderPage() {
     } catch (error) {
       console.error("Error locking survey:", error);
       toast.error("Failed to lock addresses");
+    }
+  };
+
+  const unlockSurvey = async () => {
+    try {
+      const response = await apiFetch(`/api/projects/${projectId}/survey/unlock`, {
+        method: "POST",
+      });
+
+      if (response.ok) {
+        setShowUnlockDialog(false);
+        await fetchSurvey();
+        toast.success("Survey unlocked. Backers can submit and edit responses again.");
+      } else {
+        const data = await response.json().catch(() => ({}));
+        toast.error(data.error || "Failed to unlock survey");
+      }
+    } catch (error) {
+      console.error("Error unlocking survey:", error);
+      toast.error("Failed to unlock survey");
     }
   };
 
@@ -424,7 +446,13 @@ export default function SurveyBuilderPage() {
           {survey?.status === "SENT" && (
             <Button variant="outline" onClick={() => setShowLockDialog(true)}>
               <Lock className="mr-2 h-4 w-4" />
-              Lock Addresses
+              Lock Survey
+            </Button>
+          )}
+          {survey?.status === "LOCKED" && (
+            <Button variant="outline" onClick={() => setShowUnlockDialog(true)}>
+              <LockOpen className="mr-2 h-4 w-4" />
+              Unlock Survey
             </Button>
           )}
           {survey?.status && (
@@ -453,11 +481,11 @@ export default function SurveyBuilderPage() {
                   <p className="font-medium">
                     {survey.status === "DRAFT" && "Draft - Not yet sent"}
                     {survey.status === "SENT" && "Survey sent to backers"}
-                    {survey.status === "LOCKED" && "Addresses locked"}
+                    {survey.status === "LOCKED" && "Survey locked"}
                   </p>
                   <p className="text-sm text-muted-foreground">
                     {survey.status === "SENT" && `${stats.completedResponses} of ${stats.totalBackers} responses (${stats.responseRate}%)`}
-                    {survey.status === "LOCKED" && "No more address changes allowed"}
+                    {survey.status === "LOCKED" && "Backers can't submit or edit — unlock to reopen"}
                   </p>
                 </div>
               </div>
@@ -818,13 +846,16 @@ export default function SurveyBuilderPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Lock Addresses Dialog */}
+      {/* Lock Survey Dialog */}
       <Dialog open={showLockDialog} onOpenChange={setShowLockDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Lock Addresses</DialogTitle>
+            <DialogTitle>Lock Survey</DialogTitle>
             <DialogDescription>
-              Once locked, backers will no longer be able to change their shipping addresses. This cannot be undone.
+              This locks the whole survey, not just addresses. No backer will be
+              able to submit or edit a response — including backers who never
+              replied, who will be shut out of the survey entirely. You can
+              unlock it again afterwards.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -833,7 +864,31 @@ export default function SurveyBuilderPage() {
             </Button>
             <Button onClick={lockAddresses} variant="destructive">
               <Lock className="mr-2 h-4 w-4" />
-              Lock Addresses
+              Lock Survey
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Unlock Survey Dialog */}
+      <Dialog open={showUnlockDialog} onOpenChange={setShowUnlockDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Unlock Survey</DialogTitle>
+            <DialogDescription>
+              Backers will be able to submit and edit their responses again,
+              including backers who never replied. Shipping addresses are
+              reopened for anyone who hasn&apos;t completed their survey;
+              already-completed responses stay as they are.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowUnlockDialog(false)}>
+              Cancel
+            </Button>
+            <Button onClick={unlockSurvey}>
+              <LockOpen className="mr-2 h-4 w-4" />
+              Unlock Survey
             </Button>
           </DialogFooter>
         </DialogContent>
