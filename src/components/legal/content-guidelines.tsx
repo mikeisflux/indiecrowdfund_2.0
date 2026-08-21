@@ -59,23 +59,50 @@ export function ContentGuidelinesContent() {
             heads tall reads as a child no matter what age the script assigns
             them.
           </p>
-          <figure className="rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white p-4">
-            <Image
-              src="/content-guidelines/proper-proportions.jpg"
-              alt="Figure-drawing reference chart comparing ideal human proportions at various ages, showing head-to-body ratio decreasing from eight heads tall for an adult, to 7.5 at fifteen years, 7 at ten years, 6 at five years, 5 at three years, and 4 at one year, with a matching row of head sizes above."
-              width={736}
-              height={784}
-              className="w-full h-auto"
-              sizes="(max-width: 768px) 100vw, 700px"
-            />
-            <figcaption className="mt-3 text-sm text-muted-foreground">
-              Standard figure-drawing proportions by age. Use this as the
-              reference when applying the visual maturity criteria in{" "}
-              <strong>Section 4.2</strong> — a figure that does not reach adult
-              proportions will be treated as a minor under{" "}
-              <strong>Section 4.3</strong>, regardless of stated age.
-            </figcaption>
-          </figure>
+          <p className="mb-4">
+            Two references below — one male, one female, and one realistic, one
+            stylized — because the standard applies to both and does not bend
+            for art style. The proportions differ in build, not in the ratio
+            that signals age.
+          </p>
+          <div className="grid gap-4 md:grid-cols-2">
+            <figure className="rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white p-4">
+              <Image
+                src="/content-guidelines/proper-proportions-male.jpg"
+                alt="Figure-drawing reference chart titled Ideal Proportion at Various Ages, comparing male figures from one year old to adult. Head-to-body ratio decreases from eight heads tall for an adult, to 7.5 at fifteen years, 7 at ten years, 6 at five years, 5 at three years, and 4 at one year, with a matching row of head sizes above."
+                width={736}
+                height={784}
+                className="w-full h-auto"
+                sizes="(max-width: 768px) 100vw, 45vw"
+              />
+              <figcaption className="mt-3 text-sm text-muted-foreground">
+                Realistic male proportions, one year to adult.
+              </figcaption>
+            </figure>
+            <figure className="rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white p-4">
+              <Image
+                src="/content-guidelines/proper-proportions-female.jpg"
+                alt="Figure-drawing reference chart of stylized female figures against a numbered head-height scale from one to nine. Eight figures increase in height from roughly two and a half heads tall at zero to two years, through three to five years and five to nine years, then by height in centimetres from 110-130 up to 170-180, with the tallest adult figure reaching about nine heads."
+                width={600}
+                height={442}
+                className="w-full h-auto"
+                sizes="(max-width: 768px) 100vw, 45vw"
+              />
+              <figcaption className="mt-3 text-sm text-muted-foreground">
+                Stylized female proportions, labelled by age for children and
+                by height in centimetres for older figures. Note that a
+                stylized adult may run nine heads tall rather than eight —
+                stylization lengthens the figure, it does not shrink the
+                head-to-body ratio toward a child&apos;s.
+              </figcaption>
+            </figure>
+          </div>
+          <p className="mt-4 mb-0 text-sm text-muted-foreground">
+            Use these as the reference when applying the visual maturity
+            criteria in <strong>Section 4.2</strong>. A figure that does not
+            reach adult proportions will be treated as a minor under{" "}
+            <strong>Section 4.3</strong>, regardless of stated age.
+          </p>
         </div>
 
         <h3 className="text-xl font-semibold mt-8 mb-4">1. Platform Mission &amp; Scope</h3>
