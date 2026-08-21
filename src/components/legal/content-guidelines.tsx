@@ -1,5 +1,7 @@
 /* eslint-disable react/no-unescaped-entities */
 
+import Image from "next/image";
+
 export function ContentGuidelinesContent() {
   return (
     <div className="prose prose-zinc dark:prose-invert max-w-none">
@@ -38,6 +40,42 @@ export function ContentGuidelinesContent() {
               style={{ border: 0 }}
             />
           </div>
+        </div>
+
+        {/* Proportion reference for Section 4. Section 4.2 asks for "body
+            proportions consistent with adult skeletal development" and
+            "oversized heads disproportionate to adult anatomy" — criteria a
+            creator can't apply without knowing what the ratios actually are.
+            Placed up here rather than inside Section 4 so it's seen before
+            the rules that depend on it. */}
+        <div className="mb-8">
+          <h3 className="text-xl font-semibold mb-3">Proper Proportions</h3>
+          <p className="mb-4">
+            Head-to-body ratio is the single most reliable indicator of a
+            figure&apos;s age, and it holds across art styles — including
+            stylized and manga-influenced work. An adult figure runs roughly
+            eight heads tall; the ratio drops steadily through adolescence to
+            about four heads at one year old. A character drawn at five or six
+            heads tall reads as a child no matter what age the script assigns
+            them.
+          </p>
+          <figure className="rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white p-4">
+            <Image
+              src="/content-guidelines/proper-proportions.jpg"
+              alt="Figure-drawing reference chart comparing ideal human proportions at various ages, showing head-to-body ratio decreasing from eight heads tall for an adult, to 7.5 at fifteen years, 7 at ten years, 6 at five years, 5 at three years, and 4 at one year, with a matching row of head sizes above."
+              width={736}
+              height={784}
+              className="w-full h-auto"
+              sizes="(max-width: 768px) 100vw, 700px"
+            />
+            <figcaption className="mt-3 text-sm text-muted-foreground">
+              Standard figure-drawing proportions by age. Use this as the
+              reference when applying the visual maturity criteria in{" "}
+              <strong>Section 4.2</strong> — a figure that does not reach adult
+              proportions will be treated as a minor under{" "}
+              <strong>Section 4.3</strong>, regardless of stated age.
+            </figcaption>
+          </figure>
         </div>
 
         <h3 className="text-xl font-semibold mt-8 mb-4">1. Platform Mission &amp; Scope</h3>
