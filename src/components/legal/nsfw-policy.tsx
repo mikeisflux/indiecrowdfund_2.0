@@ -1,12 +1,14 @@
 /* eslint-disable react/no-unescaped-entities */
 
+import { ProperProportions } from "./proper-proportions";
+
 export function NsfwPolicyContent() {
   return (
     <div className="prose prose-zinc dark:prose-invert max-w-none">
       <div className="rounded-lg border bg-white dark:bg-zinc-900 p-6 md:p-8">
         <h2 className="text-2xl font-bold mb-2">NSFW & Mature Content Policy</h2>
         <p className="text-sm text-muted-foreground mb-8">
-          <strong>Last Updated:</strong> December 2, 2025
+          <strong>Last Updated:</strong> August 21, 2026
         </p>
 
         <p className="mb-6">
@@ -85,9 +87,26 @@ export function NsfwPolicyContent() {
           <li>"Aging up" underage characters</li>
           <li>Ambiguous-age characters placed in sexual situations</li>
         </ul>
-        <p className="mb-4 font-medium text-red-600 dark:text-red-400">
+        <p className="mb-6 font-medium text-red-600 dark:text-red-400">
           This includes real persons, fictional characters, AI-generated characters, and stylized/animated depictions.
         </p>
+
+        {/* 2.2 bans "ambiguous-age characters placed in sexual situations"
+            without saying how a creator avoids ambiguity. This is the answer,
+            and it is the same reference the Content Guidelines use for the
+            same judgement — shared from one component so the two documents
+            cannot end up disagreeing about what an adult figure looks like. */}
+        <ProperProportions
+          policyNote={
+            <>
+              Use these when checking a character against{" "}
+              <strong>Section 2.2</strong>. Where proportions do not clearly
+              reach adult range, the character is ambiguous-age and may not
+              appear in sexual or sexualized content — a stated age in the
+              script does not resolve it.
+            </>
+          }
+        />
 
         <h4 className="text-lg font-semibold mt-6 mb-3">2.3 Illegal or Harmful Content</h4>
         <p className="mb-4">Prohibited:</p>
