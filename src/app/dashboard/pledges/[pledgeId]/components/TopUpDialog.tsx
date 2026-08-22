@@ -15,7 +15,6 @@ import {
 } from "@/components/ui/dialog";
 import { apiFetch } from "@/lib/fetch-utils";
 import { WhopPaymentForm } from "@/app/projects/[vanityname]/[slug]/pledge/components/WhopPaymentForm";
-import { PayPalPaymentForm } from "@/app/projects/[vanityname]/[slug]/pledge/components/PayPalPaymentForm";
 
 /**
  * "Add Additional Support" — the payment step.
@@ -31,7 +30,6 @@ import { PayPalPaymentForm } from "@/app/projects/[vanityname]/[slug]/pledge/com
  *                               with Stripe Elements against DC's own
  *                               publishable key, then confirm-add-items.
  *   paymentMethod: "WHOP"       Whop embedded checkout.
- *   paymentMethod: "PAYPAL"     PayPal SDK, captured by confirm-add-items.
  *
  * The dashboard used to read a `checkoutUrl` off that response and, finding
  * none (no processor has ever returned one), fall straight through to
@@ -56,7 +54,7 @@ type UpchargeState =
   | { kind: "error"; message: string }
   | { kind: "dc_elements"; clientSecret: string }
   | { kind: "whop"; sessionId: string; planId: string; environment: "production" | "sandbox" }
-  | { kind: "paypal"; paypalOrderId: string; paypalClientId: string; paypalMode: string };
+  ;
 
 /** Stripe Elements card form for the DivinityCoin no-saved-card path. */
 function DcCardForm({
@@ -179,15 +177,6 @@ export function TopUpDialog({
         return;
       }
 
-      if (data.paymentMethod === "PAYPAL") {
-        setState({
-          kind: "paypal",
-          paypalOrderId: data.paypalOrderId || "",
-          paypalClientId: data.paypalClientId || "",
-          paypalMode: data.paypalMode || "live",
-        });
-        return;
-      }
 
       if (data.clientSecret) {
         if (!data.publishableKey) {
@@ -315,21 +304,6 @@ export function TopUpDialog({
           />
         )}
 
-        {state.kind === "paypal" && (
-          <PayPalPaymentForm
-            paypalOrderId={state.paypalOrderId}
-            pledgeId={pledgeId}
-            clientId={state.paypalClientId}
-            paypalMode={state.paypalMode}
-            agreedToTerms
-            isProcessing={isProcessing}
-            setIsProcessing={setIsProcessing}
-            total={amount}
-            onSuccess={applyPayment}
-            onError={handleError}
-            upchargeConfirmUrl={confirmUrl}
-          />
-        )}
 
         {state.kind === "dc_elements" && stripePromise && (
           <Elements

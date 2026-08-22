@@ -174,10 +174,6 @@ export default function PledgePage() {
                 clientSecret={pledge.clientSecret}
                 dcStripePromise={pledge.dcStripePromise}
                 projectPath={pledge.projectPath}
-                paypalOrderId={pledge.paypalOrderId}
-                paypalClientId={pledge.paypalClientId}
-                paypalMode={pledge.paypalMode}
-                paypalConnectMerchantId={pledge.paypalConnectMerchantId}
                 whopSessionId={pledge.whopSessionId}
                 whopPlanId={pledge.whopPlanId}
                 whopEnvironment={pledge.whopEnvironment}

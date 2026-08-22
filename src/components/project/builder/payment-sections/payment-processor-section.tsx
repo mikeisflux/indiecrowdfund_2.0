@@ -14,7 +14,6 @@ import {
   ShoppingBag,
 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
-import { PAYPAL_CONNECT_PUBLIC_ENABLED } from "@/lib/paypal-connect-flag";
 import { PaymentProcessorSectionProps } from "./types";
 
 export function PaymentProcessorSection({
@@ -104,107 +103,6 @@ export function PaymentProcessorSection({
           </CardContent>
         </Card>
 
-        <Card
-          className={`cursor-pointer transition-all ${
-            payment.paymentProcessor === "PAYPAL" ? "border-2 border-primary" : "border"
-          } ${mustUseAltProcessor || isLaunched ? "opacity-50 cursor-not-allowed" : ""}`}
-          onClick={() => !mustUseAltProcessor && !isLaunched && updatePayment({ paymentProcessor: "PAYPAL" })}
-        >
-          <CardHeader className="pb-2">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-lg flex items-center gap-2">
-                <div className="h-8 w-8 rounded-lg bg-[#003087] flex items-center justify-center">
-                  <Wallet className="h-5 w-5 text-white" />
-                </div>
-                PayPal
-                {mustUseAltProcessor && (
-                  <Badge variant="outline" className="ml-2 text-amber-600 border-amber-400">SFW only</Badge>
-                )}
-              </CardTitle>
-              {payment.paymentProcessor === "PAYPAL" && (
-                <CheckCircle className="h-5 w-5 text-primary" />
-              )}
-            </div>
-            <CardDescription>
-              {mustUseAltProcessor
-                ? "Not available for adult/controversial content"
-                : "PayPal & card payments"}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2 text-sm">
-              <div className="flex items-center gap-2">
-                <Check className="h-3 w-3 text-green-500" />
-                <span>~6.5% total fees (3.49% + $0.49 + 3% platform)</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Check className="h-3 w-3 text-green-500" />
-                <span>Credit/debit cards + PayPal wallet</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Check className="h-3 w-3 text-green-500" />
-                <span>Inline Advanced Checkout form</span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* PayPal Connect — hidden from the public campaign builder until the
-            PPCP integration is finalized (see PAYPAL_CONNECT_PUBLIC_ENABLED). */}
-        {PAYPAL_CONNECT_PUBLIC_ENABLED && (
-        <Card
-          className={`cursor-pointer transition-all ${
-            payment.paymentProcessor === "PAYPAL_CONNECT" ? "border-2 border-primary" : "border"
-          } ${mustUseAltProcessor || isLaunched ? "opacity-50 cursor-not-allowed" : ""}`}
-          onClick={() => !mustUseAltProcessor && !isLaunched && updatePayment({ paymentProcessor: "PAYPAL_CONNECT" })}
-        >
-          <CardHeader className="pb-2">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-lg flex items-center gap-2">
-                <div className="h-8 w-8 rounded-lg bg-[#003087] flex items-center justify-center">
-                  <Wallet className="h-5 w-5 text-white" />
-                </div>
-                PayPal Connect
-                {mustUseAltProcessor ? (
-                  <Badge variant="outline" className="ml-2 text-amber-600 border-amber-400">SFW only</Badge>
-                ) : (
-                  <Badge variant="secondary" className="ml-2">Recommended</Badge>
-                )}
-              </CardTitle>
-              {payment.paymentProcessor === "PAYPAL_CONNECT" && (
-                <CheckCircle className="h-5 w-5 text-primary" />
-              )}
-            </div>
-            <CardDescription>
-              {mustUseAltProcessor
-                ? "Not available for adult/controversial content"
-                : "Payouts direct to your own PayPal account"}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2 text-sm">
-              <div className="flex items-center gap-2">
-                <Check className="h-3 w-3 text-green-500" />
-                <span>Pledges paid straight to your PayPal — no manual payouts</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Check className="h-3 w-3 text-green-500" />
-                <span>Grant administration fee taken automatically at checkout</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Check className="h-3 w-3 text-green-500" />
-                <span>PayPal, Venmo, Pay Later &amp; cards; PayPal handles disputes</span>
-              </div>
-            </div>
-            {payment.paymentProcessor === "PAYPAL_CONNECT" && (
-              <p className="mt-3 text-xs text-muted-foreground">
-                After saving, connect your PayPal account from the payout step to
-                start accepting pledges.
-              </p>
-            )}
-          </CardContent>
-        </Card>
-        )}
 
         <Card
           className={`cursor-pointer transition-all ${
@@ -316,32 +214,6 @@ export function PaymentProcessorSection({
         </>
       )}
 
-      {payment.paymentProcessor === "PAYPAL" && (
-        <div className="rounded-lg bg-muted/50 p-4 border">
-          <h4 className="font-medium mb-3">
-            PayPal Fee Breakdown for {formatCurrency(goalAmount)} Goal
-          </h4>
-          <div className="space-y-2 text-sm">
-            <div className="flex justify-between">
-              <span>PayPal processing fee (3.49% + $0.49/txn)</span>
-              <span className="font-medium">{formatCurrency(paypalFee)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span>Grant administration fee (3%)</span>
-              <span className="font-medium">{formatCurrency(platformFee)}</span>
-            </div>
-            <Separator className="my-2" />
-            <div className="flex justify-between font-semibold">
-              <span>Total fees</span>
-              <span className="text-amber-600">{formatCurrency(paypalTotalFees)}</span>
-            </div>
-            <div className="flex justify-between font-semibold text-lg">
-              <span>You receive</span>
-              <span className="text-green-600">{formatCurrency(paypalNetAmount)}</span>
-            </div>
-          </div>
-        </div>
-      )}
 
       {payment.paymentProcessor === "WHOP" && (
         <div className="rounded-lg bg-muted/50 p-4 border">

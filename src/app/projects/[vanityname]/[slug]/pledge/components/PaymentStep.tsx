@@ -7,7 +7,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Loader2, MailCheck } from "lucide-react";
 import type { Stripe } from "@stripe/stripe-js";
 import { ProjectData } from "../types";
-import { PayPalPaymentForm } from "./PayPalPaymentForm";
 import { WhopPaymentForm } from "./WhopPaymentForm";
 import { apiFetch } from "@/lib/fetch-utils";
 
@@ -50,10 +49,6 @@ interface PaymentStepProps {
   clientSecret: string | null;
   dcStripePromise: Promise<Stripe | null> | null;
   projectPath: string;
-  paypalOrderId: string | null;
-  paypalClientId: string | null;
-  paypalMode: string;
-  paypalConnectMerchantId?: string | null;
   whopSessionId: string | null;
   whopPlanId: string | null;
   whopEnvironment: "production" | "sandbox";
@@ -159,10 +154,6 @@ export function PaymentStep({
   clientSecret,
   dcStripePromise,
   projectPath,
-  paypalOrderId,
-  paypalClientId,
-  paypalMode,
-  paypalConnectMerchantId,
   whopSessionId,
   whopPlanId,
   whopEnvironment,
@@ -172,7 +163,7 @@ export function PaymentStep({
 }: PaymentStepProps) {
   // In modify mode, show the charge amount (difference), not the full total
   const displayTotal = isModifyMode && modifyChargeAmount != null ? modifyChargeAmount : total;
-  // For upcharge flows (modify / add-items) the Whop & PayPal forms must
+  // For upcharge flows (modify / add-items) the Whop form must
   // confirm through the endpoint that captures the upcharge AND applies the
   // pending change, rather than the original-pledge confirm. New pledges pass
   // undefined and keep the default capture + /confirm path.
@@ -290,7 +281,7 @@ export function PaymentStep({
             </div>
           )} */}
 
-          {/* Payment Form — DivinityCoin / PayPal / Whop are the supported
+          {/* Payment Form — DivinityCoin / Whop are the supported
               processors. Stripe path remains commented out below for the
               legacy campaigns that still have it stored. */}
           {project?.paymentProcessor === "WHOP" ? (
@@ -328,85 +319,6 @@ export function PaymentStep({
               <div className="flex flex-col items-center justify-center py-8">
                 <Loader2 className="h-8 w-8 animate-spin text-muted-foreground mb-3" />
                 <p className="text-sm text-muted-foreground">Loading Whop checkout...</p>
-              </div>
-            )
-          ) : project?.paymentProcessor === "PAYPAL" ? (
-            /* PayPal Advanced Checkout - inline card fields + PayPal wallet button */
-            paypalOrderId && paypalClientId && currentPledgeId ? (
-              <PayPalPaymentForm
-                paypalOrderId={paypalOrderId}
-                pledgeId={currentPledgeId}
-                clientId={paypalClientId}
-                paypalMode={paypalMode}
-                agreedToTerms={agreedToTerms}
-                isProcessing={isProcessing}
-                setIsProcessing={setIsProcessing}
-                total={displayTotal}
-                onSuccess={handlePaymentSuccess}
-                onError={handlePaymentError}
-                upchargeConfirmUrl={upchargeConfirmUrl}
-              />
-            ) : paymentError ? (
-              <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
-                <p className="text-sm text-red-600 dark:text-red-400">{paymentError}</p>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="mt-2"
-                  onClick={() => {
-                    setPaymentError(null);
-                    setClientSecret(null);
-                    setIsProcessing(false);
-                  }}
-                >
-                  Try Again
-                </Button>
-              </div>
-            ) : (
-              <div className="flex flex-col items-center justify-center py-8">
-                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground mb-3" />
-                <p className="text-sm text-muted-foreground">Loading PayPal...</p>
-              </div>
-            )
-          ) : project?.paymentProcessor === "PAYPAL_CONNECT" ? (
-            /* PayPal Connect (marketplace) — same button UI as standard PayPal
-               but scoped to the creator's merchant id and captured via the
-               Connect endpoint. */
-            paypalOrderId && paypalClientId && currentPledgeId ? (
-              <PayPalPaymentForm
-                paypalOrderId={paypalOrderId}
-                pledgeId={currentPledgeId}
-                clientId={paypalClientId}
-                paypalMode={paypalMode}
-                merchantId={paypalConnectMerchantId ?? undefined}
-                captureUrlBase="/api/paypal/connect/capture"
-                agreedToTerms={agreedToTerms}
-                isProcessing={isProcessing}
-                setIsProcessing={setIsProcessing}
-                total={displayTotal}
-                onSuccess={handlePaymentSuccess}
-                onError={handlePaymentError}
-              />
-            ) : paymentError ? (
-              <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
-                <p className="text-sm text-red-600 dark:text-red-400">{paymentError}</p>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="mt-2"
-                  onClick={() => {
-                    setPaymentError(null);
-                    setClientSecret(null);
-                    setIsProcessing(false);
-                  }}
-                >
-                  Try Again
-                </Button>
-              </div>
-            ) : (
-              <div className="flex flex-col items-center justify-center py-8">
-                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground mb-3" />
-                <p className="text-sm text-muted-foreground">Loading PayPal...</p>
               </div>
             )
           ) : project?.paymentProcessor === "DIVINITYCOIN" ? (
@@ -471,7 +383,7 @@ export function PaymentStep({
               </div>
             )
           ) : (
-            /* Stripe Payment - DISABLED: Replaced by PayPal */
+            /* Stripe Payment - DISABLED */
             /* clientSecret && stripePromise ? (
               <Elements
                 key={clientSecret}

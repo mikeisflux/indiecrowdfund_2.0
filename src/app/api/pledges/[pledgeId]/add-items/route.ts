@@ -6,7 +6,6 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { getDivinityCoinConfig, chargeDcSavedPaymentMethod, formatDeclineReason } from "@/lib/payments/divinitycoin";
 import { createWhopUpcharge } from "@/lib/payments/whop/upcharge";
-import { createPayPalUpcharge } from "@/lib/payments/paypal/upcharge";
 
 export const dynamic = "force-dynamic";
 
@@ -547,62 +546,6 @@ export async function POST(
         pledgesAddItemsLogger.error({ err: message }, "[AddItems Whop] API error:");
         return NextResponse.json(
           { error: `Failed to create Whop checkout: ${message}` },
-          { status: 502 }
-        );
-      }
-    }
-
-    // PayPal upcharge: create a PayPal order (CAPTURE intent) for
-    // just the upcharge amount. Client uses PayPal SDK to approve;
-    // confirm-add-items captures via the PayPal API and applies the
-    // addons. Custom_id is prefixed `upcharge_` so the PayPal capture
-    // route's pledge-lookup-by-orderId never collides with this.
-    if (paymentProcessor === "PAYPAL") {
-      try {
-        const { paypalOrderId, paypalClientId, paypalMode } = await createPayPalUpcharge({
-          pledgeId: pledge.id,
-          projectId: pledge.projectId,
-          amount,
-        });
-
-        await db.pledge.update({
-          where: { id: pledgeId },
-          data: {
-            metadata: {
-              ...currentMetadata,
-              pendingAdditionalItems: {
-                paymentMethod: "PAYPAL",
-                paymentIntentId: paypalOrderId,
-                addons: addonsWithQuantity,
-                amount,
-                createdAt: new Date().toISOString(),
-              },
-            },
-          },
-        });
-
-        pledgesAddItemsLogger.info(
-          { pledgeId, paypalOrderId, amount, addonCount: addonsWithQuantity.length },
-          "[AddItems PayPal] Upcharge order created"
-        );
-
-        return NextResponse.json({
-          paymentMethod: "PAYPAL",
-          type: "paypal_order",
-          paypalOrderId,
-          paypalClientId,
-          paypalMode,
-          pledgeId: pledge.id,
-        });
-      } catch (ppErr) {
-        await db.pledge.update({
-          where: { id: pledgeId },
-          data: { metadata: { ...currentMetadata } },
-        }).catch(() => null);
-        const message = ppErr instanceof Error ? ppErr.message : "Unknown error";
-        pledgesAddItemsLogger.error({ err: message }, "[AddItems PayPal] API error:");
-        return NextResponse.json(
-          { error: `Failed to create PayPal order: ${message}` },
           { status: 502 }
         );
       }

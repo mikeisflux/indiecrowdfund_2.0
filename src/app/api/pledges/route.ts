@@ -8,8 +8,6 @@ import {
   isHostedCheckoutEnabled,
 } from "@/lib/payments/divinitycoin";
 import { isPoolSoldOut } from "@/lib/payments/rewards";
-import { createPayPalPayment } from "@/lib/payments/paypal";
-import { createPayPalConnectPayment } from "@/lib/payments/paypal-connect";
 import { createWhopPayment } from "@/lib/payments/whop";
 import { isEmailVerificationRequired } from "@/lib/email";
 import { cookies } from "next/headers";
@@ -649,73 +647,6 @@ export async function POST(req: NextRequest) {
         }
       }
 
-      // PayPal payment processor
-      if (project.paymentProcessor === "PAYPAL") {
-        try {
-          const result = await createPayPalPayment({
-            projectId: data.projectId,
-            rewardId: data.rewardId,
-            addons: addonsWithQuantity,
-            amount: data.amount,
-            userId: session.user.id,
-            sourceCampaignId,
-            shippingAmount: data.shippingAmount || 0,
-            shippingAddress: resolvedShippingAddress,
-          });
-
-          metrics.pledgesCreated.inc({ status: "pending", processor: "paypal" });
-          return NextResponse.json({
-            paymentMethod: "PAYPAL",
-            type: "paypal_order",
-            paypalOrderId: result.paypalOrderId,
-            pledgeId: result.pledgeId,
-            chargedImmediately: true,
-          });
-        } catch (paypalError) {
-          pledgeLogger.error({ correlationId, err: paypalError instanceof Error ? paypalError.message : String(paypalError) }, "PayPal payment creation error");
-          return NextResponse.json(
-            { error: paypalError instanceof Error ? paypalError.message : "Failed to initialize PayPal payment" },
-            { status: 502 }
-          );
-        }
-      }
-
-      // PayPal Connect (Complete Payments Platform / marketplace) processor
-      if (project.paymentProcessor === "PAYPAL_CONNECT") {
-        try {
-          const result = await createPayPalConnectPayment({
-            projectId: data.projectId,
-            rewardId: data.rewardId,
-            addons: addonsWithQuantity,
-            amount: data.amount,
-            userId: session.user.id,
-            sourceCampaignId,
-            shippingAmount: data.shippingAmount || 0,
-            shippingAddress: resolvedShippingAddress,
-          });
-
-          metrics.pledgesCreated.inc({ status: "pending", processor: "paypal_connect" });
-          return NextResponse.json({
-            paymentMethod: "PAYPAL_CONNECT",
-            type: "paypal_connect_order",
-            // Reuse paypalOrderId so the existing PayPal button flow can render
-            // the order; paypalConnect flags route capture to the Connect endpoint.
-            paypalOrderId: result.paypalConnectOrderId,
-            paypalConnectOrderId: result.paypalConnectOrderId,
-            paypalConnectMerchantId: result.sellerMerchantId,
-            paypalConnect: true,
-            pledgeId: result.pledgeId,
-            chargedImmediately: true,
-          });
-        } catch (paypalConnectError) {
-          pledgeLogger.error({ correlationId, err: paypalConnectError instanceof Error ? paypalConnectError.message : String(paypalConnectError) }, "PayPal Connect payment creation error");
-          return NextResponse.json(
-            { error: paypalConnectError instanceof Error ? paypalConnectError.message : "Failed to initialize PayPal Connect payment" },
-            { status: 502 }
-          );
-        }
-      }
-
       // Whop payment processor
       if (project.paymentProcessor === "WHOP") {
         try {
@@ -747,9 +678,15 @@ export async function POST(req: NextRequest) {
         }
       }
 
-      // Unsupported payment processor (Stripe is no longer accepted)
+      // Unsupported payment processor. Stripe is no longer accepted, and
+      // PayPal was withdrawn — a campaign still set to PAYPAL or
+      // PAYPAL_CONNECT lands here, so the message has to be something a
+      // backer can act on rather than a bare rejection.
       return NextResponse.json(
-        { error: "This project's payment processor is not supported." },
+        {
+          error:
+            "This campaign can't take pledges through its current payment method. Please contact the creator or platform support.",
+        },
         { status: 400 }
       );
     } catch (error) {

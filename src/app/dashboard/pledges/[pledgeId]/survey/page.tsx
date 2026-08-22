@@ -350,7 +350,7 @@ export default function BackerSurveyPage() {
         throw new Error(result.error || "Failed to create payment");
       }
 
-      // Branch by payment method. Whop and PayPal don't go through
+      // Branch by payment method. Whop doesn't go through
       // Stripe Elements -- they render their own embedded checkout
       // components driven by the upchargePayment state.
       if (result.paymentMethod === "WHOP") {
@@ -366,18 +366,6 @@ export default function BackerSurveyPage() {
         return;
       }
 
-      if (result.paymentMethod === "PAYPAL") {
-        setUpchargePayment({
-          paymentMethod: "PAYPAL",
-          paypalOrderId: result.paypalOrderId,
-          paypalClientId: result.paypalClientId,
-          paypalMode: result.paypalMode,
-          pledgeId: result.pledgeId,
-        });
-        setIsProcessingPayment(false);
-        creatingPaymentRef.current = false;
-        return;
-      }
 
       // DC / Stripe path: load Stripe Elements
       let stripeLoaded = !!stripePromise;

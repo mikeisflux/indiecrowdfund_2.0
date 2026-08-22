@@ -860,61 +860,6 @@ export async function PATCH(
           }
         }
 
-        // PayPal modify upcharge: create a PayPal order for the
-        // amountDiff (CAPTURE intent). confirm-modify captures via
-        // the PayPal API and applies the modification.
-        if (paymentProcessor === "PAYPAL") {
-          try {
-            const { createPayPalUpcharge } = await import("@/lib/payments/paypal/upcharge");
-            const { paypalOrderId, paypalClientId, paypalMode } = await createPayPalUpcharge({
-              pledgeId: pledge.id,
-              projectId: pledge.projectId,
-              amount: amountDiff,
-              description: "Pledge modification upcharge",
-            });
-
-            const currentMetadata = (typeof pledge.metadata === "object" && pledge.metadata !== null)
-              ? pledge.metadata as Record<string, unknown>
-              : {};
-
-            await db.pledge.update({
-              where: { id: pledgeId },
-              data: {
-                metadata: {
-                  ...currentMetadata,
-                  pendingModification: {
-                    paymentMethod: "PAYPAL",
-                    paymentIntentId: paypalOrderId,
-                    rewardId: rewardId || null,
-                    addons: addonsWithQuantity,
-                    newAmount,
-                    oldAmount,
-                    amountDiff,
-                    createdAt: new Date().toISOString(),
-                  },
-                },
-              },
-            });
-
-            return NextResponse.json({
-              success: true,
-              requiresPayment: true,
-              paymentMethod: "PAYPAL",
-              paypalOrderId,
-              paypalClientId,
-              paypalMode,
-              message: `Additional $${amountDiff.toFixed(2)} payment required`,
-              newAmount: effectiveNewAmount,
-            });
-          } catch (ppErr) {
-            pledgesLogger.error({ err: String(ppErr) }, "[PayPal Modify] API error:");
-            return NextResponse.json(
-              { error: "Failed to create PayPal order" },
-              { status: 502 }
-            );
-          }
-        }
-
         return NextResponse.json(
           { error: "Pledge upcharges are not supported for this pledge's payment processor." },
           { status: 400 }

@@ -3,7 +3,6 @@ import { db } from "@/lib/db";
 import {
   getPayPalConnectConfig,
   getPayPalConnectAccessToken,
-  syncPayPalConnectAccount,
 } from "@/lib/payments/paypal-connect";
 import { claimRewardSlot, claimAddonSlots, assignBackerNumber } from "@/lib/payments/rewards";
 import { notifyPledgeReceived, notifyProjectFunded } from "@/lib/notifications";
@@ -84,33 +83,11 @@ export async function POST(req: NextRequest) {
 
   try {
     switch (event.event_type) {
-      // ---- Onboarding events ----
-      case "MERCHANT.ONBOARDING.COMPLETED": {
-        const resource = event.resource;
-        const trackingId = resource.tracking_id as string | undefined; // our userId
-        const merchantId = resource.merchant_id as string | undefined;
-        if (trackingId && merchantId) {
-          await syncPayPalConnectAccount(trackingId, merchantId).catch((err) =>
-            log.error({ err: String(err) }, "sync on onboarding completed failed"),
-          );
-          log.info({ trackingId, merchantId }, "PayPal Connect onboarding completed");
-        }
-        break;
-      }
-
-      case "MERCHANT.PARTNER-CONSENT.REVOKED": {
-        const resource = event.resource;
-        const merchantId = resource.merchant_id as string | undefined;
-        if (merchantId) {
-          await db.payPalConnectAccount.updateMany({
-            where: { merchantIdInPayPal: merchantId },
-            data: { onboardingStatus: "REVOKED", paymentsReceivable: false },
-          });
-          log.info({ merchantId }, "PayPal Connect consent revoked");
-        }
-        break;
-      }
-
+      // Onboarding events are gone with PayPal Connect onboarding — no new
+      // merchant can be onboarded, so MERCHANT.ONBOARDING.COMPLETED and
+      // MERCHANT.PARTNER-CONSENT.REVOKED have nothing to update. Payment
+      // events below stay: captures and refunds on pledges taken before the
+      // withdrawal still have to land.
       // ---- Payment events (custom_id = pledgeId) ----
       case "PAYMENT.CAPTURE.COMPLETED": {
         const resource = event.resource;
@@ -146,7 +123,7 @@ export async function POST(req: NextRequest) {
         });
 
         if (pledge.rewardId) {
-          await claimRewardSlot(pledge.rewardId).catch((err) =>
+          await claimRewardSlot(pledge.rewardId).catch((err: unknown) =>
             log.error({ err: String(err) }, "claimRewardSlot failed"),
           );
         }
@@ -158,10 +135,10 @@ export async function POST(req: NextRequest) {
         if (pledgeAddons.length > 0) {
           await claimAddonSlots(
             pledgeAddons.map((a: { addonId: string; quantity: number }) => ({ id: a.addonId, quantity: a.quantity })),
-          ).catch((err) => log.error({ err: String(err) }, "claimAddonSlots failed"));
+          ).catch((err: unknown) => log.error({ err: String(err) }, "claimAddonSlots failed"));
         }
 
-        await assignBackerNumber(pledge.projectId, pledge.id).catch((err) =>
+        await assignBackerNumber(pledge.projectId, pledge.id).catch((err: unknown) =>
           log.error({ err: String(err) }, "assignBackerNumber failed"),
         );
 
@@ -170,14 +147,14 @@ export async function POST(req: NextRequest) {
           pledge.project?.creatorId ?? "",
           "A backer",
           Number(pledge.amount),
-        ).catch((err) => log.error({ err: String(err) }, "notifyPledgeReceived failed"));
+        ).catch((err: unknown) => log.error({ err: String(err) }, "notifyPledgeReceived failed"));
 
         const projectIsFunded = Number(updatedProject.currentAmount) >= Number(updatedProject.goalAmount);
         const justReachedGoal =
           projectIsFunded &&
           Number(updatedProject.currentAmount) - Number(pledge.amount) < Number(updatedProject.goalAmount);
         if (justReachedGoal) {
-          await notifyProjectFunded(pledge.projectId).catch((err) =>
+          await notifyProjectFunded(pledge.projectId).catch((err: unknown) =>
             log.error({ err: String(err) }, "notifyProjectFunded failed"),
           );
         }

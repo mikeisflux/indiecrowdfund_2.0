@@ -7,7 +7,6 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { callDivinityCoinAPI } from "@/lib/payments/divinitycoin";
 import { verifyWhopUpchargePayment } from "@/lib/payments/whop/upcharge";
-import { capturePayPalUpchargeOrder } from "@/lib/payments/paypal/upcharge";
 import { notifyPledgeModified } from "@/lib/notifications/pledge-notifications";
 
 /**
@@ -77,7 +76,6 @@ export async function POST(
     // its own reference in pending.paymentIntentId:
     //   DC:     Stripe-style PaymentIntent ID
     //   WHOP:   Whop checkout configuration ID
-    //   PAYPAL: PayPal order ID
     const paymentMethod = pending.paymentMethod || "DIVINITYCOIN";
 
     if (!pending.paymentIntentId) {
@@ -102,14 +100,6 @@ export async function POST(
       if (!verify.paid) {
         return NextResponse.json(
           { error: "Payment not yet completed" },
-          { status: 400 }
-        );
-      }
-    } else if (paymentMethod === "PAYPAL") {
-      const capture = await capturePayPalUpchargeOrder(pending.paymentIntentId);
-      if (!capture.captured) {
-        return NextResponse.json(
-          { error: "Payment capture failed" },
           { status: 400 }
         );
       }

@@ -7,20 +7,15 @@ import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-
 import { Stripe } from "@stripe/stripe-js";
 import { SurveyData } from "./types";
 import { WhopPaymentForm } from "@/app/projects/[vanityname]/[slug]/pledge/components/WhopPaymentForm";
-import { PayPalPaymentForm } from "@/app/projects/[vanityname]/[slug]/pledge/components/PayPalPaymentForm";
 
 export interface SurveyUpchargePayment {
-  paymentMethod: "DIVINITYCOIN" | "WHOP" | "PAYPAL";
+  paymentMethod: "DIVINITYCOIN" | "WHOP";
   // DC path
   clientSecret?: string | null;
   // Whop path
   sessionId?: string;
   planId?: string;
   environment?: "production" | "sandbox";
-  // PayPal path
-  paypalOrderId?: string;
-  paypalClientId?: string;
-  paypalMode?: string;
   pledgeId: string;
 }
 
@@ -218,20 +213,6 @@ export function SurveyPaymentStep({
               onError={onError}
               total={addonsTotal}
               confirmUrl={confirmUrl}
-            />
-          ) : upchargePayment?.paymentMethod === "PAYPAL" && pledgeId ? (
-            <PayPalPaymentForm
-              paypalOrderId={upchargePayment.paypalOrderId || ""}
-              pledgeId={pledgeId}
-              clientId={upchargePayment.paypalClientId || ""}
-              paypalMode={upchargePayment.paypalMode || "live"}
-              agreedToTerms={true}
-              isProcessing={isProcessingPayment}
-              setIsProcessing={setIsProcessingPayment}
-              onSuccess={onSuccess}
-              onError={onError}
-              total={addonsTotal}
-              upchargeConfirmUrl={confirmUrl}
             />
           ) : clientSecret && stripePromise ? (
             <Elements

@@ -7,7 +7,6 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { callDivinityCoinAPI } from "@/lib/payments/divinitycoin";
 import { verifyWhopUpchargePayment } from "@/lib/payments/whop/upcharge";
-import { capturePayPalUpchargeOrder } from "@/lib/payments/paypal/upcharge";
 
 /**
  * POST /api/pledges/[pledgeId]/confirm-add-items
@@ -100,7 +99,6 @@ export async function POST(
     // its own reference in pendingItems.paymentIntentId:
     //   DC:     Stripe-style PaymentIntent ID
     //   WHOP:   Whop checkout configuration ID
-    //   PAYPAL: PayPal order ID
     const paymentMethod = pendingItems.paymentMethod || "DIVINITYCOIN";
 
     if (!pendingItems.paymentIntentId) {
@@ -128,17 +126,6 @@ export async function POST(
       if (!verify.paid) {
         return NextResponse.json(
           { error: "Payment not yet completed" },
-          { status: 400 }
-        );
-      }
-    } else if (paymentMethod === "PAYPAL") {
-      // PayPal CAPTURE intent — the client has approved the order
-      // via the SDK; we capture server-side here. Idempotent: if a
-      // parallel call already captured, the helper returns success.
-      const capture = await capturePayPalUpchargeOrder(pendingItems.paymentIntentId);
-      if (!capture.captured) {
-        return NextResponse.json(
-          { error: "Payment capture failed" },
           { status: 400 }
         );
       }
