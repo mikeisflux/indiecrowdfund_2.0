@@ -176,14 +176,37 @@ export async function POST(
       fromName: creatorName,
       replyTo: creatorEmail,
       isCreatorEmail: true, // Mark as creator email for mailbox filtering
+      // A creator replying to a backer about the campaign they funded is
+      // transactional, not marketing. Unsubscribing from site email is a
+      // choice about newsletters and notifications; it is not a way to stop
+      // hearing from the creator you gave money to about shipping, delays or
+      // what you owe. Same reasoning as /api/creator/email/compose.
+      skipUnsubscribeCheck: true,
       attachments: attachments || undefined,
     });
 
-    if (!emailResult.success) {
+    // A "skipped" result means the recipient unsubscribed or their address is
+    // blocked. That is an expected outcome for the EMAIL copy, and it must not
+    // stop the site message: this used to return 500 and bail before the
+    // Message record was written, so the creator saw "User has unsubscribed
+    // from emails" and the message went nowhere at all — not to the inbox, not
+    // on the site. Site messages are required functionality and always deliver.
+    const emailSkipped =
+      !emailResult.success && "skipped" in emailResult &&
+      (emailResult as { skipped?: boolean }).skipped === true;
+
+    if (!emailResult.success && !emailSkipped) {
       creatorEmailThreadsReplyLogger.error({ err: String(emailResult.error) }, "Failed to send reply email:");
       return NextResponse.json(
         { error: emailResult.error || "Failed to send email" },
         { status: 500 }
+      );
+    }
+
+    if (emailSkipped) {
+      creatorEmailThreadsReplyLogger.info(
+        { reason: emailResult.error },
+        "Reply email copy skipped (recipient unsubscribed/blocked); delivering on-site only"
       );
     }
 
