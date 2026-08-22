@@ -83,7 +83,7 @@ IndieCrowdfund relies on the following PCI DSS-validated and otherwise compliant
 |---|---|---|---|
 | PaymentCloud (NMI white-label) | Card capture (Collect.js), tokenization, Customer Vault, settlement | PCI DSS Level 1 | Full PAN handling — replaces our scope |
 | DivinityCoin | NSFW-permissive backup processor | PCI DSS validated | Full PAN handling on DC-routed campaigns |
-| PayPal | Backup processor | PCI DSS Level 1 | Full PAN handling on PP-routed campaigns |
+| PayPal | Withdrawn as a processor; still services pre-withdrawal transactions (capture, refunds, disputes, webhooks) | PCI DSS Level 1 | Full PAN handling on campaigns routed to PP before withdrawal |
 | Whop | Backup processor | PCI DSS validated | Full PAN handling on Whop-routed campaigns |
 | Cloudflare | DNS, edge cache, TLS, R2 object storage | SOC 2 Type II, ISO 27001, PCI DSS Level 1 | None (R2 stores project images, no CHD) |
 | Hosting provider | Compute and storage for application and database | SOC 2 Type II | None (no CHD ever resides here) |
@@ -99,7 +99,7 @@ IndieCrowdfund has a written agreement in place with each TPSP listed above. Eac
 |---|---|---|
 | PaymentCloud | Merchant Processing Agreement | Acquirer/processor agreement; PCI compliance clause + AOC delivered annually |
 | DivinityCoin | Service Agreement | Vendor contract; PCI/security responsibilities clause |
-| PayPal | Standard Merchant Agreement + Acceptable Use Policy | PayPal's published merchant TOS includes its PCI obligations |
+| PayPal | Standard Merchant Agreement + Acceptable Use Policy | PayPal's published merchant TOS includes its PCI obligations. Retained while pre-withdrawal transactions remain refundable or disputable |
 | Whop | Whop Creator Agreement | Whop's TOS includes payment-data security obligations |
 | Cloudflare | Self-Serve Subscription Agreement / Enterprise MSA | Cloudflare's DPA + security addendum + published SOC 2 / ISO 27001 reports |
 | Hosting provider | Standard hosting agreement | Provider's TOS + DPA |

@@ -67,9 +67,39 @@
 - Before committing any new/edited client fetch to `/api/*`, scan the diff: if the method is POST/PUT/PATCH/DELETE and it's not in the `csrfExemptRoutes` list in `src/proxy.ts`, it must go through `apiFetch`
 - Exempt routes (webhooks, `/api/track`, `/api/error-report`, etc.) live in `csrfExemptRoutes` — check that list before assuming plain `fetch()` is OK
 
+### PayPal is withdrawn — do not add it back
+
+PayPal and PayPal Connect were removed as payment processors. Nothing may
+open a **new** PayPal payment: no checkout, no upcharge, no processor option in
+the campaign builder, no client-token/config/capture routes. If you find
+yourself writing one, that is the mistake.
+
+What deliberately **remains**, and must keep working:
+
+- `captureAuthorizedPaypalPledges` / `captureAuthorizedPayPalConnectPledges` —
+  pledges authorized before the withdrawal still have to settle
+- Refunds, the PayPal webhooks (payment events only — merchant onboarding is
+  gone), and the `getPayPalConfig` / `getPayPalAccessToken` helpers they need
+- Admin payout views, and the creator PayPal **payout** rails
+  (`PayPalBankAccount`, `PayPalPayoutConfig`) — PayPal as a way creators get
+  *paid* is a separate thing from PayPal as a way backers pay *in*
+- The "PayPal Collected" IndieKit stat — it counts real COMPLETED pledges
+
+Campaigns that ran on PayPal still owe backers rewards and owe creators
+payouts. Deleting those paths strands real money rather than stopping new
+money.
+
+The `PAYPAL` / `PAYPAL_CONNECT` enum values and the `paypal*` columns stay in
+the schema. Postgres cannot drop an enum value in place, and those columns are
+the audit trail for past transactions.
+
+`captureAuthorizedPaypalPledges` filters on `pledge.paymentProcessor`, not the
+project's — so migrating a legacy campaign to another processor does not
+orphan its authorized pledges.
+
 ### Supported Creator Countries — KEEP THE GRANT AGREEMENT IN SYNC
 - The single source of truth for creator payout countries is `BANK_COUNTRY_OPTIONS` / `SUPPORTED_BANK_COUNTRIES` in `src/lib/bank-countries.ts`
-- It feeds the **Bank Country** dropdown in the campaign-creation payout step for **every** processor: DivinityCoin, PayPal, and Whop (`src/components/project/builder/payment-sections/*`)
+- It feeds the **Bank Country** dropdown in the campaign-creation payout step for **every** processor: DivinityCoin and Whop, plus the legacy PayPal payout section still shown to campaigns that ran on PayPal (`src/components/project/builder/payment-sections/*`)
 - **When adding a new supported country, you MUST do all of these:**
   1. Add it to `BankCountry`, `BANK_COUNTRY_OPTIONS`, `SUPPORTED_BANK_COUNTRIES`, `BANK_COUNTRY_FIELDS`, and `parseBankCountry` in `src/lib/bank-countries.ts`
   2. Add its branch to `validateBankAccountFormat` (routing/account format for that country)
