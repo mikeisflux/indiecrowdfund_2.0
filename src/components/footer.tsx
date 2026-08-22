@@ -54,6 +54,7 @@ export function Footer() {
               <li><Link href="/terms" className="hover:text-foreground">Terms of Service</Link></li>
               <li><Link href="/privacy" className="hover:text-foreground">Privacy Policy</Link></li>
               <li><Link href="/trust-safety" className="hover:text-foreground">Trust & Safety</Link></li>
+              <li><Link href="/api-docs" className="hover:text-foreground">Developer API</Link></li>
             </ul>
           </div>
         </div>

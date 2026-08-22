@@ -56,6 +56,19 @@ export async function GET() {
         usageCount: true,
         createdAt: true,
         expiresAt: true,
+        // Public Data API fields. A key issued through /dashboard/api carries
+        // the owning account and who to contact about the integration; keys
+        // minted by an admin before the public API predate these and are null.
+        secretPrefix: true,
+        scopes: true,
+        appName: true,
+        appUrl: true,
+        contactEmail: true,
+        lastUsedIp: true,
+        revokedAt: true,
+        user: {
+          select: { id: true, name: true, email: true },
+        },
         createdBy: {
           select: {
             name: true,

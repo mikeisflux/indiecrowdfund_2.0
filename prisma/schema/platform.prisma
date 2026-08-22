@@ -656,10 +656,41 @@ model ApiKey {
   createdById String?
   createdBy   User?   @relation(fields: [createdById], references: [id], onDelete: SetNull)
 
+  // ── Public Data API (v1) ────────────────────────────────────────────────
+  //
+  // Owner of the credential. Keys are self-service: a tracking site signs up
+  // for an ICF account and issues its own. Nullable because keys predating
+  // the public API were minted by an admin with no owner, and revoking those
+  // retroactively would break whatever is using them.
+  userId String?
+  user   User?   @relation("ApiKeyOwner", fields: [userId], references: [id], onDelete: Cascade)
+
+  // The secret half. `key` is the public identifier and travels in the clear;
+  // this is the half that proves possession, and only its hash is ever
+  // stored — a lost secret is regenerated, never recovered.
+  secretHash   String?
+  secretPrefix String? // first chars, for "which secret is this" in the UI
+
+  // Who is calling and why. Required at issue time for the public API so an
+  // abusive integration can be identified and contacted rather than just
+  // rate-limited into silence.
+  appName      String?
+  appUrl       String?
+  contactEmail String?
+
+  // Coarse permissions. Public data API keys get ["read:public"]; the array
+  // exists so a future write or private scope cannot be granted by accident
+  // to a key that predates it.
+  scopes String[] @default([])
+
+  lastUsedIp  String?
+  revokedById String?
+
   @@index([key])
   @@index([prefix])
   @@index([status])
   @@index([createdById])
+  @@index([userId])
 }
 
 enum ApiEnvironment {

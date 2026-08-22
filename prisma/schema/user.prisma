@@ -101,6 +101,7 @@ model User {
   bugReports                  BugReport[]
   mediaFiles                  MediaFile[]
   apiKeys                     ApiKey[]
+  ownedApiKeys                ApiKey[]                          @relation("ApiKeyOwner")
   backerNotes                 BackerNote[]
   emailCampaignClicks         EmailCampaignClick[]
   uploadedDigitalFiles        DigitalFile[]
