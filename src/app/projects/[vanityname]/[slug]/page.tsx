@@ -51,6 +51,7 @@ import {
 import { CountdownTimer } from "@/components/ui/countdown-timer";
 import { BackToTop } from "@/components/back-to-top";
 import { BannedStamp } from "@/components/ui/banned-stamp";
+import { EmbedDialog } from "@/components/project/embed-dialog";
 
 export default function ProjectPage() {
   const { data: session } = useSession();
@@ -760,6 +761,13 @@ export default function ProjectPage() {
                   </Button>
                 </div>
               </div>
+
+              {/* Embed widget. Sits with Follow/share because it is the same
+                  job — getting the campaign in front of people elsewhere. */}
+              {/* No status guard here: /embed enforces PUBLIC_PROJECT_STATUSES
+                  itself and 404s otherwise, so it is the single authority on
+                  what may be embedded. */}
+              {vanityname && <EmbedDialog vanityName={vanityname} slug={project.slug} />}
 
               {/* In-app contact path: real backer report of someone clicking
                   the share-by-email envelope trying to reach the creator,

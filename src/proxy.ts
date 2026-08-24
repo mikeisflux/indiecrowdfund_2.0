@@ -643,7 +643,7 @@ function getSecuritySettings() {
 }
 
 // Generate CSP header value
-function getCSPHeader(allowShopifyIframe: boolean = false): string {
+function getCSPHeader(allowShopifyIframe: boolean = false, allowAnyIframe: boolean = false): string {
   // Script sources
   // Note: 'unsafe-eval' is required for Google reCAPTCHA to function
   // Note: https://unpkg.com is needed for pdf.js worker
@@ -652,7 +652,14 @@ function getCSPHeader(allowShopifyIframe: boolean = false): string {
 
   // For Shopify iframe routes, allow embedding from Shopify domains
   // Include 'self' and all Shopify admin domains
-  const frameAncestors = allowShopifyIframe
+  // /embed/* is the campaign widget, which exists to be framed by anyone —
+  // that is the entire feature, so frame-ancestors has to be open there. It is
+  // scoped to those routes alone and they are read-only: no session is used,
+  // no form posts, and pledging deliberately breaks out to our own domain, so
+  // there is nothing on an embed page worth clickjacking.
+  const frameAncestors = allowAnyIframe
+    ? "*"
+    : allowShopifyIframe
     ? "'self' https://*.myshopify.com https://admin.shopify.com https://*.shopify.com https://partners.shopify.com"
     : "'self'";
 
@@ -964,16 +971,21 @@ export async function proxy(req: NextRequest) {
     pathname.startsWith(route)
   );
 
+  // Campaign embed widget — meant to be framed by third-party sites.
+  const isEmbedRoute = pathname.startsWith("/embed/");
+
   // Add Content Security Policy header if enabled
   if (securitySettings.contentSecurityPolicy) {
-    response.headers.set("Content-Security-Policy", getCSPHeader(isShopifyIframeRoute));
+    response.headers.set("Content-Security-Policy", getCSPHeader(isShopifyIframeRoute, isEmbedRoute));
   }
 
   // Add other security headers
   response.headers.set("X-Content-Type-Options", "nosniff");
   // For Shopify iframe routes, don't set X-Frame-Options (CSP frame-ancestors handles it)
   // X-Frame-Options ALLOWALL is not valid, and ALLOW-FROM is deprecated
-  if (!isShopifyIframeRoute) {
+  // X-Frame-Options has no wildcard and predates frame-ancestors, so for
+  // routes meant to be framed it must be omitted entirely and left to CSP.
+  if (!isShopifyIframeRoute && !isEmbedRoute) {
     response.headers.set("X-Frame-Options", "SAMEORIGIN");
   }
   response.headers.set("X-XSS-Protection", "1; mode=block");

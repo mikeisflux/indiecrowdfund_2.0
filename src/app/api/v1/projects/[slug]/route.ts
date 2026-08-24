@@ -49,7 +49,9 @@ export async function GET(
         description: true,
         risks: true,
         rewards: {
-          where: { deletedAt: null, type: "TIER" },
+          // Reward has no deletedAt. Public tiers only: SECRET rewards are
+          // reachable solely via their secretToken and must not be listed.
+          where: { type: "TIER", visibility: "PUBLIC", isEnded: false },
           select: {
             id: true,
             title: true,

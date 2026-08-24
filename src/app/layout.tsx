@@ -8,6 +8,7 @@ import { AnnouncementBar } from "@/components/announcement-bar";
 import { PromoPopup } from "@/components/promo-popup";
 import { ConsentBanner } from "@/components/consent-banner";
 import { SiteHeader } from "@/components/site-header";
+import { HideOnEmbed } from "@/components/hide-on-embed";
 import { EmailVerificationBanner } from "@/components/email-verification-banner";
 import { ScreenReaderAnnouncer } from "@/components/ui/screen-reader-announcer";
 import { ErrorReporter } from "@/components/error-reporter";
@@ -276,11 +277,15 @@ export default async function RootLayout({
               Skip to main content
             </a>
             <TrackingProvider>
-              <AnnouncementBar initialAnnouncements={announcements} />
-              <PromoPopup />
-              <ConsentBanner />
-              <SiteHeader />
-              <EmailVerificationBanner />
+              {/* Site chrome is suppressed on /embed/* — the widget renders
+                  inside a third-party page and must arrive bare. */}
+              <HideOnEmbed>
+                <AnnouncementBar initialAnnouncements={announcements} />
+                <PromoPopup />
+                <ConsentBanner />
+                <SiteHeader />
+                <EmailVerificationBanner />
+              </HideOnEmbed>
               <main id="main-content">
                 {children}
               </main>
@@ -289,7 +294,9 @@ export default async function RootLayout({
             </ScreenReaderAnnouncer>
             <Toaster />
             <ErrorReporter />
-            <SupportChatWidget />
+            <HideOnEmbed>
+              <SupportChatWidget />
+            </HideOnEmbed>
           </ThemeProvider>
         </AuthProvider>
       </body>
