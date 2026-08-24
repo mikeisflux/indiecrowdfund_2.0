@@ -38,17 +38,17 @@ export function ProperProportions({
       </p>
       <div className="grid gap-4 md:grid-cols-2">
         <ProportionFigure
-          src="/content-guidelines/proper-proportions-male.jpg"
+          src="/content-guidelines/proper-proportions-male.png"
           alt="Figure-drawing reference chart titled Ideal Proportion at Various Ages, comparing male figures from one year old to adult. Head-to-body ratio decreases from eight heads tall for an adult, to 7.5 at fifteen years, 7 at ten years, 6 at five years, 5 at three years, and 4 at one year, with a matching row of head sizes above."
           width={736}
-          height={784}
+          height={803}
           caption="Realistic male proportions, one year to adult."
         />
         <ProportionFigure
           src="/content-guidelines/proper-proportions-female.jpg"
           alt="Figure-drawing reference chart of stylized female figures against a numbered head-height scale from one to nine. Eight figures increase in height from roughly two and a half heads tall at zero to two years, through three to five years and five to nine years, then by height in centimetres from 110-130 up to 170-180, with the tallest adult figure reaching about nine heads."
           width={600}
-          height={442}
+          height={441}
           caption={
             <>
               Stylized female proportions, labelled by age for children and by
