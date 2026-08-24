@@ -226,25 +226,6 @@ export function usePledge() {
   //   initStripe();
   // }, []);
 
-  // Load PayPal client ID and client token when project uses PayPal or
-  // PayPal Connect. Connect uses the separate partner-app config endpoint.
-  useEffect(() => {
-    if (!project) return;
-    const isConnect = project.paymentProcessor === "PAYPAL_CONNECT";
-    if (project.paymentProcessor !== "PAYPAL" && !isConnect) return;
-    async function initPayPal() {
-      try {
-        const configRes = await fetch(isConnect ? "/api/paypal/connect/config" : "/api/paypal/config");
-        const configData = await configRes.json();
-        if (configData.clientId) setPaypalClientId(configData.clientId);
-        if (configData.mode) setPaypalMode(configData.mode);
-      } catch (err) {
-        console.error("Failed to load PayPal config:", err);
-      }
-    }
-    initPayPal();
-  }, [project]);
-
   // Load Whop plan ID and environment when project uses Whop
   useEffect(() => {
     if (!project || project.paymentProcessor !== "WHOP") return;
