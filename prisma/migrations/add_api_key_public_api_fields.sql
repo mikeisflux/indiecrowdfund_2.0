@@ -34,7 +34,17 @@ CREATE INDEX CONCURRENTLY IF NOT EXISTS "ApiKey_userId_idx" ON "ApiKey" ("userId
 -- key does not block writes. Existing rows all have userId = NULL and satisfy
 -- it trivially; validate off-peak with:
 --   ALTER TABLE "ApiKey" VALIDATE CONSTRAINT "ApiKey_userId_fkey";
-ALTER TABLE "ApiKey"
-  ADD CONSTRAINT "ApiKey_userId_fkey"
-  FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE
-  NOT VALID;
+-- Postgres has no ADD CONSTRAINT IF NOT EXISTS, so this is guarded explicitly.
+-- Without the guard a re-run aborts here under ON_ERROR_STOP=1, which looks
+-- like a failed migration when in fact everything already applied.
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'ApiKey_userId_fkey'
+  ) THEN
+    ALTER TABLE "ApiKey"
+      ADD CONSTRAINT "ApiKey_userId_fkey"
+      FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE
+      NOT VALID;
+  END IF;
+END $$;
