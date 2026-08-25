@@ -680,20 +680,23 @@ export async function handlePaymentSucceeded(
       } catch (addonErr) {
         paymentsDivinitycoinLogger.error({ err: addonErr }, `[DivinityCoin] Failed to claim addon slots for pledge ${pledgeId}`);
       }
+      // Notify the project team. Inside the CAS block on purpose: /confirm
+      // notifies from the same claim, so a pledge that goes through both
+      // /confirm and this webhook — the normal case for an immediate charge —
+      // produced two "New Pledge!" notifications per recipient. Whichever path
+      // wins confirmationEmailSent owns the money AND the notification.
+      try {
+        await notifyPledgeReceived(
+          pledge.projectId,
+          pledge.project.creatorId,
+          pledge.user?.name || "A backer",
+          Number(pledge.amount)
+        );
+      } catch (notifyError) {
+        paymentsDivinitycoinLogger.error({ err: notifyError }, `[DivinityCoin] Failed to notify creator for pledge ${pledgeId}:`);
+      }
     } else {
-      paymentsDivinitycoinLogger.info(`[DivinityCoin] Stats already updated by /confirm for pledge ${pledgeId}, skipping stat update`);
-    }
-
-    // Notify creator of new pledge (non-blocking)
-    try {
-      await notifyPledgeReceived(
-        pledge.projectId,
-        pledge.project.creatorId,
-        pledge.user?.name || "A backer",
-        Number(pledge.amount)
-      );
-    } catch (notifyError) {
-      paymentsDivinitycoinLogger.error({ err: notifyError }, `[DivinityCoin] Failed to notify creator for pledge ${pledgeId}:`);
+      paymentsDivinitycoinLogger.info(`[DivinityCoin] Stats already updated by /confirm for pledge ${pledgeId}, skipping stat update and notification`);
     }
 
     // Assign backer number before sending confirmation email
