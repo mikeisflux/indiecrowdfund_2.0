@@ -1,6 +1,8 @@
 "use client";
 
 import { apiFetch } from "@/lib/fetch-utils";
+import { ImageSizeHint } from "@/components/ui/image-size-hint";
+import { AVATAR_SPEC, PROFILE_BANNER_SPEC } from "@/lib/image-specs";
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -366,6 +368,11 @@ export default function ProfilePage() {
             </Button>
           </div>
         </div>
+        {/* Neither upload control showed a size before, so creators had no way
+            to know the banner is cropped differently on every screen width. */}
+        <div className="mt-2">
+          <ImageSizeHint spec={PROFILE_BANNER_SPEC} prefix="Banner:" />
+        </div>
 
         {/* Profile Header with Avatar */}
         <div className="relative px-6 md:px-8 pb-6">
@@ -397,6 +404,9 @@ export default function ProfilePage() {
                   <Camera className="h-4 w-4" />
                 )}
               </button>
+            </div>
+            <div className="mt-2">
+              <ImageSizeHint spec={AVATAR_SPEC} prefix="Photo:" />
             </div>
           </div>
 

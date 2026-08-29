@@ -80,6 +80,25 @@ export const ITEM_SPEC: ImageSpec = {
     "Square is the only shape this is ever shown in, so anything else is centre-cropped to a square the moment a backer sees it.",
 };
 
+/**
+ * Profile banner (User.heroImage).
+ *
+ * Full-bleed on the public profile: h-48 / md:h-64 / lg:h-80 with object-cover,
+ * spanning the whole viewport width. That means there is no single correct
+ * aspect — the visible slice is roughly 2:1 on a phone and closer to 6:1 on a
+ * wide desktop, so the crop genuinely differs per visitor. 1920 x 480 is wide
+ * enough to cover a desktop without being absurd, and the advice that actually
+ * matters is to keep the subject centred.
+ */
+export const PROFILE_BANNER_SPEC: ImageSpec = {
+  aspect: "aspect-[4/1]",
+  label: "1920 x 480 px (4:1 wide)",
+  where:
+    "The banner across the top of your public creator profile, behind your photo.",
+  crop:
+    "It spans the full width of the screen, so the crop changes with the visitor's device — narrow screens lose the sides, wide screens lose the top and bottom. Keep logos and faces centred, and away from all four edges.",
+};
+
 /** Creator avatar. */
 export const AVATAR_SPEC: ImageSpec = {
   aspect: "aspect-square",
