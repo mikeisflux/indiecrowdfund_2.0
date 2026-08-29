@@ -495,6 +495,8 @@ export function BasicsStep() {
           uploadType="project"
           aspectRatio={PROJECT_COVER_SPEC.aspect}
           recommendedSize={PROJECT_COVER_SPEC.label}
+          whereUsed={PROJECT_COVER_SPEC.where}
+          cropNote={PROJECT_COVER_SPEC.crop}
           maxSizeMB={10}
         />
       </div>

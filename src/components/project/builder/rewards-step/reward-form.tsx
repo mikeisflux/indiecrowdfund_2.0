@@ -307,6 +307,8 @@ export function RewardForm({
                 uploadType="reward"
                 aspectRatio={artwork.aspect}
                 recommendedSize={artwork.label}
+                whereUsed={artwork.where}
+                cropNote={artwork.crop}
                 maxSizeMB={10}
               />
             </CardContent>

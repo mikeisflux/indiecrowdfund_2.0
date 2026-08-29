@@ -14,12 +14,24 @@ export interface ImageSpec {
   aspect: string;
   /** Human-readable recommendation shown under the dropzone. */
   label: string;
+  /** Where the image is actually shown, so a creator can picture the frame. */
+  where: string;
+  /**
+   * What goes wrong at the wrong aspect. Every surface uses object-cover, so a
+   * mismatch is never letterboxed — it is silently cropped, and the creator
+   * does not see it happen. Saying which edge is lost is the difference
+   * between a size hint and a usable one.
+   */
+  crop: string;
 }
 
 /** Campaign hero / listing card. Rendered aspect-video on both layouts. */
 export const PROJECT_COVER_SPEC: ImageSpec = {
   aspect: "aspect-video",
   label: "1024 x 576 px (16:9)",
+  where:
+    "The main image at the top of your campaign page, on every listing card in Discover, and in the embed widget other sites put on their pages.",
+  crop: "A portrait or square upload keeps its middle band and loses the top and bottom. Keep titles and faces away from the edges.",
 };
 
 /**
@@ -29,6 +41,8 @@ export const PROJECT_COVER_SPEC: ImageSpec = {
 export const REWARD_SPEC_V1: ImageSpec = {
   aspect: "aspect-[3/2]",
   label: "933 x 621 px (3:2 landscape)",
+  where: "The reward tile in the right-hand rail of your campaign page.",
+  crop: "A portrait upload is cropped top and bottom to fit this landscape frame.",
 };
 
 /**
@@ -43,6 +57,10 @@ export const REWARD_SPEC_V1: ImageSpec = {
 export const REWARD_SPEC_V2: ImageSpec = {
   aspect: "aspect-[2/3]",
   label: "1000 x 1500 px (2:3 portrait)",
+  where:
+    "The reward card in the tier grid on your campaign page, and in the pledge checkout.",
+  crop:
+    "Portrait, because on a comics platform this is a cover, not a banner. A landscape upload loses its left and right sides. Standard comic trim (6.625 x 10.25 in) drops in almost exactly.",
 };
 
 /**
@@ -56,12 +74,20 @@ export const REWARD_SPEC_V2: ImageSpec = {
 export const ITEM_SPEC: ImageSpec = {
   aspect: "aspect-square",
   label: "800 x 800 px (square)",
+  where:
+    "The thumbnail beside each item when a backer fills in their fulfillment survey, rendered at 80 x 80.",
+  crop:
+    "Square is the only shape this is ever shown in, so anything else is centre-cropped to a square the moment a backer sees it.",
 };
 
 /** Creator avatar. */
 export const AVATAR_SPEC: ImageSpec = {
   aspect: "aspect-square",
-  label: "400 x 400 px",
+  label: "400 x 400 px (square)",
+  where:
+    "Your creator photo on the campaign page, your public profile, and next to any update or comment you post.",
+  crop:
+    "Displayed as a circle, so the corners are always cut off. Keep your face centred and clear of the edges.",
 };
 
 /**

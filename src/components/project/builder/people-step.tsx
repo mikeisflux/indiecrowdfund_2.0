@@ -387,6 +387,8 @@ export function PeopleStep() {
                 uploadType="project"
                 aspectRatio={AVATAR_SPEC.aspect}
                 recommendedSize={AVATAR_SPEC.label}
+                whereUsed={AVATAR_SPEC.where}
+                cropNote={AVATAR_SPEC.crop}
                 maxSizeMB={5}
                 className="w-32 h-32"
               />

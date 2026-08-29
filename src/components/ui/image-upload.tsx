@@ -5,7 +5,13 @@ import { useState, useRef, useCallback } from "react";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { Upload, X, Image as ImageIcon, Loader2 } from "lucide-react";
+import { Upload, X, Image as ImageIcon, Loader2, Info } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { toast } from "sonner";
 
 interface ImageUploadProps {
@@ -17,6 +23,10 @@ interface ImageUploadProps {
   aspectRatio?: string;
   maxSizeMB?: number;
   recommendedSize?: string;
+  /** Where this image is shown. Surfaced in a tooltip beside the size hint. */
+  whereUsed?: string;
+  /** What gets cropped at the wrong aspect ratio. */
+  cropNote?: string;
   accept?: string;
 }
 
@@ -29,6 +39,8 @@ export function ImageUpload({
   aspectRatio = "aspect-video",
   maxSizeMB = 10,
   recommendedSize = "1024 x 576 px",
+  whereUsed,
+  cropNote,
   accept = "image/jpeg,image/png,image/gif,image/webp",
 }: ImageUploadProps) {
   const [isDragging, setIsDragging] = useState(false);
@@ -208,8 +220,39 @@ export function ImageUpload({
             <p className="text-sm text-muted-foreground mb-1">
               {isDragging ? "Drop image here" : "Drag and drop an image, or click to browse"}
             </p>
-            <p className="text-xs text-muted-foreground">
+            {/* The size alone does not tell a creator whether their artwork
+                survives the frame. The tooltip carries where it is shown and
+                which edges are lost, which is the part they cannot see. */}
+            <p className="text-xs text-muted-foreground flex items-center gap-1">
               Recommended: {recommendedSize}
+              {(whereUsed || cropNote) && (
+                <TooltipProvider delayDuration={150}>
+                  <Tooltip>
+                    <TooltipTrigger
+                      asChild
+                      // Stops the tooltip trigger from opening the file picker.
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                      }}
+                    >
+                      <button
+                        type="button"
+                        aria-label={`Where this image is used: ${whereUsed ?? ""} ${cropNote ?? ""}`.trim()}
+                        className="inline-flex text-muted-foreground hover:text-foreground"
+                      >
+                        <Info className="h-3.5 w-3.5" />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="top" className="max-w-xs text-left">
+                      {whereUsed && <p className="mb-1">{whereUsed}</p>}
+                      {cropNote && (
+                        <p className="text-muted-foreground">{cropNote}</p>
+                      )}
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
             </p>
             <p className="text-xs text-muted-foreground mt-1">
               Max size: {maxSizeMB}MB ({accept.split(",").map((t) => t.trim().replace("image/", "").toUpperCase()).join(", ")})

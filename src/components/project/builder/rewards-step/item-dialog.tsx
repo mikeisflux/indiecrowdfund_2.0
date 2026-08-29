@@ -85,6 +85,8 @@ export function ItemDialog({
               uploadType="item"
               aspectRatio={ITEM_SPEC.aspect}
               recommendedSize={ITEM_SPEC.label}
+              whereUsed={ITEM_SPEC.where}
+              cropNote={ITEM_SPEC.crop}
               maxSizeMB={10}
             />
           </div>
