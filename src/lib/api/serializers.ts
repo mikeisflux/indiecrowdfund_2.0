@@ -1,3 +1,5 @@
+import { isDisplayableImage } from "@/lib/image-src";
+
 /**
  * Public shapes for the Data API.
  *
@@ -154,7 +156,12 @@ export function serializeProject(
       // so this is null rather than a URL that 404s.
       profile_url: vanity ? `https://indiecrowdfund.com/${vanity}` : null,
       // showNameOnly is the creator's own "don't show my picture" setting.
-      avatar_url: creator.showNameOnly ? null : (creator.image ?? null),
+      // isDisplayableImage rather than a nullish check: three accounts hold an
+      // empty string here, which `?? null` would publish as avatar_url: "".
+      avatar_url:
+        creator.showNameOnly || !isDisplayableImage(creator.image)
+          ? null
+          : creator.image,
     },
   };
 }
