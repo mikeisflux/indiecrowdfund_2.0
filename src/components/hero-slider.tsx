@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
+import { isDisplayableImage } from "@/lib/image-src";
 import Link from "next/link";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
@@ -209,7 +210,7 @@ export function HeroSlider({ initialSlides = [], autoPlayInterval = 6000 }: Hero
       <div className="absolute inset-0 bg-[linear-gradient(rgba(16,185,129,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(16,185,129,0.03)_1px,transparent_1px)] bg-[size:60px_60px] [mask-image:radial-gradient(ellipse_50%_50%_at_50%_50%,black_40%,transparent_100%)]" />
 
       {/* Background media */}
-      {currentSlide.mediaType === "IMAGE" && currentSlide.imageUrl && (
+      {currentSlide.mediaType === "IMAGE" && isDisplayableImage(currentSlide.imageUrl) && (
         <div className="absolute inset-0">
           <Image
             src={currentSlide.imageUrl}
