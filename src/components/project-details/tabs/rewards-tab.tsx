@@ -10,6 +10,7 @@ import { Package, ChevronRight } from "lucide-react";
 import { RewardData, AddonData } from "../types";
 import { formatMoney, formatDeliveryDate } from "../utils";
 import { RewardGrid } from "../reward-grid";
+import { RewardDetails } from "@/components/rewards/reward-details";
 
 interface RewardsTabProps {
   projectPath: string;
@@ -299,12 +300,15 @@ function RewardsTabV1({
                                   <div className="flex-1 min-w-0">
                                     <p className="font-medium text-sm">{addon.title}</p>
                                     <p className="text-sm text-[#05ce78]">+${Number(addon.amount).toFixed(2)}</p>
-                                    <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
-                                      {addon.description}
-                                      {addon.description.length > 80 && (
-                                        <button className="text-[#05ce78] ml-1">See more</button>
-                                      )}
-                                    </p>
+                                    {/* This was a "See more" button with no
+                                        onClick — it rendered, invited a click
+                                        and did nothing, which is worse than
+                                        showing no affordance at all. */}
+                                    <RewardDetails
+                                      description={addon.description}
+                                      descriptionClassName="text-xs text-muted-foreground mt-1"
+                                      clampLines={2}
+                                    />
                                   </div>
                                   <div className="h-12 w-12 rounded bg-muted flex-shrink-0 relative overflow-hidden">
                                     {addon.imageUrl && (

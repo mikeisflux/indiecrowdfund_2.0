@@ -5,13 +5,14 @@ import Image from "next/image";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { CheckCircle, Clock } from "lucide-react";
+import { Clock } from "lucide-react";
 import {
   ALL_CATEGORIES,
   CategoryFilter,
   filterByCategory,
   useCategoryGroups,
 } from "@/components/rewards/category-filter";
+import { RewardDetails } from "@/components/rewards/reward-details";
 import { RewardData } from "./types";
 import { formatDeliveryDate } from "./utils";
 import { useState } from "react";
@@ -103,27 +104,10 @@ export function RewardGrid({
                 </p>
                 <p className="font-semibold leading-snug">{reward.title}</p>
 
-                {reward.description && (
-                  <p className="text-sm text-muted-foreground line-clamp-3">
-                    {reward.description}
-                  </p>
-                )}
-
-                {reward.items.length > 0 && (
-                  <div className="space-y-1">
-                    {reward.items.slice(0, 3).map((item, index) => (
-                      <div key={index} className="flex items-start gap-1.5 text-xs">
-                        <CheckCircle className="mt-0.5 h-3 w-3 shrink-0 text-[#05ce78]" />
-                        <span className="min-w-0">{item.title}</span>
-                      </div>
-                    ))}
-                    {reward.items.length > 3 && (
-                      <p className="pl-[18px] text-xs text-muted-foreground">
-                        +{reward.items.length - 3} more
-                      </p>
-                    )}
-                  </div>
-                )}
+                <RewardDetails
+                  description={reward.description}
+                  items={reward.items}
+                />
 
                 {isScarce && (
                   <Badge
