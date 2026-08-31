@@ -1,6 +1,7 @@
 "use client";
 
 import { apiFetch } from "@/lib/fetch-utils";
+import { isOpenBugStatus, isClosedBugStatus } from "@/lib/bug-report-status";
 import { toast } from "sonner";
 
 import { useState, useEffect, useCallback } from "react";
@@ -77,6 +78,7 @@ interface Stats {
   new: number;
   inProgress: number;
   resolved: number;
+  open: number;
 }
 
 const categoryLabels: Record<string, string> = {
@@ -104,7 +106,8 @@ const statusLabels: Record<string, string> = {
 export default function BugReportsPage() {
   const [activeTab, setActiveTab] = useState("open");
   const [bugReports, setBugReports] = useState<BugReport[]>([]);
-  const [stats, setStats] = useState<Stats>({ new: 0, inProgress: 0, resolved: 0 });
+  const [stats, setStats] = useState<Stats>({ new: 0, inProgress: 0, resolved: 0, open: 0 });
+  const [totalReports, setTotalReports] = useState(0);
   const [selectedReport, setSelectedReport] = useState<BugReport | null>(null);
   const [showReportDialog, setShowReportDialog] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -125,6 +128,12 @@ export default function BugReportsPage() {
       const params = new URLSearchParams({
         sortBy,
         sortOrder,
+        // The API defaults to 20 and the page has no paginator, so it was
+        // splitting Open/Closed over only the newest 20 reports — an open
+        // report sitting behind 20 resolved ones simply vanished from the
+        // list while still counting in the sidebar badge. 100 is the API's
+        // ceiling; `truncated` below keeps us honest past it.
+        limit: "100",
         ...(statusFilter !== "all" && { status: statusFilter }),
         ...(categoryFilter !== "all" && { category: categoryFilter }),
         ...(priorityFilter !== "all" && { priority: priorityFilter }),
@@ -133,7 +142,8 @@ export default function BugReportsPage() {
       if (response.ok) {
         const data = await response.json();
         setBugReports(data.bugReports || []);
-        setStats(data.stats || { new: 0, inProgress: 0, resolved: 0 });
+        setStats(data.stats || { new: 0, inProgress: 0, resolved: 0, open: 0 });
+        setTotalReports(data.pagination?.total ?? (data.bugReports || []).length);
       }
     } catch (error) {
       console.error("Error fetching bug reports:", error);
@@ -270,12 +280,12 @@ export default function BugReportsPage() {
     return true;
   });
 
-  const openReports = filteredReports.filter(r =>
-    ["NEW", "ACKNOWLEDGED", "IN_PROGRESS", "NEEDS_INFO"].includes(r.status)
-  );
-  const closedReports = filteredReports.filter(r =>
-    ["RESOLVED", "CLOSED", "WONT_FIX"].includes(r.status)
-  );
+  const openReports = filteredReports.filter(r => isOpenBugStatus(r.status));
+  const closedReports = filteredReports.filter(r => isClosedBugStatus(r.status));
+
+  // The list is capped at 100 rows. If more exist, say so rather than letting
+  // the tabs imply they are showing everything.
+  const truncated = totalReports > bugReports.length;
 
   const toggleSort = (field: string) => {
     if (sortBy === field) {
@@ -364,6 +374,12 @@ export default function BugReportsPage() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
+        {truncated && (
+          <p className="mb-2 text-xs text-muted-foreground">
+            Showing the {bugReports.length} most recent of {totalReports} reports. Use the
+            filters to reach older ones.
+          </p>
+        )}
         <TabsList>
           <TabsTrigger value="open">
             <Bug className="mr-2 h-4 w-4" />
@@ -448,7 +464,9 @@ export default function BugReportsPage() {
                 <Bug className="h-12 w-12 text-emerald-300 mb-4" />
                 <h3 className="font-medium text-zinc-900 dark:text-white mb-2">No open bug reports</h3>
                 <p className="text-sm text-muted-foreground max-w-sm">
-                  All caught up! No pending bug reports at this time.
+                  {stats.open > 0
+                    ? `${stats.open} open report${stats.open === 1 ? "" : "s"} exist but ${stats.open === 1 ? "is" : "are"} outside the loaded results. Narrow the filters above to find ${stats.open === 1 ? "it" : "them"}.`
+                    : "All caught up! No pending bug reports at this time."}
                 </p>
               </CardContent>
             </Card>

@@ -5,15 +5,36 @@ import { logger } from "@/lib/logger";
 const adminSidebarStatsLogger = logger.child({ module: "admin-sidebar-stats" });
 import { validateSession } from "@/lib/auth/session";
 import { db } from "@/lib/db";
+import { OPEN_BUG_STATUSES } from "@/lib/bug-report-status";
 
 export const dynamic = "force-dynamic";
 
-// Calculate unread notifications for an admin
+// Calculate unread notifications for an admin.
+//
+// This must agree with /api/admin/notifications, which is what the bell
+// actually opens. It previously did not, in three ways:
+//
+//   1. `createdAt` was written twice in each where-clause —
+//      `createdAt: { gte: oneWeekAgo }` followed by a spread that set
+//      `createdAt` again. Object spread overwrites, so the one-week bound was
+//      silently discarded whenever allReadBefore was set, widening the window
+//      instead of narrowing it.
+//   2. Read items were removed by subtracting `readIds.size` from the total —
+//      arithmetic between two unrelated sets. Reading a notification that had
+//      already aged out of the window still decremented the badge, so it drifted
+//      low; ids for types this function does not count decremented it too. That
+//      is why the badge did not settle after things were read.
+//   3. Large pledges were `amount >= 10000` commented as "100 dollars in
+//      cents", but Pledge.amount is a Decimal in DOLLARS. The threshold was
+//      $10,000, so the notification effectively never fired.
+//
+// Ids are now generated in the same format as the notifications route and
+// checked against readIds individually, which is what makes a read
+// notification actually stay read.
 async function calculateUnreadNotifications(adminId: string): Promise<number> {
   try {
     const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
 
-    // Get read notification state
     const setting = await db.adminSetting.findUnique({
       where: { key: `admin_read_notifications_${adminId}` },
     });
@@ -22,63 +43,46 @@ async function calculateUnreadNotifications(adminId: string): Promise<number> {
     const readIds = new Set(readState?.readIds || []);
     const allReadBefore = readState?.allReadBefore ? new Date(readState.allReadBefore) : null;
 
-    // Count unread events from various sources
-    const [
-      pendingProjects,
-      recentUsers,
-      largePledges,
-      bugReports,
-    ] = await Promise.all([
-      // Pending projects (SUBMITTED status = awaiting review)
-      db.project.count({
-        where: {
-          status: "SUBMITTED",
-          createdAt: { gte: oneWeekAgo },
-          ...(allReadBefore ? { createdAt: { gte: allReadBefore } } : {}),
-        },
-      }),
+    // "Mark all read" moves the floor forward; the week bound still applies.
+    // The later of the two is the correct lower bound.
+    const since =
+      allReadBefore && allReadBefore > oneWeekAgo ? allReadBefore : oneWeekAgo;
 
-      // New users (last week)
-      db.user.count({
-        where: {
-          createdAt: { gte: oneWeekAgo },
-          ...(allReadBefore ? { createdAt: { gte: allReadBefore } } : {}),
-        },
+    const [projects, users, pledges, bugs] = await Promise.all([
+      db.project.findMany({
+        where: { status: "SUBMITTED", createdAt: { gte: since } },
+        select: { id: true },
       }),
-
-      // Large pledges ($100+). Include committed PENDING (Stripe
-      // payment-method-saved) so admin gets the notification ping
-      // when a big AoN pledge lands, not just after the funded-cron
-      // converts it.
-      db.pledge.count({
+      db.user.findMany({
+        where: { createdAt: { gte: since } },
+        select: { id: true },
+      }),
+      db.pledge.findMany({
         where: {
-          amount: { gte: 10000 },
-          createdAt: { gte: oneWeekAgo },
-          ...(allReadBefore ? { createdAt: { gte: allReadBefore } } : {}),
+          amount: { gte: 100 },
+          createdAt: { gte: since },
+          deletedAt: null,
           OR: [
             { status: "COMPLETED" },
             { status: "PENDING", confirmationEmailSent: true },
           ],
         },
+        select: { id: true },
       }),
-
-      // Bug reports (NEW or IN_PROGRESS status)
-      db.bugReport.count({
-        where: {
-          status: { in: ["NEW", "IN_PROGRESS"] },
-          createdAt: { gte: oneWeekAgo },
-          ...(allReadBefore ? { createdAt: { gte: allReadBefore } } : {}),
-        },
+      db.bugReport.findMany({
+        where: { status: { in: [...OPEN_BUG_STATUSES] }, createdAt: { gte: since } },
+        select: { id: true },
       }),
     ]);
 
-    // Total potential notifications
-    let total = pendingProjects + recentUsers + largePledges + bugReports;
+    const ids = [
+      ...projects.map((p: { id: string }) => `project-new-${p.id}`),
+      ...users.map((u: { id: string }) => `user-new-${u.id}`),
+      ...pledges.map((p: { id: string }) => `pledge-large-${p.id}`),
+      ...bugs.map((b: { id: string }) => `bug-${b.id}`),
+    ];
 
-    // Subtract read ones (rough estimate - exact count would require generating all IDs)
-    total = Math.max(0, total - readIds.size);
-
-    return total;
+    return ids.filter((id) => !readIds.has(id)).length;
   } catch {
     return 0;
   }
@@ -141,10 +145,11 @@ export async function GET() {
       // Total media files
       db.mediaFile.count(),
 
-      // New/acknowledged bug reports
+      // Open bug reports. Uses the shared definition so the badge can never
+      // again disagree with what the Bug Reports page calls open.
       db.bugReport.count({
         where: {
-          status: { in: ["NEW", "ACKNOWLEDGED"] },
+          status: { in: [...OPEN_BUG_STATUSES] },
         },
       }),
 

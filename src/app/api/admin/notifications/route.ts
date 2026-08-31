@@ -104,7 +104,10 @@ export async function GET(request: Request) {
       db.pledge.findMany({
         where: {
           createdAt: { gte: oneWeekAgo },
-          amount: { gte: 10000 }, // 100 dollars in cents
+          // Pledge.amount is a Decimal in DOLLARS, not cents. This read
+          // `gte: 10000` commented as "100 dollars in cents", so the
+          // threshold was actually $10,000 and the notification never fired.
+          amount: { gte: 100 },
           status: "COMPLETED",
           deletedAt: null,
         },

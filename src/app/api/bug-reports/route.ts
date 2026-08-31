@@ -5,6 +5,7 @@ import { logger } from "@/lib/logger";
 const bugReportsLogger = logger.child({ module: "bug-reports" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { OPEN_BUG_STATUSES } from "@/lib/bug-report-status";
 import { z } from "zod";
 import { sendBugReportResolutionEmail } from "@/lib/email/email-templates-misc";
 import { rateLimiter } from "@/lib/rate-limiter";
@@ -154,11 +155,17 @@ export async function GET(req: NextRequest) {
       db.bugReport.count({ where }),
     ]);
 
-    // Get stats
-    const [newCount, inProgressCount, resolvedCount] = await Promise.all([
+    // Get stats.
+    //
+    // `open` is the number that actually matters and was missing: NEW and
+    // IN_PROGRESS were counted separately while ACKNOWLEDGED and NEEDS_INFO
+    // were counted nowhere, so a single acknowledged report showed as zero
+    // across every card while still sitting in the sidebar badge.
+    const [newCount, inProgressCount, resolvedCount, openCount] = await Promise.all([
       db.bugReport.count({ where: { status: "NEW" } }),
       db.bugReport.count({ where: { status: "IN_PROGRESS" } }),
       db.bugReport.count({ where: { status: "RESOLVED" } }),
+      db.bugReport.count({ where: { status: { in: [...OPEN_BUG_STATUSES] } } }),
     ]);
 
     return NextResponse.json({
@@ -173,6 +180,7 @@ export async function GET(req: NextRequest) {
         new: newCount,
         inProgress: inProgressCount,
         resolved: resolvedCount,
+        open: openCount,
       },
     });
   } catch (error) {
