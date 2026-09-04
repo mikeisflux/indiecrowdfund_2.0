@@ -32,7 +32,7 @@ export async function GET(
 ) {
   try {
     const { username } = await params;
-    await auth(); // Check auth status for isFollowing feature (used later)
+    const session = await auth();
 
     // Find user by vanityUrl or id (exclude soft-deleted users)
     const user = await db.user.findFirst({
@@ -134,9 +134,26 @@ export async function GET(
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    // Check if current user is following this profile
-    // Note: Follow functionality will be added in a future update
-    const isFollowing = false;
+    // Is the signed-in viewer following this profile?
+    //
+    // This was hardcoded to false with a note saying follow was coming in a
+    // future update — but the write side (POST /api/backer/following) had
+    // already shipped. So a follow was saved, the button flipped, and then
+    // every reload read this constant and reverted to "Follow". The row was
+    // in the database the whole time; nothing ever asked for it.
+    //
+    // Anonymous viewers stay false without a query.
+    const isFollowing = session?.user?.id
+      ? (await db.creatorFollow.findUnique({
+          where: {
+            followerId_creatorId: {
+              followerId: session.user.id,
+              creatorId: user.id,
+            },
+          },
+          select: { id: true },
+        })) !== null
+      : false;
 
     // Fetch creator rating data in parallel with project stats
     const ratingAgg = await db.backerReview.aggregate({
