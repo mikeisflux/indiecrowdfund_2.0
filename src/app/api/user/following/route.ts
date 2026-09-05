@@ -67,15 +67,23 @@ export async function GET(request: Request) {
       orderBy: { createdAt: "desc" },
     });
 
-    // Get creators the user is following from preferences
-    const preferences = await db.userPreference.findUnique({
-      where: { userId: session.user.id },
-      select: {
-        followedCreators: true,
-      },
+    // Creators the user follows.
+    //
+    // This read from UserPreference.followedCreators, a String[] that NOTHING
+    // in the codebase ever writes to — so it was empty for every user and the
+    // creators tab could never show anything. Following a creator writes a
+    // CreatorFollow row (POST /api/backer/following), which is also what the
+    // profile page and the backer dashboard read. That table is the source of
+    // truth; this now uses it too.
+    const creatorFollows = await db.creatorFollow.findMany({
+      where: { followerId: session.user.id },
+      select: { creatorId: true },
+      orderBy: { createdAt: "desc" },
     });
 
-    const followedCreatorIds = preferences?.followedCreators || [];
+    const followedCreatorIds = creatorFollows.map(
+      (f: { creatorId: string }) => f.creatorId
+    );
 
     // Fetch creator details
     const followedCreators = followedCreatorIds.length > 0
@@ -325,21 +333,13 @@ export async function DELETE(request: Request) {
     }
 
     if (creatorId) {
-      const preferences = await db.userPreference.findUnique({
-        where: { userId: session.user.id },
-        select: { followedCreators: true },
+      // Delete the CreatorFollow row rather than filtering the dead
+      // UserPreference array, which held nothing and so unfollowed nothing.
+      // deleteMany, not delete: a second click on an already-removed follow
+      // is a no-op instead of a P2025.
+      await db.creatorFollow.deleteMany({
+        where: { followerId: session.user.id, creatorId },
       });
-
-      if (preferences) {
-        await db.userPreference.update({
-          where: { userId: session.user.id },
-          data: {
-            followedCreators: preferences.followedCreators.filter(
-              (id: string) => id !== creatorId
-            ),
-          },
-        });
-      }
       return NextResponse.json({ success: true });
     }
 
