@@ -75,3 +75,12 @@ export const REWARD_CSV_HEADERS = [
   "estimatedDeliveryYear",
   "itemTitles",
 ] as const;
+
+// Columns for the Items CSV export.
+//
+// Same rule as above, and the same two columns handleImportItems reads — which
+// is also the shape of public/templates/items_template.csv. The item image is
+// left out for the reason the reward image is: the importer keeps whatever
+// image is already attached and has no way to set one from a file, so an
+// imageUrl column would look editable and do nothing on the way back in.
+export const ITEM_CSV_HEADERS = ["title", "description"] as const;

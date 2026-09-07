@@ -9,7 +9,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Calculator, FileDown, Upload } from "lucide-react";
 import { toast } from "sonner";
 
-import { defaultItem, defaultReward, MONTHS, REWARD_CSV_HEADERS } from "./constants";
+import {
+  defaultItem,
+  defaultReward,
+  ITEM_CSV_HEADERS,
+  MONTHS,
+  REWARD_CSV_HEADERS,
+} from "./constants";
 import { rewardsToCsvRows } from "./reward-csv";
 import { RewardValueDialog } from "./reward-value-dialog";
 import { csvFilename, downloadCsv, toCsv } from "@/lib/csv";
@@ -175,6 +181,24 @@ export function RewardsStep({ onFormOpenChange }: RewardsStepProps) {
 
   // Export the tab in view, in the order it's displayed.
   const handleExportCsv = () => {
+    // Items are their own shape — two columns, no prices or shipping — so they
+    // get their own headers rather than being squeezed into the reward CSV.
+    if (activeTab === "items") {
+      if (items.length === 0) {
+        toast.info("No items to export yet.");
+        return;
+      }
+      downloadCsv(
+        csvFilename(projectSlug || "campaign", "items"),
+        toCsv(
+          [...ITEM_CSV_HEADERS],
+          items.map((i) => [i.title || "", i.description || ""])
+        )
+      );
+      toast.success(`Exported ${items.length} item${items.length === 1 ? "" : "s"}`);
+      return;
+    }
+
     const isAddons = activeTab === "addons";
     const list = isAddons ? addons : tiers;
     if (list.length === 0) {
@@ -1104,23 +1128,21 @@ export function RewardsStep({ onFormOpenChange }: RewardsStepProps) {
         <div className="flex items-center justify-between">
           <h2 className="text-2xl font-semibold">Create your rewards</h2>
           <div className="flex flex-wrap items-center gap-2">
-            {/* Both act on the tab in view, so neither appears on Items, which
-                has no prices and no reward CSV shape. */}
+            {/* Calculate value is priced, so it stays off Items. Export works
+                on every tab — each one exports its own CSV shape. */}
             {activeTab !== "items" && (
-              <>
-                <Button
-                  variant={calcMode ? "default" : "outline"}
-                  onClick={() => (calcMode ? exitCalc() : setCalcMode(true))}
-                >
-                  <Calculator className="h-4 w-4 mr-2" />
-                  {calcMode ? "Cancel" : "Calculate value"}
-                </Button>
-                <Button variant="outline" onClick={handleExportCsv}>
-                  <FileDown className="h-4 w-4 mr-2" />
-                  Export CSV
-                </Button>
-              </>
+              <Button
+                variant={calcMode ? "default" : "outline"}
+                onClick={() => (calcMode ? exitCalc() : setCalcMode(true))}
+              >
+                <Calculator className="h-4 w-4 mr-2" />
+                {calcMode ? "Cancel" : "Calculate value"}
+              </Button>
             )}
+            <Button variant="outline" onClick={handleExportCsv}>
+              <FileDown className="h-4 w-4 mr-2" />
+              Export CSV
+            </Button>
             <Button variant="outline" onClick={() => {
               setIsImportScreenOpen(true);
               onFormOpenChange?.(true);
