@@ -173,6 +173,21 @@ export async function GET() {
           },
         },
         {
+          event: "dispute.created",
+          description:
+            "Cardholder disputed a charge. Marks the pledge as a chargeback and stops the order if nothing has shipped yet. 'chargeback.created' is accepted as an alias.",
+          payloadRequired: true,
+          payloadFormat: {
+            disputeId: "string (DC/Stripe dispute id)",
+            stripePaymentIntentId:
+              "string (REQUIRED if pledgeId is absent — a dispute is raised against a charge, so this is the reliable key)",
+            pledgeId: "string (optional, if DC has it)",
+            paymentId: "string (DC payment ID, optional)",
+            amount: "number (optional)",
+            reason: "string (e.g. 'fraudulent', 'product_not_received')",
+          },
+        },
+        {
           event: "checkout.completed",
           description: "White-label hosted checkout session reached terminal success. PAYMENT mode also fires payment.succeeded; SETUP mode only fires this event.",
           payloadRequired: true,

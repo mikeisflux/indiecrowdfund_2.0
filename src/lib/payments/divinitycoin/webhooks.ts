@@ -21,6 +21,7 @@ import {
   handleCheckoutExpired,
   handleCheckoutCanceled,
 } from "./payments";
+import { applyChargeback, findPledgeForDispute } from "@/lib/payments/chargebacks";
 
 /**
  * Verify webhook signature from DivinityCoin
@@ -212,6 +213,37 @@ export async function handleDivinityCoinWebhook(
         return { success: false, error: "Refund data is required" };
       }
       return handleRefundCompleted(request.data);
+
+    // A dispute has to stop the order before the creator ships against money
+    // that is being clawed back. Both names are accepted because DC has not
+    // settled on one yet and a missed dispute is expensive.
+    case "dispute.created":
+    case "chargeback.created": {
+      if (!request.data) {
+        return { success: false, error: "Dispute data is required" };
+      }
+      const pledgeId = await findPledgeForDispute({
+        pledgeId: request.data.pledgeId,
+        paymentIntentId:
+          request.data.stripePaymentIntentId || request.data.paymentIntentId,
+        paymentId: request.data.paymentId,
+      });
+      if (!pledgeId) {
+        // Not an error on our side — DC also processes marketplace and
+        // non-pledge charges. Reported so a real miss is visible in the log.
+        return {
+          success: true,
+          message: "No pledge matched this dispute; nothing to stop",
+        };
+      }
+      const result = await applyChargeback({
+        pledgeId,
+        processor: "DivinityCoin",
+        disputeId: request.data.disputeId,
+        reason: request.data.reason || request.data.error,
+      });
+      return { success: true, message: result.message };
+    }
 
     case "checkout.completed":
       if (!request.data) {

@@ -28,7 +28,13 @@ export type DivinityCoinEventType =
   | "checkout.completed"
   | "checkout.failed"
   | "checkout.expired"
-  | "checkout.canceled";
+  | "checkout.canceled"
+  // Cardholder disputed a charge. DC does not send these yet — see
+  // lib/payments/chargebacks.ts and the spec handed to their team. Declared
+  // now so the handler is live the moment they start sending them, rather
+  // than a dispute arriving to a switch that silently ignores it.
+  | "dispute.created"
+  | "chargeback.created";
 
 // Webhook request structure from DivinityCoin
 export interface DivinityCoinWebhookRequest {
@@ -62,6 +68,10 @@ export interface DivinityCoinWebhookRequest {
     paymentMethodId?: string;    // pm_... — set on checkout.completed when status=complete
     clientSecret?: string;       // present on payment.requires_action for recovery
     nextActionType?: "use_stripe_sdk" | "redirect_to_url" | null;
+    // Dispute fields. A dispute is raised against a CHARGE, so the payload may
+    // not carry pledgeId at all — the intent id is the reliable key.
+    disputeId?: string;
+    chargeId?: string;
     type?: "initial" | "upcharge"; // present on payment.requires_action
     [key: string]: unknown;
   };

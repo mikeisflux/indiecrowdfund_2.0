@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { applyChargeback, findPledgeForDispute } from "@/lib/payments/chargebacks";
 import { getWhopConfig, verifyWhopWebhookSignature } from "@/lib/payments/whop";
 import { claimRewardSlot, claimAddonSlots, assignBackerNumber } from "@/lib/payments/rewards";
 import { notifyPledgeReceived, notifyProjectFunded } from "@/lib/notifications";
@@ -291,8 +292,30 @@ export async function POST(req: NextRequest) {
       case "dispute_created": {
         const data = event.data;
         const metadata = data?.metadata as Record<string, string> | undefined;
-        const pledgeId = metadata?.pledgeId;
-        whopWebhookLogger.warn({ pledgeId, eventType }, "Whop dispute created");
+        // Logged and dropped before this: the pledge stayed COMPLETED, kept
+        // its reward slot and kept appearing in fulfillment queues while the
+        // money was being clawed back.
+        const resolvedPledgeId = await findPledgeForDispute({
+          pledgeId: metadata?.pledgeId,
+          paymentId: (data?.payment_id as string) || (data?.id as string),
+        });
+        if (!resolvedPledgeId) {
+          whopWebhookLogger.warn(
+            { eventType, metadata },
+            "Whop dispute created but no pledge matched"
+          );
+          break;
+        }
+        const result = await applyChargeback({
+          pledgeId: resolvedPledgeId,
+          processor: "Whop",
+          disputeId: data?.id as string | undefined,
+          reason: data?.reason as string | undefined,
+        });
+        whopWebhookLogger.warn(
+          { eventType, ...result },
+          "Whop dispute created"
+        );
         break;
       }
 
