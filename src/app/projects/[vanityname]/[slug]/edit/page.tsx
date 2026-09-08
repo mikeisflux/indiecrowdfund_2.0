@@ -64,6 +64,7 @@ export default function EditProjectPage() {
         const project = data.project;
         const rewards = data.rewards || [];
         const addons = data.addons || [];
+        const stretchGoals = data.stretchGoals || [];
 
         // Reset store before loading new data
         reset();
@@ -181,7 +182,10 @@ export default function EditProjectPage() {
         // First, get all loaded items for fallback title matching
         const loadedItems = useProjectStore.getState().items;
 
-        const allRewards = [...rewards, ...addons];
+        // Every reward type the builder manages. Stretch goals were missing
+        // here, so a saved goal was invisible in the editor even though the
+        // row existed — and the tab offered to create a second one.
+        const allRewards = [...rewards, ...addons, ...stretchGoals];
         for (const reward of allRewards) {
           // Add the reward
           addReward({

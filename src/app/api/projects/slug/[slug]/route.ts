@@ -4,6 +4,7 @@ import { logger } from "@/lib/logger";
 
 const projectsSlugLogger = logger.child({ module: "projects-slug" });
 import { db } from "@/lib/db";
+import { unlockThreshold, type UnlockAmount } from "@/lib/rewards/unlock";
 import { auth } from "@/lib/auth";
 import { getProjectStats, getProjectFundingSeries } from "@/lib/stats";
 
@@ -268,6 +269,8 @@ export async function GET(
       shippingCost: Record<string, number> | null;
       quantityAvailable: number | null;
       quantityClaimed: number;
+      unlockAtAmount: unknown;
+      sharedStockWithId: string | null;
       visibility: string;
       secretToken: string | null;
       imageUrl: string | null;
@@ -322,6 +325,10 @@ export async function GET(
       shippingCost: (r.shippingCost as Record<string, number>) || {},
       quantityAvailable: r.quantityAvailable,
       quantityClaimed: r.quantityClaimed || 0,
+      // The builder loads from this endpoint, so a column absent here is a
+      // column the creator cannot see and the next save writes back as empty.
+      unlockAtAmount: unlockThreshold(r.unlockAtAmount as UnlockAmount),
+      sharedStockWithId: r.sharedStockWithId ?? null,
       backerCount: r._count?.pledges || 0,
       // Include recent backer avatars for display
       backers: (r.pledges || []).map((p: RewardPledge) => ({
@@ -348,11 +355,20 @@ export async function GET(
     // Separate tiers and addons
     const tiers = formattedRewards.filter((r: { type: string }) => r.type === "TIER");
     const addons = formattedRewards.filter((r: { type: string }) => r.type === "ADDON");
+    // Anything that is neither a tier nor an add-on — today that means stretch
+    // goals. Split out rather than folded into `rewards` because the campaign
+    // page renders them in their own row, but returned rather than dropped:
+    // this is the endpoint the campaign editor loads from, and a type missing
+    // here vanishes from the builder while sitting in the database.
+    const stretchGoals = formattedRewards.filter(
+      (r: { type: string }) => r.type === "STRETCH_GOAL"
+    );
 
     return NextResponse.json({
       project: formattedProject,
       rewards: tiers,
       addons,
+      stretchGoals,
     });
   } catch (error) {
     projectsSlugLogger.error({ err: formatError(error) }, "Get project by slug error:");
