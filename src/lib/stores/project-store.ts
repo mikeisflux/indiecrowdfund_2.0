@@ -61,6 +61,12 @@ interface ProjectBuilderState {
   projectStatus: string | null;
   setProjectStatus: (status: string | null) => void;
 
+  // Campaign total raised. Drives the stretch-goal meter in the builder, so a
+  // creator sees the same progress a backer does. Null until a saved project
+  // is loaded; a draft has raised nothing, so it reads as 0.
+  projectRaisedAmount: number | null;
+  setProjectRaisedAmount: (amount: number | null) => void;
+
   // Campaign page layout the project renders with. Drives the builder's
   // recommended artwork sizes: v1 shows reward covers landscape, v2 shows them
   // portrait, so the two ask creators for different files. Null until a saved
@@ -115,6 +121,7 @@ const initialState = {
   projectId: null,
   projectSlug: null,
   projectStatus: null,
+  projectRaisedAmount: null,
   projectLayoutVersion: null,
 };
 
@@ -201,6 +208,8 @@ export const useProjectStore = create<ProjectBuilderState>()(
       setProjectSlug: (slug) => set({ projectSlug: slug }),
 
       setProjectStatus: (status) => set({ projectStatus: status }),
+
+      setProjectRaisedAmount: (amount) => set({ projectRaisedAmount: amount }),
 
       setProjectLayoutVersion: (version) => set({ projectLayoutVersion: version }),
 
@@ -304,6 +313,7 @@ export const useProjectStore = create<ProjectBuilderState>()(
           projectId: state.projectId,
           projectSlug: state.projectSlug,
           projectStatus: state.projectStatus,
+          projectRaisedAmount: state.projectRaisedAmount,
           projectLayoutVersion: state.projectLayoutVersion,
         } as ProjectBuilderState;
       },

@@ -15,7 +15,10 @@ export type DurationType = "FIXED_DAYS" | "END_DATE";
 export type PaymentProcessor = "STRIPE" | "DIVINITYCOIN" | "PAYPAL" | "PAYPAL_CONNECT" | "WHOP";
 
 // Reward types
-export type RewardType = "TIER" | "ADDON";
+// STRETCH_GOAL is a campaign milestone rather than something a backer buys:
+// free, no shipping, and granted automatically once the campaign's raised
+// total passes the reward's unlockAtAmount.
+export type RewardType = "TIER" | "ADDON" | "STRETCH_GOAL";
 
 export type ShippingType = "WORLDWIDE" | "SELECTED_COUNTRIES" | "NO_SHIPPING";
 

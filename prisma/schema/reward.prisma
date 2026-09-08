@@ -99,6 +99,12 @@ model Reward {
 enum RewardType {
   TIER
   ADDON
+  // A campaign milestone. Not something a backer buys: it costs nothing, it
+  // ships nothing on its own, and it is granted to every qualifying pledge
+  // automatically once the campaign's raised total reaches unlockAtAmount.
+  // Modelled as a Reward so it reuses items, artwork, ordering and the
+  // PledgeAddon join that already carries "extra things in this order".
+  STRETCH_GOAL
 }
 
 enum ShippingType {

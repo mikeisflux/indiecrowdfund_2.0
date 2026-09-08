@@ -13,6 +13,7 @@ import { AlertTriangle, CheckCircle, Clock } from "lucide-react";
 import { PdfPageFlipReader } from "@/components/PdfPageFlipReader";
 import { FundingCurve } from "../funding-curve";
 import { RewardGrid } from "../reward-grid";
+import { StretchGoalGrid } from "../stretch-goal-grid";
 import { ProjectData, RewardData } from "../types";
 import { processStoryHtml, formatDeliveryDate } from "../utils";
 
@@ -33,6 +34,8 @@ import { processStoryHtml, formatDeliveryDate } from "../utils";
 interface CampaignTabV2Props {
   project: ProjectData;
   tiers: RewardData[];
+  /** Milestone rewards, rendered in their own row above the tiers. */
+  stretchGoals?: RewardData[];
   projectPath: string;
   onViewCreator?: () => void;
 }
@@ -119,7 +122,7 @@ function SectionHeading({ children }: { children: React.ReactNode }) {
   );
 }
 
-export function CampaignTabV2({ project, tiers, projectPath, onViewCreator }: CampaignTabV2Props) {
+export function CampaignTabV2({ project, tiers, stretchGoals = [], projectPath, onViewCreator }: CampaignTabV2Props) {
   const [pledgeAmount, setPledgeAmount] = useState("1");
 
   const projectEnded = project.endDate ? new Date(project.endDate) < new Date() : false;
@@ -315,6 +318,17 @@ export function CampaignTabV2({ project, tiers, projectPath, onViewCreator }: Ca
         {/* "Rewards", not "Rewards & add-ons". The grid is fed `tiers` only:
             add-ons attach to a pledge, so a backer meets them on their own
             step after choosing a reward, never alongside one. */}
+        {stretchGoals.length > 0 && (
+          <div className="mb-10 space-y-5">
+            <SectionHeading>Stretch Goals</SectionHeading>
+            <StretchGoalGrid
+              goals={stretchGoals}
+              raisedAmount={Number(project.currentAmount) || 0}
+              currency={project.currentAmountDisplay?.currency || "USD"}
+            />
+          </div>
+        )}
+
         <SectionHeading>Rewards</SectionHeading>
 
         <RewardGrid

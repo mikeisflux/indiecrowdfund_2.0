@@ -155,6 +155,7 @@ export function RewardForm({
   const [isEmailing, setIsEmailing] = React.useState(false);
 
   const isAddon = (currentReward.type || "TIER") === "ADDON";
+  const isStretchGoal = (currentReward.type || "TIER") === "STRETCH_GOAL";
 
   // Held locally rather than lifted like quantityType/audienceType: the form
   // unmounts between rewards, so seeding from the saved value is enough, and
@@ -324,7 +325,9 @@ export function RewardForm({
             </CardContent>
           </Card>
 
-          {/* Pricing Section */}
+          {/* A stretch goal has no price -- it is granted, not bought -- so
+              the pledge-amount field would be a box that changes nothing. */}
+          {!isStretchGoal && (
           <Card>
             <CardContent className="p-6 space-y-4">
               <h3 className="font-semibold text-lg">Pricing</h3>
@@ -363,6 +366,7 @@ export function RewardForm({
               </div>
             </CardContent>
           </Card>
+          )}
 
           {/* Availability Section */}
           <Card>
@@ -576,8 +580,12 @@ export function RewardForm({
               {/* Funding goal lock */}
               <div className="space-y-3">
                 <div className="flex items-center gap-2">
-                  <Label className="text-base font-medium">Funding goal lock</Label>
-                  <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded">New</span>
+                  <Label className="text-base font-medium">
+                    {isStretchGoal ? "Unlock amount" : "Funding goal lock"}
+                  </Label>
+                  <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded">
+                    {isStretchGoal ? "Required" : "New"}
+                  </span>
                 </div>
                 <p className="text-sm text-muted-foreground">
                   Show this {isAddon ? "add-on" : "reward"} from day one but keep it
@@ -762,7 +770,11 @@ export function RewardForm({
             </CardContent>
           </Card>
 
-          {/* Shipping Section */}
+          {/* A stretch goal is granted inside an order the backer already
+              placed, so it never ships on its own and never charges shipping.
+              Hidden rather than disabled: an inert shipping picker invites a
+              creator to set a rate that would silently do nothing. */}
+          {!isStretchGoal && (
           <Card>
             <CardContent className="p-6 space-y-4">
               <h3 className="font-semibold text-lg">Shipping</h3>
@@ -934,6 +946,7 @@ export function RewardForm({
               )}
             </CardContent>
           </Card>
+          )}
 
           {/* Bottom Save/Cancel Buttons */}
           <div className="flex items-center justify-end gap-4 pt-6 border-t mt-6">

@@ -27,6 +27,7 @@ import { ImportAddonDialog } from "./import-addon-dialog";
 import { ItemsTab } from "./items-tab";
 import { TiersTab } from "./tiers-tab";
 import { AddonsTab } from "./addons-tab";
+import { StretchGoalsTab } from "./stretch-goals-tab";
 import type {
   ImportableReward,
   ImportableRewardItem,
@@ -49,10 +50,14 @@ export function RewardsStep({ onFormOpenChange }: RewardsStepProps) {
     removeReward,
     reorderRewards,
     projectStatus,
+    projectRaisedAmount,
     projectId,
     projectSlug,
     endReward,
   } = useProjectStore();
+
+  // A draft has raised nothing, so an unset value is 0 rather than unknown.
+  const projectRaised = projectRaisedAmount ?? 0;
 
   // Check if campaign is live (can't edit rewards with backers)
   const isLive = projectStatus === "LIVE" || projectStatus === "FUNDED";
@@ -96,7 +101,7 @@ export function RewardsStep({ onFormOpenChange }: RewardsStepProps) {
     }
   };
 
-  const [activeTab, setActiveTab] = useState<"items" | "tiers" | "addons">("items");
+  const [activeTab, setActiveTab] = useState<"items" | "tiers" | "addons" | "stretch">("items");
   const [isSaving, setIsSaving] = useState(false);
 
   // Item dialog state
@@ -130,6 +135,7 @@ export function RewardsStep({ onFormOpenChange }: RewardsStepProps) {
 
   const tiers = rewards.filter((r) => r.type === "TIER");
   const addons = rewards.filter((r) => r.type === "ADDON");
+  const stretchGoals = rewards.filter((r) => r.type === "STRETCH_GOAL");
 
   // Value calculator.
   //
@@ -416,7 +422,13 @@ export function RewardsStep({ onFormOpenChange }: RewardsStepProps) {
   // Reward handlers
   const openCreateRewardForm = (type: RewardType) => {
     editingKeyRef.current = null;
-    setCurrentReward({ ...defaultReward, type });
+    setCurrentReward({
+      ...defaultReward,
+      type,
+      // Stretch goals are free; defaultReward's $1 would render as a price on
+      // a card that is not for sale.
+      ...(type === "STRETCH_GOAL" ? { amount: 0 } : {}),
+    });
     setSelectedItemIds([]);
     setEditingRewardIndex(null);
     setQuantityType("unlimited");
@@ -471,11 +483,22 @@ export function RewardsStep({ onFormOpenChange }: RewardsStepProps) {
   };
 
   const handleSaveReward = async () => {
+    const isStretchGoal = currentReward.type === "STRETCH_GOAL";
+
     if (!currentReward.title.trim()) {
       toast.error("Please enter a title");
       return;
     }
-    if (currentReward.amount <= 0) {
+    // A stretch goal has no price — it is granted, not bought — so the amount
+    // check is replaced by the one thing it does need: a threshold. Without
+    // one it can never unlock, and it would sit invisible on the campaign page
+    // with no indication of why.
+    if (isStretchGoal) {
+      if (!currentReward.unlockAtAmount || currentReward.unlockAtAmount <= 0) {
+        toast.error("Set the amount that unlocks this stretch goal");
+        return;
+      }
+    } else if (currentReward.amount <= 0) {
       toast.error("Please enter a valid amount");
       return;
     }
@@ -510,6 +533,18 @@ export function RewardsStep({ onFormOpenChange }: RewardsStepProps) {
       visibility: audienceType === "secret" ? "SECRET" : "PUBLIC",
       secretToken: audienceType === "secret" ? (secretToken || currentReward.secretToken) : undefined,
       estimatedDelivery,
+      // Forced rather than trusted to the form: a stretch goal costs nothing
+      // and ships inside an order the backer already placed, so a stray price
+      // or shipping rate carried over from a duplicated reward would charge
+      // for something that is supposed to be free.
+      ...(isStretchGoal
+        ? {
+            amount: 0,
+            shippingType: "NO_SHIPPING" as const,
+            shippingCountries: [],
+            shippingCost: {},
+          }
+        : {}),
     };
 
     if (projectId) {
@@ -586,7 +621,13 @@ export function RewardsStep({ onFormOpenChange }: RewardsStepProps) {
       }
     }
 
-    setActiveTab(rewardToSave.type === "ADDON" ? "addons" : "tiers");
+    setActiveTab(
+      rewardToSave.type === "ADDON"
+        ? "addons"
+        : rewardToSave.type === "STRETCH_GOAL"
+          ? "stretch"
+          : "tiers"
+    );
     setIsRewardFormOpen(false);
     onFormOpenChange?.(false);
     // Keyed off the saved reward, not the pre-edit one — a rename changes the
@@ -598,7 +639,13 @@ export function RewardsStep({ onFormOpenChange }: RewardsStepProps) {
   };
 
   const handleCancelRewardForm = () => {
-    setActiveTab(currentReward.type === "ADDON" ? "addons" : "tiers");
+    setActiveTab(
+      currentReward.type === "ADDON"
+        ? "addons"
+        : currentReward.type === "STRETCH_GOAL"
+          ? "stretch"
+          : "tiers"
+    );
     setIsRewardFormOpen(false);
     onFormOpenChange?.(false);
     // Cancel discards edits, so the row is still whatever it was when opened.
@@ -1207,6 +1254,12 @@ export function RewardsStep({ onFormOpenChange }: RewardsStepProps) {
             >
               Add-ons
             </TabsTrigger>
+            <TabsTrigger
+              value="stretch"
+              className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-4 pb-3 pt-2"
+            >
+              Stretch Goals
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="items">
@@ -1265,6 +1318,19 @@ export function RewardsStep({ onFormOpenChange }: RewardsStepProps) {
               calcMode={calcMode}
               calcSelected={calcSelected}
               onToggleCalc={toggleCalc}
+            />
+          </TabsContent>
+
+          <TabsContent value="stretch">
+            <StretchGoalsTab
+              stretchGoals={stretchGoals}
+              rewards={rewards}
+              raisedAmount={projectRaised}
+              projectId={projectId}
+              onCreateStretchGoal={() => openCreateRewardForm("STRETCH_GOAL")}
+              onEditReward={openEditRewardForm}
+              onDeleteReward={handleDeleteReward}
+              onRewardImageChange={handleRewardImageChange}
             />
           </TabsContent>
         </Tabs>

@@ -406,14 +406,20 @@ export async function GET(
       endedAt: r.endedAt,
     }));
 
-    // Separate tiers and addons
+    // Separate tiers, addons and stretch goals
     const tiers = formattedRewards.filter((r: { type: string }) => r.type === "TIER");
     const addons = formattedRewards.filter((r: { type: string }) => r.type === "ADDON");
+    // Stretch goals are milestones, not purchasables — they render in their
+    // own row and must never reach the reward grid or the add-on step.
+    const stretchGoals = formattedRewards.filter(
+      (r: { type: string }) => r.type === "STRETCH_GOAL"
+    );
 
     return NextResponse.json({
       project: formattedProject,
       rewards: tiers,
       addons,
+      stretchGoals,
     });
   } catch (error) {
     projectsVanityLogger.error({ err: formatError(error) }, "Get project by vanity URL error:");

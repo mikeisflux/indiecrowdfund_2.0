@@ -102,6 +102,9 @@ export default function ProjectPage() {
   useProjectTracking(project.id);
 
   const tiers = rewards.filter((r) => r.type === "TIER");
+  // Stretch goals ride in on the same rewards payload but render in their own
+  // row — they are milestones, not something a backer selects.
+  const stretchGoals = rewards.filter((r) => r.type === "STRETCH_GOAL");
   const fundingPercentage = Number(project.goalAmount) > 0
     ? (Number(project.currentAmount) / Number(project.goalAmount)) * 100
     : 0;
@@ -151,7 +154,7 @@ export default function ProjectPage() {
 
         const data = await response.json();
         setProject(data.project);
-        setRewards(data.rewards || []);
+        setRewards([...(data.rewards || []), ...(data.stretchGoals || [])]);
         setAddons(data.addons || []);
       } catch (err) {
         console.error("Error fetching project:", err);
@@ -906,6 +909,7 @@ export default function ProjectPage() {
           <CampaignTab
             project={project}
             tiers={tiers}
+            stretchGoals={stretchGoals}
             projectPath={projectPath}
             onViewCreator={() => handleTabClick("creator")}
           />

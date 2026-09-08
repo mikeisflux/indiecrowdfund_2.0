@@ -17,6 +17,8 @@ import { CampaignTabV2 } from "./campaign-tab-v2";
 interface CampaignTabProps {
   project: ProjectData;
   tiers: RewardData[];
+  /** Milestone rewards, rendered in their own row above the tiers. */
+  stretchGoals?: RewardData[];
   projectPath: string;
   // Switches the parent ProjectDetails page to the "creator" tab so
   // clicks on the creator name/card in the right sidebar jump
@@ -35,6 +37,8 @@ export function CampaignTab(props: CampaignTabProps) {
   return <CampaignTabV1 {...props} />;
 }
 
+// v1 does not render the stretch-goal row: its layout has no full-width band
+// to put one in, and campaigns already running when this shipped stay on v1.
 function CampaignTabV1({ project, tiers, projectPath, onViewCreator }: CampaignTabProps) {
   const [pledgeAmount, setPledgeAmount] = useState("1");
   const [activeStorySection, setActiveStorySection] = useState<string>("");

@@ -31,6 +31,7 @@ export default function EditProjectPage() {
     setProjectId,
     setProjectSlug,
     setProjectStatus,
+    setProjectRaisedAmount,
     setProjectLayoutVersion,
     updateBasics,
     updateStory,
@@ -71,6 +72,7 @@ export default function EditProjectPage() {
         setProjectId(project.id);
         setProjectSlug(project.slug);
         setProjectStatus(project.status);
+        setProjectRaisedAmount(Number(project.currentAmount) || 0);
         // Decides which artwork sizes the builder recommends — a live v1
         // campaign still wants landscape reward covers.
         setProjectLayoutVersion(project.layoutVersion ?? 1);
@@ -236,7 +238,7 @@ export default function EditProjectPage() {
       loadedSlugRef.current = slug;
       loadProject();
     }
-  }, [slug, router, reset, setProjectId, setProjectSlug, setProjectStatus, setProjectLayoutVersion, updateBasics, updateStory, updatePeople, updatePayment, updatePromotion, addReward, addItem]);
+  }, [slug, router, reset, setProjectId, setProjectSlug, setProjectStatus, setProjectRaisedAmount, setProjectLayoutVersion, updateBasics, updateStory, updatePeople, updatePayment, updatePromotion, addReward, addItem]);
 
   if (loading) {
     return (
