@@ -47,10 +47,14 @@ export async function GET(
 
 const rewardSchema = z.object({
   id: z.string().optional(),
-  type: z.enum(["TIER", "ADDON"]).default("TIER"),
+  type: z.enum(["TIER", "ADDON", "STRETCH_GOAL"]).default("TIER"),
   title: z.string().min(1),
   description: z.string().optional().default(""),
-  amount: z.number().positive().max(999999.99),
+  // STRETCH_GOAL is free by definition — it is granted, never bought — so the
+  // positive-amount rule that protects tiers and add-ons from a $0 listing has
+  // to yield for it. Enforced per type below rather than dropped outright: a
+  // TIER at $0 is still a mistake nobody meant to make.
+  amount: z.number().min(0).max(999999.99),
   imageUrl: z.string().optional().nullable(),
   // Free-text grouping label for the campaign-page filter pills. Trimmed, and
   // an empty string is stored as NULL so "" and "no category" can't become two
@@ -95,6 +99,17 @@ const rewardSchema = z.object({
     description: z.string().optional().nullable(),
     imageUrl: z.string().optional().nullable(),
   })).optional().default([]),
+}).superRefine((r, ctx) => {
+  // A stretch goal is free, so amount was relaxed to min(0) above. Everything
+  // else still has to cost something: a $0 TIER or ADDON is a listing nobody
+  // meant to publish, and it silently breaks the pledge total.
+  if (r.type !== "STRETCH_GOAL" && r.amount <= 0) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["amount"],
+      message: "Amount must be greater than 0",
+    });
+  }
 });
 
 // Batch schema - accepts array of rewards

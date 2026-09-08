@@ -599,37 +599,42 @@ export function RewardForm({
                   </span>
                 </div>
                 <p className="text-sm text-muted-foreground">
-                  Show this {isAddon ? "add-on" : "reward"} from day one but keep it
-                  unpledgeable until your campaign raises a set amount. Backers see a
-                  &ldquo;Locked&rdquo; stamp and the figure that opens it, so it gives
-                  them something to push toward.
+                  {isStretchGoal
+                    ? "The amount your campaign has to raise before this goal unlocks and lands in every backer's order. A stretch goal is a milestone, so there is no version of it that is available from day one — this is required."
+                    : `Show this ${isAddon ? "add-on" : "reward"} from day one but keep it unpledgeable until your campaign raises a set amount. Backers see a "Locked" stamp and the figure that opens it, so it gives them something to push toward.`}
                 </p>
-                <RadioGroup
-                  value={goalLocked ? "locked" : "open"}
-                  onValueChange={(v) => {
-                    const locked = v === "locked";
-                    setGoalLocked(locked);
-                    if (!locked) {
-                      onRewardChange({ ...currentReward, unlockAtAmount: null });
-                    }
-                  }}
-                  className="space-y-2"
-                >
-                  <div className="flex items-center space-x-3 rounded-lg border p-4">
-                    <RadioGroupItem value="open" id="unlock-none" />
-                    <Label htmlFor="unlock-none" className="cursor-pointer font-normal">
-                      Available immediately
-                    </Label>
-                  </div>
-                  <div className="flex items-center space-x-3 rounded-lg border p-4">
-                    <RadioGroupItem value="locked" id="unlock-goal" />
-                    <Label htmlFor="unlock-goal" className="cursor-pointer font-normal">
-                      Unlocks when the campaign hits a funding goal
-                    </Label>
-                  </div>
-                </RadioGroup>
-                {goalLocked && (
-                  <div className="ml-8 space-y-2">
+                {/* A stretch goal is defined BY its threshold — an "available
+                    immediately" stretch goal is just a free reward, and offering
+                    the choice invites a creator to configure one that can never
+                    unlock. Tiers and add-ons keep the opt-in. */}
+                {!isStretchGoal && (
+                  <RadioGroup
+                    value={goalLocked ? "locked" : "open"}
+                    onValueChange={(v) => {
+                      const locked = v === "locked";
+                      setGoalLocked(locked);
+                      if (!locked) {
+                        onRewardChange({ ...currentReward, unlockAtAmount: null });
+                      }
+                    }}
+                    className="space-y-2"
+                  >
+                    <div className="flex items-center space-x-3 rounded-lg border p-4">
+                      <RadioGroupItem value="open" id="unlock-none" />
+                      <Label htmlFor="unlock-none" className="cursor-pointer font-normal">
+                        Available immediately
+                      </Label>
+                    </div>
+                    <div className="flex items-center space-x-3 rounded-lg border p-4">
+                      <RadioGroupItem value="locked" id="unlock-goal" />
+                      <Label htmlFor="unlock-goal" className="cursor-pointer font-normal">
+                        Unlocks when the campaign hits a funding goal
+                      </Label>
+                    </div>
+                  </RadioGroup>
+                )}
+                {(goalLocked || isStretchGoal) && (
+                  <div className={isStretchGoal ? "space-y-2" : "ml-8 space-y-2"}>
                     <Label htmlFor="unlock-amount" className="text-sm font-medium">
                       Unlock at
                     </Label>
@@ -657,14 +662,15 @@ export function RewardForm({
                     </div>
                     <p className="text-xs text-muted-foreground">
                       Measured against your campaign&apos;s total raised, not against
-                      your funding goal — so you can stack several of these as stretch
-                      goals. It unlocks for everyone the moment the total reaches this
-                      figure, and once unlocked it stays unlocked.
+                      your funding goal — so you can stack several of these. It
+                      unlocks for everyone the moment the total reaches this figure,
+                      and once unlocked it stays unlocked.
                     </p>
                     {(currentReward.unlockAtAmount ?? 0) <= 0 && (
                       <p className="text-xs text-amber-600 dark:text-amber-400">
-                        Enter an amount above $0, or this {isAddon ? "add-on" : "reward"} stays
-                        available immediately.
+                        {isStretchGoal
+                          ? "Enter an amount above $0. A stretch goal with no amount can never unlock."
+                          : `Enter an amount above $0, or this ${isAddon ? "add-on" : "reward"} stays available immediately.`}
                       </p>
                     )}
                   </div>
@@ -1001,7 +1007,15 @@ export function RewardForm({
                     <span className="text-muted-foreground">
                       {currentReward.title || "Reward title"}
                     </span>
-                    <span className="font-bold">${Number(currentReward.amount || 1).toFixed(2)}</span>
+                    {/* `|| 1` is a placeholder for an empty price field, which
+                        is right for a tier and wrong for a stretch goal: those
+                        are free, and the fallback was printing $1.00 next to
+                        something that costs nothing. */}
+                    <span className="font-bold">
+                      {isStretchGoal
+                        ? "Free"
+                        : `$${Number(currentReward.amount || 1).toFixed(2)}`}
+                    </span>
                   </div>
                   <div className="flex items-center justify-between text-sm text-muted-foreground">
                     <div>

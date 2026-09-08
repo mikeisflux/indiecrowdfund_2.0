@@ -100,7 +100,7 @@ const rewardItemSchema = z.object({
 // Schema for rewards
 const rewardSchema = z.object({
   id: z.string().optional(),
-  type: z.enum(["TIER", "ADDON"]),
+  type: z.enum(["TIER", "ADDON", "STRETCH_GOAL"]),
   title: z.string().max(200),
   description: z.string().max(5000).optional().nullable(),
   amount: z.number(),

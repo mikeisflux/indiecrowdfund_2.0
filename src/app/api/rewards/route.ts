@@ -10,10 +10,14 @@ import { canUserEditProject } from "@/lib/project-auth";
 
 const createRewardSchema = z.object({
   projectId: z.string(),
-  type: z.enum(["TIER", "ADDON"]).default("TIER"),
+  type: z.enum(["TIER", "ADDON", "STRETCH_GOAL"]).default("TIER"),
   title: z.string().min(1).max(200),
   description: z.string().min(1).max(5000),
-  amount: z.number().positive().max(999999.99),
+  // STRETCH_GOAL is free by definition — it is granted, never bought — so the
+  // positive-amount rule that protects tiers and add-ons from a $0 listing has
+  // to yield for it. Enforced per type below rather than dropped outright: a
+  // TIER at $0 is still a mistake nobody meant to make.
+  amount: z.number().min(0).max(999999.99),
   imageUrl: z.string().max(8192).optional(),
   category: z.string().max(40).optional().nullable(),
   estimatedDelivery: z.string().max(100).optional(),
@@ -27,6 +31,17 @@ const createRewardSchema = z.object({
     description: z.string().max(1000).optional(),
     imageUrl: z.string().max(8192).optional(),
   })).max(100).default([]),
+}).superRefine((r, ctx) => {
+  // A stretch goal is free, so amount was relaxed to min(0) above. Everything
+  // else still has to cost something: a $0 TIER or ADDON is a listing nobody
+  // meant to publish, and it silently breaks the pledge total.
+  if (r.type !== "STRETCH_GOAL" && r.amount <= 0) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["amount"],
+      message: "Amount must be greater than 0",
+    });
+  }
 });
 
 const updateRewardSchema = z.object({
