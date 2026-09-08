@@ -201,6 +201,12 @@ export default function EditProjectPage() {
             quantityAvailable: reward.quantityAvailable,
             quantityClaimed: reward.quantityClaimed || 0,
             backerCount: reward.backerCount || 0,
+            // Both of these have to round-trip. The reward form posts an
+            // explicit null to clear them, so a field the loader drops comes
+            // back as "cleared" on the next save rather than as "unchanged".
+            unlockAtAmount:
+              reward.unlockAtAmount == null ? null : Number(reward.unlockAtAmount),
+            sharedStockWithId: reward.sharedStockWithId ?? undefined,
             visibility: reward.visibility || "PUBLIC",
             items: (reward.items || []).map((item: { id: string; projectItemId?: string; title: string; imageUrl?: string; quantity?: number }) => {
               // If projectItemId exists, use it. Otherwise, try to find matching global item by title

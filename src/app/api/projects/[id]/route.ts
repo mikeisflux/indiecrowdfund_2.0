@@ -724,7 +724,14 @@ export async function PATCH(
                 shippingCountries: reward.shippingCountries || [],
                 shippingCost: reward.shippingCost || {},
                 quantityAvailable: reward.quantityAvailable ?? null,
-                unlockAtAmount: reward.unlockAtAmount ?? null,
+                // Bare value, NOT `?? null`. In Prisma `undefined` means
+                // "leave this column alone" and `null` means "erase it", so
+                // normalizing to null turned every partial update into a
+                // delete: PATCHing a reward to attach artwork sends no
+                // threshold, and that wiped the stretch goal's unlock amount
+                // seconds after it was saved. An explicit null still clears it,
+                // which is how the form turns a goal lock back off.
+                unlockAtAmount: reward.unlockAtAmount,
                 isEnded: reward.isEnded || false,
               };
 
@@ -779,7 +786,7 @@ export async function PATCH(
               shippingCountries: reward.shippingCountries || [],
               shippingCost: reward.shippingCost || {},
               quantityAvailable: reward.quantityAvailable ?? null,
-              unlockAtAmount: reward.unlockAtAmount ?? null,
+              unlockAtAmount: reward.unlockAtAmount,
               isEnded: reward.isEnded || false,
             };
 

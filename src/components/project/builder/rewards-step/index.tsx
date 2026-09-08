@@ -397,6 +397,7 @@ export function RewardsStep({ onFormOpenChange }: RewardsStepProps) {
             shippingCountries: reward.shippingCountries,
             shippingCost: reward.shippingCost,
             quantityAvailable: reward.quantityAvailable,
+            unlockAtAmount: reward.unlockAtAmount,
             visibility: reward.visibility,
             isEnded: reward.isEnded,
             items: (reward.items ?? []).map(item => ({
