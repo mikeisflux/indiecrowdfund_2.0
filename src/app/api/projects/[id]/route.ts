@@ -114,6 +114,10 @@ const rewardSchema = z.object({
     z.record(z.string(), z.number().min(0).max(9999)),
   ]).optional(),
   quantityAvailable: z.number().optional().nullable(),
+  // Stretch-goal lock. Positive amounts only — 0 or negative is "no lock",
+  // which is what null already means, and a reward nobody can ever buy is
+  // never what a creator meant to configure.
+  unlockAtAmount: z.number().positive().max(99999999).optional().nullable(),
   items: z.array(rewardItemSchema).max(100).optional(),
   isEnded: z.boolean().optional(),
 });
@@ -720,6 +724,7 @@ export async function PATCH(
                 shippingCountries: reward.shippingCountries || [],
                 shippingCost: reward.shippingCost || {},
                 quantityAvailable: reward.quantityAvailable ?? null,
+                unlockAtAmount: reward.unlockAtAmount ?? null,
                 isEnded: reward.isEnded || false,
               };
 
@@ -774,6 +779,7 @@ export async function PATCH(
               shippingCountries: reward.shippingCountries || [],
               shippingCost: reward.shippingCost || {},
               quantityAvailable: reward.quantityAvailable ?? null,
+              unlockAtAmount: reward.unlockAtAmount ?? null,
               isEnded: reward.isEnded || false,
             };
 

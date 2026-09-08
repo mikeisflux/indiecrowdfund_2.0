@@ -920,6 +920,8 @@ export default function ProjectPage() {
             onToggleAddon={toggleAddon}
             projectEnded={project.endDate ? new Date(project.endDate) < new Date() : false}
             layoutVersion={project.layoutVersion}
+            raisedAmount={Number(project.currentAmount) || 0}
+            currency={project.currentAmountDisplay?.currency || "USD"}
           />
         )}
 

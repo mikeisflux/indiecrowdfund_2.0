@@ -73,6 +73,9 @@ const rewardSchema = z.object({
     z.number().transform((n) => ({ default: n })),
   ]).optional().default({}),
   quantityAvailable: z.number().int().min(1).optional().nullable(),
+  // Stretch-goal lock. Positive only — 0 or negative means "no lock", which
+  // null already says, and would otherwise create a reward nobody can buy.
+  unlockAtAmount: z.number().positive().max(99999999).optional().nullable(),
   // Shared stock pool: id of another reward on this project whose quantity
   // this one draws from. Checked against the project by validSharedStockId
   // before every write — a foreign id would pool two campaigns' inventories.
@@ -244,6 +247,7 @@ async function saveReward(projectId: string, reward: RewardData) {
           shippingCountries: normalizeShippingCountries(reward),
           shippingCost: reward.shippingCost,
           quantityAvailable: reward.quantityAvailable,
+          unlockAtAmount: reward.unlockAtAmount ?? null,
           sharedStockWithId: sharedStockId,
           visibility: reward.visibility,
           secretToken,
@@ -286,6 +290,7 @@ async function saveReward(projectId: string, reward: RewardData) {
       shippingCountries: normalizeShippingCountries(reward),
       shippingCost: reward.shippingCost,
       quantityAvailable: reward.quantityAvailable,
+      unlockAtAmount: reward.unlockAtAmount ?? null,
       sharedStockWithId: sharedStockId,
       visibility: reward.visibility,
       secretToken,
@@ -587,6 +592,7 @@ export async function PATCH(
           shippingCountries: normalizeShippingCountries(reward),
           shippingCost: reward.shippingCost,
           quantityAvailable: reward.quantityAvailable,
+          unlockAtAmount: reward.unlockAtAmount ?? null,
           sharedStockWithId: patchSharedStockId,
           visibility: reward.visibility,
           secretToken,

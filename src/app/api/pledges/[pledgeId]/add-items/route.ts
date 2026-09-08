@@ -4,6 +4,12 @@ import { logger } from "@/lib/logger";
 const pledgesAddItemsLogger = logger.child({ module: "pledges-add-items" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { getProjectStats } from "@/lib/stats";
+import {
+  formatUnlockAmount,
+  isRewardLocked,
+  unlockThreshold,
+} from "@/lib/rewards/unlock";
 import { getDivinityCoinConfig, chargeDcSavedPaymentMethod, formatDeclineReason } from "@/lib/payments/divinitycoin";
 import { createWhopUpcharge } from "@/lib/payments/whop/upcharge";
 
@@ -150,6 +156,24 @@ export async function POST(
         { error: "Physical add-ons can't be added to a digital reward. Only digital add-ons are available for this pledge." },
         { status: 400 }
       );
+    }
+
+    // Goal lock. Enforced here as well as at pledge creation — a locked
+    // add-on's id is public on the campaign page, and this route is the other
+    // way one can reach a pledge.
+    if (validAddons.some((a) => unlockThreshold(a.unlockAtAmount) !== null)) {
+      const stats = await getProjectStats(pledge.projectId);
+      const stillLocked = validAddons.find((a) =>
+        isRewardLocked(a.unlockAtAmount, stats.currentAmount)
+      );
+      if (stillLocked) {
+        return NextResponse.json(
+          {
+            error: `"${stillLocked.title}" unlocks at ${formatUnlockAmount(stillLocked.unlockAtAmount)} raised. The campaign isn't there yet.`,
+          },
+          { status: 400 }
+        );
+      }
     }
 
     // Create a map for quick lookup

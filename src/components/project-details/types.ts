@@ -114,6 +114,8 @@ export interface RewardData {
   shippingCountries: string[];
   quantityAvailable: number | null;
   quantityClaimed: number;
+  // Stretch-goal lock; null = available immediately.
+  unlockAtAmount?: number | null;
   backerCount: number;
   backers: RewardBacker[];
   imageUrl: string;
@@ -130,6 +132,8 @@ export interface AddonData {
   imageUrl: string;
   shippingCost: Record<string, number>; // Per-country rates
   shippingCountries: string[];
+  // Stretch-goal lock; null = available immediately.
+  unlockAtAmount?: number | null;
 }
 
 export interface SimilarProject {

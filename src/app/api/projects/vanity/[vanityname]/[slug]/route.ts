@@ -4,6 +4,7 @@ import { logger } from "@/lib/logger";
 
 const projectsVanityLogger = logger.child({ module: "projects-vanity" });
 import { db } from "@/lib/db";
+import { unlockThreshold, type UnlockAmount } from "@/lib/rewards/unlock";
 import { auth } from "@/lib/auth";
 import { getProjectStats, getProjectFundingSeries } from "@/lib/stats";
 import { resolveCampaignDisplay } from "@/lib/currency";
@@ -323,6 +324,7 @@ export async function GET(
       shippingCost: Record<string, number> | null;
       quantityAvailable: number | null;
       quantityClaimed: number;
+      unlockAtAmount: unknown;
       visibility: string;
       secretToken: string | null;
       imageUrl: string | null;
@@ -378,6 +380,9 @@ export async function GET(
       shippingCost: (r.shippingCost as Record<string, number>) || {},
       quantityAvailable: r.quantityAvailable,
       quantityClaimed: r.quantityClaimed || 0,
+      // Stretch-goal lock. Decimal -> number so the client can compare it
+      // against the raised total without importing Prisma's Decimal.
+      unlockAtAmount: unlockThreshold(r.unlockAtAmount as UnlockAmount),
       backerCount: r._count?.pledges || 0,
       // Include recent backer avatars for display
       backers: (r.pledges || []).map((p: RewardPledge) => ({

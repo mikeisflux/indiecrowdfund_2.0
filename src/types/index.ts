@@ -582,6 +582,9 @@ export interface RewardData {
   shippingCost: Record<string, number>;  // Per-country rates: { "US": 5, "CA": 8 }
   quantityAvailable?: number;
   quantityClaimed?: number;
+  // Stretch-goal lock: listed from day one, but not pledgeable until the
+  // campaign has raised this much. Undefined/null = available immediately.
+  unlockAtAmount?: number | null;
   // Shared stock: when set, this reward draws from the linked reward's
   // quantity pool rather than counting on its own.
   sharedStockWithId?: string;

@@ -13,6 +13,8 @@ import {
   filterByCategory,
   useCategoryGroups,
 } from "@/components/rewards/category-filter";
+import { LockedStamp } from "@/components/rewards/locked-stamp";
+import { isRewardLocked } from "@/lib/rewards/unlock";
 import { AddonData } from "../types";
 
 // The add-on step, for campaigns on layout v2.
@@ -42,6 +44,8 @@ interface AddonGridProps {
     shippingType: string,
     country: string
   ) => number;
+  /** Campaign total raised, for goal-locked add-ons. */
+  raisedAmount?: number;
 }
 
 export function AddonGrid({
@@ -52,6 +56,7 @@ export function AddonGrid({
   handleAddonToggle,
   handleAddonQuantityChange,
   getShippingCost,
+  raisedAmount = 0,
 }: AddonGridProps) {
   const [activeFilter, setActiveFilter] = useState<string>(ALL_CATEGORIES);
   const currentCountry = SHIPPING_COUNTRIES.find((c) => c.code === shippingCountry);
@@ -120,6 +125,7 @@ export function AddonGrid({
               : null;
           const isSoldOut = remaining !== null && remaining <= 0;
           const atLimit = remaining !== null && qty >= remaining;
+          const locked = isRewardLocked(addon.unlockAtAmount, raisedAmount);
 
           return (
             <Card
@@ -155,6 +161,12 @@ export function AddonGrid({
                   <span className="absolute right-2 top-2 flex h-6 w-6 items-center justify-center rounded-full bg-[#05ce78] text-white shadow-[0_0_12px_rgba(5,206,120,.9)]">
                     <CheckCircle className="h-4 w-4" />
                   </span>
+                )}
+                {locked && (
+                  <LockedStamp
+                    unlockAtAmount={addon.unlockAtAmount}
+                    raisedAmount={raisedAmount}
+                  />
                 )}
               </div>
 
@@ -214,7 +226,11 @@ export function AddonGrid({
                     )}
                   </div>
 
-                  {isSoldOut ? (
+                  {locked ? (
+                    <Button className="w-full" disabled>
+                      Locked
+                    </Button>
+                  ) : isSoldOut ? (
                     <Button className="w-full" disabled>
                       Sold out
                     </Button>

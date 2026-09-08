@@ -8,6 +8,12 @@ import {
   isHostedCheckoutEnabled,
 } from "@/lib/payments/divinitycoin";
 import { isPoolSoldOut } from "@/lib/payments/rewards";
+import { getProjectStats } from "@/lib/stats";
+import {
+  formatUnlockAmount,
+  isRewardLocked,
+  unlockThreshold,
+} from "@/lib/rewards/unlock";
 import { createWhopPayment } from "@/lib/payments/whop";
 import { isEmailVerificationRequired } from "@/lib/email";
 import { cookies } from "next/headers";
@@ -124,6 +130,36 @@ export async function POST(req: NextRequest) {
         }
       }
 
+      // Goal lock. A locked reward is visible on the campaign page, so its id
+      // is trivially guessable — the button being disabled in the UI is not a
+      // control. Resolved once here and reused for the add-ons below.
+      //
+      // Measured against live stats rather than Project.currentAmount: that
+      // column is denormalized and lags, and a backer who watches the total
+      // pass the threshold and still gets refused has hit what reads as a bug.
+      let raisedAmount: number | null = null;
+      const campaignRaised = async (): Promise<number> => {
+        if (raisedAmount === null) {
+          const stats = await getProjectStats(data.projectId, {
+            status: project.status,
+            goalAmount: project.goalAmount,
+          });
+          raisedAmount = stats.currentAmount;
+        }
+        return raisedAmount;
+      };
+
+      if (reward && unlockThreshold(reward.unlockAtAmount) !== null) {
+        if (isRewardLocked(reward.unlockAtAmount, await campaignRaised())) {
+          return NextResponse.json(
+            {
+              error: `This reward unlocks at ${formatUnlockAmount(reward.unlockAtAmount)} raised. The campaign isn't there yet.`,
+            },
+            { status: 400 }
+          );
+        }
+      }
+
       // Use the new addons format if provided, otherwise convert legacy addonIds
       const addonsWithQuantity = data.addons || data.addonIds.map(id => ({ id, quantity: 1 }));
 
@@ -134,10 +170,27 @@ export async function POST(req: NextRequest) {
         const addonIdList = addonsWithQuantity.map((a: { id: string }) => a.id);
         const addonRows = await db.reward.findMany({
           where: { id: { in: addonIdList }, projectId: data.projectId, type: "ADDON", isEnded: false },
-          select: { id: true, shippingType: true },
+          select: { id: true, shippingType: true, unlockAtAmount: true, title: true },
         });
         if (addonRows.length !== addonIdList.length) {
           return NextResponse.json({ error: "One or more invalid addons" }, { status: 400 });
+        }
+        const lockedAddon = addonRows.find(
+          (row) => unlockThreshold(row.unlockAtAmount) !== null
+        );
+        if (lockedAddon) {
+          const raised = await campaignRaised();
+          const stillLocked = addonRows.find((row) =>
+            isRewardLocked(row.unlockAtAmount, raised)
+          );
+          if (stillLocked) {
+            return NextResponse.json(
+              {
+                error: `"${stillLocked.title}" unlocks at ${formatUnlockAmount(stillLocked.unlockAtAmount)} raised. The campaign isn't there yet.`,
+              },
+              { status: 400 }
+            );
+          }
         }
         for (const row of addonRows) addonShippingTypes.push(row.shippingType);
       }

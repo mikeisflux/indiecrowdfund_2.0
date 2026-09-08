@@ -20,6 +20,9 @@ interface RewardsTabProps {
   onToggleAddon: (addonId: string) => void;
   projectEnded?: boolean; // True when project end date has passed
   layoutVersion?: number;
+  /** Campaign total raised, so goal-locked tiers know whether they're open. */
+  raisedAmount?: number;
+  currency?: string;
 }
 
 export function RewardsTab(props: RewardsTabProps) {
@@ -34,6 +37,8 @@ export function RewardsTab(props: RewardsTabProps) {
         tiers={props.tiers}
         projectPath={props.projectPath}
         projectEnded={props.projectEnded ?? false}
+        raisedAmount={props.raisedAmount ?? 0}
+        currency={props.currency}
       />
     );
   }

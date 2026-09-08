@@ -30,6 +30,8 @@ export interface RewardData {
   quantityClaimed: number;
   imageUrl: string;
   items: { title: string; quantity: number }[];
+  // Stretch-goal lock; null = available immediately.
+  unlockAtAmount?: number | null;
 }
 
 export interface AddonData {
@@ -44,6 +46,8 @@ export interface AddonData {
   estimatedDelivery: string;
   limitedQuantity: number | null;
   quantityClaimed: number;
+  // Stretch-goal lock; null = available immediately.
+  unlockAtAmount?: number | null;
   includes: string[];
   // Creator-chosen grouping, used for the filter pills on the add-on step.
   // Add-on categories are their own vocabulary — Reward.type keeps them from

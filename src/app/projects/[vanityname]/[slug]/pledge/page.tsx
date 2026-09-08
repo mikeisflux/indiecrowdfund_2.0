@@ -127,6 +127,7 @@ export default function PledgePage() {
                 setShippingCountry={pledge.setShippingCountry}
                 handleSelectReward={pledge.handleSelectReward}
                 getShippingCost={pledge.getShippingCost}
+                raisedAmount={Number(pledge.project.currentAmount) || 0}
               />
             )}
 
@@ -140,6 +141,7 @@ export default function PledgePage() {
                 handleAddonToggle={pledge.handleAddonToggle}
                 handleAddonQuantityChange={pledge.handleAddonQuantityChange}
                 getShippingCost={pledge.getShippingCost}
+                raisedAmount={Number(pledge.project.currentAmount) || 0}
               />
             )}
 

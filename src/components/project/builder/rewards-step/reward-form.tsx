@@ -154,6 +154,16 @@ export function RewardForm({
   const [isCopied, setIsCopied] = React.useState(false);
   const [isEmailing, setIsEmailing] = React.useState(false);
 
+  const isAddon = (currentReward.type || "TIER") === "ADDON";
+
+  // Held locally rather than lifted like quantityType/audienceType: the form
+  // unmounts between rewards, so seeding from the saved value is enough, and
+  // the radio needs its own state only so that picking "unlocks at a goal"
+  // survives the moment before an amount is typed.
+  const [goalLocked, setGoalLocked] = React.useState(
+    (currentReward.unlockAtAmount ?? 0) > 0
+  );
+
   // Blast the secret reward's private link to the campaign's followers.
   const handleEmailFollowers = async () => {
     const rewardId = currentReward.id;
@@ -561,6 +571,85 @@ export function RewardForm({
                     </Label>
                   </div>
                 </RadioGroup>
+              </div>
+
+              {/* Funding goal lock */}
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <Label className="text-base font-medium">Funding goal lock</Label>
+                  <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded">New</span>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Show this {isAddon ? "add-on" : "reward"} from day one but keep it
+                  unpledgeable until your campaign raises a set amount. Backers see a
+                  &ldquo;Locked&rdquo; stamp and the figure that opens it, so it gives
+                  them something to push toward.
+                </p>
+                <RadioGroup
+                  value={goalLocked ? "locked" : "open"}
+                  onValueChange={(v) => {
+                    const locked = v === "locked";
+                    setGoalLocked(locked);
+                    if (!locked) {
+                      onRewardChange({ ...currentReward, unlockAtAmount: null });
+                    }
+                  }}
+                  className="space-y-2"
+                >
+                  <div className="flex items-center space-x-3 rounded-lg border p-4">
+                    <RadioGroupItem value="open" id="unlock-none" />
+                    <Label htmlFor="unlock-none" className="cursor-pointer font-normal">
+                      Available immediately
+                    </Label>
+                  </div>
+                  <div className="flex items-center space-x-3 rounded-lg border p-4">
+                    <RadioGroupItem value="locked" id="unlock-goal" />
+                    <Label htmlFor="unlock-goal" className="cursor-pointer font-normal">
+                      Unlocks when the campaign hits a funding goal
+                    </Label>
+                  </div>
+                </RadioGroup>
+                {goalLocked && (
+                  <div className="ml-8 space-y-2">
+                    <Label htmlFor="unlock-amount" className="text-sm font-medium">
+                      Unlock at
+                    </Label>
+                    <div className="relative max-w-xs">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                        $
+                      </span>
+                      <Input
+                        id="unlock-amount"
+                        type="number"
+                        min={1}
+                        step="0.01"
+                        className="pl-8"
+                        placeholder="5000"
+                        value={currentReward.unlockAtAmount ?? ""}
+                        onChange={(e) =>
+                          onRewardChange({
+                            ...currentReward,
+                            unlockAtAmount: e.target.value === ""
+                              ? null
+                              : parseFloat(e.target.value),
+                          })
+                        }
+                      />
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Measured against your campaign&apos;s total raised, not against
+                      your funding goal — so you can stack several of these as stretch
+                      goals. It unlocks for everyone the moment the total reaches this
+                      figure, and once unlocked it stays unlocked.
+                    </p>
+                    {(currentReward.unlockAtAmount ?? 0) <= 0 && (
+                      <p className="text-xs text-amber-600 dark:text-amber-400">
+                        Enter an amount above $0, or this {isAddon ? "add-on" : "reward"} stays
+                        available immediately.
+                      </p>
+                    )}
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>

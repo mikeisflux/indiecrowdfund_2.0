@@ -13,6 +13,8 @@ import {
 } from "@/components/ui/select";
 import { Info } from "lucide-react";
 import { SHIPPING_COUNTRIES } from "@/types";
+import { LockedStamp } from "@/components/rewards/locked-stamp";
+import { isRewardLocked } from "@/lib/rewards/unlock";
 import { RewardData } from "../types";
 
 interface RewardSelectorProps {
@@ -28,6 +30,8 @@ interface RewardSelectorProps {
     shippingType: string,
     country: string
   ) => number;
+  /** Campaign total raised, for goal-locked tiers. */
+  raisedAmount?: number;
 }
 
 export function RewardSelector({
@@ -38,6 +42,7 @@ export function RewardSelector({
   shippingCountry,
   setShippingCountry,
   handleSelectReward,
+  raisedAmount = 0,
   getShippingCost,
 }: RewardSelectorProps) {
   const currentCountry = SHIPPING_COUNTRIES.find((c) => c.code === shippingCountry);
@@ -113,6 +118,7 @@ export function RewardSelector({
         <div className="space-y-4">
           {allRewards.map((reward, index) => {
             const shipping = getShippingCost(reward.shippingCost, reward.shippingType, shippingCountry);
+            const locked = isRewardLocked(reward.unlockAtAmount, raisedAmount);
 
             return (
               <Card
@@ -217,15 +223,31 @@ export function RewardSelector({
                             </span>
                           </div>
                         )}
+                        {locked && (
+                          <LockedStamp
+                            unlockAtAmount={reward.unlockAtAmount}
+                            raisedAmount={raisedAmount}
+                            size="compact"
+                          />
+                        )}
                       </div>
 
                       {/* Pledge button */}
-                      <Button
-                        onClick={() => handleSelectReward(reward)}
-                        className="rounded-b-xl md:rounded-none h-12 bg-gradient-to-r from-[#028858] to-emerald-600 hover:from-[#026d47] hover:to-emerald-700 text-white font-medium shadow-lg shadow-[#028858]/20"
-                      >
-                        Pledge ${Number(reward.amount).toFixed(2)}
-                      </Button>
+                      {locked ? (
+                        <Button
+                          disabled
+                          className="rounded-b-xl md:rounded-none h-12 font-medium"
+                        >
+                          Locked
+                        </Button>
+                      ) : (
+                        <Button
+                          onClick={() => handleSelectReward(reward)}
+                          className="rounded-b-xl md:rounded-none h-12 bg-gradient-to-r from-[#028858] to-emerald-600 hover:from-[#026d47] hover:to-emerald-700 text-white font-medium shadow-lg shadow-[#028858]/20"
+                        >
+                          Pledge ${Number(reward.amount).toFixed(2)}
+                        </Button>
+                      )}
                     </div>
                   </div>
                 </CardContent>

@@ -26,6 +26,18 @@ model Reward {
   shippingCountries String[]
   shippingCost      Json         @default("{}") // Per-country rates: { "US": 5, "CA": 8 }
 
+  // Stretch-goal lock. When set, the reward is listed from day one but cannot
+  // be pledged until the campaign has raised at least this much — the point is
+  // that backers can see what they're pushing toward, so it is deliberately
+  // not the same thing as a SECRET reward (hidden) or an ended one (gone).
+  //
+  // Compared against the campaign's live raised total, not against
+  // Project.currentAmount: that column is denormalized and can lag, and a
+  // reward that unlocks a few minutes late reads as a broken promise.
+  //
+  // Null = available immediately, which is every reward that predates this.
+  unlockAtAmount Decimal? @db.Decimal(10, 2)
+
   // Availability
   quantityAvailable Int?
   quantityClaimed   Int        @default(0)

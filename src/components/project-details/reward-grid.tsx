@@ -13,6 +13,8 @@ import {
   useCategoryGroups,
 } from "@/components/rewards/category-filter";
 import { RewardDetails } from "@/components/rewards/reward-details";
+import { LockedStamp, LockedNote } from "@/components/rewards/locked-stamp";
+import { isRewardLocked } from "@/lib/rewards/unlock";
 import { RewardData } from "./types";
 import { formatDeliveryDate } from "./utils";
 import { useState } from "react";
@@ -32,10 +34,15 @@ export function RewardGrid({
   tiers,
   projectPath,
   projectEnded,
+  raisedAmount = 0,
+  currency = "USD",
 }: {
   tiers: RewardData[];
   projectPath: string;
   projectEnded: boolean;
+  /** Campaign total raised, for goal-locked tiers. */
+  raisedAmount?: number;
+  currency?: string;
 }) {
   const [activeFilter, setActiveFilter] = useState<string>(ALL_CATEGORIES);
   const { groups, uncategorized } = useCategoryGroups(tiers);
@@ -65,6 +72,7 @@ export function RewardGrid({
           const isSoldOut = isLimited && remaining === 0;
           const isScarce =
             isLimited && !isSoldOut && remaining !== null && remaining <= 25;
+          const isLocked = isRewardLocked(reward.unlockAtAmount, raisedAmount);
 
           return (
             <Card
@@ -95,6 +103,21 @@ export function RewardGrid({
                       {reward.category.trim()}
                     </span>
                   )}
+                  {isLocked && (
+                    <LockedStamp
+                      unlockAtAmount={reward.unlockAtAmount}
+                      raisedAmount={raisedAmount}
+                      currency={currency}
+                    />
+                  )}
+                </div>
+              )}
+
+              {/* No artwork to stamp — say it in the body instead, so a
+                  locked reward is never silently unselectable. */}
+              {isLocked && !reward.imageUrl && (
+                <div className="px-4 pt-4">
+                  <LockedNote unlockAtAmount={reward.unlockAtAmount} currency={currency} />
                 </div>
               )}
 
@@ -144,7 +167,11 @@ export function RewardGrid({
                     )}
                   </div>
 
-                  {!isSoldOut && !projectEnded ? (
+                  {isLocked && !isSoldOut && !projectEnded ? (
+                    <Button className="w-full" disabled>
+                      Locked
+                    </Button>
+                  ) : !isSoldOut && !projectEnded ? (
                     <Link href={`${projectPath}/pledge?reward=${reward.id}`} className="block">
                       <Button className="btn-glow w-full bg-gradient-to-r from-[#05ce78] to-emerald-600 text-white hover:from-[#05ce78]/90 hover:to-emerald-600/90">
                         Select

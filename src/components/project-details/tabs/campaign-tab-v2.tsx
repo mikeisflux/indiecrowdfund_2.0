@@ -321,6 +321,8 @@ export function CampaignTabV2({ project, tiers, projectPath, onViewCreator }: Ca
           tiers={tiers}
           projectPath={projectPath}
           projectEnded={projectEnded}
+          raisedAmount={Number(project.currentAmount) || 0}
+          currency={project.currentAmountDisplay?.currency || "USD"}
         />
       </div>
 

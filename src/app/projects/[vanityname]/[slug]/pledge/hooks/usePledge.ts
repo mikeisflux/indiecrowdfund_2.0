@@ -486,6 +486,7 @@ export function usePledge() {
         shippingCost?: Record<string, number> | number; shippingType?: string;
         shippingCountries?: string[]; imageUrl?: string; estimatedDelivery?: string;
         quantityClaimed?: number; items?: { title: string }[];
+        unlockAtAmount?: number | null;
       }) => ({
         id: reward.id, title: reward.title, description: reward.description || "",
         amount: reward.amount, shippingCost: reward.shippingCost || {},
@@ -494,6 +495,7 @@ export function usePledge() {
         estimatedDelivery: reward.estimatedDelivery
           ? new Date(reward.estimatedDelivery).toLocaleDateString("en-US", { month: "long", year: "numeric" }) : "",
         quantityClaimed: reward.quantityClaimed || 0,
+        unlockAtAmount: reward.unlockAtAmount ?? null,
         items: (reward.items || []).map((item: { title: string }) => ({ title: item.title, quantity: 1 })),
       }));
       setAllRewards(formattedTiers);
@@ -510,6 +512,7 @@ export function usePledge() {
             estimatedDelivery: reward.estimatedDelivery
               ? new Date(reward.estimatedDelivery).toLocaleDateString("en-US", { month: "long", year: "numeric" }) : "",
             quantityClaimed: reward.quantityClaimed || 0,
+            unlockAtAmount: reward.unlockAtAmount ?? null,
             items: (reward.items || []).map((item: { title: string }) => ({ title: item.title, quantity: 1 })),
           });
         }
@@ -520,7 +523,7 @@ export function usePledge() {
         shippingCost?: Record<string, number> | number; shippingType?: string;
         shippingCountries?: string[]; imageUrl?: string; estimatedDelivery?: string;
         quantityAvailable?: number; quantityClaimed?: number; items?: { title: string }[];
-        category?: string | null;
+        category?: string | null; unlockAtAmount?: number | null;
       }) => ({
         id: addon.id, title: addon.title, description: addon.description || "",
         category: addon.category ?? null,
@@ -530,6 +533,7 @@ export function usePledge() {
         estimatedDelivery: addon.estimatedDelivery
           ? new Date(addon.estimatedDelivery).toLocaleDateString("en-US", { month: "long", year: "numeric" }) : "",
         limitedQuantity: addon.quantityAvailable || null, quantityClaimed: addon.quantityClaimed || 0,
+        unlockAtAmount: addon.unlockAtAmount ?? null,
         includes: (addon.items || []).map((item: { title: string }) => item.title),
       }));
       setAddons(formattedAddons);
