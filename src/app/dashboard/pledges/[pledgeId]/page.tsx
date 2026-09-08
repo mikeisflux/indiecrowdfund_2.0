@@ -7,6 +7,7 @@ import { TrackingLink } from "@/components/fulfillment/tracking-link";
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -90,12 +91,19 @@ interface PledgeDetails {
     id: string;
     title: string;
     amount: number;
+    imageUrl?: string | null;
+    description?: string | null;
+    estimatedDelivery?: string | null;
   } | null;
   addons: Array<{
     id: string;
     title: string;
     amount: number;
     quantity: number;
+    imageUrl?: string | null;
+    description?: string | null;
+    /** Granted by a campaign milestone rather than bought. */
+    isStretchGoal?: boolean;
   }>;
   canCancel: boolean;
   canRefund: boolean;
@@ -518,12 +526,37 @@ export default function ManagePledgePage() {
           {/* Reward Tier */}
           {pledge.reward && (
             <div className="p-4 rounded-lg border">
-              <div className="flex items-center gap-2 mb-2">
+              <div className="flex items-center gap-2 mb-3">
                 <Gift className="h-4 w-4 text-purple-500" />
                 <span className="font-medium">Reward Tier</span>
               </div>
-              <p className="text-lg font-semibold">{pledge.reward.title}</p>
-              <p className="text-sm text-muted-foreground">Tier amount: ${Number(pledge.reward.amount).toFixed(2)}</p>
+              <div className="flex gap-3">
+                {pledge.reward.imageUrl && (
+                  // Portrait, matching how covers render everywhere else on the
+                  // platform. This is the whole point of the block: a title like
+                  // "DS3-05" tells a backer nothing about which cover they got.
+                  <div className="relative aspect-[2/3] w-20 shrink-0 overflow-hidden rounded-md border bg-muted sm:w-24">
+                    <Image
+                      src={pledge.reward.imageUrl}
+                      alt={pledge.reward.title}
+                      fill
+                      sizes="96px"
+                      className="object-cover"
+                    />
+                  </div>
+                )}
+                <div className="min-w-0 flex-1">
+                  <p className="text-lg font-semibold leading-snug">{pledge.reward.title}</p>
+                  <p className="text-sm text-muted-foreground">
+                    Tier amount: ${Number(pledge.reward.amount).toFixed(2)}
+                  </p>
+                  {pledge.reward.description && (
+                    <p className="mt-2 whitespace-pre-line text-sm text-muted-foreground">
+                      {pledge.reward.description}
+                    </p>
+                  )}
+                </div>
+              </div>
             </div>
           )}
 
@@ -534,11 +567,43 @@ export default function ManagePledgePage() {
                 <Plus className="h-4 w-4 text-blue-500" />
                 <span className="font-medium">Add-ons</span>
               </div>
-              <div className="space-y-2">
+              <div className="space-y-3">
                 {pledge.addons.map((addon) => (
-                  <div key={addon.id} className="flex justify-between text-sm">
-                    <span>{addon.title} x{addon.quantity}</span>
-                    <span>${(Number(addon.amount) * addon.quantity).toFixed(2)}</span>
+                  <div key={addon.id} className="flex items-start gap-3">
+                    {addon.imageUrl && (
+                      <div className="relative aspect-[2/3] w-14 shrink-0 overflow-hidden rounded-md border bg-muted sm:w-16">
+                        <Image
+                          src={addon.imageUrl}
+                          alt={addon.title}
+                          fill
+                          sizes="64px"
+                          className="object-cover"
+                        />
+                      </div>
+                    )}
+                    <div className="flex min-w-0 flex-1 items-start justify-between gap-3 text-sm">
+                      <div className="min-w-0">
+                        <p className="font-medium leading-snug">
+                          {addon.title}
+                          {addon.quantity > 1 && ` ×${addon.quantity}`}
+                        </p>
+                        {addon.isStretchGoal && (
+                          <span className="mt-1 inline-flex items-center gap-1 rounded-full bg-[#05ce78]/15 px-2 py-0.5 text-[11px] font-medium text-[#05ce78]">
+                            Stretch goal unlocked
+                          </span>
+                        )}
+                        {addon.description && (
+                          <p className="mt-1 line-clamp-2 text-muted-foreground">
+                            {addon.description}
+                          </p>
+                        )}
+                      </div>
+                      <span className="shrink-0 whitespace-nowrap">
+                        {addon.isStretchGoal
+                          ? "Free"
+                          : `$${(Number(addon.amount) * addon.quantity).toFixed(2)}`}
+                      </span>
+                    </div>
                   </div>
                 ))}
               </div>

@@ -135,11 +135,18 @@ export async function GET(
             },
           },
         },
+        // imageUrl and description are what make this page answer "what did I
+        // actually back?". Without them a backer sees a row of SKU-ish titles
+        // ("DS3-05") and has to email the creator to ask which cover that is —
+        // which is exactly what was happening.
         reward: {
           select: {
             id: true,
             title: true,
             amount: true,
+            imageUrl: true,
+            description: true,
+            estimatedDelivery: true,
           },
         },
         addons: {
@@ -149,6 +156,9 @@ export async function GET(
                 id: true,
                 title: true,
                 amount: true,
+                imageUrl: true,
+                description: true,
+                type: true,
               },
             },
           },
@@ -204,13 +214,34 @@ export async function GET(
           id: pledge.reward.id,
           title: pledge.reward.title,
           amount: Number(pledge.reward.amount),
+          imageUrl: pledge.reward.imageUrl,
+          description: pledge.reward.description,
+          estimatedDelivery: pledge.reward.estimatedDelivery,
         } : null,
-        addons: pledge.addons.map((a: { addon: { id: string; title: string; amount: number }; quantity: number }) => ({
-          id: a.addon.id,
-          title: a.addon.title,
-          amount: Number(a.addon.amount),
-          quantity: a.quantity,
-        })),
+        addons: pledge.addons.map(
+          (a: {
+            addon: {
+              id: string;
+              title: string;
+              amount: number;
+              imageUrl: string | null;
+              description: string | null;
+              type: string;
+            };
+            quantity: number;
+          }) => ({
+            id: a.addon.id,
+            title: a.addon.title,
+            amount: Number(a.addon.amount),
+            quantity: a.quantity,
+            imageUrl: a.addon.imageUrl,
+            description: a.addon.description,
+            // Stretch goals ride in the same join as paid add-ons, so the page
+            // can label them as unlocked rather than as something the backer
+            // bought — they cost nothing and were granted, not chosen.
+            isStretchGoal: a.addon.type === "STRETCH_GOAL",
+          })
+        ),
         canCancel: !locked && ((!isFunded && pledge.status === "PENDING") || (pledge.status === "COMPLETED" && !campaignClosed)),
         canRefund: !locked && pledge.status === "COMPLETED" && !campaignClosed,
         canRequestRefund: !locked && pledge.status === "COMPLETED" && campaignClosed && !pledge.refundRequest,
