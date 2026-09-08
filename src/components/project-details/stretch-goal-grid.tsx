@@ -32,32 +32,46 @@ export function StretchGoalGrid({
   currency?: string;
 }) {
   const withThresholds = goals
-    .map((g) => ({ goal: g, threshold: unlockThreshold(g.unlockAtAmount) ?? 0 }))
+    .map((g) => ({
+      goal: g,
+      threshold: unlockThreshold(g.unlockAtAmount) ?? 0,
+    }))
     .filter((g) => g.threshold > 0)
     .sort((a, b) => a.threshold - b.threshold);
 
   if (withThresholds.length === 0) return null;
 
-  const markers: StretchGoalMarker[] = withThresholds.map(({ goal, threshold }) => ({
-    id: goal.id,
-    title: goal.title,
-    threshold,
-    unlocked: raisedAmount >= threshold,
-  }));
+  const markers: StretchGoalMarker[] = withThresholds.map(
+    ({ goal, threshold }) => ({
+      id: goal.id,
+      title: goal.title,
+      threshold,
+      unlocked: raisedAmount >= threshold,
+    }),
+  );
 
   return (
     <div className="space-y-5">
-      <StretchGoalBar goals={markers} raisedAmount={raisedAmount} currency={currency} />
+      <StretchGoalBar
+        goals={markers}
+        raisedAmount={raisedAmount}
+        currency={currency}
+      />
 
       <div className="grid gap-4 min-[480px]:grid-cols-2 sm:gap-5 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
-        {withThresholds.map(({ goal, threshold }) => {
+        {withThresholds.map(({ goal, threshold }, i) => {
           const unlocked = raisedAmount >= threshold;
 
           return (
             <Card
               key={goal.id}
-              className={`group relative flex flex-col overflow-hidden glass-card glass-card-hover ${
-                unlocked ? "border-[#05ce78]/60" : "border-border/60"
+              // Staggered entrance, capped: past ~8 cards the delay stops
+              // reading as a cascade and starts reading as a slow page.
+              style={{ animationDelay: `${Math.min(i, 7) * 70}ms` }}
+              className={`group relative flex animate-in flex-col overflow-hidden fade-in slide-in-from-bottom-4 glass-card glass-card-hover fill-mode-backwards motion-reduce:animate-none ${
+                unlocked
+                  ? "border-[#05ce78]/60 shadow-[0_0_24px_rgba(5,206,120,0.18)]"
+                  : "border-border/60"
               }`}
             >
               {goal.imageUrl && (
@@ -70,8 +84,8 @@ export function StretchGoalGrid({
                     className="object-cover transition-transform duration-500 group-hover:scale-[1.04]"
                   />
                   {unlocked ? (
-                    <span className="absolute left-2 top-2 inline-flex items-center gap-1 rounded-full bg-[#05ce78] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white shadow-[0_0_12px_rgba(5,206,120,.8)]">
-                      <Check className="h-3 w-3" />
+                    <span className="absolute left-2 top-2 inline-flex items-center gap-1 rounded-full bg-[#05ce78] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white shadow-[0_0_12px_rgba(5,206,120,.8)] sm:text-[11px]">
+                      <Check className="h-3 w-3 shrink-0" />
                       Unlocked
                     </span>
                   ) : (
@@ -84,17 +98,24 @@ export function StretchGoalGrid({
                 </div>
               )}
 
-              <CardContent className="flex flex-1 flex-col gap-2 p-4">
+              <CardContent className="flex flex-1 flex-col gap-1.5 p-3 sm:gap-2 sm:p-4">
                 <p
-                  className={`text-sm font-bold uppercase tracking-wide tabular-nums ${
-                    unlocked ? "text-[#05ce78] neon-text-green" : "text-muted-foreground"
+                  className={`text-sm font-bold uppercase tracking-wide tabular-nums transition-colors sm:text-base ${
+                    unlocked
+                      ? "text-[#05ce78] neon-text-green"
+                      : "text-muted-foreground"
                   }`}
                 >
                   {formatUnlockAmount(threshold, currency)}
                 </p>
-                <p className="font-semibold leading-snug">{goal.title}</p>
+                <p className="text-sm font-semibold leading-snug sm:text-base">
+                  {goal.title}
+                </p>
 
-                <RewardDetails description={goal.description} items={goal.items} />
+                <RewardDetails
+                  description={goal.description}
+                  items={goal.items}
+                />
 
                 {/* No artwork to stamp — the state has to be said in words. */}
                 {!goal.imageUrl &&
@@ -104,11 +125,14 @@ export function StretchGoalGrid({
                       Unlocked
                     </Badge>
                   ) : (
-                    <LockedNote unlockAtAmount={goal.unlockAtAmount} currency={currency} />
+                    <LockedNote
+                      unlockAtAmount={goal.unlockAtAmount}
+                      currency={currency}
+                    />
                   ))}
 
                 <div className="mt-auto pt-2">
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-[11px] leading-snug text-muted-foreground sm:text-xs">
                     {unlocked
                       ? "Added automatically to every physical order."
                       : "Unlocks for every physical order when the campaign reaches this total."}

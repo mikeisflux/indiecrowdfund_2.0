@@ -1,7 +1,11 @@
 "use client";
 
 import { Lock } from "lucide-react";
-import { amountUntilUnlock, formatUnlockAmount, UnlockAmount } from "@/lib/rewards/unlock";
+import {
+  amountUntilUnlock,
+  formatUnlockAmount,
+  UnlockAmount,
+} from "@/lib/rewards/unlock";
 
 /**
  * The "LOCKED" stamp laid over a goal-locked reward's artwork.
@@ -40,25 +44,47 @@ export function LockedStamp({
   return (
     <div
       aria-hidden
-      className="pointer-events-none absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 bg-black/55 backdrop-blur-[1px]"
+      className="pointer-events-none absolute inset-0 z-10 flex flex-col items-center justify-center gap-1.5 bg-black/60 backdrop-blur-[2px] sm:gap-2"
     >
+      {/* Scanline wash. Purely atmospheric, and skipped when the viewer has
+          asked for less motion — it is a static gradient either way, but the
+          sheen that rides over it is not. */}
+      <span
+        aria-hidden
+        className="absolute inset-0 bg-[linear-gradient(transparent_50%,rgba(0,0,0,0.25)_50%)] bg-[length:100%_4px] opacity-40"
+      />
+      <span
+        aria-hidden
+        className="shimmer absolute inset-0 opacity-60 motion-reduce:hidden"
+      />
+
       <div
-        className={`flex -rotate-12 items-center gap-2 rounded-md border-[3px] border-white/85 bg-black/35 font-extrabold uppercase tracking-[0.2em] text-white/95 shadow-lg ${
-          compact ? "px-3 py-1 text-sm" : "px-5 py-2 text-xl"
+        className={`relative flex -rotate-12 items-center gap-1.5 rounded-md border-2 border-white/85 bg-black/40 font-extrabold uppercase text-white/95 shadow-[0_0_18px_rgba(0,0,0,.55)] sm:gap-2 sm:border-[3px] ${
+          compact
+            ? "px-2 py-0.5 text-[11px] tracking-[0.15em] sm:px-3 sm:py-1 sm:text-sm"
+            : "px-3 py-1 text-sm tracking-[0.15em] sm:px-4 sm:py-1.5 sm:text-base sm:tracking-[0.2em] lg:px-5 lg:py-2 lg:text-xl"
         }`}
       >
-        <Lock className={compact ? "h-4 w-4" : "h-5 w-5"} />
+        <Lock
+          className={
+            compact ? "h-3 w-3 sm:h-4 sm:w-4" : "h-3.5 w-3.5 lg:h-5 lg:w-5"
+          }
+        />
         Locked
       </div>
       <p
-        className={`px-2 text-center font-semibold text-white drop-shadow ${
-          compact ? "text-[11px] leading-tight" : "text-sm"
+        className={`relative px-2 text-center font-semibold text-white drop-shadow ${
+          compact
+            ? "text-[10px] leading-tight sm:text-[11px]"
+            : "text-xs leading-tight sm:text-sm"
         }`}
       >
         Unlocks at {label}
       </p>
+      {/* "to go" is the first thing dropped when space is tight: the threshold
+          above is the fact a backer needs, this is the nice-to-have. */}
       {remaining > 0 && !compact && (
-        <p className="px-2 text-center text-xs text-white/80 drop-shadow">
+        <p className="relative hidden px-2 text-center text-xs text-white/80 drop-shadow sm:block">
           {formatUnlockAmount(remaining, currency)} to go
         </p>
       )}
@@ -84,9 +110,9 @@ export function LockedNote({
 
   return (
     <span
-      className={`inline-flex w-fit items-center gap-1 rounded-full bg-amber-500/15 px-2 py-0.5 text-xs font-medium text-amber-600 dark:text-amber-400 ${className}`}
+      className={`inline-flex w-fit items-center gap-1 rounded-full border border-amber-500/30 bg-amber-500/15 px-2 py-0.5 text-[11px] font-medium text-amber-600 shadow-[0_0_10px_rgba(245,158,11,0.15)] sm:text-xs dark:text-amber-400 ${className}`}
     >
-      <Lock className="h-3 w-3" />
+      <Lock className="h-3 w-3 shrink-0" />
       Unlocks at {label}
     </span>
   );
