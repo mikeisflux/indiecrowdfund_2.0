@@ -568,6 +568,13 @@ export function RewardsStep({ onFormOpenChange }: RewardsStepProps) {
             shippingCountries: rewardToSave.shippingCountries,
             shippingCost: rewardToSave.shippingCost,
             quantityAvailable: rewardToSave.quantityAvailable,
+            // This body is an explicit field list, not a spread, so a new
+            // column is invisible to the server until it is named here. Leaving
+            // it out is why a stretch goal saved with no threshold: the form
+            // collected the amount, the API accepted the row, and the campaign
+            // page then filtered out a goal that could never unlock.
+            unlockAtAmount: rewardToSave.unlockAtAmount ?? null,
+            sharedStockWithId: rewardToSave.sharedStockWithId,
             visibility: rewardToSave.visibility,
             secretToken: rewardToSave.secretToken,
             isEnded: rewardToSave.isEnded,

@@ -14,6 +14,7 @@ import { PdfPageFlipReader } from "@/components/PdfPageFlipReader";
 import { FundingCurve } from "../funding-curve";
 import { RewardGrid } from "../reward-grid";
 import { StretchGoalGrid } from "../stretch-goal-grid";
+import { unlockThreshold } from "@/lib/rewards/unlock";
 import { ProjectData, RewardData } from "../types";
 import { processStoryHtml, formatDeliveryDate } from "../utils";
 
@@ -123,6 +124,10 @@ function SectionHeading({ children }: { children: React.ReactNode }) {
 }
 
 export function CampaignTabV2({ project, tiers, stretchGoals = [], projectPath, onViewCreator }: CampaignTabV2Props) {
+  // Only goals with a real threshold are renderable — see the note at the row.
+  const renderableStretchGoals = stretchGoals.filter(
+    (g) => (unlockThreshold(g.unlockAtAmount) ?? 0) > 0
+  );
   const [pledgeAmount, setPledgeAmount] = useState("1");
 
   const projectEnded = project.endDate ? new Date(project.endDate) < new Date() : false;
@@ -318,11 +323,15 @@ export function CampaignTabV2({ project, tiers, stretchGoals = [], projectPath, 
         {/* "Rewards", not "Rewards & add-ons". The grid is fed `tiers` only:
             add-ons attach to a pledge, so a backer meets them on their own
             step after choosing a reward, never alongside one. */}
-        {stretchGoals.length > 0 && (
-          <div className="mb-10 space-y-5">
+        {/* Gated on the same predicate the grid uses, not on the raw count.
+            A goal with no unlock amount can never unlock, so the grid drops it
+            — and gating the heading on the count alone printed "Stretch Goals"
+            above an empty space. */}
+        {renderableStretchGoals.length > 0 && (
+          <div className="mb-8 space-y-5 sm:mb-10">
             <SectionHeading>Stretch Goals</SectionHeading>
             <StretchGoalGrid
-              goals={stretchGoals}
+              goals={renderableStretchGoals}
               raisedAmount={Number(project.currentAmount) || 0}
               currency={project.currentAmountDisplay?.currency || "USD"}
             />
