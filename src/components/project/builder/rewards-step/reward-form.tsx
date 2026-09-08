@@ -373,6 +373,15 @@ export function RewardForm({
             <CardContent className="p-6 space-y-6">
               <h3 className="font-semibold text-lg">Availability</h3>
 
+              {/* Quantity, audience and time limits are all meaningless on a
+                  stretch goal: it is granted rather than claimed, so there is
+                  no stock to cap, no link to hand out, and no window to sell
+                  it in. Hidden rather than left inert — a creator who set
+                  "limited to 100" here would be configuring something the
+                  distribution job does not read. The unlock amount below is
+                  the one setting that applies. */}
+              {!isStretchGoal && (
+                <>
               {/* Project Quantity */}
               <div className="space-y-3">
                 <div>
@@ -576,6 +585,8 @@ export function RewardForm({
                   </div>
                 </RadioGroup>
               </div>
+                </>
+              )}
 
               {/* Funding goal lock */}
               <div className="space-y-3">

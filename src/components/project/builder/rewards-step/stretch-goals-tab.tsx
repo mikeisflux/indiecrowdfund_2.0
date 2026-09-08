@@ -95,8 +95,10 @@ export function StretchGoalsTab({
 
       {configured.length > 0 && (
         <StretchGoalBar
-          goals={configured.map(({ goal, threshold }) => ({
-            id: goal.id || goal.title,
+          goals={configured.map(({ goal, threshold, index }) => ({
+            // Unsaved goals have no id, and two of them can share a title —
+            // which would collide as React keys and drop a node from the bar.
+            id: goal.id || `new-${index}`,
             title: goal.title,
             threshold,
             unlocked: raisedAmount >= threshold,

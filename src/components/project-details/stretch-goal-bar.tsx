@@ -39,6 +39,8 @@ export function StretchGoalBar({
 }) {
   if (goals.length === 0) return null;
 
+  // Sorted defensively: callers pass sorted arrays today, but the node
+  // positions and the `max` below are both wrong if that ever stops holding.
   const sorted = [...goals].sort((a, b) => a.threshold - b.threshold);
   const max = sorted[sorted.length - 1].threshold;
   // Guard a single goal at 0 (or a bad row) from dividing by zero.
@@ -65,15 +67,17 @@ export function StretchGoalBar({
         )}
       </div>
 
-      {/* pb leaves room for the labels hanging below each node. */}
-      <div className="relative pb-16 pt-1">
+      {/* px gives the end nodes room for their labels: the last milestone sits
+          at left:100%, and a centred 6rem label would otherwise hang half
+          outside the card. pb leaves room for the labels below the track. */}
+      <div className="relative px-12 pb-20 pt-1">
         <div className="relative h-2 rounded-full bg-border">
           <div
             className="absolute inset-y-0 left-0 rounded-full bg-gradient-to-r from-[#05ce78] to-emerald-500"
             style={{ width: `${filled}%` }}
           />
 
-          {sorted.map((goal) => {
+          {sorted.map((goal, i) => {
             const left = pct(goal.threshold);
             return (
               <div
@@ -96,9 +100,16 @@ export function StretchGoalBar({
                   )}
                 </div>
 
-                {/* Labels alternate above/below the track so adjacent
-                    milestones don't overprint each other. */}
-                <div className="absolute left-1/2 top-8 w-24 -translate-x-1/2 text-center">
+                {/* Labels drop to two staggered rows so adjacent milestones
+                    don't overprint each other. Nodes are positioned by amount,
+                    so two goals a few hundred dollars apart sit almost on top
+                    of one another and a single row of labels becomes an
+                    unreadable smear. */}
+                <div
+                  className={`absolute left-1/2 w-24 -translate-x-1/2 text-center ${
+                    i % 2 === 0 ? "top-8" : "top-[4.5rem]"
+                  }`}
+                >
                   <p
                     className={`text-xs font-semibold tabular-nums ${
                       goal.unlocked ? "text-[#05ce78]" : "text-muted-foreground"

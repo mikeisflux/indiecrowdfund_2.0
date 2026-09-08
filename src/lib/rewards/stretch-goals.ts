@@ -21,6 +21,9 @@ import { unlockThreshold, type UnlockAmount } from "@/lib/rewards/unlock";
 /** Pledge states that earn a stretch goal. */
 const QUALIFYING_STATUSES = ["COMPLETED", "PENDING"] as const;
 
+/** Rows per createMany. See the chunking note in the grant loop. */
+const GRANT_CHUNK_SIZE = 1000;
+
 export interface StretchGoalDistribution {
   projectId: string;
   raisedAmount: number;
@@ -122,20 +125,50 @@ export async function distributeStretchGoalsForProject(
     };
   }
 
-  const rows = pledges.flatMap((p) =>
-    unlocked.map((g) => ({
-      pledgeId: p.id,
-      addonId: g.id,
-      quantity: 1,
-      // Free. The backer already paid for this by getting the campaign here.
-      amount: 0,
-    }))
+  // Diff against what is already granted rather than re-sending every pair and
+  // leaning on skipDuplicates. On a 5,000-backer campaign with six goals that
+  // is 30,000 rows pushed over the wire every cron tick to write nothing; the
+  // steady state should be a read and no writes at all.
+  const unlockedIds = unlocked.map((g) => g.id);
+  const existing = await db.pledgeAddon.findMany({
+    where: {
+      addonId: { in: unlockedIds },
+      pledgeId: { in: pledges.map((p) => p.id) },
+    },
+    select: { pledgeId: true, addonId: true },
+  });
+  const alreadyGranted = new Set(
+    (existing as { pledgeId: string; addonId: string }[]).map(
+      (e) => `${e.pledgeId}:${e.addonId}`
+    )
   );
 
-  const result = await db.pledgeAddon.createMany({
-    data: rows,
-    skipDuplicates: true,
-  });
+  const rows = pledges.flatMap((p) =>
+    unlocked
+      .filter((g) => !alreadyGranted.has(`${p.id}:${g.id}`))
+      .map((g) => ({
+        pledgeId: p.id,
+        addonId: g.id,
+        quantity: 1,
+        // Free. The backer already paid for this by getting the campaign here.
+        amount: 0,
+      }))
+  );
+
+  // Chunked: on a first run after a big goal unlocks this is still tens of
+  // thousands of rows, and a single createMany that size risks blowing the
+  // driver's bind-parameter limit — which fails the whole batch, not part of
+  // it. skipDuplicates is kept despite the diff above: the diff is
+  // read-then-write, so a concurrent cron run or a pledge modification can
+  // insert the same pair in between.
+  let granted = 0;
+  for (let i = 0; i < rows.length; i += GRANT_CHUNK_SIZE) {
+    const result = await db.pledgeAddon.createMany({
+      data: rows.slice(i, i + GRANT_CHUNK_SIZE),
+      skipDuplicates: true,
+    });
+    granted += result.count;
+  }
 
   const revoked = await revokeIneligibleStretchGoals(projectId);
 
@@ -143,7 +176,7 @@ export async function distributeStretchGoalsForProject(
     projectId,
     raisedAmount,
     unlockedGoalIds: unlocked.map((g) => g.id),
-    granted: result.count,
+    granted,
     revoked,
   };
 }
@@ -195,18 +228,73 @@ export async function revokeIneligibleStretchGoals(projectId: string): Promise<n
 }
 
 /**
- * Bring one pledge's stretch goals in line with what it now qualifies for.
+ * Bring ONE pledge's stretch goals in line with what it now qualifies for.
  *
- * Called straight after an order is modified so the backer sees the right
- * contents immediately rather than after the next cron cycle.
+ * Scoped to the single pledge on purpose. Routing this through
+ * distributeStretchGoalsForProject would make every edit of a single order
+ * re-evaluate the entire campaign — on a 5,000-backer project with six goals
+ * that is a full aggregate plus a 30,000-row upsert, inside the request the
+ * backer is waiting on, to fix one row.
+ *
+ * It has to run on EVERY modification, not just ones that change the reward:
+ * applyModificationChanges deletes all of a pledge's PledgeAddon rows and
+ * recreates only the add-ons the client sent, so an unrelated edit silently
+ * drops the backer's granted stretch goals. This puts them back.
  */
 export async function reconcileStretchGoalsForPledge(pledgeId: string): Promise<void> {
   const pledge = await db.pledge.findUnique({
     where: { id: pledgeId },
-    select: { projectId: true },
+    select: {
+      id: true,
+      projectId: true,
+      status: true,
+      deletedAt: true,
+      rewardId: true,
+      reward: { select: { shippingType: true } },
+    },
   });
   if (!pledge) return;
-  await distributeStretchGoalsForProject(pledge.projectId);
+
+  const qualifies =
+    !pledge.deletedAt &&
+    (QUALIFYING_STATUSES as readonly string[]).includes(pledge.status) &&
+    !!pledge.rewardId &&
+    (PHYSICAL_SHIPPING_TYPES as readonly string[]).includes(
+      pledge.reward?.shippingType ?? ""
+    );
+
+  if (!qualifies) {
+    await db.pledgeAddon.deleteMany({
+      where: {
+        pledgeId,
+        addon: { projectId: pledge.projectId, type: "STRETCH_GOAL" },
+      },
+    });
+    return;
+  }
+
+  const goals = await db.reward.findMany({
+    where: { projectId: pledge.projectId, type: "STRETCH_GOAL", isEnded: false },
+    select: { id: true, unlockAtAmount: true },
+  });
+  if (goals.length === 0) return;
+
+  const stats = await getProjectStats(pledge.projectId);
+  const unlocked = goals.filter((g) => {
+    const threshold = unlockThreshold(g.unlockAtAmount);
+    return threshold !== null && stats.currentAmount >= threshold;
+  });
+  if (unlocked.length === 0) return;
+
+  await db.pledgeAddon.createMany({
+    data: unlocked.map((g) => ({
+      pledgeId,
+      addonId: g.id,
+      quantity: 1,
+      amount: 0,
+    })),
+    skipDuplicates: true,
+  });
 }
 
 /**
