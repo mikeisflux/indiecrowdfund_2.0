@@ -54,7 +54,11 @@ export const GROUPS: FeatureGroup[] = [
       // BMB "yes": a live campaign runs "flexible" funding and charges
       // immediately at checkout ("charged immediately upon checkout as this
       // campaign has a flexible goal").
-      { label: "Flexible “keep-it-all” funding option", ic: "yes", ks: "no", ig: "yes", fmc: "yes", bmb: "yes" },
+      // IG changed to "no" in Sep 2026: the October 2025 Gamefound platform
+      // upgrade retired Flexible Funding — Indiegogo is fixed-funding only now,
+      // with stretch goals offered in its place. Left as "yes" this row was a
+      // claim we could no longer support on a page that names the competitor.
+      { label: "Flexible “keep-it-all” funding option", ic: "yes", ks: "no", ig: "no", fmc: "yes", bmb: "yes" },
       // FMC "no": Fund My Comic's public campaign pages roll externally-raised
       // funds into the headline total — e.g. campaign 118 displays "$81,850
       // raised / 16,370% funded" with the sub-line "$77,743 raised on other
@@ -74,6 +78,28 @@ export const GROUPS: FeatureGroup[] = [
       // "secret" rewards; FMC not verified. BMB "yes": every reward object in
       // its page data carries an `is_secret` flag.
       { label: "Secret rewards (private link/code)", ic: "yes", ks: "yes", ig: "yes", fmc: "no", bmb: "yes" },
+      // Rewards/add-ons that stay VISIBLE but unpledgeable until the campaign
+      // total reaches a set figure. Distinct from a stretch goal: this gates a
+      // purchasable tier, rather than adding content to pledges already made.
+      // KS "no": no such concept — a tier is live from launch or hidden.
+      // IG "partial": Gamefound's stretch goals unlock content into pledges
+      //   (help.gamefound.com/article/113), which is adjacent but not a gated
+      //   purchasable tier; marked partial rather than no, since we cannot
+      //   verify the absence of a tier-level gate.
+      // FMC / BMB "unknown": not documented publicly and not verifiable from
+      //   their live sites.
+      { label: "Rewards & add-ons that unlock at a funding milestone", ic: "yes", ks: "no", ig: "partial", fmc: "unknown", bmb: "unknown" },
+      // KS "no": Kickstarter's own help centre is explicit that "stretch goals
+      // are not part of the official Kickstarter platform" — creators track and
+      // announce them by hand in updates.
+      // IG "yes": the October 2025 Gamefound platform upgrade added a built-in
+      // automated stretch-goal tool (help.indiegogo.com/article/645).
+      { label: "Built-in stretch goal management", ic: "yes", ks: "no", ig: "yes", fmc: "unknown", bmb: "unknown" },
+      // Unlocked goals attaching themselves to every qualifying order, without
+      // the creator adding them by hand — including backers who pledge after
+      // the goal unlocks.
+      // IG "yes": Gamefound automatic stretch goals unlock items into pledges.
+      { label: "Stretch goals auto-added to backers’ orders", ic: "yes", ks: "no", ig: "yes", fmc: "unknown", bmb: "unknown" },
       { label: "Late pledges after the campaign ends", ic: "yes", ks: "yes", ig: "yes", fmc: "partial", bmb: "no" },
       { label: "Backer reviews & star ratings", ic: "yes", ks: "no", ig: "no", fmc: "no", bmb: "no" },
       { label: "Team collaborators on a campaign", ic: "yes", ks: "yes", ig: "yes", fmc: "no", bmb: "no" },
