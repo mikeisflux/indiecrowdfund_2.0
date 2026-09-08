@@ -110,8 +110,8 @@ export function StretchGoalGrid({
                 <div className="mt-auto pt-2">
                   <p className="text-xs text-muted-foreground">
                     {unlocked
-                      ? "Added to every backer's order automatically."
-                      : "Unlocks for every backer when the campaign reaches this total."}
+                      ? "Added automatically to every physical order."
+                      : "Unlocks for every physical order when the campaign reaches this total."}
                   </p>
                 </div>
               </CardContent>

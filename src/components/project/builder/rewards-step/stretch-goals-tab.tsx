@@ -84,6 +84,11 @@ export function StretchGoalsTab({
               pledge afterwards. Stretch goals are free and never charge shipping;
               they ship with the order the backer already placed.
             </p>
+            <p className="text-sm text-muted-foreground">
+              Backers on a digital tier don&apos;t receive them — there&apos;s no
+              shipment for the item to ride along in, and you&apos;d be owing
+              postage on a download-only pledge.
+            </p>
           </div>
         </div>
       </div>

@@ -33,34 +33,48 @@ export async function GET(req: NextRequest) {
     const projects = await db.project.findMany({
       where: {
         deletedAt: null,
-        status: { in: ["LIVE", "FUNDED"] },
-        rewards: { some: { type: "STRETCH_GOAL", isEnded: false } },
+        // FAILED and CANCELLED are here for the revoke half of the sweep, not
+        // the grant half: those campaigns refund everyone, and their pledges
+        // must not keep stretch goals just because the campaign stopped being
+        // LIVE before the next run.
+        status: { in: ["LIVE", "FUNDED", "FAILED", "CANCELLED"] },
+        rewards: { some: { type: "STRETCH_GOAL" } },
       },
       select: { id: true, title: true },
     });
 
     let totalGranted = 0;
-    const results: { projectId: string; title: string; granted: number; unlocked: number }[] = [];
+    let totalRevoked = 0;
+    const results: {
+      projectId: string;
+      title: string;
+      granted: number;
+      revoked: number;
+      unlocked: number;
+    }[] = [];
 
     for (const project of projects) {
       try {
         const result = await distributeStretchGoalsForProject(project.id);
         totalGranted += result.granted;
+        totalRevoked += result.revoked;
         results.push({
           projectId: project.id,
           title: project.title,
           granted: result.granted,
+          revoked: result.revoked,
           unlocked: result.unlockedGoalIds.length,
         });
-        if (result.granted > 0) {
+        if (result.granted > 0 || result.revoked > 0) {
           stretchGoalLogger.info(
             {
               projectId: project.id,
               granted: result.granted,
+              revoked: result.revoked,
               raised: result.raisedAmount,
               goals: result.unlockedGoalIds.length,
             },
-            "Distributed stretch goals"
+            "Reconciled stretch goals"
           );
         }
       } catch (err) {
@@ -77,6 +91,7 @@ export async function GET(req: NextRequest) {
       success: true,
       projectsChecked: projects.length,
       granted: totalGranted,
+      revoked: totalRevoked,
       results,
     });
   } catch (error) {

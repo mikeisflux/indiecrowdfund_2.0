@@ -5,6 +5,7 @@ import { logger } from "@/lib/logger";
 const pledgesLogger = logger.child({ module: "pledges" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { reconcileStretchGoalsForPledge } from "@/lib/rewards/stretch-goals";
 import { callDivinityCoinAPI, getDivinityCoinConfig } from "@/lib/payments/divinitycoin";
 import { notifyPledgeModified, notifyPledgeCancelled } from "@/lib/notifications/pledge-notifications";
 import { getPayPalConfig, getPayPalAccessToken } from "@/lib/payments/paypal";
@@ -76,6 +77,22 @@ async function applyModificationChanges(
         currentAmount: { increment: amountDiff },
       },
     });
+  }
+
+  // Stretch goals follow the order. Swapping a physical tier for a digital one
+  // has to take the milestone items back off — otherwise the creator is
+  // shipping to someone who now holds a download-only pledge. Reconciling here
+  // rather than at each caller because this is the one choke point every
+  // modification passes through.
+  try {
+    await reconcileStretchGoalsForPledge(pledgeId);
+  } catch (err) {
+    // Never fail an applied modification over this — the cron sweep is the
+    // backstop and runs within a cycle.
+    pledgesLogger.error(
+      { err: String(err), pledgeId },
+      "Failed to reconcile stretch goals after pledge modification"
+    );
   }
 }
 
@@ -499,6 +516,16 @@ export async function PATCH(
           pledgesLogger.error({ err: String(err) }, "[Cancel] Failed to send refund notification:")
         );
 
+        // A cancelled or refunded pledge keeps no stretch goals: the money went
+        // back, so the goods must not go out. Fire-and-forget — the cancellation
+        // itself has already succeeded and must not be reported as failed.
+        reconcileStretchGoalsForPledge(pledgeId).catch((err) =>
+          pledgesLogger.error(
+            { err: String(err), pledgeId },
+            "Failed to revoke stretch goals after pledge cancellation"
+          )
+        );
+
         return NextResponse.json({
           success: true,
           refunded: true,
@@ -560,6 +587,16 @@ export async function PATCH(
       // Send cancellation notification (async, don't block response)
       notifyPledgeCancelled(pledgeId, false).catch(err =>
         pledgesLogger.error({ err: String(err) }, "[Cancel] Failed to send cancellation notification:")
+      );
+
+      // A cancelled or refunded pledge keeps no stretch goals: the money went
+      // back, so the goods must not go out. Fire-and-forget — the cancellation
+      // itself has already succeeded and must not be reported as failed.
+      reconcileStretchGoalsForPledge(pledgeId).catch((err) =>
+        pledgesLogger.error(
+          { err: String(err), pledgeId },
+          "Failed to revoke stretch goals after pledge cancellation"
+        )
       );
 
       return NextResponse.json({

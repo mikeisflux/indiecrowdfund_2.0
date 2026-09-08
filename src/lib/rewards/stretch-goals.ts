@@ -28,18 +28,40 @@ export interface StretchGoalDistribution {
   unlockedGoalIds: string[];
   /** PledgeAddon rows actually written this run. */
   granted: number;
+  /** Rows taken back off pledges that stopped qualifying. */
+  revoked: number;
 }
 
 /**
  * Grant every unlocked stretch goal on one project to every qualifying pledge.
  *
- * Qualifying = not deleted, COMPLETED or PENDING, and holding a reward tier.
+ * Qualifying = not deleted, COMPLETED or PENDING, and holding a PHYSICAL
+ * reward tier.
+ *
  * PENDING is included because an all-or-nothing campaign parks real backers
  * there until the goal is hit — they helped reach the stretch goal and would
- * be the odd ones out. Pledges with no reward are excluded: there is no order
- * to attach a physical milestone item to, and granting one would invent a
- * fulfillment obligation the backer never opted into.
+ * be the odd ones out.
+ *
+ * Two exclusions, both for the same reason — there is no box to put the thing
+ * in, and granting it would invent a fulfillment obligation the backer never
+ * opted into:
+ *
+ *   - Pledges with no reward at all.
+ *   - Pledges on a DIGITAL tier (shippingType NO_SHIPPING). A backer who
+ *     bought a PDF has no shipment for a physical milestone item to ride
+ *     along in, and the creator would owe them postage on a $15 digital
+ *     pledge. Note this cannot be delegated to the usual digital gate, which
+ *     compares the ADD-ON's shippingType: a stretch goal is always
+ *     NO_SHIPPING (it never charges its own postage), so that check would
+ *     wave every one of them through.
+ *
+ * The consequence, stated plainly: a stretch goal that is itself digital —
+ * a bonus wallpaper, an extra PDF — also skips digital backers, because
+ * nothing on the row distinguishes it from a physical one. Giving creators
+ * that choice needs a flag on the reward; until then this errs toward not
+ * promising a digital backer something the creator would have to ship.
  */
+const PHYSICAL_SHIPPING_TYPES = ["WORLDWIDE", "SELECTED_COUNTRIES"] as const;
 export async function distributeStretchGoalsForProject(
   projectId: string
 ): Promise<StretchGoalDistribution> {
@@ -53,8 +75,11 @@ export async function distributeStretchGoalsForProject(
     raisedAmount: 0,
     unlockedGoalIds: [],
     granted: 0,
+    revoked: 0,
   };
-  if (goals.length === 0) return empty;
+  if (goals.length === 0) {
+    return { ...empty, revoked: await revokeIneligibleStretchGoals(projectId) };
+  }
 
   // Live stats rather than Project.currentAmount: that column lags, and a
   // creator watching the meter cross a milestone expects it to fire.
@@ -65,7 +90,13 @@ export async function distributeStretchGoalsForProject(
     const threshold = unlockThreshold(g.unlockAtAmount);
     return threshold !== null && raisedAmount >= threshold;
   });
-  if (unlocked.length === 0) return { ...empty, raisedAmount };
+  if (unlocked.length === 0) {
+    return {
+      ...empty,
+      raisedAmount,
+      revoked: await revokeIneligibleStretchGoals(projectId),
+    };
+  }
 
   const pledges = await db.pledge.findMany({
     where: {
@@ -73,11 +104,22 @@ export async function distributeStretchGoalsForProject(
       deletedAt: null,
       status: { in: [...QUALIFYING_STATUSES] as ("COMPLETED")[] },
       NOT: { rewardId: null },
+      // Listed positively rather than as `not: "NO_SHIPPING"` — Prisma 7 is
+      // fussy about `not` on this shape, and naming the physical types makes
+      // a future shipping type opt in on purpose instead of by accident.
+      reward: {
+        shippingType: { in: [...PHYSICAL_SHIPPING_TYPES] as ("WORLDWIDE")[] },
+      },
     },
     select: { id: true },
   });
   if (pledges.length === 0) {
-    return { ...empty, raisedAmount, unlockedGoalIds: unlocked.map((g) => g.id) };
+    return {
+      ...empty,
+      raisedAmount,
+      unlockedGoalIds: unlocked.map((g) => g.id),
+      revoked: await revokeIneligibleStretchGoals(projectId),
+    };
   }
 
   const rows = pledges.flatMap((p) =>
@@ -95,12 +137,76 @@ export async function distributeStretchGoalsForProject(
     skipDuplicates: true,
   });
 
+  const revoked = await revokeIneligibleStretchGoals(projectId);
+
   return {
     projectId,
     raisedAmount,
     unlockedGoalIds: unlocked.map((g) => g.id),
     granted: result.count,
+    revoked,
   };
+}
+
+/**
+ * Take stretch goals back off pledges that no longer qualify for them.
+ *
+ * Granting is not a one-way door. A pledge can stop qualifying long after it
+ * was granted, and every route below leaves a stretch goal sitting in an order
+ * that should not have one:
+ *
+ *   - The backer edits their pledge and swaps a physical tier for a digital
+ *     one. Nothing about the granted row changes on its own, so the creator
+ *     would be shipping a milestone item to someone who bought a PDF.
+ *   - The pledge is refunded, cancelled or charged back. The money went back;
+ *     the goods should not go out.
+ *   - The pledge drops its reward entirely, or is soft-deleted.
+ *
+ * Written as a sweep over the whole project rather than as a hook on each of
+ * those events on purpose. There are several refund paths (admin, webhook,
+ * RefundRequest) and more than one way to edit an order; a sweep that states
+ * the eligibility rule once cannot be bypassed by a path nobody remembered to
+ * update. The modify route calls it directly so the change is immediate, and
+ * the cron catches everything else within a cycle.
+ *
+ * Only STRETCH_GOAL rows are touched. A real add-on the backer paid for is
+ * never removed by this, whatever state the pledge is in.
+ */
+export async function revokeIneligibleStretchGoals(projectId: string): Promise<number> {
+  const result = await db.pledgeAddon.deleteMany({
+    where: {
+      addon: { projectId, type: "STRETCH_GOAL" },
+      pledge: {
+        OR: [
+          // Refunded, cancelled, charged back or failed.
+          { status: { notIn: [...QUALIFYING_STATUSES] as ("COMPLETED")[] } },
+          // Switched to a digital tier — no shipment to ride along in.
+          { reward: { shippingType: "NO_SHIPPING" } },
+          // Dropped the reward, or the pledge was soft-deleted.
+          { rewardId: null },
+          // `NOT: { field: null }` rather than `{ not: null }` — Prisma 7
+          // rejects the latter at runtime on nullable columns.
+          { NOT: { deletedAt: null } },
+        ],
+      },
+    },
+  });
+  return result.count;
+}
+
+/**
+ * Bring one pledge's stretch goals in line with what it now qualifies for.
+ *
+ * Called straight after an order is modified so the backer sees the right
+ * contents immediately rather than after the next cron cycle.
+ */
+export async function reconcileStretchGoalsForPledge(pledgeId: string): Promise<void> {
+  const pledge = await db.pledge.findUnique({
+    where: { id: pledgeId },
+    select: { projectId: true },
+  });
+  if (!pledge) return;
+  await distributeStretchGoalsForProject(pledge.projectId);
 }
 
 /**
