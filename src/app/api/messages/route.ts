@@ -7,6 +7,10 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { z } from "zod";
 import { sendEmail } from "@/lib/email";
+import {
+  getDelegatedProjectCreators,
+  getDelegatedProjectIds,
+} from "@/lib/messages/delegated-projects";
 
 const APP_NAME = process.env.NEXT_PUBLIC_APP_NAME || "IndieCrowdfund";
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
@@ -158,20 +162,33 @@ export async function GET(req: NextRequest) {
 
     const userId = session.user.id;
 
+    // Campaigns whose inbox this user shares with the owner. Every query below
+    // is "mine, or belonging to one of these projects".
+    const delegatedIds = await getDelegatedProjectIds(userId);
+    const delegated = delegatedIds.length > 0;
+
     // Build where clause
     const whereClause: {
       senderId?: string;
       recipientId?: string;
-      OR?: Array<{ senderId: string; recipientId: string }>;
+      OR?: Array<Record<string, unknown>>;
       projectId?: string;
       isSpam: boolean;
     } = { isSpam: false };
 
     if (conversationWith) {
-      // Get conversation thread with specific user
+      // Get conversation thread with specific user. On a shared campaign the
+      // thread is between the owner and the backer, so matching only on "me"
+      // would return an empty thread — the delegate is in neither end of it.
       whereClause.OR = [
         { senderId: userId, recipientId: conversationWith },
         { senderId: conversationWith, recipientId: userId },
+        ...(delegated
+          ? [
+              { projectId: { in: delegatedIds }, senderId: conversationWith },
+              { projectId: { in: delegatedIds }, recipientId: conversationWith },
+            ]
+          : []),
       ];
       if (projectId) {
         whereClause.projectId = projectId;
@@ -180,7 +197,14 @@ export async function GET(req: NextRequest) {
       whereClause.senderId = userId;
       if (projectId) whereClause.projectId = projectId;
     } else {
-      whereClause.recipientId = userId;
+      if (delegated) {
+        whereClause.OR = [
+          { recipientId: userId },
+          { projectId: { in: delegatedIds } },
+        ];
+      } else {
+        whereClause.recipientId = userId;
+      }
       if (projectId) whereClause.projectId = projectId;
     }
 
@@ -220,6 +244,7 @@ export async function GET(req: NextRequest) {
         OR: [
           { senderId: userId },
           { recipientId: userId },
+          ...(delegated ? [{ projectId: { in: delegatedIds } }] : []),
         ],
         isSpam: false,
       },
@@ -231,8 +256,21 @@ export async function GET(req: NextRequest) {
       orderBy: { createdAt: "desc" },
     });
 
+    const delegatedCreators = await getDelegatedProjectCreators(delegatedIds);
+
     for (const msg of allMessages) {
-      const otherUser = msg.senderId === userId ? msg.recipient : msg.sender;
+      // On a shared campaign the counterpart is whoever isn't the campaign
+      // owner — otherwise a message the owner sent files itself under the
+      // owner's name and the backer's thread splits in two.
+      const ownerId = msg.projectId ? delegatedCreators.get(msg.projectId) : undefined;
+      const otherUser =
+        ownerId && msg.senderId !== userId && msg.recipientId !== userId
+          ? msg.senderId === ownerId
+            ? msg.recipient
+            : msg.sender
+          : msg.senderId === userId
+            ? msg.recipient
+            : msg.sender;
       // Use "inbox" for messages without a project (creator inbox emails)
       const key = `${otherUser.id}-${msg.projectId || "inbox"}`;
 
@@ -254,10 +292,14 @@ export async function GET(req: NextRequest) {
 
     // Count unread messages for each conversation
     for (const [, conv] of Array.from(conversationsMap)) {
+      const isDelegated = !!conv.project && delegatedIds.includes(conv.project.id);
       const unreadCount = await db.message.count({
         where: {
           senderId: conv.otherUser.id,
-          recipientId: userId,
+          // On a shared campaign the unread message is addressed to the owner,
+          // not to the delegate — pinning recipientId would always count zero.
+          // Filtering on the backer as sender already makes this inbound-only.
+          ...(isDelegated ? {} : { recipientId: userId }),
           // Handle messages without a project (creator inbox emails)
           projectId: conv.project?.id || null,
           read: false,
@@ -272,7 +314,13 @@ export async function GET(req: NextRequest) {
     // Get total unread count
     const totalUnread = await db.message.count({
       where: {
-        recipientId: userId,
+        OR: [
+          { recipientId: userId },
+          ...(delegated ? [{ projectId: { in: delegatedIds } }] : []),
+        ],
+        // Own outbound mail is unread until the backer opens it; that is the
+        // backer's unread, not the sender's.
+        NOT: { senderId: userId },
         read: false,
         isSpam: false,
       },
@@ -301,12 +349,20 @@ export async function PATCH(req: NextRequest) {
 
     const userId = session.user.id;
 
+    // Reading a shared campaign's message marks it read for the owner too.
+    // That is the point of a shared inbox: if it stayed unread for them, both
+    // people keep working the same message and the backer gets two replies.
+    const delegatedIds = await getDelegatedProjectIds(userId);
+    const mine = delegatedIds.length > 0
+      ? [{ recipientId: userId }, { projectId: { in: delegatedIds } }]
+      : [{ recipientId: userId }];
+
     if (messageIds && Array.isArray(messageIds)) {
       // Mark specific messages as read
       await db.message.updateMany({
         where: {
           id: { in: messageIds },
-          recipientId: userId,
+          OR: mine,
         },
         data: {
           read: true,
@@ -320,7 +376,7 @@ export async function PATCH(req: NextRequest) {
       await db.message.updateMany({
         where: {
           senderId: conversationWith,
-          recipientId: userId,
+          OR: mine,
           ...(projectId ? { projectId } : {}),
         },
         data: {

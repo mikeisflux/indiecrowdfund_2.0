@@ -5,6 +5,7 @@ import { logger } from "@/lib/logger";
 const userActivityLogger = logger.child({ module: "user-activity" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { getDelegatedProjectIds } from "@/lib/messages/delegated-projects";
 
 export const dynamic = "force-dynamic";
 
@@ -238,10 +239,17 @@ export async function GET() {
       }
     }
 
-    // Get unread messages count
+    // Get unread messages count. Includes campaigns whose inbox this user
+    // shares with the owner — a badge that ignored them would leave the
+    // delegate with no signal that anything needs answering.
+    const delegatedIds = await getDelegatedProjectIds(userId);
     const unreadMessages = await db.message.count({
       where: {
-        recipientId: userId,
+        OR: [
+          { recipientId: userId },
+          ...(delegatedIds.length > 0 ? [{ projectId: { in: delegatedIds } }] : []),
+        ],
+        NOT: { senderId: userId },
         read: false,
       },
     });
