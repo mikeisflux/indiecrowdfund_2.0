@@ -347,17 +347,20 @@ export async function GET(
     const isAdmin = userRole === "ADMIN" || userRole === "SUPER_ADMIN";
 
     // An ended reward stays in the database for record keeping — backers who
-    // already have one keep it, and it still shows on their pledge and in the
-    // creator's builder — but it must not be offered to anyone new. This
-    // endpoint feeds both the campaign page and the pledge flow, and
-    // POST /api/pledges already rejects isEnded rewards, so leaving them
-    // visible only produced a tier a backer could pick and then be refused at
-    // checkout. Creators and admins still see them, so the builder and the
-    // admin views are unaffected.
-    const canSeeEnded = isCreator || isAdmin;
-
+    // already have one keep it on their pledge page, and the creator still sees
+    // it in the builder — but it is gone from the campaign page for EVERYONE,
+    // the creator included.
+    //
+    // No creator/admin exception here, deliberately. The builder loads rewards
+    // from /api/projects/slug/[slug], not from this route, so an exception buys
+    // the creator nothing except seeing a tier on their own public page that no
+    // backer can see — which reads as the End button having failed.
+    //
+    // POST /api/pledges already rejects ended rewards, so leaving them visible
+    // only ever produced a tier a backer could pick and then be refused at
+    // checkout.
     const visibleRewards = project.rewards.filter((r: Reward) => {
-      if (r.isEnded && !canSeeEnded) return false;
+      if (r.isEnded) return false;
 
       // Always show PUBLIC rewards
       if (r.visibility === "PUBLIC") return true;
@@ -413,7 +416,7 @@ export async function GET(
       items: r.items
         // Same rule as the reward itself: an ended item is no longer part of
         // what a new backer is being offered, so it drops out of the list.
-        .filter((i: RewardItem) => canSeeEnded || !i.projectItem?.endedAt)
+        .filter((i: RewardItem) => !i.projectItem?.endedAt)
         .map((i: RewardItem) => ({
           id: i.id,
           projectItemId: i.projectItemId, // Include reference to ProjectItem for checkbox matching
