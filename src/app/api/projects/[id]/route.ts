@@ -428,11 +428,20 @@ export async function PATCH(
       return NextResponse.json({ error: "Project not found" }, { status: 404 });
     }
 
-    // Check if user is creator or an accepted collaborator with edit permission
+    // Check if user is creator, a platform admin, or an accepted collaborator
+    // with edit permission.
+    //
+    // Admins were missing here while the GET on this same project already
+    // allowed them, so an admin could open a campaign in the builder and then
+    // get a 403 on every save — which is what transferring a campaign to
+    // another account looks like from the original owner's side: the editor
+    // loads, nothing saves.
     const isCreator = project.creatorId === session.user.id;
-    let canEdit = isCreator;
+    const isPlatformAdmin =
+      session.user.role === "ADMIN" || session.user.role === "SUPER_ADMIN";
+    let canEdit = isCreator || isPlatformAdmin;
 
-    if (!isCreator) {
+    if (!canEdit) {
       // Check if user is a collaborator with edit permission
       const collaborator = await db.projectCollaborator.findFirst({
         where: {
