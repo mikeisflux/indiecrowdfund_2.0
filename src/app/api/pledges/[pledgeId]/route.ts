@@ -716,6 +716,17 @@ export async function PATCH(
           return NextResponse.json({ error: "Invalid reward" }, { status: 400 });
         }
 
+        // Add-ons were already guarded against this below, the main reward was
+        // not: a backer could switch INTO a tier the creator had ended, which
+        // is the one thing ending a tier is supposed to prevent. Staying on an
+        // ended reward you already hold is fine and stays allowed.
+        if (newReward.isEnded && pledge.rewardId !== rewardId) {
+          return NextResponse.json(
+            { error: "That reward is no longer available." },
+            { status: 400 }
+          );
+        }
+
         // Check availability (but allow if it's the same reward)
         if (newReward.quantityAvailable !== null &&
             newReward.quantityClaimed >= newReward.quantityAvailable &&

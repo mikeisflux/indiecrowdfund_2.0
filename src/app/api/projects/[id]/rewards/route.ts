@@ -18,7 +18,12 @@ export async function GET(
 
     // Fetch rewards for this project
     const rewards = await db.reward.findMany({
-      where: { projectId },
+      // Ended rewards are excluded. Both callers of this route are pickers of
+      // things a backer can still get — the modify-pledge form and the add-on
+      // import dialog — and offering an ended reward there just produces a
+      // choice the pledge routes then refuse. The record itself is untouched:
+      // it stays in the builder, on existing pledges and in admin views.
+      where: { projectId, isEnded: false },
       include: {
         items: true,
       },

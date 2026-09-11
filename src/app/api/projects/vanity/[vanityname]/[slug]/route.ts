@@ -62,7 +62,9 @@ export async function GET(
         },
         rewards: {
           include: {
-            items: true,
+            // projectItem carries endedAt — an ended item must drop out of a
+            // reward's "includes" list, and RewardItem itself has no such flag.
+            items: { include: { projectItem: { select: { endedAt: true } } } },
             // Count BOTH completed and pending pledges as "backers" so
             // the per-reward count matches Project.backerCount, which
             // also includes pending. AoN campaigns hold pledges in
@@ -303,6 +305,8 @@ export async function GET(
       title: string;
       description: string | null;
       imageUrl: string | null;
+      /** Joined from ProjectItem; set once the creator ends the item. */
+      projectItem?: { endedAt: Date | null } | null;
     }
     interface RewardPledge {
       user: {
@@ -342,7 +346,19 @@ export async function GET(
     const isCreator = userId === project.creator.id;
     const isAdmin = userRole === "ADMIN" || userRole === "SUPER_ADMIN";
 
+    // An ended reward stays in the database for record keeping — backers who
+    // already have one keep it, and it still shows on their pledge and in the
+    // creator's builder — but it must not be offered to anyone new. This
+    // endpoint feeds both the campaign page and the pledge flow, and
+    // POST /api/pledges already rejects isEnded rewards, so leaving them
+    // visible only produced a tier a backer could pick and then be refused at
+    // checkout. Creators and admins still see them, so the builder and the
+    // admin views are unaffected.
+    const canSeeEnded = isCreator || isAdmin;
+
     const visibleRewards = project.rewards.filter((r: Reward) => {
+      if (r.isEnded && !canSeeEnded) return false;
+
       // Always show PUBLIC rewards
       if (r.visibility === "PUBLIC") return true;
 
@@ -394,14 +410,18 @@ export async function GET(
       // Only include secretToken for creators/admins (so they can share the link)
       secretToken: (isCreator || isAdmin) ? r.secretToken : undefined,
       imageUrl: r.imageUrl || "",
-      items: r.items.map((i: RewardItem) => ({
-        id: i.id,
-        projectItemId: i.projectItemId, // Include reference to ProjectItem for checkbox matching
-        title: i.title,
-        description: i.description || "",
-        imageUrl: i.imageUrl || "",
-        quantity: 1,
-      })),
+      items: r.items
+        // Same rule as the reward itself: an ended item is no longer part of
+        // what a new backer is being offered, so it drops out of the list.
+        .filter((i: RewardItem) => canSeeEnded || !i.projectItem?.endedAt)
+        .map((i: RewardItem) => ({
+          id: i.id,
+          projectItemId: i.projectItemId, // Include reference to ProjectItem for checkbox matching
+          title: i.title,
+          description: i.description || "",
+          imageUrl: i.imageUrl || "",
+          quantity: 1,
+        })),
       isEnded: r.isEnded || false,
       endedAt: r.endedAt,
     }));
