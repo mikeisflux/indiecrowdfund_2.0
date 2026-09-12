@@ -145,7 +145,12 @@ export async function applyChargeback(params: {
     // Release the reward slot so another backer can take it. Guarded by
     // wasCounted for the same reason the cancel route guards it: an
     // unconfirmed pledge never claimed the slot in the first place.
-    if (pledge.rewardId) {
+    //
+    // NOT released once the order has shipped. The copy physically left the
+    // building — the creator is out the item as well as the money — so handing
+    // the slot back would let a second backer buy inventory that no longer
+    // exists and turn one loss into two.
+    if (pledge.rewardId && !alreadyShipped) {
       await db.$executeRaw`UPDATE "Reward" SET "quantityClaimed" = GREATEST(0, "quantityClaimed" - 1) WHERE id = ${pledge.rewardId}`;
     }
   }
