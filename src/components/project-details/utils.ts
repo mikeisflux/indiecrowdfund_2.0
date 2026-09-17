@@ -36,9 +36,15 @@ export function processStoryHtml(html: string): { processedHtml: string; navItem
     }
   });
 
+  // doc.body can be null. DOMParser is specified to always produce one for
+  // text/html, but this runs in whatever browser the backer brought — and the
+  // campaign story is creator-supplied HTML that has already been through
+  // DOMPurify, so the input is not something we fully control either. A null
+  // here took down the whole campaign page through the useMemo that calls it.
+  // Falling back to the sanitized string costs only the heading anchors.
   return {
-    processedHtml: doc.body.innerHTML,
-    navItems,
+    processedHtml: doc.body?.innerHTML ?? sanitizedHtml,
+    navItems: doc.body ? navItems : [],
   };
 }
 

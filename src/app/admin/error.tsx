@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { isStaleChunkError, recoverFromStaleChunk } from "@/lib/chunk-reload";
 import { Button } from "@/components/ui/button";
 import { AlertTriangle } from "lucide-react";
 import Link from "next/link";
@@ -12,7 +13,20 @@ export default function AdminError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  // A chunk that vanished under an open tab is a deploy artifact, not a
+  // bug: reload onto the new build rather than showing an error page and
+  // reporting noise. recoverFromStaleChunk refuses to loop, so a chunk
+  // failure that is NOT stale still lands on the real error UI below.
+  const [reloading, setReloading] = useState(false);
+
   useEffect(() => {
+    if (isStaleChunkError(error) && recoverFromStaleChunk()) {
+      setReloading(true);
+    }
+  }, [error]);
+
+  useEffect(() => {
+    if (isStaleChunkError(error)) return;
     console.error("Admin error:", error);
     // Report to self-hosted error tracker
     if (error) {
@@ -30,6 +44,17 @@ export default function AdminError({
       });
     }
   }, [error]);
+
+  // Reload is in flight — show a neutral line rather than an alarming error
+  // page for what is really just a new deploy landing.
+  if (reloading) {
+    return (
+      <div className="flex min-h-[60vh] flex-col items-center justify-center gap-3 px-4">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-muted border-t-primary motion-reduce:animate-none" />
+        <p className="text-sm text-muted-foreground">Updating to the latest version…</p>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4 px-4">

@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { isStaleChunkError, recoverFromStaleChunk } from "@/lib/chunk-reload";
 
 export default function GlobalError({
   error,
@@ -13,6 +14,18 @@ export default function GlobalError({
   // This global error boundary prevents that crash from propagating
   const message = error?.message || "An unexpected error occurred";
   const digest = error?.digest;
+
+  // A chunk that vanished under an open tab is a deploy artifact, not a
+  // bug: reload onto the new build rather than showing an error page and
+  // reporting noise. recoverFromStaleChunk refuses to loop, so a chunk
+  // failure that is NOT stale still lands on the real error UI below.
+  const [reloading, setReloading] = useState(false);
+
+  useEffect(() => {
+    if (isStaleChunkError(error) && recoverFromStaleChunk()) {
+      setReloading(true);
+    }
+  }, [error]);
 
   useEffect(() => {
     if (error) {
@@ -54,6 +67,24 @@ export default function GlobalError({
   // Log for debugging but don't crash
   if (error) {
     console.error("[GlobalError]", message, digest ? `(digest: ${digest})` : "");
+  }
+
+  if (reloading) {
+    return (
+      <html lang="en">
+        <body
+          style={{
+            display: "flex",
+            minHeight: "100vh",
+            alignItems: "center",
+            justifyContent: "center",
+            fontFamily: "system-ui, sans-serif",
+          }}
+        >
+          <p>Updating to the latest version…</p>
+        </body>
+      </html>
+    );
   }
 
   return (
