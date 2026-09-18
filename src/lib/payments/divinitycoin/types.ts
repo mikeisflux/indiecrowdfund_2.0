@@ -80,6 +80,9 @@ export interface DivinityCoinWebhookRequest {
     // not carry pledgeId at all — the intent id is the reliable key.
     disputeId?: string;
     chargeId?: string;
+    // ISO deadline for submitting evidence. A dispute is lost by default once
+    // it passes, so this is the most actionable field in the payload.
+    evidenceDueBy?: string;
     type?: "initial" | "upcharge"; // present on payment.requires_action
     [key: string]: unknown;
   };

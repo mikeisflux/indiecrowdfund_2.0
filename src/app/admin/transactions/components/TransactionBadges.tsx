@@ -4,7 +4,13 @@ import { Badge } from "@/components/ui/badge";
 import {
   CreditCard,
   Coins,
+  AlertTriangle,
 } from "lucide-react";
+import {
+  readDisputeState,
+  daysUntilEvidenceDue,
+  disputeUrgency,
+} from "@/lib/payments/dispute-state";
 
 export const getTypeBadge = (type: string) => {
   const config: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
@@ -33,6 +39,47 @@ export const getStatusBadge = (status: string) => {
   };
   const c = config[status] || { className: "bg-gray-100 text-gray-800" };
   return <Badge className={c.className}>{status}</Badge>;
+};
+
+/**
+ * Countdown to a dispute's evidence deadline.
+ *
+ * A dispute is lost by default if the deadline passes, so the number of days
+ * left is the only thing about it that is urgent. Returns null when the
+ * transaction carries no dispute or the processor sent no deadline — the
+ * status badge alone is enough then.
+ */
+export const getDisputeDeadlineBadge = (
+  metadata: Record<string, unknown> | null
+) => {
+  const dispute = readDisputeState(metadata);
+  if (!dispute?.evidenceDueBy) return null;
+
+  const daysLeft = daysUntilEvidenceDue(dispute.evidenceDueBy);
+  if (daysLeft === null) return null;
+
+  const urgency = disputeUrgency(daysLeft);
+  const className: Record<typeof urgency, string> = {
+    overdue: "bg-gray-200 text-gray-700 dark:bg-gray-800 dark:text-gray-300",
+    critical: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400",
+    soon: "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400",
+    open: "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400",
+  };
+  const label =
+    urgency === "overdue"
+      ? "Response window closed"
+      : daysLeft === 0
+        ? "Due today"
+        : `${daysLeft}d to respond`;
+
+  return (
+    <Badge className={`${className[urgency]} gap-1 whitespace-nowrap`}>
+      {urgency === "critical" || urgency === "overdue" ? (
+        <AlertTriangle className="h-3 w-3" aria-hidden="true" />
+      ) : null}
+      {label}
+    </Badge>
+  );
 };
 
 export const getProcessorBadge = (processor: string | null) => {

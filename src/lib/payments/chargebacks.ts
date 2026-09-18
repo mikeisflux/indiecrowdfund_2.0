@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { logger } from "@/lib/logger";
 import { reconcileStretchGoalsForPledge } from "@/lib/rewards/stretch-goals";
+import { withDisputeState } from "@/lib/payments/dispute-state";
 
 const chargebackLogger = logger.child({ module: "chargebacks" });
 
@@ -52,8 +53,16 @@ export async function applyChargeback(params: {
   disputeId?: string;
   /** The processor's stated reason ("fraudulent", "product_not_received"). */
   reason?: string;
+  /** Their dispute status ("warning_needs_response", "lost", …). */
+  disputeStatus?: string;
+  /**
+   * ISO deadline for submitting evidence. A dispute is lost by default if the
+   * deadline passes, so this is the field the admin view counts down.
+   */
+  evidenceDueBy?: string;
 }): Promise<ChargebackResult> {
-  const { pledgeId, processor, disputeId, reason } = params;
+  const { pledgeId, processor, disputeId, reason, disputeStatus, evidenceDueBy } =
+    params;
 
   const pledge = await db.pledge.findFirst({
     where: { id: pledgeId, deletedAt: null },
@@ -67,6 +76,7 @@ export async function applyChargeback(params: {
       confirmationEmailSent: true,
       fulfillmentStatus: true,
       trackingNumber: true,
+      metadata: true,
     },
   });
 
@@ -119,6 +129,17 @@ export async function applyChargeback(params: {
     data: {
       status: "CHARGEBACK",
       lastFailureReason: `Chargeback via ${processor}${reason ? `: ${reason}` : ""}`,
+      // The deadline rides along with the status change so the admin view can
+      // count down to it. Written in the same statement because a dispute
+      // recorded without its due date is the situation this is meant to end.
+      metadata: withDisputeState(pledge.metadata, {
+        disputeId,
+        processor,
+        reason,
+        status: disputeStatus,
+        evidenceDueBy,
+        openedAt: new Date().toISOString(),
+      }),
     },
   });
 

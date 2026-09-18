@@ -27,7 +27,7 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import type { UnifiedTransaction, TransactionStats, Pagination } from "./types";
-import { getTypeBadge, getStatusBadge, getProcessorBadge } from "./TransactionBadges";
+import { getTypeBadge, getStatusBadge, getProcessorBadge, getDisputeDeadlineBadge } from "./TransactionBadges";
 import { formatCurrency, copyToClipboard } from "./utils";
 
 interface TransactionTableProps {
@@ -162,6 +162,7 @@ export function TransactionTable({
                           <TableCell>
                             <div className="flex flex-col gap-1">
                               {getStatusBadge(txn.status)}
+                              {getDisputeDeadlineBadge(txn.metadata)}
                               {txn.retryCount > 0 && (
                                 <span className="text-xs text-yellow-600">
                                   {txn.retryCount} retries
@@ -256,6 +257,7 @@ export function TransactionTable({
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="text-sm font-semibold">{formatCurrency(txn.amount)}</span>
                         {getStatusBadge(txn.status)}
+                        {getDisputeDeadlineBadge(txn.metadata)}
                         {txn.retryCount > 0 && (
                           <span className="text-xs text-yellow-600">{txn.retryCount} retries</span>
                         )}

@@ -241,6 +241,8 @@ export async function handleDivinityCoinWebhook(
         processor: "DivinityCoin",
         disputeId: request.data.disputeId,
         reason: request.data.reason || request.data.error,
+        disputeStatus: request.data.status,
+        evidenceDueBy: request.data.evidenceDueBy,
       });
       return { success: true, message: result.message };
     }
