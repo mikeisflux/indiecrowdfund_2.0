@@ -28,6 +28,18 @@ const csrfExemptRoutes = [
   "/api/track", // Analytics tracking endpoint
   "/api/blocked", // Bot/blocked request sink
   "/api/internal", // Internal API called by middleware itself (localhost-only auth)
+  // Scheduled jobs. Every /api/cron route authenticates with
+  // `Authorization: Bearer $CRON_SECRET` and fails closed when the secret is
+  // unset, so none of them is reachable by cross-site forgery: a bearer token
+  // is not an ambient credential the way a session cookie is, and an attacker
+  // cannot set that header from a victim's browser.
+  //
+  // CSRF was therefore only ever blocking the legitimate caller. curl from
+  // crontab sends no CSRF cookie or header, so every POST-invoked cron got a
+  // 403 "CSRF validation failed" and silently never ran — the stale-pledge
+  // sweep had a full log of nothing but 403s. Jobs invoked with GET were
+  // unaffected, which is why this stayed hidden.
+  "/api/cron",
   "/api/admin/ai-marketing/campaigns/fix-images", // One-time fix script
   "/api/retailers/login", // Protected by CAPTCHA and rate limiting instead
   "/api/retailers/forgot-password", // Protected by CAPTCHA and rate limiting instead
