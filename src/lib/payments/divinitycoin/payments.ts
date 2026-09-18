@@ -8,6 +8,10 @@ import { circuitBreaker } from "@/lib/circuit-breaker";
 import { metrics } from "@/lib/metrics";
 import { getDivinityCoinConfig, paymentsDivinitycoinLogger } from "./config";
 import { commitDcPledge } from "./commit-pledge";
+// Imported from the modules directly rather than from ./index — the barrel
+// re-exports this file, so going through it would close a cycle.
+import { MAX_DC_RETRIES } from "./charge-attempts";
+import { formatDeclineReason } from "./decline-reasons";
 import type {
   DivinityCoinWebhookRequest,
   RefundRequestResponse,
@@ -776,7 +780,12 @@ export async function handlePaymentFailed(
   try {
     const pledge = await db.pledge.findFirst({
       where: { id: pledgeId , deletedAt: null },
-      select: { id: true, status: true },
+      select: {
+        id: true,
+        status: true,
+        retryCount: true,
+        divinityCoinPaymentMethodId: true,
+      },
     });
 
     if (!pledge) {
@@ -785,6 +794,55 @@ export async function handlePaymentFailed(
 
     if (pledge.status !== "PENDING") {
       return { success: true, message: `Pledge already ${pledge.status}` };
+    }
+
+    // A saved-card pledge that has not exhausted its retries belongs to the
+    // funded-campaigns cron, and the cron alone decides when it is dead.
+    //
+    // DC's 2026-09 release began firing payment.failed on real card declines.
+    // The cron's own charge produces exactly such a decline, so this webhook
+    // now lands on every rung of the backoff ladder — and the old code here
+    // flipped PENDING to FAILED on the first one, cutting a 5-attempt ladder
+    // (1h, 6h, 24h, 72h, 168h) off after attempt one. An insufficient_funds
+    // that would have cleared on payday instead became a permanently dead
+    // pledge, with the nextRetryAt the cron had just written left orphaned on
+    // a row nothing would ever look at again.
+    //
+    // The same guard is right for the other population that reaches here with
+    // a saved card: a backer declining in the browser. usePledge holds
+    // currentPledgeId and refuses to create a second pledge, so their retry
+    // with a different card lands on this very row — marking it FAILED
+    // underneath them would break a payment they are actively completing.
+    //
+    // Record the reason so the backer and the admin transaction view see why
+    // the attempt failed, but leave status and the retry schedule alone.
+    const underRetryLadder =
+      !!pledge.divinityCoinPaymentMethodId &&
+      (pledge.retryCount ?? 0) < MAX_DC_RETRIES;
+
+    if (underRetryLadder) {
+      await db.pledge.updateMany({
+        where: { id: pledgeId, status: "PENDING", deletedAt: null },
+        data: {
+          lastFailureReason: formatDeclineReason({
+            declineCode: data.declineCode,
+            code: data.code,
+            fallbackError: reason,
+          }),
+        },
+      });
+      paymentsDivinitycoinLogger.info(
+        {
+          pledgeId,
+          retryCount: pledge.retryCount ?? 0,
+          declineCode: data.declineCode ?? null,
+        },
+        "[DivinityCoin] payment.failed on a pledge still under the retry ladder; reason recorded, status left PENDING for the cron"
+      );
+      return {
+        success: true,
+        message: "Decline recorded; pledge remains scheduled for retry",
+      };
     }
 
     // CAS for idempotent webhook retries

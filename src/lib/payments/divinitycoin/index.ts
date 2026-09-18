@@ -83,6 +83,7 @@ export {
   readDcChargeState,
   nextAttemptKey,
   withDcChargeState,
+  MAX_DC_RETRIES,
 } from "./charge-attempts";
 export type { DcChargeAttemptState } from "./charge-attempts";
 

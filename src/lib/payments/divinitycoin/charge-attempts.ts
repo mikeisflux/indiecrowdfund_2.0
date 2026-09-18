@@ -23,6 +23,19 @@
  *                   lookup-payment before charging again.
  */
 
+/**
+ * How many times the funded-campaigns cron will attempt an off-session charge
+ * before giving up and marking the pledge FAILED.
+ *
+ * Shared because the cron is not the only thing that has an opinion about it.
+ * DC's `payment.failed` webhook now fires on real card declines as well as on
+ * their own post-processing errors, and that webhook arrives while a pledge is
+ * still mid-ladder — so the handler has to know where the ladder ends in order
+ * to leave the terminal verdict to the cron. Two copies of this number would
+ * mean the webhook could bury a pledge the cron still intended to retry.
+ */
+export const MAX_DC_RETRIES = 5;
+
 export interface DcChargeAttemptState {
   /**
    * Idempotency key for the NEXT charge on this pledge. Undefined means send

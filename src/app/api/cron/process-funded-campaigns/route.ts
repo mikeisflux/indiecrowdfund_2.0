@@ -14,6 +14,7 @@ import {
   readDcChargeState,
   nextAttemptKey,
   withDcChargeState,
+  MAX_DC_RETRIES,
 } from "@/lib/payments/divinitycoin";
 import { distributeReadyFilesForProject } from "@/lib/fulfillment/auto-distribute";
 
@@ -61,7 +62,6 @@ async function captureDcPendingPledges(projectId: string): Promise<{
     },
   });
 
-  const MAX_DC_RETRIES = 5;
   const BACKOFF_HOURS = [1, 6, 24, 72, 168];
 
   result.total = pledges.length;

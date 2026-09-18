@@ -50,6 +50,14 @@ export interface DivinityCoinWebhookRequest {
     // `error`; older payloads (and our own outbound `refund.request`)
     // used `reason`. Read both for resilience.
     error?: string;
+    // Added to `payment.failed` in DC's 2026-09 partner release, which also
+    // began firing that event on real card declines rather than only on DC's
+    // own post-processing failures. A genuine decline carries `code` (and
+    // usually `declineCode`) plus a non-terminal `status`; a post-processing
+    // failure carries neither code. That is the only way to tell them apart.
+    code?: string;         // e.g. "card_declined"
+    declineCode?: string;  // e.g. "insufficient_funds"
+    status?: string;       // e.g. "requires_payment_method"
     originalTransactionId?: string; // DivinityCoin's transaction ID from when the card was redeemed
     originalCardCode?: string; // The card code that was redeemed
     // Payment event fields (new seamless flow)
