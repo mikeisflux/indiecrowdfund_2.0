@@ -134,7 +134,12 @@ export async function POST(req: NextRequest) {
         success: true,
         dryRun: true,
         count: stalePledges.length,
-        message: `Would mark ${stalePledges.length} stale pledges as CANCELLED`,
+        // Says DELETE because that is what the live path does — deleteMany,
+        // plus the pledges' PledgeAddon rows. This used to read "mark as
+        // CANCELLED", which describes a reversible status change and would
+        // reasonably lead someone to approve a dry run they would not have
+        // approved had it said the rows were going away for good.
+        message: `Would permanently DELETE ${stalePledges.length} stale pledges (and their add-on rows)`,
       });
     }
 
