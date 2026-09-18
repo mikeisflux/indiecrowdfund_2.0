@@ -77,10 +77,26 @@ export async function POST(req: NextRequest) {
           confirmationEmailSent: false,
           lastFailureReason: null,
         },
-        // DivinityCoin pledges: never paid (no payment ID)
+        // DivinityCoin pledges: never paid (no payment ID) AND no card on
+        // file. Both halves matter.
+        //
+        // "PENDING with no payment ID" is not abandonment for DivinityCoin —
+        // it is also what every healthy deferred-capture pledge looks like for
+        // the whole life of its campaign, and what a pledge mid-retry looks
+        // like while the funded-campaigns cron works its backoff ladder (1h,
+        // 6h, 24h, 72h, 168h — eleven days, far past this 48h cutoff). Without
+        // the card-on-file guard this sweep deletes live pledges, and it
+        // deletes rather than cancels, taking their PledgeAddon rows with them.
+        //
+        // A saved payment method is the signal that the backer finished
+        // checkout and is waiting on us, so it is the line between "abandoned
+        // cart" and "money we are going to collect". The STRIPE branch above
+        // has always drawn it that way; this branch was missing it.
         {
           paymentProcessor: "DIVINITYCOIN" as const,
           divinityCoinPaymentId: null,
+          divinityCoinPaymentMethodId: null,
+          confirmationEmailSent: false,
         },
         // PayPal pledges: order was created but never captured after the cutoff window
         {
