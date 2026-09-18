@@ -98,15 +98,28 @@ export async function POST(req: NextRequest) {
           divinityCoinPaymentMethodId: null,
           confirmationEmailSent: false,
         },
-        // PayPal pledges: order was created but never captured after the cutoff window
+        // PayPal pledges: never authorized, so nothing was ever owed.
+        //
+        // These were two branches — one for `paypalOrderId` set, one for it
+        // null — which between them matched every PENDING PayPal pledge and
+        // made the column irrelevant. That swept up authorized pledges, and
+        // an authorized PayPal pledge is money a backer has committed and a
+        // creator is owed: captureAuthorizedPaypalPledges selects exactly
+        // PAYPAL + PENDING + paypalAuthorizationId, and captures them when
+        // the campaign hits its goal. Deleting one stranded a real payment
+        // and took the audit trail with it.
+        //
+        // PayPal is withdrawn as a way to pay in, but pledges authorized
+        // before the withdrawal still have to settle. An authorization is
+        // never garbage to collect — not even an expired one, which is the
+        // record of a debt that went uncollected and needs to stay visible.
+        //
+        // Genuine abandonment is a checkout that never reached an
+        // authorization at all, which is what this now matches.
         {
           paymentProcessor: "PAYPAL" as const,
-          NOT: { paypalOrderId: null },
-        },
-        // PayPal pledges: checkout abandoned before an order was even created
-        {
-          paymentProcessor: "PAYPAL" as const,
-          paypalOrderId: null,
+          paypalAuthorizationId: null,
+          confirmationEmailSent: false,
         },
       ],
     };
