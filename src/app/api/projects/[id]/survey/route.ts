@@ -106,10 +106,16 @@ export async function GET(
   }
 }
 
+// collectAddresses is deliberately absent. Address collection is no longer a
+// creator setting: a survey for a pledge that ships always asks for the
+// address. A creator who turned it off shipped against pledge.shippingAddress,
+// the snapshot taken at pledge time — which on a campaign that delivers a year
+// later is wherever the backer lived when they pledged, with nothing anywhere
+// prompting them to correct it. The column stays for existing rows and is
+// forced true on every write.
 const surveySchema = z.object({
   introTitle: z.string().optional().nullable(),
   introMessage: z.string().optional().nullable(),
-  collectAddresses: z.boolean().optional(),
 });
 
 // POST - Create survey for a project
@@ -163,7 +169,7 @@ export async function POST(
           projectId,
           introTitle: data.introTitle,
           introMessage: data.introMessage,
-          collectAddresses: data.collectAddresses ?? true,
+          collectAddresses: true,
         },
       });
     } catch (createErr) {
@@ -258,7 +264,9 @@ export async function PUT(
       data: {
         introTitle: data.introTitle,
         introMessage: data.introMessage,
-        collectAddresses: data.collectAddresses,
+        // Forced, not passed through: an existing survey saved with it off is
+        // corrected the next time the creator touches its settings.
+        collectAddresses: true,
       },
     });
 

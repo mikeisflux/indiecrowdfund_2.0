@@ -445,8 +445,17 @@ export default function BackerSurveyPage() {
     setIsProcessingPayment(false);
   };
 
-  // Whether address collection applies to this specific pledge
-  const showAddressStep = data?.survey.collectAddresses && data?.survey.requiresShipping;
+  // Whether address collection applies to this specific pledge.
+  //
+  // Driven by the pledge, not by a creator setting. Anything physical asks for
+  // the address every time; survey.collectAddresses is no longer consulted,
+  // because a creator turning it off meant we shipped against the address
+  // captured at pledge time and never asked the backer to confirm it.
+  //
+  // Still gated on requiresShipping: a digital-only pledge has nothing to post,
+  // so demanding a mailing address for a PDF would be friction for data we
+  // would never use.
+  const showAddressStep = data?.survey.requiresShipping;
 
   const getSteps = (): Step[] => {
     const steps: Step[] = ["intro"];

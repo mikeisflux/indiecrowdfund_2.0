@@ -125,7 +125,6 @@ export default function SurveyBuilderPage() {
   // Form state
   const [introTitle, setIntroTitle] = useState("");
   const [introMessage, setIntroMessage] = useState("");
-  const [collectAddresses, setCollectAddresses] = useState(true);
 
   // Item questions state
   const [itemQuestions, setItemQuestions] = useState<SurveyItemQuestion[]>([]);
@@ -167,7 +166,6 @@ export default function SurveyBuilderPage() {
         if (data.survey) {
           setIntroTitle(data.survey.introTitle || "");
           setIntroMessage(data.survey.introMessage || "");
-          setCollectAddresses(data.survey.collectAddresses);
           setItemQuestions(data.survey.itemQuestions || []);
           setBackerQuestions(data.survey.backerQuestions || []);
         }
@@ -195,7 +193,6 @@ export default function SurveyBuilderPage() {
         body: JSON.stringify({
           introTitle,
           introMessage,
-          collectAddresses,
         }),
       });
 
@@ -223,7 +220,6 @@ export default function SurveyBuilderPage() {
         body: JSON.stringify({
           introTitle,
           introMessage,
-          collectAddresses,
         }),
       });
 
@@ -783,17 +779,19 @@ export default function SurveyBuilderPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="flex items-center justify-between p-4 border rounded-lg">
+                <div className="flex items-start justify-between gap-4 p-4 border rounded-lg bg-muted/40">
                   <div>
-                    <p className="font-medium">Collect Shipping Addresses</p>
+                    <p className="font-medium">Shipping addresses are always collected</p>
                     <p className="text-sm text-muted-foreground">
-                      Ask backers to provide their shipping address
+                      Every backer with a physical reward is asked to confirm
+                      their address, pre-filled from the one saved on their
+                      account. Digital-only backers are not asked, since there
+                      is nothing to post.
                     </p>
                   </div>
-                  <Switch
-                    checked={collectAddresses}
-                    onCheckedChange={setCollectAddresses}
-                    disabled={!isEditable}
+                  <Lock
+                    className="h-4 w-4 mt-1 flex-shrink-0 text-muted-foreground"
+                    aria-label="Always on"
                   />
                 </div>
                 {isEditable && (

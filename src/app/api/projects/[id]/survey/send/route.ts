@@ -66,18 +66,12 @@ export async function POST(
       );
     }
 
-    // Validate survey has some content
-    const hasContent =
-      survey.itemQuestions.length > 0 ||
-      survey.backerQuestions.length > 0 ||
-      survey.collectAddresses;
-
-    if (!hasContent) {
-      return NextResponse.json(
-        { error: "Survey must have at least one question or collect addresses" },
-        { status: 400 }
-      );
-    }
+    // No content check. Address collection is now unconditional, so every
+    // survey always has at least the address step to justify sending — the
+    // old `|| survey.collectAddresses` clause made this test always pass for
+    // the default survey anyway. A creator sending an address-only survey to
+    // refresh addresses before shipping is a legitimate and common thing to
+    // want, so there is nothing left here to refuse.
 
     // Get all completed pledges for this project
     const pledges = await db.pledge.findMany({

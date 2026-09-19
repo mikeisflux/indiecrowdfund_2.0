@@ -159,7 +159,9 @@ function SurveyPreviewContent() {
     { id: "intro", label: "Welcome", icon: ClipboardList },
     ...(hasItems ? [{ id: "items" as Step, label: "Items", icon: Package }] : []),
     ...(hasQuestions ? [{ id: "questions" as Step, label: "Questions", icon: ClipboardList }] : []),
-    ...(survey.collectAddresses ? [{ id: "address" as Step, label: "Address", icon: MapPin }] : []),
+    // Always shown. Address collection is no longer a creator setting, so the
+    // preview must not imply it can be dropped.
+    { id: "address" as Step, label: "Address", icon: MapPin },
     { id: "review", label: "Review", icon: ClipboardList },
   ];
 
@@ -237,7 +239,7 @@ function SurveyPreviewContent() {
                 <ul className="list-disc list-inside space-y-1 text-muted-foreground">
                   {hasItems && <li>Select variants for your items (size, color, etc.)</li>}
                   {hasQuestions && <li>Answer a few questions from the creator</li>}
-                  {survey.collectAddresses && <li>Confirm your shipping address</li>}
+                  <li>Confirm your shipping address</li>
                   <li>Review and submit your responses</li>
                 </ul>
               </div>
@@ -377,7 +379,7 @@ function SurveyPreviewContent() {
           </div>
         )}
 
-        {currentStep === "address" && survey.collectAddresses && (
+        {currentStep === "address" && (
           <div className="space-y-6">
             <h2 className="text-xl font-semibold">Shipping Address</h2>
             <Card>
@@ -458,12 +460,12 @@ function SurveyPreviewContent() {
                   </div>
                 )}
 
-                {survey.collectAddresses && (
-                  <div>
-                    <h3 className="font-medium mb-2">Shipping Address</h3>
-                    <p className="text-sm text-muted-foreground">Address collection enabled</p>
-                  </div>
-                )}
+                <div>
+                  <h3 className="font-medium mb-2">Shipping Address</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Always collected for backers with a physical reward
+                  </p>
+                </div>
 
                 <Button className="w-full bg-teal-600" disabled>
                   Submit Survey (Preview Mode)

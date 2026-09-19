@@ -108,7 +108,10 @@ export async function POST(req: NextRequest) {
       });
 
       if (survey) {
-        const allowedSurveyFields = ["status", "collectAddresses", "addressesLocked", "introTitle", "introMessage"];
+        // collectAddresses is not settable. A survey for a pledge that ships
+        // always collects the address — see the note in
+        // /api/projects/[id]/survey. This was the second way to turn it off.
+        const allowedSurveyFields = ["status", "addressesLocked", "introTitle", "introMessage"];
         const safeData = Object.fromEntries(
           Object.entries((body.surveySettings as Record<string, unknown>) || {}).filter(([key]) =>
             allowedSurveyFields.includes(key)

@@ -537,8 +537,13 @@ export async function POST(
         }
       }
 
-      // Check address if required - but only for pledges that need physical shipping
-      if (survey.collectAddresses) {
+      // Address is required for every pledge that ships, and that is not a
+      // creator setting. survey.collectAddresses used to gate this block; a
+      // survey saved with it off let a backer submit with no address at all,
+      // and fulfillment fell back to whatever was captured at pledge time.
+      // The block below still exempts digital-only pledges, which is the only
+      // exemption that makes sense.
+      {
         // Determine if this pledge requires shipping. Guard the null rewardId
         // ("No Reward" pledge) so findUnique doesn't 500 the survey.
         const rewardForShipping = pledge.rewardId
