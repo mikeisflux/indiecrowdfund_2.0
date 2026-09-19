@@ -112,8 +112,22 @@ const questionTypes = [
   { id: "multiple_choice", label: "Multiple Choice", icon: CircleDot },
   { id: "checkboxes", label: "Checkboxes", icon: CheckSquare },
   { id: "dropdown", label: "Dropdown", icon: ChevronDown },
-  { id: "address", label: "Address", icon: MapPin },
-  { id: "email", label: "Email", icon: Mail },
+  // No Address or Email types. Both duplicated information the platform
+  // already guarantees — the address step is built into every survey for a
+  // physical pledge, and name/email come off the account — and the duplicates
+  // were worse than redundant.
+  //
+  // A custom question's answer is stored in SurveyResponse.backerResponses.
+  // Shipping labels, the EasyPost / Shippo / ShipStation pushes and the address
+  // export all read SurveyResponse.shippingAddress. Nothing copies one to the
+  // other. So an "Updated Shipping Address" question — which is what this
+  // builder named it by default, under help text telling the backer to fill it
+  // in if they had moved — collected a new address into a field no shipping
+  // path reads. The backer believed they had corrected it and the parcel went
+  // to the old address anyway.
+  //
+  // Phone stays: it is genuinely optional everywhere else, so asking for it is
+  // a real question rather than a shadow copy of a required field.
   { id: "phone", label: "Phone", icon: Phone },
   { id: "date", label: "Date", icon: Calendar },
   { id: "number", label: "Number", icon: Hash },
@@ -134,6 +148,12 @@ export function SurveyBuilderTab({ questions = [], projectId }: SurveyBuilderTab
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [draggedId, setDraggedId] = useState<string | null>(null);
   const [dragOverId, setDragOverId] = useState<string | null>(null);
+
+  // Survey intro. Moved here from the standalone builder at
+  // /dashboard/projects/[id]/survey, which was the only place these could be
+  // edited and has been retired in favour of this one.
+  const [introTitle, setIntroTitle] = useState("");
+  const [introMessage, setIntroMessage] = useState("");
 
   // Rewards/Addons state
   const [rewards, setRewards] = useState<Reward[]>([]);
@@ -156,6 +176,10 @@ export function SurveyBuilderTab({ questions = [], projectId }: SurveyBuilderTab
           setSurveyQuestions(data.questions);
         }
         // If no saved questions, keep the default template
+        if (data.survey) {
+          setIntroTitle(data.survey.introTitle || "");
+          setIntroMessage(data.survey.introMessage || "");
+        }
       }
     } catch (error) {
       console.error("Error fetching survey:", error);
@@ -561,6 +585,8 @@ export function SurveyBuilderTab({ questions = [], projectId }: SurveyBuilderTab
                 body: JSON.stringify({
                   projectId,
                   questions: surveyQuestions,
+                  introTitle,
+                  introMessage,
                 }),
               });
               const data = await res.json();
@@ -603,6 +629,8 @@ export function SurveyBuilderTab({ questions = [], projectId }: SurveyBuilderTab
                   body: JSON.stringify({
                     projectId,
                     questions: surveyQuestions,
+                    introTitle,
+                    introMessage,
                   }),
                 });
                 if (!saveRes.ok) {
@@ -635,16 +663,65 @@ export function SurveyBuilderTab({ questions = [], projectId }: SurveyBuilderTab
 
       {/* Tabs for General vs Per-Reward Questions */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-2">
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="intro" className="flex items-center gap-2">
+            <Info className="h-4 w-4" />
+            <span className="truncate">Welcome</span>
+          </TabsTrigger>
           <TabsTrigger value="general" className="flex items-center gap-2">
             <ClipboardList className="h-4 w-4" />
-            General Questions
+            <span className="truncate">General Questions</span>
+            {surveyQuestions.length > 0 && (
+              <Badge variant="secondary" className="ml-1 hidden sm:inline-flex">
+                {surveyQuestions.length}
+              </Badge>
+            )}
           </TabsTrigger>
           <TabsTrigger value="rewards" className="flex items-center gap-2">
             <Gift className="h-4 w-4" />
-            Per Reward/Addon
+            <span className="truncate">Per Reward/Addon</span>
           </TabsTrigger>
         </TabsList>
+
+        {/* Welcome / intro. The one thing the retired standalone builder
+            could edit that this one could not. */}
+        <TabsContent value="intro" className="mt-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Welcome message</CardTitle>
+              <CardDescription>
+                The first thing backers see when they open the survey. Leave
+                blank to use the default wording.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4 max-w-2xl">
+              <div className="space-y-2">
+                <Label htmlFor="survey-intro-title">Title</Label>
+                <Input
+                  id="survey-intro-title"
+                  value={introTitle}
+                  onChange={(e) => setIntroTitle(e.target.value)}
+                  placeholder="Backer Survey"
+                  maxLength={120}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="survey-intro-message">Message</Label>
+                <textarea
+                  id="survey-intro-message"
+                  value={introMessage}
+                  onChange={(e) => setIntroMessage(e.target.value)}
+                  placeholder="Thanks for backing us! Please confirm your details so we can get your rewards to you."
+                  rows={5}
+                  className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Saved with the rest of the survey when you hit Save Draft.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
 
         {/* General Questions Tab */}
         <TabsContent value="general" className="mt-6">
@@ -694,8 +771,12 @@ export function SurveyBuilderTab({ questions = [], projectId }: SurveyBuilderTab
                 ) : surveyQuestions.length === 0 ? (
                   <div className="text-center py-12 text-muted-foreground">
                     <ClipboardList className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                    <p>No questions yet. Click a question type above to add custom questions for your backers.</p>
-                    <p className="text-sm mt-2">Note: Shipping addresses are collected separately if enabled in survey settings.</p>
+                    <p className="font-medium text-foreground">No extra questions yet</p>
+                    <p className="text-sm mt-1 max-w-md mx-auto">
+                      Your survey already collects name, email and shipping
+                      address. Add questions here only for things beyond that —
+                      a dedication, a t-shirt size, a signing request.
+                    </p>
                   </div>
                 ) : (
                   surveyQuestions.map((question, index) => (
@@ -895,44 +976,60 @@ export function SurveyBuilderTab({ questions = [], projectId }: SurveyBuilderTab
         </TabsContent>
       </Tabs>
 
-      {/* Survey Settings */}
+      {/* What every survey collects.
+          This replaced a "Survey Settings" card of four Switches that were
+          pure decoration — `<Switch defaultChecked />` with no checked prop,
+          no handler and no state. Toggling "Lock After Fulfillment" did
+          nothing whatsoever. Showing a creator a control that does not exist
+          is worse than showing them nothing, so the card now states what is
+          actually true. */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Settings className="h-5 w-5 text-teal-600" />
-            Survey Settings
+            Always collected
           </CardTitle>
+          <CardDescription>
+            Included in every survey automatically — you don&apos;t need to add
+            questions for these, and adding your own copies won&apos;t reach
+            your shipping labels.
+          </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="flex items-center justify-between p-3 border rounded-lg">
-              <div>
-                <p className="font-medium text-sm">Allow Address Changes</p>
-                <p className="text-xs text-muted-foreground">Backers can update shipping address after submitting</p>
-              </div>
-              <Switch defaultChecked />
-            </div>
-            <div className="flex items-center justify-between p-3 border rounded-lg">
-              <div>
-                <p className="font-medium text-sm">Send Confirmation Email</p>
-                <p className="text-xs text-muted-foreground">Email backer when survey is completed</p>
-              </div>
-              <Switch defaultChecked />
-            </div>
-            <div className="flex items-center justify-between p-3 border rounded-lg">
-              <div>
-                <p className="font-medium text-sm">Lock After Fulfillment</p>
-                <p className="text-xs text-muted-foreground">Prevent changes once order is shipped</p>
-              </div>
-              <Switch defaultChecked />
-            </div>
-            <div className="flex items-center justify-between p-3 border rounded-lg">
-              <div>
-                <p className="font-medium text-sm">Require All Fields</p>
-                <p className="text-xs text-muted-foreground">Make all questions required by default</p>
-              </div>
-              <Switch />
-            </div>
+        <CardContent>
+          <div className="grid gap-3 sm:grid-cols-3">
+            {[
+              {
+                icon: Type,
+                label: "Name",
+                detail: "From the backer's account",
+              },
+              {
+                icon: Mail,
+                label: "Email",
+                detail: "Verified on their account",
+              },
+              {
+                icon: MapPin,
+                label: "Shipping address",
+                detail: "Physical rewards only, pre-filled and confirmed",
+              },
+            ].map((field) => {
+              const Icon = field.icon;
+              return (
+                <div
+                  key={field.label}
+                  className="flex items-start gap-3 rounded-lg border bg-muted/40 p-3"
+                >
+                  <Icon className="mt-0.5 h-4 w-4 flex-shrink-0 text-teal-600" />
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium">{field.label}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {field.detail}
+                    </p>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </CardContent>
       </Card>

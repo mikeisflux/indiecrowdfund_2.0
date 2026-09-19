@@ -323,7 +323,17 @@ export default function SurveyResponsesPage() {
       {/* Header */}
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
-          <Button variant="ghost" size="sm" onClick={() => router.push(`/dashboard/projects/${projectId}/survey`)}>
+          {/* Straight to IndieKit. The old /survey route is now only a
+              redirect here, so going via it would bounce twice. */}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() =>
+              router.push(
+                `/dashboard/indiekit?project=${encodeURIComponent(projectId)}&phase=surveys`
+              )
+            }
+          >
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to Survey
           </Button>

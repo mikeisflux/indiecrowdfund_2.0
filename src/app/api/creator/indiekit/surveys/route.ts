@@ -111,7 +111,13 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { projectId, questions } = body;
+    // introTitle / introMessage were readable through GET but had no way back
+    // in from this builder — they were only editable in the standalone survey
+    // page, which has been retired. Accepting them here is what let that page
+    // go. Undefined means "not edited", so a caller that omits them (an older
+    // client, or a save from a surface with no intro fields) leaves the stored
+    // values alone rather than blanking them.
+    const { projectId, questions, introTitle, introMessage } = body;
 
     if (!projectId) {
       return NextResponse.json({ error: "Project ID required" }, { status: 400 });
@@ -150,6 +156,19 @@ export async function POST(req: NextRequest) {
         data: {
           projectId,
           status: "DRAFT",
+          introTitle: typeof introTitle === "string" ? introTitle : undefined,
+          introMessage: typeof introMessage === "string" ? introMessage : undefined,
+        },
+      });
+    } else if (typeof introTitle === "string" || typeof introMessage === "string") {
+      // Prisma treats undefined as "leave this column alone" and null as
+      // "erase it", so each field is only included when the caller actually
+      // sent a string.
+      survey = await db.survey.update({
+        where: { id: survey.id },
+        data: {
+          ...(typeof introTitle === "string" ? { introTitle } : {}),
+          ...(typeof introMessage === "string" ? { introMessage } : {}),
         },
       });
     }

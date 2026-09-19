@@ -375,6 +375,33 @@ export default function IndieKitPage() {
     }
   }, [fetchData, isInitialized]);
 
+  // Deep-link handler: ?phase=<tabId> opens a phase tab directly.
+  //
+  // Added so /dashboard/projects/[id]/survey — the standalone survey builder
+  // this replaced — can forward anyone holding the old URL straight to the
+  // Surveys tab rather than dropping them on the IndieKit landing view and
+  // leaving them to find it.
+  // A phase tab only renders when its phase is also selected, so both are set.
+  const handledPhaseDeepLinkRef = useRef<string | null>(null);
+  useEffect(() => {
+    const target = searchParams?.get("phase");
+    if (!target) return;
+    if (handledPhaseDeepLinkRef.current === target) return;
+
+    const owner: [FulfillmentPhase, { id: PhaseTab }[]][] = [
+      ["pre-fulfillment", PRE_FULFILLMENT_TABS],
+      ["fulfillment", FULFILLMENT_TABS],
+      ["post-fulfillment", POST_FULFILLMENT_TABS],
+    ];
+    const match = owner.find(([, tabs]) => tabs.some((t) => t.id === target));
+    if (!match) return;
+
+    handledPhaseDeepLinkRef.current = target;
+    setActiveSection("phase");
+    setActivePhase(match[0]);
+    setActivePhaseTab(target as PhaseTab);
+  }, [searchParams]);
+
   // Deep-link handler: ?backer=<pledgeId> auto-opens the BackerDialog
   // for that specific pledge once backers have loaded. Used by the
   // messaging "click a transaction" flow. Fires once per pledgeId so a
