@@ -108,7 +108,7 @@ import {
 import { WhatsNextBanner } from "./components/whats-next-banner";
 
 // Import layout components
-import { PhaseSelector } from "./components/layout/PhaseSelector";
+import { PhaseSelector, PHASE_ACCENT } from "./components/layout/PhaseSelector";
 import { WorkflowProgress } from "./components/layout/WorkflowProgress";
 
 // Import v1 tabs that are used directly (not merged)
@@ -682,7 +682,14 @@ export default function IndieKitPage() {
             )}
 
             {/* Always Available Navigation Bar */}
-            <div className="mb-4 flex flex-wrap items-center gap-1 p-2 rounded-xl bg-muted/50 border border-border">
+            {/* Indigo identity, distinct from the phase rows below it. The
+                three navigation rows were all bg-muted with
+                text-muted-foreground labels, so they stacked into one grey
+                block and it took a moment to work out which level you were
+                operating at. Each row now has its own colour, and the labels
+                are near-full-strength foreground rather than muted — these are
+                the primary controls on the page, not secondary text. */}
+            <div className="mb-4 flex flex-wrap items-center gap-1 p-2 rounded-xl bg-indigo-50/80 border border-indigo-200 dark:bg-indigo-950/20 dark:border-indigo-900/50">
               {ALWAYS_AVAILABLE_TABS.map((tab) => {
                 const Icon = tab.icon;
                 const isActive = activeSection === "always" && activeAlwaysTab === tab.id;
@@ -693,11 +700,11 @@ export default function IndieKitPage() {
                       className={cn(
                         "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm transition-colors",
                         isActive
-                          ? "bg-background shadow-sm font-medium text-foreground border border-foreground/20"
-                          : "text-muted-foreground hover:text-foreground hover:bg-background/50 border border-transparent"
+                          ? "bg-white text-indigo-900 font-semibold shadow-sm border border-indigo-300 dark:bg-indigo-950/60 dark:text-indigo-100 dark:border-indigo-700"
+                          : "text-indigo-900/75 font-medium hover:bg-white/70 hover:text-indigo-900 border border-transparent dark:text-indigo-200/75 dark:hover:bg-indigo-950/40 dark:hover:text-indigo-100"
                       )}
                     >
-                      <Icon className="h-4 w-4" />
+                      <Icon className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
                       <span className="hidden sm:inline">{tab.label}</span>
                     </button>
                   </HelpTooltip>
@@ -710,8 +717,16 @@ export default function IndieKitPage() {
             <div className="mb-4 space-y-3">
               <PhaseSelector activePhase={activePhase} onPhaseChange={handlePhaseChange} isPhaseActive={activeSection === "phase"} />
 
-              {/* Phase Sub-tabs */}
-              <div className="flex gap-1 p-1.5 rounded-lg bg-muted/30 border border-border">
+              {/* Phase Sub-tabs, tinted to match the selected phase above —
+                  amber for Pre-Fulfillment, teal for Fulfillment, purple for
+                  Post-Fulfillment — so the row visibly belongs to that phase
+                  rather than floating as a third anonymous grey bar. */}
+              <div
+                className={cn(
+                  "flex gap-1 p-1.5 rounded-lg border",
+                  PHASE_ACCENT[activePhase].rowBg
+                )}
+              >
                 {currentPhaseTabs.map((tab) => {
                   const Icon = tab.icon;
                   const isActive = activeSection === "phase" && activePhaseTab === tab.id;
@@ -720,13 +735,13 @@ export default function IndieKitPage() {
                       <button
                         onClick={() => handleSelectPhaseTab(tab.id)}
                         className={cn(
-                          "flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm transition-colors flex-1 justify-center",
+                          "flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm transition-colors flex-1 justify-center border",
                           isActive
-                            ? "bg-background shadow-sm font-medium text-foreground"
-                            : "text-muted-foreground hover:text-foreground hover:bg-background/50"
+                            ? cn("shadow-sm font-semibold", PHASE_ACCENT[activePhase].tabActive)
+                            : cn("font-medium border-transparent", PHASE_ACCENT[activePhase].tabIdle)
                         )}
                       >
-                        <Icon className="h-4 w-4" />
+                        <Icon className={cn("h-4 w-4", PHASE_ACCENT[activePhase].icon)} />
                         {tab.label}
                       </button>
                     </HelpTooltip>
