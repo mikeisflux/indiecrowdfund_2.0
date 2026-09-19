@@ -205,7 +205,10 @@ export function SiteHeader() {
   );
 
   return (
-    <header className="sticky top-0 z-50 border-b border-border/50 bg-background/80 backdrop-blur-xl">
+    // frost-bar (globals.css): frosted glass in both themes — saturated blur
+    // so page colour bleeds through the header instead of dying against a
+    // flat translucent strip.
+    <header className="frost-bar sticky top-0 z-50">
       <div className="container flex h-16 items-center justify-between">
         <div className="flex items-center gap-8">
           <Link href="/" className="text-xl font-bold gradient-text-brand flex items-center gap-2 group">

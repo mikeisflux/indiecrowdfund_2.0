@@ -24,7 +24,10 @@
     --border: 220 15% 18%;
     --input: 220 15% 14%;
     --ring: 152 76% 42%;
-    --radius: 0.5rem;
+    /* 12px, up from 8px. Every rounded component reads from this token, so
+       one change modernises the whole surface — softer cards, pills, inputs —
+       in both themes. */
+    --radius: 0.75rem;
     --chart-1: 152 76% 42%;
     --chart-2: 200 70% 50%;
     --chart-3: 280 65% 60%;
@@ -32,32 +35,41 @@
     --chart-5: 340 75% 55%;
   }
 
-  /* Light mode override - enhanced for beautiful aesthetics */
+  /* Light mode — the site default as of Sept 2026.
+     Not a grey-on-white inversion of the dark theme: the neutrals carry a
+     cool tint, accent/secondary are softly coloured rather than grey, and
+     the body gets an aurora wash (see .light body::before below) so full-bleed
+     pages never read as flat white. */
   .light {
-    --background: 210 20% 98%;
-    --foreground: 220 20% 10%;
+    --background: 200 35% 98%;
+    --foreground: 222 30% 9%;
     --card: 0 0% 100%;
-    --card-foreground: 220 20% 10%;
+    --card-foreground: 222 30% 9%;
     --popover: 0 0% 100%;
-    --popover-foreground: 220 20% 10%;
-    --primary: 152 76% 36%;
+    --popover-foreground: 222 30% 9%;
+    --primary: 152 76% 34%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 220 14% 96%;
-    --secondary-foreground: 220 20% 10%;
-    --muted: 220 14% 95%;
-    --muted-foreground: 220 10% 40%;
-    --accent: 220 14% 94%;
-    --accent-foreground: 220 20% 10%;
-    --destructive: 0 84% 60%;
+    /* Cool indigo-tinted secondary instead of grey — badges and secondary
+       buttons pick up a hint of colour without shouting. */
+    --secondary: 226 40% 95%;
+    --secondary-foreground: 226 35% 22%;
+    --muted: 210 30% 95%;
+    /* Darker than before (was 40% lightness). Muted text on white was the
+       single biggest "everything looks washed out" complaint. */
+    --muted-foreground: 219 15% 35%;
+    /* Mint-tinted accent so hover states feel branded, not disabled. */
+    --accent: 152 45% 94%;
+    --accent-foreground: 152 76% 18%;
+    --destructive: 0 84% 55%;
     --destructive-foreground: 0 0% 100%;
-    --border: 220 13% 91%;
-    --input: 220 13% 91%;
-    --ring: 152 76% 36%;
-    --chart-1: 152 76% 42%;
-    --chart-2: 200 70% 50%;
-    --chart-3: 280 65% 60%;
-    --chart-4: 43 74% 66%;
-    --chart-5: 340 75% 55%;
+    --border: 214 25% 89%;
+    --input: 214 25% 89%;
+    --ring: 152 76% 34%;
+    --chart-1: 152 76% 38%;
+    --chart-2: 199 89% 44%;
+    --chart-3: 262 80% 56%;
+    --chart-4: 38 92% 50%;
+    --chart-5: 340 80% 52%;
   }
 }
 
@@ -978,4 +990,120 @@
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
+}
+
+/* ============================================ */
+/* LIGHT-FIRST POLISH (Sept 2026)               */
+/* Light became the site default; this section  */
+/* is what keeps it from reading as flat white. */
+/* ============================================ */
+
+/* Aurora wash behind every light-mode page. Three faint brand-coloured
+   radial fields on a fixed layer, so scrolling content moves over a still
+   atmosphere. Kept behind everything (z-index -1) and non-interactive.
+   Deliberately at 5-7% alpha: it should be felt, not seen. */
+.light body {
+  position: relative;
+}
+
+.light body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(1100px 560px at 88% -8%, hsla(160, 84%, 39%, 0.07), transparent 60%),
+    radial-gradient(950px 520px at -8% 18%, hsla(217, 91%, 60%, 0.06), transparent 55%),
+    radial-gradient(900px 520px at 52% 108%, hsla(271, 81%, 56%, 0.05), transparent 60%);
+}
+
+/* Text selection carries the brand in both themes. */
+::selection {
+  background: hsla(152, 76%, 42%, 0.85);
+  color: #fff;
+}
+.light ::selection {
+  background: hsla(152, 76%, 34%, 0.9);
+  color: #fff;
+}
+
+/* Slim, quiet scrollbars (WebKit + Firefox). */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: hsl(var(--muted-foreground) / 0.35) transparent;
+}
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+*::-webkit-scrollbar-thumb {
+  background: hsl(var(--muted-foreground) / 0.3);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--muted-foreground) / 0.5);
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+
+/* Card hover with lift + coloured soft shadow. The light-mode counterpart of
+   the dark theme's glow: light surfaces express depth through shadow, not
+   emission. Works in dark too, where it falls back to a deeper drop. */
+.card-lift {
+  transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.25s ease;
+}
+.card-lift:hover {
+  transform: translateY(-3px);
+  box-shadow:
+    0 12px 28px -8px rgba(0, 0, 0, 0.45),
+    0 0 24px rgba(16, 185, 129, 0.12);
+}
+.light .card-lift:hover {
+  box-shadow:
+    0 12px 28px -10px rgba(15, 40, 70, 0.18),
+    0 4px 12px -4px rgba(16, 185, 129, 0.18);
+}
+
+/* Animated aurora gradient text — the light-theme "flex" heading treatment.
+   Unlike .gradient-text (static), the hues drift slowly. Use on hero and
+   section headings, one per view. */
+@keyframes aurora-drift {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+.aurora-text {
+  background: linear-gradient(
+    115deg,
+    #059669 0%,
+    #0891b2 30%,
+    #6d28d9 60%,
+    #059669 100%
+  );
+  background-size: 220% 220%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: aurora-drift 9s ease-in-out infinite;
+}
+
+/* Frosted sticky-header treatment for light mode. The dark glass-card
+   already handles dark; this gives light headers the same depth without
+   the smoke. Apply alongside a sticky/top-0 position. */
+.light .frost-bar {
+  background: hsla(0, 0%, 100%, 0.75);
+  backdrop-filter: blur(14px) saturate(1.4);
+  -webkit-backdrop-filter: blur(14px) saturate(1.4);
+  border-bottom: 1px solid hsla(214, 25%, 80%, 0.5);
+}
+.frost-bar {
+  background: hsla(220, 15%, 8%, 0.75);
+  backdrop-filter: blur(14px) saturate(1.2);
+  -webkit-backdrop-filter: blur(14px) saturate(1.2);
+  border-bottom: 1px solid hsla(220, 15%, 25%, 0.5);
 }

@@ -263,9 +263,14 @@ export default async function RootLayout({
         )}
         <GoogleAnalytics ga4Id={ga4Id} />
         <AuthProvider session={session}>
+          {/* Light is the default as of Sept 2026 — dark had been the default
+              since the futuristic redesign ~6 months earlier. Only visitors
+              with no stored preference are affected: next-themes keeps an
+              explicit Light/Dark/System choice in localStorage, so anyone who
+              picked dark on purpose stays dark. */}
           <ThemeProvider
             attribute="class"
-            defaultTheme="dark"
+            defaultTheme="light"
             enableSystem
             disableTransitionOnChange
           >
