@@ -196,7 +196,9 @@ export function HeroSlider({ initialSlides = [], autoPlayInterval = 6000 }: Hero
     if (title.includes("Support")) {
       return (
         <>
-          <span className="gradient-text">Support</span> {title.replace("Support ", "")}
+          {/* aurora-text: same gradient as before but the hues drift —
+              the hero headline is the one place the animation earns itself. */}
+          <span className="aurora-text">Support</span> {title.replace("Support ", "")}
         </>
       );
     }

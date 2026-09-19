@@ -482,7 +482,7 @@ async function FeaturedProjectsSection({ userId }: { userId: string | undefined 
   if (featuredProjects.length === 0) return null;
 
   return (
-    <section className="py-8 md:py-12 relative">
+    <section className="scroll-reveal py-8 md:py-12 relative">
       <div className="container">
         <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
@@ -490,7 +490,7 @@ async function FeaturedProjectsSection({ userId }: { userId: string | undefined 
               <div className="p-2 rounded-lg bg-gradient-to-br from-primary/20 to-emerald-500/20 glow-pulse">
                 <Zap className="h-5 w-5 text-primary" />
               </div>
-              <h2 className="text-2xl font-bold md:text-3xl">Featured Projects</h2>
+              <h2 className="aurora-text text-2xl font-bold md:text-3xl">Featured Projects</h2>
             </div>
             <p className="text-muted-foreground">Handpicked projects we love</p>
           </div>
@@ -598,7 +598,7 @@ async function PrelaunchProjectsSection({ userId }: { userId: string | undefined
   if (prelaunchProjects.length === 0) return null;
 
   return (
-    <section className="relative border-t border-border/50 py-8 md:py-12 overflow-hidden">
+    <section className="scroll-reveal relative border-t border-border/50 py-8 md:py-12 overflow-hidden">
       <div className="absolute inset-0 bg-gradient-to-b from-amber-500/5 via-transparent to-transparent" />
       <div className="container relative">
         <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -607,7 +607,7 @@ async function PrelaunchProjectsSection({ userId }: { userId: string | undefined
               <div className="p-2 rounded-lg bg-gradient-to-br from-amber-500/20 to-orange-500/20 glow-pulse">
                 <Sparkles className="h-5 w-5 text-amber-500" />
               </div>
-              <h2 className="text-2xl font-bold md:text-3xl">Projects in Prelaunch</h2>
+              <h2 className="aurora-text text-2xl font-bold md:text-3xl">Projects in Prelaunch</h2>
             </div>
             <p className="text-muted-foreground">Coming soon - follow to get notified when they launch</p>
           </div>
@@ -689,7 +689,7 @@ async function PastCampaignsSection() {
   if (pastCampaigns.length === 0) return null;
 
   return (
-    <section className="relative border-t border-border/50 py-8 md:py-12 overflow-hidden">
+    <section className="scroll-reveal relative border-t border-border/50 py-8 md:py-12 overflow-hidden">
       <div className="absolute inset-0 bg-gradient-to-b from-muted/20 to-transparent" />
       <div className="container relative">
         <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -698,7 +698,7 @@ async function PastCampaignsSection() {
               <div className="p-2 rounded-lg bg-gradient-to-br from-zinc-500/20 to-slate-500/20">
                 <Archive className="h-5 w-5 text-muted-foreground" />
               </div>
-              <h2 className="text-2xl font-bold md:text-3xl">Past Projects</h2>
+              <h2 className="aurora-text text-2xl font-bold md:text-3xl">Past Projects</h2>
             </div>
             <p className="text-muted-foreground">Recently completed campaigns</p>
           </div>
@@ -915,7 +915,7 @@ export default async function HomePage() {
         <div className="absolute inset-0 hero-gradient opacity-50" />
         <div className="container relative">
           <div className="mb-6 text-center">
-            <h2 className="text-2xl font-bold md:text-3xl mb-2">How It Works</h2>
+            <h2 className="aurora-text text-2xl font-bold md:text-3xl mb-2">How It Works</h2>
             <p className="text-muted-foreground">
               Three simple steps to fund your creative vision
             </p>

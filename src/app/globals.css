@@ -1107,3 +1107,86 @@
   -webkit-backdrop-filter: blur(14px) saturate(1.2);
   border-bottom: 1px solid hsla(220, 15%, 25%, 0.5);
 }
+
+/* ============================================ */
+/* BLEEDING-EDGE PASS (Sept 2026)               */
+/* ============================================ */
+
+/* Registered custom property so the conic border's angle itself can be
+   animated — interpolating a gradient's from-angle is only possible when the
+   browser knows the variable is an <angle>. Everywhere @property is
+   unsupported the border still appears on hover, it just doesn't rotate. */
+@property --spin-angle {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+
+@keyframes spin-border {
+  to {
+    --spin-angle: 360deg;
+  }
+}
+
+/* Rotating gradient ring on project-card hover. The full colour wheel of the
+   brand — emerald, cyan, violet, amber — sweeping the card's edge. Sits on
+   ::after with the masked-padding trick so it hugs any radius, and stays at
+   opacity 0 until hover so grids do not strobe. */
+.project-card {
+  position: relative;
+}
+
+.project-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1.5px;
+  background: conic-gradient(
+    from var(--spin-angle),
+    #10b981,
+    #06b6d4,
+    #8b5cf6,
+    #f59e0b,
+    #10b981
+  );
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+}
+
+.project-card:hover::after {
+  opacity: 1;
+  animation: spin-border 3s linear infinite;
+}
+
+/* Film grain over everything, both themes. A tiled feTurbulence SVG at 2.5%
+   opacity — the texture that separates a designed surface from a flat one.
+   Fixed and non-interactive; z-index 1 keeps it above backgrounds but it is
+   faint enough to sit over content without muddying text. */
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  opacity: 0.025;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* Scroll-driven reveals — CSS animation-timeline, no JS, no observers.
+   Sections drift up and fade in as they enter the viewport, driven by scroll
+   position rather than time. Progressive enhancement: outside
+   @supports (Safari < 26, Firefox behind flag) content simply renders
+   visible, which is the correct fallback for content. */
+@supports (animation-timeline: view()) {
+  .scroll-reveal {
+    animation: fade-in-up 1s ease-out both;
+    animation-timeline: view();
+    animation-range: entry 0% entry 50%;
+  }
+}
