@@ -52,7 +52,7 @@ import {
   Send,
   Trash2,
   Edit,
-  Settings,
+  AlertCircle,
   Gift,
   Package,
   Loader2,
@@ -683,6 +683,74 @@ export function SurveyBuilderTab({ questions = [], projectId }: SurveyBuilderTab
           </TabsTrigger>
         </TabsList>
 
+        {/* Always collected.
+            Sits directly under the tabs, on every tab, because it is the
+            answer to the question a creator is about to ask wrongly — they
+            reach for an Address or Email question, and the copy they build
+            would never reach a shipping label. It used to sit at the bottom of
+            the page where it was read after the mistake rather than before it.
+
+            Deliberately warning-coloured rather than a neutral panel: this is
+            not decoration, it is the one thing on the screen that stops a
+            parcel going to the wrong house. It replaced a "Survey Settings"
+            card whose four Switches were pure decoration — no checked prop, no
+            handler, no state — so "Lock After Fulfillment" did nothing at
+            all. */}
+        <div className="mt-4 rounded-lg border border-red-300 bg-red-50 p-4 dark:border-red-900/60 dark:bg-red-950/30">
+          <div className="flex items-start gap-3">
+            <AlertCircle className="mt-0.5 h-5 w-5 flex-shrink-0 text-red-600 dark:text-red-400" />
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold text-red-900 dark:text-red-200">
+                Name, email and shipping address are already collected
+              </p>
+              <p className="mt-0.5 text-sm text-red-800/90 dark:text-red-300/90">
+                Every survey includes them automatically. Don&apos;t add your
+                own — a question you build here is saved as a survey answer, not
+                as the backer&apos;s address, so it will never reach your
+                shipping labels or exports.
+              </p>
+
+              <div className="mt-3 grid gap-2 sm:grid-cols-3">
+                {[
+                  {
+                    icon: Type,
+                    label: "Name",
+                    detail: "From the backer's account",
+                  },
+                  {
+                    icon: Mail,
+                    label: "Email",
+                    detail: "Verified on their account",
+                  },
+                  {
+                    icon: MapPin,
+                    label: "Shipping address",
+                    detail: "Physical rewards, pre-filled and confirmed",
+                  },
+                ].map((field) => {
+                  const Icon = field.icon;
+                  return (
+                    <div
+                      key={field.label}
+                      className="flex items-start gap-2 rounded-md border border-red-200 bg-white/70 p-2.5 dark:border-red-900/50 dark:bg-red-950/40"
+                    >
+                      <Icon className="mt-0.5 h-4 w-4 flex-shrink-0 text-red-600 dark:text-red-400" />
+                      <div className="min-w-0">
+                        <p className="text-xs font-medium text-red-900 dark:text-red-200">
+                          {field.label}
+                        </p>
+                        <p className="text-[11px] leading-snug text-red-700/80 dark:text-red-300/70">
+                          {field.detail}
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* Welcome / intro. The one thing the retired standalone builder
             could edit that this one could not. */}
         <TabsContent value="intro" className="mt-6">
@@ -975,65 +1043,6 @@ export function SurveyBuilderTab({ questions = [], projectId }: SurveyBuilderTab
           </Card>
         </TabsContent>
       </Tabs>
-
-      {/* What every survey collects.
-          This replaced a "Survey Settings" card of four Switches that were
-          pure decoration — `<Switch defaultChecked />` with no checked prop,
-          no handler and no state. Toggling "Lock After Fulfillment" did
-          nothing whatsoever. Showing a creator a control that does not exist
-          is worse than showing them nothing, so the card now states what is
-          actually true. */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Settings className="h-5 w-5 text-teal-600" />
-            Always collected
-          </CardTitle>
-          <CardDescription>
-            Included in every survey automatically — you don&apos;t need to add
-            questions for these, and adding your own copies won&apos;t reach
-            your shipping labels.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-3 sm:grid-cols-3">
-            {[
-              {
-                icon: Type,
-                label: "Name",
-                detail: "From the backer's account",
-              },
-              {
-                icon: Mail,
-                label: "Email",
-                detail: "Verified on their account",
-              },
-              {
-                icon: MapPin,
-                label: "Shipping address",
-                detail: "Physical rewards only, pre-filled and confirmed",
-              },
-            ].map((field) => {
-              const Icon = field.icon;
-              return (
-                <div
-                  key={field.label}
-                  className="flex items-start gap-3 rounded-lg border bg-muted/40 p-3"
-                >
-                  <Icon className="mt-0.5 h-4 w-4 flex-shrink-0 text-teal-600" />
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium">{field.label}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {field.detail}
-                    </p>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </CardContent>
-      </Card>
-
       {/* Edit Question Dialog */}
       <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
         <DialogContent className="max-w-md">
