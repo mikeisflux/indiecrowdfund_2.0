@@ -470,20 +470,100 @@ const getRecentBacks = cache(async (): Promise<TickerItem[]> => {
   }
 });
 
-// Film strip of live campaign covers under the hero. Reuses the cached
-// featured-projects query, so it costs no extra database round trip.
+// Film strip under the hero. The art comes from REWARD images, not campaign
+// banners — on a comics platform the rewards are the covers, and the covers
+// are the best art there is. Public, un-ended rewards only: a secret variant
+// or an ended cover must never leak onto the homepage.
+//
+// Shuffled server-side with a cap of three covers per campaign, so a
+// 39-cover campaign cannot monopolise the strip and the order changes with
+// each 60s page regeneration. Falls back to campaign banner images if the
+// catalogue is too thin in reward art for a seamless loop.
+const getMarqueeCovers = cache(async () => {
+  try {
+    const now = new Date();
+    const rewards = await db.reward.findMany({
+      where: {
+        imageUrl: { not: null },
+        visibility: "PUBLIC",
+        isEnded: false,
+        type: { in: ["TIER", "ADDON"] },
+        project: {
+          status: "LIVE",
+          deletedAt: null,
+          OR: [{ endDate: null }, { endDate: { gt: now } }],
+          NOT: { title: { contains: "test", mode: "insensitive" } },
+        },
+      },
+      orderBy: { createdAt: "desc" },
+      take: 80,
+      select: {
+        id: true,
+        title: true,
+        imageUrl: true,
+        projectId: true,
+        project: {
+          select: {
+            title: true,
+            slug: true,
+            creator: { select: { vanityUrl: true } },
+          },
+        },
+      },
+    });
+
+    const shuffle = <T,>(arr: T[]): T[] => {
+      for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+      }
+      return arr;
+    };
+
+    const byProject = new Map<string, typeof rewards>();
+    for (const r of rewards) {
+      if (!r.project.creator.vanityUrl) continue;
+      const group = byProject.get(r.projectId) ?? [];
+      group.push(r);
+      byProject.set(r.projectId, group);
+    }
+
+    const MAX_PER_CAMPAIGN = 3;
+    const picked = [...byProject.values()].flatMap((group) =>
+      shuffle(group).slice(0, MAX_PER_CAMPAIGN)
+    );
+
+    return shuffle(picked)
+      .slice(0, 20)
+      .map((r) => ({
+        id: r.id,
+        title: r.project.title,
+        imageUrl: r.imageUrl as string,
+        href: `/projects/${r.project.creator.vanityUrl}/${r.project.slug}`,
+      }));
+  } catch {
+    return [];
+  }
+});
+
 async function CoverMarqueeSection() {
   const fx = await getUiEffects();
   if (!fx.coverMarquee) return null;
-  const projects = await getFeaturedProjects();
-  const covers = projects
-    .filter((p) => p.imageUrl)
-    .map((p) => ({
-      id: p.id,
-      title: p.title,
-      imageUrl: p.imageUrl as string,
-      href: p.projectUrl,
-    }));
+
+  let covers = await getMarqueeCovers();
+  if (covers.length < 6) {
+    // Not enough reward art for a seamless loop; the campaign banners are
+    // better than an empty strip.
+    const projects = await getFeaturedProjects();
+    covers = projects
+      .filter((p) => p.imageUrl)
+      .map((p) => ({
+        id: p.id,
+        title: p.title,
+        imageUrl: p.imageUrl as string,
+        href: p.projectUrl,
+      }));
+  }
   return <CoverMarquee covers={covers} />;
 }
 
