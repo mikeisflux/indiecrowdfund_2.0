@@ -17,7 +17,20 @@ import { useEffect, useRef, useState } from "react";
 
 const DIGITS = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"];
 
-export function RollingNumber({ text }: { text: string }) {
+interface RollingNumberProps {
+  text: string;
+  /**
+   * Class applied to every visible character INSTEAD of styling the parent.
+   * Exists for gradient text: background-clip:text on an ancestor is not
+   * painted through the transformed digit strips (the browser drops the clip
+   * across a transform boundary), which left the digits fully transparent —
+   * "$1.2K+" rendered as "$ . K+". Clipping per character keeps the paint
+   * local to an element with no transformed descendants, which always works.
+   */
+  charClassName?: string;
+}
+
+export function RollingNumber({ text, charClassName }: RollingNumberProps) {
   const ref = useRef<HTMLSpanElement>(null);
   const [rolled, setRolled] = useState(false);
   const [reduced, setReduced] = useState(false);
@@ -44,7 +57,7 @@ export function RollingNumber({ text }: { text: string }) {
   }, []);
 
   if (reduced) {
-    return <span>{text}</span>;
+    return <span className={charClassName}>{text}</span>;
   }
 
   return (
@@ -72,14 +85,14 @@ export function RollingNumber({ text }: { text: string }) {
               }}
             >
               {DIGITS.map((d) => (
-                <span key={d} className="h-[1.15em] leading-[1.15em]">
+                <span key={d} className={`h-[1.15em] leading-[1.15em] ${charClassName ?? ""}`}>
                   {d}
                 </span>
               ))}
             </span>
           </span>
         ) : (
-          <span key={i} aria-hidden="true" className="h-[1.15em] leading-[1.15em]">
+          <span key={i} aria-hidden="true" className={`h-[1.15em] leading-[1.15em] ${charClassName ?? ""}`}>
             {ch}
           </span>
         )

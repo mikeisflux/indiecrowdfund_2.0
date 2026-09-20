@@ -63,8 +63,8 @@ export function HomeStatsPoller({ initialStats }: HomeStatsPollerProps) {
         <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-br from-primary/20 to-emerald-500/20 mb-3 group-hover:glow-pulse transition-all">
           <TrendingUp className="w-6 h-6 text-primary" />
         </div>
-        <p className="text-3xl font-bold stat-value mb-1">
-          <RollingNumber text={stats.totalPledged > 0 ? `${formatCurrency(stats.totalPledged)}+` : "$0"} />
+        <p className="text-3xl font-bold mb-1">
+          <RollingNumber charClassName="stat-value" text={stats.totalPledged > 0 ? `${formatCurrency(stats.totalPledged)}+` : "$0"} />
         </p>
         <p className="text-sm text-muted-foreground">Pledged to projects</p>
       </div>
@@ -72,8 +72,8 @@ export function HomeStatsPoller({ initialStats }: HomeStatsPollerProps) {
         <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-br from-cyan-500/20 to-blue-500/20 mb-3 group-hover:glow-pulse-cyan transition-all">
           <Target className="w-6 h-6 text-cyan-500" />
         </div>
-        <p className="text-3xl font-bold stat-value mb-1">
-          <RollingNumber text={stats.projectsFunded > 0 ? formatNumber(stats.projectsFunded) : "0"} />
+        <p className="text-3xl font-bold mb-1">
+          <RollingNumber charClassName="stat-value" text={stats.projectsFunded > 0 ? formatNumber(stats.projectsFunded) : "0"} />
         </p>
         <p className="text-sm text-muted-foreground">Projects funded</p>
       </div>
@@ -81,8 +81,8 @@ export function HomeStatsPoller({ initialStats }: HomeStatsPollerProps) {
         <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500/20 to-pink-500/20 mb-3 group-hover:glow-pulse-purple transition-all">
           <Users className="w-6 h-6 text-purple-500" />
         </div>
-        <p className="text-3xl font-bold stat-value mb-1">
-          <RollingNumber text={stats.backerPool > 0 ? formatNumber(stats.backerPool) : "0"} />
+        <p className="text-3xl font-bold mb-1">
+          <RollingNumber charClassName="stat-value" text={stats.backerPool > 0 ? formatNumber(stats.backerPool) : "0"} />
         </p>
         <p className="text-sm text-muted-foreground">Backer pool</p>
       </div>
@@ -90,8 +90,8 @@ export function HomeStatsPoller({ initialStats }: HomeStatsPollerProps) {
         <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-br from-amber-500/20 to-orange-500/20 mb-3 group-hover:glow-pulse transition-all">
           <Award className="w-6 h-6 text-amber-500" />
         </div>
-        <p className="text-3xl font-bold stat-value mb-1">
-          <RollingNumber text={stats.successRate > 0 ? `${stats.successRate}%` : "0%"} />
+        <p className="text-3xl font-bold mb-1">
+          <RollingNumber charClassName="stat-value" text={stats.successRate > 0 ? `${stats.successRate}%` : "0%"} />
         </p>
         <p className="text-sm text-muted-foreground">Success rate</p>
       </div>
@@ -99,8 +99,8 @@ export function HomeStatsPoller({ initialStats }: HomeStatsPollerProps) {
         <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500/20 to-teal-500/20 mb-3 group-hover:glow-pulse transition-all">
           <Store className="w-6 h-6 text-emerald-500" />
         </div>
-        <p className="text-3xl font-bold stat-value mb-1">
-          <RollingNumber text={stats.certifiedRetailers > 0 ? formatNumber(stats.certifiedRetailers) : "0"} />
+        <p className="text-3xl font-bold mb-1">
+          <RollingNumber charClassName="stat-value" text={stats.certifiedRetailers > 0 ? formatNumber(stats.certifiedRetailers) : "0"} />
         </p>
         <p className="text-sm text-muted-foreground">Certified Retailers</p>
       </Link>
