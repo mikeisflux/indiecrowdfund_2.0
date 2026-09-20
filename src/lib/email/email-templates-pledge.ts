@@ -407,6 +407,14 @@ export async function sendSurveyCompletionEmail(
   rewardTitle: string | null,
   projectSlug: string,
   projectUrlPath?: string,
+  /**
+   * The backer's actual answers — variant picks (metal / size / cover),
+   * custom answers, shipping address. This email is the backer's receipt,
+   * and a receipt that says only "complete" caused exactly the support
+   * message you would expect: "the confirmation email states nothing
+   * regarding metal choice". Optional so older callers keep working.
+   */
+  selections?: { label: string; value: string }[],
 ) {
   const projectUrl = projectUrlPath ? `${APP_URL}${projectUrlPath}` : `${APP_URL}/projects/${projectSlug}`;
   const dashboardUrl = `${APP_URL}/dashboard/backer`;
@@ -455,6 +463,21 @@ export async function sendSurveyCompletionEmail(
             </tr>
           </table>
         </div>
+
+        ${selections && selections.length > 0 ? `
+        <div style="background: #f9f9f9; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
+          <h3 style="margin-top: 0;">Your Selections</h3>
+          <table style="width: 100%; border-collapse: collapse;">
+            ${selections.map((sel, i) => `
+            <tr>
+              <td style="padding: 8px 0; ${i < selections.length - 1 ? "border-bottom: 1px solid #e5e5e5;" : ""} color: #666; vertical-align: top;">${escapeHtml(sel.label)}</td>
+              <td style="padding: 8px 0; ${i < selections.length - 1 ? "border-bottom: 1px solid #e5e5e5;" : ""} text-align: right; font-weight: 500;">${escapeHtml(sel.value)}</td>
+            </tr>
+            `).join("")}
+          </table>
+          <p style="margin: 10px 0 0 0; color: #999; font-size: 12px;">Spot something wrong? You can update your survey from your dashboard until the creator locks orders.</p>
+        </div>
+        ` : ""}
 
         <div style="background: #f9f9f9; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
           <p style="margin: 0 0 10px 0;"><strong>What happens next?</strong></p>

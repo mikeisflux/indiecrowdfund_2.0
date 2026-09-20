@@ -656,6 +656,54 @@ export async function POST(
             ? `/${pledgeWithDetails.project.creator.vanityUrl}/${pledgeWithDetails.project.slug}`
             : undefined;
 
+          // Itemise the backer's answers into the email — this is their
+          // receipt, and "just that it was completed" is not a receipt.
+          // Labels come from the survey structure, values from the saved
+          // response, matched by the same reward/addon relevance rule the
+          // GET uses so answers for someone else's tier never leak in.
+          type ItemResp = {
+            variants?: Record<string, string>;
+            customAnswers?: Record<string, string | string[]>;
+          };
+          const finalItems = (updatedResponse?.itemResponses ?? {}) as Record<string, ItemResp>;
+          const finalBacker = (updatedResponse?.backerResponses ?? {}) as Record<string, string | string[]>;
+          const emailAddonIds = pledge.addons.map((a: { addonId: string }) => a.addonId);
+          const selections: { label: string; value: string }[] = [];
+
+          for (const iq of survey.itemQuestions) {
+            if (iq.rewardId !== pledge.rewardId && !emailAddonIds.includes(iq.rewardId)) continue;
+            const resp = finalItems[iq.id];
+            for (const variant of iq.variants) {
+              // Responses are dual-keyed by variant id and variantType (see
+              // SurveyItemsStep); read id first, fall back to type.
+              const val = resp?.variants?.[variant.id] ?? resp?.variants?.[variant.variantType];
+              if (val) selections.push({ label: `${iq.itemName} — ${variant.variantType}`, value: val });
+            }
+            for (const cq of iq.customQuestions) {
+              const answer = resp?.customAnswers?.[cq.id];
+              const value = Array.isArray(answer) ? answer.join(", ") : answer;
+              if (value && value.trim()) selections.push({ label: `${iq.itemName} — ${cq.question}`, value });
+            }
+          }
+
+          for (const bq of survey.backerQuestions) {
+            const answer = finalBacker[bq.id];
+            const value = Array.isArray(answer) ? answer.join(", ") : answer;
+            if (value && value.trim()) selections.push({ label: bq.question, value });
+          }
+
+          const addr = updatedResponse?.shippingAddress as
+            | { line1?: string; city?: string; state?: string; postalCode?: string; country?: string }
+            | null;
+          if (addr?.line1) {
+            selections.push({
+              label: "Shipping to",
+              value: [addr.line1, addr.city, addr.state, addr.postalCode, addr.country]
+                .filter(Boolean)
+                .join(", "),
+            });
+          }
+
           await sendSurveyCompletionEmail(
             pledgeWithDetails.user.email,
             pledgeWithDetails.user.name || "",
@@ -663,6 +711,7 @@ export async function POST(
             pledgeWithDetails.reward?.title || null,
             pledgeWithDetails.project.slug,
             projectUrlPath,
+            selections,
           );
         }
       } catch (emailError) {
