@@ -1315,7 +1315,7 @@ body::after {
      retracted 10. The track stays a slim centered rail (via background-size)
      so it doesn't become a painted stripe; the comet is the full-height
      element that carries the size. */
-  height: 8px;
+  height: var(--scanline-h, 8px);
   width: 100%;
   overflow: hidden;
   background: linear-gradient(
@@ -1375,4 +1375,16 @@ body::after {
 ::view-transition-old(root),
 ::view-transition-new(root) {
   animation-duration: 0.25s;
+}
+
+/* ---- Admin effect switches (/admin/themes -> Effects) ---- */
+/* The layout writes data-fx-* attributes on <body> from PlatformSettings.
+   CSS-driven effects are switched off here; JS-driven ones (tilt, view
+   transitions) read the same attributes in their components. */
+body[data-fx-grain="off"]::after {
+  display: none; /* film grain */
+}
+
+.light body[data-fx-aurora="off"]::before {
+  display: none; /* aurora wash */
 }

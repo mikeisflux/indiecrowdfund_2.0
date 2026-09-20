@@ -35,7 +35,12 @@ function useTiltEnabled(): boolean {
   // immediately after mount.
   return useSyncExternalStore(
     subscribe,
-    () => window.matchMedia(QUERY).matches,
+    () =>
+      window.matchMedia(QUERY).matches &&
+      // Admin kill switch (/admin/themes -> Effects), written on <body> by
+      // the layout. Checked at snapshot time; a change applies on the next
+      // page load, which is the right cost for a taste setting.
+      document.body.dataset.fxTilt !== "off",
     () => false
   );
 }

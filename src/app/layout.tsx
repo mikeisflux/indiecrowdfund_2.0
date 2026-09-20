@@ -18,6 +18,7 @@ import { ViewTransitionsProvider } from "@/components/effects/view-transitions";
 import { GoogleAnalytics } from "@/components/google-analytics";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { getUiEffects } from "@/lib/ui-effects";
 import "./globals.css";
 
 const geistSans = localFont({
@@ -200,6 +201,10 @@ export default async function RootLayout({
     if (process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID) ga4Id = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID;
   }
 
+  // Visual-effects switches (/admin/themes -> Effects). Cached per request,
+  // defaults on any failure, so this can never take the layout down.
+  const fx = await getUiEffects();
+
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
@@ -251,6 +256,11 @@ export default async function RootLayout({
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} font-sans antialiased`}
+        data-fx-grain={fx.filmGrain ? "on" : "off"}
+        data-fx-aurora={fx.auroraWash ? "on" : "off"}
+        data-fx-tilt={fx.tiltCards ? "on" : "off"}
+        data-fx-vt={fx.viewTransitions ? "on" : "off"}
+        style={{ "--scanline-h": `${fx.scanlineHeight}px` } as React.CSSProperties}
       >
         {/* GTM noscript fallback immediately after <body> per GTM spec */}
         {gtmId && (
@@ -291,7 +301,9 @@ export default async function RootLayout({
                 {/* Gradient read-progress bar across the very top, driven by
                     animation-timeline: scroll() — no JS, no scroll listeners.
                     display:none where unsupported (it is chrome, not content). */}
-                <div className="scroll-progress" aria-hidden="true" />
+                {fx.scrollProgress && (
+                  <div className="scroll-progress" aria-hidden="true" />
+                )}
                 <AnnouncementBar initialAnnouncements={announcements} />
                 <PromoPopup />
                 <ConsentBanner />

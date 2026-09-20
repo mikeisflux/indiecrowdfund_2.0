@@ -22,9 +22,22 @@ interface HomeStats {
 
 interface HomeStatsPollerProps {
   initialStats: HomeStats;
+  /** /admin/themes -> Effects. False renders plain numbers, no roll. */
+  odometer?: boolean;
 }
 
-export function HomeStatsPoller({ initialStats }: HomeStatsPollerProps) {
+
+// Odometer or plain text behind one prop, so the five call sites below stay
+// single-line. Plain text keeps the stat-value gradient per character-run.
+function StatValue({ odometer, text }: { odometer: boolean; text: string }) {
+  return odometer ? (
+    <RollingNumber charClassName="stat-value" text={text} />
+  ) : (
+    <span className="stat-value">{text}</span>
+  );
+}
+
+export function HomeStatsPoller({ initialStats, odometer = true }: HomeStatsPollerProps) {
   const [stats, setStats] = useState<HomeStats>(initialStats);
 
   useEffect(() => {
@@ -64,7 +77,7 @@ export function HomeStatsPoller({ initialStats }: HomeStatsPollerProps) {
           <TrendingUp className="w-6 h-6 text-primary" />
         </div>
         <p className="text-3xl font-bold mb-1">
-          <RollingNumber charClassName="stat-value" text={stats.totalPledged > 0 ? `${formatCurrency(stats.totalPledged)}+` : "$0"} />
+          <StatValue odometer={odometer} text={stats.totalPledged > 0 ? `${formatCurrency(stats.totalPledged)}+` : "$0"} />
         </p>
         <p className="text-sm text-muted-foreground">Pledged to projects</p>
       </div>
@@ -73,7 +86,7 @@ export function HomeStatsPoller({ initialStats }: HomeStatsPollerProps) {
           <Target className="w-6 h-6 text-cyan-500" />
         </div>
         <p className="text-3xl font-bold mb-1">
-          <RollingNumber charClassName="stat-value" text={stats.projectsFunded > 0 ? formatNumber(stats.projectsFunded) : "0"} />
+          <StatValue odometer={odometer} text={stats.projectsFunded > 0 ? formatNumber(stats.projectsFunded) : "0"} />
         </p>
         <p className="text-sm text-muted-foreground">Projects funded</p>
       </div>
@@ -82,7 +95,7 @@ export function HomeStatsPoller({ initialStats }: HomeStatsPollerProps) {
           <Users className="w-6 h-6 text-purple-500" />
         </div>
         <p className="text-3xl font-bold mb-1">
-          <RollingNumber charClassName="stat-value" text={stats.backerPool > 0 ? formatNumber(stats.backerPool) : "0"} />
+          <StatValue odometer={odometer} text={stats.backerPool > 0 ? formatNumber(stats.backerPool) : "0"} />
         </p>
         <p className="text-sm text-muted-foreground">Backer pool</p>
       </div>
@@ -91,7 +104,7 @@ export function HomeStatsPoller({ initialStats }: HomeStatsPollerProps) {
           <Award className="w-6 h-6 text-amber-500" />
         </div>
         <p className="text-3xl font-bold mb-1">
-          <RollingNumber charClassName="stat-value" text={stats.successRate > 0 ? `${stats.successRate}%` : "0%"} />
+          <StatValue odometer={odometer} text={stats.successRate > 0 ? `${stats.successRate}%` : "0%"} />
         </p>
         <p className="text-sm text-muted-foreground">Success rate</p>
       </div>
@@ -100,7 +113,7 @@ export function HomeStatsPoller({ initialStats }: HomeStatsPollerProps) {
           <Store className="w-6 h-6 text-emerald-500" />
         </div>
         <p className="text-3xl font-bold mb-1">
-          <RollingNumber charClassName="stat-value" text={stats.certifiedRetailers > 0 ? formatNumber(stats.certifiedRetailers) : "0"} />
+          <StatValue odometer={odometer} text={stats.certifiedRetailers > 0 ? formatNumber(stats.certifiedRetailers) : "0"} />
         </p>
         <p className="text-sm text-muted-foreground">Certified Retailers</p>
       </Link>

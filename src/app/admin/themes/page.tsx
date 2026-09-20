@@ -33,7 +33,9 @@ import {
   Undo2,
   Check,
   Copy,
+  Sparkles,
 } from "lucide-react";
+import { EffectsPanel } from "./effects-panel";
 
 // Preset themes
 const presetThemes = [
@@ -284,7 +286,7 @@ export default function ThemesPage() {
         {/* Editor Panel */}
         <div className="md:col-span-2 space-y-6">
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="flex w-full overflow-x-auto md:grid md:grid-cols-4">
+            <TabsList className="flex w-full overflow-x-auto md:grid md:grid-cols-5">
               <TabsTrigger value="colors" className="whitespace-nowrap">
                 <Palette className="mr-2 h-4 w-4" />
                 <span className="hidden sm:inline">Colors</span>
@@ -300,6 +302,10 @@ export default function ThemesPage() {
               <TabsTrigger value="appearance" className="whitespace-nowrap">
                 <Layers className="mr-2 h-4 w-4" />
                 <span className="hidden sm:inline">Appearance</span>
+              </TabsTrigger>
+              <TabsTrigger value="effects" className="whitespace-nowrap">
+                <Sparkles className="mr-2 h-4 w-4" />
+                <span className="hidden sm:inline">Effects</span>
               </TabsTrigger>
             </TabsList>
 
@@ -887,6 +893,15 @@ export default function ThemesPage() {
                 </CardContent>
               </Card>
             </TabsContent>
+
+            {/* Effects Tab — the Sept 2026 visual features, live-toggleable.
+                Its own component and its own API (/api/admin/ui-effects):
+                these save independently of the main Save button above, which
+                serves the older sections. */}
+            <TabsContent value="effects" className="mt-6 space-y-6">
+              <EffectsPanel />
+            </TabsContent>
+
           </Tabs>
         </div>
 

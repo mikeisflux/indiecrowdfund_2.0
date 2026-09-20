@@ -286,6 +286,14 @@ model PlatformSettings {
   // currency) so a JSON blob is fine.
   fxRatesUsd Json?
 
+  // Homepage / sitewide visual-effects switches (scanlines, marquee, ticker,
+  // odometer, tilt, view transitions, grain, aurora, scroll progress) plus
+  // the scanline height. One Json bucket rather than eleven columns: these
+  // are read together, written together from one admin screen, and the set
+  // will keep growing. Nullable so the ALTER is catalog-only on the live DB;
+  // readers treat null as "all defaults".
+  uiEffects Json?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }

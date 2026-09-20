@@ -32,6 +32,7 @@ import { LiveTicker, type TickerItem } from "@/components/home/live-ticker";
 import { getPlatformStats, getRetailerStats } from "@/lib/stats/actions";
 import { getBatchProjectStats } from "@/lib/stats";
 import { db } from "@/lib/db";
+import { getUiEffects } from "@/lib/ui-effects";
 import { formatTimeRemaining } from "@/lib/utils";
 import { auth } from "@/lib/auth";
 
@@ -472,6 +473,8 @@ const getRecentBacks = cache(async (): Promise<TickerItem[]> => {
 // Film strip of live campaign covers under the hero. Reuses the cached
 // featured-projects query, so it costs no extra database round trip.
 async function CoverMarqueeSection() {
+  const fx = await getUiEffects();
+  if (!fx.coverMarquee) return null;
   const projects = await getFeaturedProjects();
   const covers = projects
     .filter((p) => p.imageUrl)
@@ -525,6 +528,7 @@ function StatsSectionSkeleton() {
 
 // Async server component for stats section
 async function StatsSection() {
+  const fx = await getUiEffects();
   const [stats, retailerStats] = await Promise.all([
     getPlatformStats(),
     getRetailerStats(),
@@ -534,8 +538,8 @@ async function StatsSection() {
     <section className="relative border-y border-border/50 py-8 overflow-hidden">
       <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-cyan-500/5 to-purple-500/5" />
       <div className="container relative">
-        <LiveTicker items={await getRecentBacks()} />
-        <HomeStatsPoller initialStats={{
+        {fx.liveTicker && <LiveTicker items={await getRecentBacks()} />}
+        <HomeStatsPoller odometer={fx.odometerStats} initialStats={{
           totalPledged: stats.totalPledged,
           projectsFunded: stats.projectsFunded,
           successRate: stats.successRate,
@@ -907,6 +911,7 @@ export default async function HomePage() {
 
   // Only fetch hero slides synchronously (above the fold)
   const heroSlides = await getHeroSlides();
+  const fx = await getUiEffects();
 
   return (
     <main className="min-h-screen relative">
@@ -959,47 +964,47 @@ export default async function HomePage() {
         <div className="floating-orb absolute -bottom-40 right-1/4 w-[450px] h-[450px] bg-cyan-500/15" style={{ animationDelay: '-10s' }} />
       </div>
 
-      <div className="scanline scanline-violet" aria-hidden="true" />
+      {fx.scanlines && <div className="scanline scanline-violet" aria-hidden="true" />}
 
       {/* Hero Section */}
       <HeroSlider initialSlides={heroSlides} />
 
-      <div className="scanline scanline-cyan" aria-hidden="true" />
+      {fx.scanlines && <div className="scanline scanline-cyan" aria-hidden="true" />}
 
       {/* Live-campaign cover marquee - streams in */}
       <Suspense fallback={null}>
         <CoverMarqueeSection />
       </Suspense>
 
-      <div className="scanline" aria-hidden="true" />
+      {fx.scanlines && <div className="scanline" aria-hidden="true" />}
 
       {/* Stats Section - streams in */}
       <Suspense fallback={<StatsSectionSkeleton />}>
         <StatsSection />
       </Suspense>
 
-      <div className="scanline scanline-rose" aria-hidden="true" />
+      {fx.scanlines && <div className="scanline scanline-rose" aria-hidden="true" />}
 
       {/* Featured Projects - streams in */}
       <Suspense fallback={<ProjectSectionSkeleton />}>
         <FeaturedProjectsSection userId={userId} />
       </Suspense>
 
-      <div className="scanline scanline-cyan" aria-hidden="true" />
+      {fx.scanlines && <div className="scanline scanline-cyan" aria-hidden="true" />}
 
       {/* Prelaunch Projects - streams in */}
       <Suspense fallback={<ProjectSectionSkeleton />}>
         <PrelaunchProjectsSection userId={userId} />
       </Suspense>
 
-      <div className="scanline scanline-violet" aria-hidden="true" />
+      {fx.scanlines && <div className="scanline scanline-violet" aria-hidden="true" />}
 
       {/* Past Campaigns - streams in */}
       <Suspense fallback={<ProjectSectionSkeleton />}>
         <PastCampaignsSection />
       </Suspense>
 
-      <div className="scanline scanline-amber" aria-hidden="true" />
+      {fx.scanlines && <div className="scanline scanline-amber" aria-hidden="true" />}
 
       {/* Empty state - only renders when every project section is empty */}
       <Suspense fallback={null}>

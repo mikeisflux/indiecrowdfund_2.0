@@ -59,7 +59,9 @@ export function TransitionLink({ href, onClick, children, ...props }: Transition
         if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
         if (
           !("startViewTransition" in document) ||
-          window.matchMedia("(prefers-reduced-motion: reduce)").matches
+          window.matchMedia("(prefers-reduced-motion: reduce)").matches ||
+          // Admin kill switch (/admin/themes -> Effects).
+          document.body.dataset.fxVt === "off"
         ) {
           return; // plain Link navigation
         }
