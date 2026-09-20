@@ -1311,11 +1311,11 @@ body::after {
 .scanline {
   --scan: #10b981;
   position: relative;
-  /* 20px tall — the first two attempts (2px, then 4px) still read as
-     hairlines at arm's length. The track stays a slim centered rail (via
-     background-size) so it doesn't become a painted stripe; the comet is the
-     full-height element that carries the size. */
-  height: 20px;
+  /* 8px — dialed in by eye on the live site after passes at 2, 4, 20 and a
+     retracted 10. The track stays a slim centered rail (via background-size)
+     so it doesn't become a painted stripe; the comet is the full-height
+     element that carries the size. */
+  height: 8px;
   width: 100%;
   overflow: hidden;
   background: linear-gradient(
@@ -1324,7 +1324,7 @@ body::after {
       color-mix(in srgb, var(--scan) 35%, transparent) 50%,
       transparent
     )
-    center / 100% 4px no-repeat;
+    center / 100% 3px no-repeat;
 }
 
 .scanline::after {
