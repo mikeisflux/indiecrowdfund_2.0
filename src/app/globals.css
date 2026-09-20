@@ -1311,17 +1311,20 @@ body::after {
 .scanline {
   --scan: #10b981;
   position: relative;
-  /* 4px, up from 2 — at 2px the comet read as a hairline glitch on large
-     monitors; at 4 it reads as a deliberate light element. */
-  height: 4px;
+  /* 20px tall — the first two attempts (2px, then 4px) still read as
+     hairlines at arm's length. The track stays a slim centered rail (via
+     background-size) so it doesn't become a painted stripe; the comet is the
+     full-height element that carries the size. */
+  height: 20px;
   width: 100%;
   overflow: hidden;
   background: linear-gradient(
-    90deg,
-    transparent,
-    color-mix(in srgb, var(--scan) 18%, transparent) 50%,
-    transparent
-  );
+      90deg,
+      transparent,
+      color-mix(in srgb, var(--scan) 35%, transparent) 50%,
+      transparent
+    )
+    center / 100% 4px no-repeat;
 }
 
 .scanline::after {
@@ -1331,16 +1334,22 @@ body::after {
   left: 0;
   height: 100%;
   width: 38%;
+  /* White-hot core inside the colour — brightness comes from the core, not
+     from cranking opacity, which is how the real KITT scanner reads. */
   background: linear-gradient(
     90deg,
     transparent,
-    color-mix(in srgb, var(--scan) 55%, transparent) 35%,
-    var(--scan) 50%,
-    color-mix(in srgb, var(--scan) 55%, transparent) 65%,
+    color-mix(in srgb, var(--scan) 65%, transparent) 30%,
+    var(--scan) 44%,
+    color-mix(in srgb, var(--scan) 60%, white) 50%,
+    var(--scan) 56%,
+    color-mix(in srgb, var(--scan) 65%, transparent) 70%,
     transparent
   );
   border-radius: 999px;
-  box-shadow: 0 0 16px 2px var(--scan), 0 0 40px 4px color-mix(in srgb, var(--scan) 45%, transparent);
+  box-shadow:
+    0 0 24px 4px var(--scan),
+    0 0 64px 12px color-mix(in srgb, var(--scan) 50%, transparent);
   animation: knight-rider 5.5s ease-in-out infinite alternate;
 }
 
