@@ -484,7 +484,12 @@ const getMarqueeCovers = cache(async () => {
     const now = new Date();
     const rewards = await db.reward.findMany({
       where: {
-        imageUrl: { not: null },
+        // Prisma 7 rejects `{ field: { not: null } }` on nullable string
+        // columns at runtime — the wrapper form is required. The first
+        // version of this query used the rejected form, threw on every
+        // request, and the catch silently served the campaign-banner
+        // fallback, making it look like the reward switch never shipped.
+        NOT: { imageUrl: null },
         visibility: "PUBLIC",
         isEnded: false,
         type: { in: ["TIER", "ADDON"] },
