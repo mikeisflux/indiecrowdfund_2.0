@@ -17,6 +17,11 @@ export const metadata: Metadata = {
     canonical: `${SITE_URL}/crowdfunds`,
   },
   openGraph: {
+    // Explicit because a nested layout's openGraph REPLACES the root
+    // layout's block wholesale — this page was shipping with no og:type at
+    // all, which degrades share previews and crashed at least one visitor's
+    // meta-reading browser extension (Sentinel, Sept 19).
+    type: "website",
     title: "Comic Book Crowdfunding Campaigns on IndieCrowdfund",
     description:
       "Browse indie comic and graphic novel crowdfunding campaigns. Find and back projects you believe in.",
