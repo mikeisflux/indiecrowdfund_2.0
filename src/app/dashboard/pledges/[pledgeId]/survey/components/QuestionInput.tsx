@@ -118,6 +118,22 @@ export function QuestionInput({
     );
   }
 
+  // Safety net for broken data: a choice question saved with zero options
+  // used to render as a bare label — nothing to click — and if required it
+  // dead-ended the whole survey ("the form can't be completed"). The save
+  // paths now reject that shape, but rows created before the guard (or by
+  // any future path that forgets it) must still be answerable, so they fall
+  // back to free text.
+  if ((type === "SINGLE_SELECT" || type === "MULTIPLE_SELECT") && options.length === 0) {
+    return (
+      <Input
+        value={(Array.isArray(value) ? value.join(", ") : value) || ""}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder="Type your answer..."
+      />
+    );
+  }
+
   if (type === "SINGLE_SELECT") {
     return (
       <RadioGroup

@@ -173,15 +173,39 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // Clear existing backer questions and recreate
-    await db.surveyBackerQuestion.deleteMany({
-      where: { surveyId: survey.id },
-    });
-
     // Filter out section breaks and item-related questions
     const backerQuestions = questions.filter(
       (q: { type: string; isItemQuestion?: boolean }) => q.type !== "section_break" && !q.isItemQuestion
     );
+
+    // Reject choice questions with no options BEFORE the destructive
+    // clear-and-recreate below — a required SINGLE/MULTIPLE_SELECT with an
+    // empty options list renders as a label with nothing to click and
+    // permanently blocks submission (the Star Whores t-shirt bug, via the
+    // per-reward path). Validation must precede deleteMany: rejecting after
+    // the wipe would eat the creator's existing questions on every failed
+    // save. Same rule as the item-questions route.
+    for (const q of backerQuestions) {
+      const dbType = mapToDbQuestionType(q.type);
+      const cleanOptions = (q.options || []).map((o: string) => o.trim()).filter(Boolean);
+      if (
+        (dbType === "SINGLE_SELECT" || dbType === "MULTIPLE_SELECT") &&
+        cleanOptions.length === 0
+      ) {
+        return NextResponse.json(
+          {
+            error: `"${q.label}" is a choice question but has no options — add at least one option, or switch it to a text question`,
+          },
+          { status: 400 }
+        );
+      }
+      q.options = cleanOptions;
+    }
+
+    // Clear existing backer questions and recreate
+    await db.surveyBackerQuestion.deleteMany({
+      where: { surveyId: survey.id },
+    });
 
     // Create new backer questions
     for (let i = 0; i < backerQuestions.length; i++) {

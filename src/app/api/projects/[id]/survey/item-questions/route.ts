@@ -15,15 +15,39 @@ const variantSchema = z.object({
   sortOrder: z.number().default(0),
 });
 
-const customQuestionSchema = z.object({
-  id: z.string().optional(),
-  question: z.string().min(1),
-  description: z.string().optional().nullable(),
-  questionType: z.enum(["OPEN_TEXT", "SINGLE_SELECT", "MULTIPLE_SELECT"]).default("OPEN_TEXT"),
-  options: z.array(z.string()).default([]),
-  isRequired: z.boolean().default(false),
-  sortOrder: z.number().default(0),
-});
+const customQuestionSchema = z
+  .object({
+    id: z.string().optional(),
+    question: z.string().min(1),
+    description: z.string().optional().nullable(),
+    questionType: z.enum(["OPEN_TEXT", "SINGLE_SELECT", "MULTIPLE_SELECT"]).default("OPEN_TEXT"),
+    options: z.array(z.string()).default([]),
+    isRequired: z.boolean().default(false),
+    sortOrder: z.number().default(0),
+  })
+  .transform((q) => ({
+    ...q,
+    // Trim and drop empties so ", ,m," style input can't smuggle blanks in.
+    options: q.options.map((o) => o.trim()).filter(Boolean),
+  }))
+  .superRefine((q, ctx) => {
+    // A choice question with no options renders as a label with nothing to
+    // click, and if it is required the backer can never submit. variantSchema
+    // has always demanded min(1) options; custom questions did not, and
+    // exactly that gap shipped a required MULTIPLE_SELECT with options: {} on
+    // Star Whores — every backer holding that add-on was hard-stuck at
+    // "the form can't be completed". Reject it at save time, loudly.
+    if (
+      (q.questionType === "SINGLE_SELECT" || q.questionType === "MULTIPLE_SELECT") &&
+      q.options.length === 0
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["options"],
+        message: `"${q.question}" is a choice question but has no options — add at least one option, or switch it to a text question`,
+      });
+    }
+  });
 
 const itemQuestionSchema = z.object({
   rewardId: z.string(),
