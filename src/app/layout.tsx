@@ -285,6 +285,10 @@ export default async function RootLayout({
               {/* Site chrome is suppressed on /embed/* — the widget renders
                   inside a third-party page and must arrive bare. */}
               <HideOnEmbed>
+                {/* Gradient read-progress bar across the very top, driven by
+                    animation-timeline: scroll() — no JS, no scroll listeners.
+                    display:none where unsupported (it is chrome, not content). */}
+                <div className="scroll-progress" aria-hidden="true" />
                 <AnnouncementBar initialAnnouncements={announcements} />
                 <PromoPopup />
                 <ConsentBanner />

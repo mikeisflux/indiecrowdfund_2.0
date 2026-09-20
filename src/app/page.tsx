@@ -25,6 +25,8 @@ import { HeroSlider } from "@/components/hero-slider";
 import { JsonLd } from "@/components/json-ld";
 import { HomeStatsPoller } from "@/components/home-stats-poller";
 import { ShowMoreGrid } from "@/components/home/show-more-grid";
+import { CoverMarquee } from "@/components/home/cover-marquee";
+import { TiltCard } from "@/components/effects/tilt-card";
 import { getPlatformStats, getRetailerStats } from "@/lib/stats/actions";
 import { getBatchProjectStats } from "@/lib/stats";
 import { db } from "@/lib/db";
@@ -410,6 +412,21 @@ async function getHeroSlides() {
   }
 }
 
+// Film strip of live campaign covers under the hero. Reuses the cached
+// featured-projects query, so it costs no extra database round trip.
+async function CoverMarqueeSection() {
+  const projects = await getFeaturedProjects();
+  const covers = projects
+    .filter((p) => p.imageUrl)
+    .map((p) => ({
+      id: p.id,
+      title: p.title,
+      imageUrl: p.imageUrl as string,
+      href: p.projectUrl,
+    }));
+  return <CoverMarquee covers={covers} />;
+}
+
 // Skeleton loader for project sections
 function ProjectSectionSkeleton() {
   return (
@@ -505,6 +522,7 @@ async function FeaturedProjectsSection({ userId }: { userId: string | undefined 
         <ShowMoreGrid className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3" label="Show more featured projects">
           {featuredProjects.map((project, index) => (
             <Link key={project.id} href={project.projectUrl} className="animate-fade-in-up" style={{ animationDelay: `${index * 0.1}s` }}>
+              <TiltCard className="h-full rounded-2xl">
               <Card className="project-card overflow-hidden h-full glass-card glass-card-hover rounded-2xl border-border/50">
                 <div className="aspect-video bg-muted relative overflow-hidden">
                   {project.imageUrl ? (
@@ -580,6 +598,7 @@ async function FeaturedProjectsSection({ userId }: { userId: string | undefined 
                   </div>
                 </CardFooter>
               </Card>
+              </TiltCard>
             </Link>
           ))}
         </ShowMoreGrid>
@@ -884,6 +903,11 @@ export default async function HomePage() {
 
       {/* Hero Section */}
       <HeroSlider initialSlides={heroSlides} />
+
+      {/* Live-campaign cover marquee - streams in */}
+      <Suspense fallback={null}>
+        <CoverMarqueeSection />
+      </Suspense>
 
       {/* Stats Section - streams in */}
       <Suspense fallback={<StatsSectionSkeleton />}>
