@@ -578,7 +578,24 @@ export default function ProjectPage() {
       )}
 
       {/* Hero Section */}
-      <section className="border-b border-border/50 relative hero-gradient">
+      <section className="border-b border-border/50 relative hero-gradient overflow-hidden">
+        {/* Cinematic backdrop: the campaign's own cover, blown up, blurred and
+            scrimmed to the page background. Every campaign page becomes its
+            own poster, and the dominant colours come from the art itself —
+            no extraction step needed when the art IS the backdrop. */}
+        {project.imageUrl && (
+          <div className="absolute inset-0" aria-hidden="true">
+            <Image
+              src={project.imageUrl}
+              alt=""
+              fill
+              sizes="100vw"
+              className="scale-110 object-cover opacity-30 blur-2xl saturate-150 dark:opacity-25"
+              unoptimized={project.imageUrl.endsWith(".gif")}
+            />
+            <div className="absolute inset-0 bg-gradient-to-b from-background/55 via-background/75 to-background" />
+          </div>
+        )}
         <div className="container py-10 relative">
           {/* Title */}
           <div className="text-center mb-8">
@@ -589,7 +606,10 @@ export default function ProjectPage() {
           <div className="grid gap-8 md:grid-cols-5">
             {/* Media - Takes 3 columns */}
             <div className="md:col-span-3 animate-in fade-in slide-in-from-left-4 duration-500" style={{ animationDelay: '200ms' }}>
-              <div className="aspect-video overflow-hidden rounded-2xl bg-muted relative shadow-2xl shadow-black/20 ring-1 ring-border/50">
+              {/* Shares its view-transition-name with the homepage card's
+                  cover container, so navigating from the grid morphs the small
+                  cover into this hero instead of hard-cutting. */}
+              <div className="aspect-video overflow-hidden rounded-2xl bg-muted relative shadow-2xl shadow-black/20 ring-1 ring-border/50" style={{ viewTransitionName: `cover-${project.id}` } as React.CSSProperties}>
                 {project.videoUrl ? (
                   <ProjectVideoPlayer
                     videoUrl={project.videoUrl}

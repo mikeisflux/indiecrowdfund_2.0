@@ -10,6 +10,7 @@ import {
   Store,
 } from "lucide-react";
 import { formatCurrency, formatNumber } from "@/lib/stats/utils";
+import { RollingNumber } from "@/components/effects/rolling-number";
 
 interface HomeStats {
   totalPledged: number;
@@ -63,7 +64,7 @@ export function HomeStatsPoller({ initialStats }: HomeStatsPollerProps) {
           <TrendingUp className="w-6 h-6 text-primary" />
         </div>
         <p className="text-3xl font-bold stat-value mb-1">
-          {stats.totalPledged > 0 ? `${formatCurrency(stats.totalPledged)}+` : "$0"}
+          <RollingNumber text={stats.totalPledged > 0 ? `${formatCurrency(stats.totalPledged)}+` : "$0"} />
         </p>
         <p className="text-sm text-muted-foreground">Pledged to projects</p>
       </div>
@@ -72,7 +73,7 @@ export function HomeStatsPoller({ initialStats }: HomeStatsPollerProps) {
           <Target className="w-6 h-6 text-cyan-500" />
         </div>
         <p className="text-3xl font-bold stat-value mb-1">
-          {stats.projectsFunded > 0 ? formatNumber(stats.projectsFunded) : "0"}
+          <RollingNumber text={stats.projectsFunded > 0 ? formatNumber(stats.projectsFunded) : "0"} />
         </p>
         <p className="text-sm text-muted-foreground">Projects funded</p>
       </div>
@@ -81,7 +82,7 @@ export function HomeStatsPoller({ initialStats }: HomeStatsPollerProps) {
           <Users className="w-6 h-6 text-purple-500" />
         </div>
         <p className="text-3xl font-bold stat-value mb-1">
-          {stats.backerPool > 0 ? formatNumber(stats.backerPool) : "0"}
+          <RollingNumber text={stats.backerPool > 0 ? formatNumber(stats.backerPool) : "0"} />
         </p>
         <p className="text-sm text-muted-foreground">Backer pool</p>
       </div>
@@ -90,7 +91,7 @@ export function HomeStatsPoller({ initialStats }: HomeStatsPollerProps) {
           <Award className="w-6 h-6 text-amber-500" />
         </div>
         <p className="text-3xl font-bold stat-value mb-1">
-          {stats.successRate > 0 ? `${stats.successRate}%` : "0%"}
+          <RollingNumber text={stats.successRate > 0 ? `${stats.successRate}%` : "0%"} />
         </p>
         <p className="text-sm text-muted-foreground">Success rate</p>
       </div>
@@ -99,7 +100,7 @@ export function HomeStatsPoller({ initialStats }: HomeStatsPollerProps) {
           <Store className="w-6 h-6 text-emerald-500" />
         </div>
         <p className="text-3xl font-bold stat-value mb-1">
-          {stats.certifiedRetailers > 0 ? formatNumber(stats.certifiedRetailers) : "0"}
+          <RollingNumber text={stats.certifiedRetailers > 0 ? formatNumber(stats.certifiedRetailers) : "0"} />
         </p>
         <p className="text-sm text-muted-foreground">Certified Retailers</p>
       </Link>
