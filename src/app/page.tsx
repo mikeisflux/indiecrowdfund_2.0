@@ -500,8 +500,12 @@ const getMarqueeCovers = cache(async () => {
           NOT: { title: { contains: "test", mode: "insensitive" } },
         },
       },
+      // No recency bias: the pool must cover EVERY live campaign, or one
+      // that just imported a hundred covers floods the sample and an older
+      // campaign with nine never appears. The eligible set is a few hundred
+      // rows of ids and urls; 500 is a safety bound, not a sampler.
       orderBy: { createdAt: "desc" },
-      take: 80,
+      take: 500,
       select: {
         id: true,
         title: true,
