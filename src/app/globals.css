@@ -1311,7 +1311,9 @@ body::after {
 .scanline {
   --scan: #10b981;
   position: relative;
-  height: 2px;
+  /* 4px, up from 2 — at 2px the comet read as a hairline glitch on large
+     monitors; at 4 it reads as a deliberate light element. */
+  height: 4px;
   width: 100%;
   overflow: hidden;
   background: linear-gradient(
@@ -1337,7 +1339,8 @@ body::after {
     color-mix(in srgb, var(--scan) 55%, transparent) 65%,
     transparent
   );
-  box-shadow: 0 0 12px 1px var(--scan), 0 0 28px 2px color-mix(in srgb, var(--scan) 45%, transparent);
+  border-radius: 999px;
+  box-shadow: 0 0 16px 2px var(--scan), 0 0 40px 4px color-mix(in srgb, var(--scan) 45%, transparent);
   animation: knight-rider 5.5s ease-in-out infinite alternate;
 }
 

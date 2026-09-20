@@ -959,18 +959,26 @@ export default async function HomePage() {
         <div className="floating-orb absolute -bottom-40 right-1/4 w-[450px] h-[450px] bg-cyan-500/15" style={{ animationDelay: '-10s' }} />
       </div>
 
+      <div className="scanline scanline-violet" aria-hidden="true" />
+
       {/* Hero Section */}
       <HeroSlider initialSlides={heroSlides} />
+
+      <div className="scanline scanline-cyan" aria-hidden="true" />
 
       {/* Live-campaign cover marquee - streams in */}
       <Suspense fallback={null}>
         <CoverMarqueeSection />
       </Suspense>
 
+      <div className="scanline" aria-hidden="true" />
+
       {/* Stats Section - streams in */}
       <Suspense fallback={<StatsSectionSkeleton />}>
         <StatsSection />
       </Suspense>
+
+      <div className="scanline scanline-rose" aria-hidden="true" />
 
       {/* Featured Projects - streams in */}
       <Suspense fallback={<ProjectSectionSkeleton />}>
