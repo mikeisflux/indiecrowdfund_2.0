@@ -1300,3 +1300,67 @@ body::after {
     }
   }
 }
+
+/* ---- Knight Rider scanlines ---- */
+/* Section dividers with a glowing comet that sweeps edge to edge and bounces
+   back (animation-direction: alternate — the bounce is what makes it KITT
+   and not a loading bar). The comet is brightest at its center with a long
+   soft tail via the three-stop gradient, and throws light with box-shadow.
+   Colour comes from --scan so one block serves every variant. The global
+   prefers-reduced-motion rule freezes it into a static gradient hairline. */
+.scanline {
+  --scan: #10b981;
+  position: relative;
+  height: 2px;
+  width: 100%;
+  overflow: hidden;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--scan) 18%, transparent) 50%,
+    transparent
+  );
+}
+
+.scanline::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: 38%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--scan) 55%, transparent) 35%,
+    var(--scan) 50%,
+    color-mix(in srgb, var(--scan) 55%, transparent) 65%,
+    transparent
+  );
+  box-shadow: 0 0 12px 1px var(--scan), 0 0 28px 2px color-mix(in srgb, var(--scan) 45%, transparent);
+  animation: knight-rider 5.5s ease-in-out infinite alternate;
+}
+
+@keyframes knight-rider {
+  from {
+    transform: translateX(170%);
+  }
+  to {
+    transform: translateX(-110%);
+  }
+}
+
+.scanline-cyan { --scan: #06b6d4; }
+.scanline-violet { --scan: #8b5cf6; }
+.scanline-amber { --scan: #f59e0b; }
+.scanline-rose { --scan: #f43f5e; }
+
+/* ---- View Transitions ---- */
+/* Quarter-second cross-fade for the whole page on TransitionLink
+   navigations; elements sharing a view-transition-name (homepage card cover
+   -> campaign hero) morph geometry instead. Browsers without the API never
+   reach this — TransitionLink falls back to a plain navigation. */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 0.25s;
+}

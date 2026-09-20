@@ -27,6 +27,8 @@ import { HomeStatsPoller } from "@/components/home-stats-poller";
 import { ShowMoreGrid } from "@/components/home/show-more-grid";
 import { CoverMarquee } from "@/components/home/cover-marquee";
 import { TiltCard } from "@/components/effects/tilt-card";
+import { TransitionLink } from "@/components/effects/view-transitions";
+import { LiveTicker, type TickerItem } from "@/components/home/live-ticker";
 import { getPlatformStats, getRetailerStats } from "@/lib/stats/actions";
 import { getBatchProjectStats } from "@/lib/stats";
 import { db } from "@/lib/db";
@@ -412,6 +414,61 @@ async function getHeroSlides() {
   }
 }
 
+// Most recent completed pledges, for the live ticker in the stats band.
+// Anonymous by design: region and amount sell the platform, the backer's
+// name is theirs. Freshness rides the page's 60s ISR.
+const getRecentBacks = cache(async (): Promise<TickerItem[]> => {
+  try {
+    const pledges = await db.pledge.findMany({
+      where: {
+        status: "COMPLETED",
+        deletedAt: null,
+        project: { status: "LIVE", deletedAt: null },
+      },
+      orderBy: { createdAt: "desc" },
+      take: 8,
+      select: {
+        id: true,
+        amount: true,
+        createdAt: true,
+        shippingAddress: true,
+        project: {
+          select: {
+            title: true,
+            slug: true,
+            creator: { select: { vanityUrl: true } },
+          },
+        },
+      },
+    });
+
+    const ago = (d: Date) => {
+      const mins = Math.max(1, Math.round((Date.now() - d.getTime()) / 60000));
+      if (mins < 60) return `${mins}m ago`;
+      const hours = Math.round(mins / 60);
+      if (hours < 24) return `${hours}h ago`;
+      return `${Math.round(hours / 24)}d ago`;
+    };
+
+    return pledges
+      .filter((p) => p.project.creator.vanityUrl)
+      .map((p) => {
+        const addr = p.shippingAddress as { city?: string; state?: string } | null;
+        const region = addr?.city || addr?.state;
+        return {
+          id: p.id,
+          lead: region ? `Someone in ${region} backed` : "Someone just backed",
+          title: p.project.title,
+          amount: `$${Math.round(Number(p.amount)).toLocaleString()}`,
+          when: ago(p.createdAt),
+          href: `/projects/${p.project.creator.vanityUrl}/${p.project.slug}`,
+        };
+      });
+  } catch {
+    return [];
+  }
+});
+
 // Film strip of live campaign covers under the hero. Reuses the cached
 // featured-projects query, so it costs no extra database round trip.
 async function CoverMarqueeSection() {
@@ -477,6 +534,7 @@ async function StatsSection() {
     <section className="relative border-y border-border/50 py-8 overflow-hidden">
       <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-cyan-500/5 to-purple-500/5" />
       <div className="container relative">
+        <LiveTicker items={await getRecentBacks()} />
         <HomeStatsPoller initialStats={{
           totalPledged: stats.totalPledged,
           projectsFunded: stats.projectsFunded,
@@ -521,10 +579,10 @@ async function FeaturedProjectsSection({ userId }: { userId: string | undefined 
 
         <ShowMoreGrid className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3" label="Show more featured projects">
           {featuredProjects.map((project, index) => (
-            <Link key={project.id} href={project.projectUrl} className="animate-fade-in-up" style={{ animationDelay: `${index * 0.1}s` }}>
+            <TransitionLink key={project.id} href={project.projectUrl} className="animate-fade-in-up" style={{ animationDelay: `${index * 0.1}s` }}>
               <TiltCard className="h-full rounded-2xl">
               <Card className="project-card overflow-hidden h-full glass-card glass-card-hover rounded-2xl border-border/50">
-                <div className="aspect-video bg-muted relative overflow-hidden">
+                <div className="aspect-video bg-muted relative overflow-hidden" style={{ viewTransitionName: `cover-${project.id}` } as React.CSSProperties}>
                   {project.imageUrl ? (
                     <Image
                       src={project.imageUrl}
@@ -599,7 +657,7 @@ async function FeaturedProjectsSection({ userId }: { userId: string | undefined 
                 </CardFooter>
               </Card>
               </TiltCard>
-            </Link>
+            </TransitionLink>
           ))}
         </ShowMoreGrid>
       </div>
@@ -919,15 +977,21 @@ export default async function HomePage() {
         <FeaturedProjectsSection userId={userId} />
       </Suspense>
 
+      <div className="scanline scanline-cyan" aria-hidden="true" />
+
       {/* Prelaunch Projects - streams in */}
       <Suspense fallback={<ProjectSectionSkeleton />}>
         <PrelaunchProjectsSection userId={userId} />
       </Suspense>
 
+      <div className="scanline scanline-violet" aria-hidden="true" />
+
       {/* Past Campaigns - streams in */}
       <Suspense fallback={<ProjectSectionSkeleton />}>
         <PastCampaignsSection />
       </Suspense>
+
+      <div className="scanline scanline-amber" aria-hidden="true" />
 
       {/* Empty state - only renders when every project section is empty */}
       <Suspense fallback={null}>

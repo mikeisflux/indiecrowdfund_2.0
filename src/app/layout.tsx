@@ -13,6 +13,8 @@ import { EmailVerificationBanner } from "@/components/email-verification-banner"
 import { ScreenReaderAnnouncer } from "@/components/ui/screen-reader-announcer";
 import { ErrorReporter } from "@/components/error-reporter";
 import { SupportChatWidget } from "@/components/support-chat-widget";
+import { CommandPalette } from "@/components/command-palette";
+import { ViewTransitionsProvider } from "@/components/effects/view-transitions";
 import { GoogleAnalytics } from "@/components/google-analytics";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
@@ -274,6 +276,7 @@ export default async function RootLayout({
             enableSystem
             disableTransitionOnChange
           >
+            <ViewTransitionsProvider>
             <ScreenReaderAnnouncer>
             <a
               href="#main-content"
@@ -301,10 +304,13 @@ export default async function RootLayout({
               {modal}
             </TrackingProvider>
             </ScreenReaderAnnouncer>
+            </ViewTransitionsProvider>
             <Toaster />
             <ErrorReporter />
             <HideOnEmbed>
               <SupportChatWidget />
+              {/* ⌘K / Ctrl+K everywhere except embeds */}
+              <CommandPalette />
             </HideOnEmbed>
           </ThemeProvider>
         </AuthProvider>
