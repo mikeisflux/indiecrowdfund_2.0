@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { emailBodyToPlainText } from "@/lib/email/email-to-text";
 import { db } from "@/lib/db";
 import { getR2Storage, generateEmailAttachmentKey } from "@/lib/r2";
 import { isSenderBlocked, recordBlockHit } from "@/lib/email/inbound-blocklist";
@@ -408,10 +409,16 @@ export async function POST(request: NextRequest) {
       // Store the message with the creator as recipient
       // If sender is external (not in our system), include their info in the content
       // and use creator.id as senderId (self-message to inbox)
+      //
+      // emailBodyToPlainText replaces the old bare tag-strip, which removed
+      // <style>'s tags but kept its CSS rules — HTML-formatted emails arrived
+      // in the inbox as walls of stylesheet ("webcode bleeding through") — and
+      // never ran at all when a sender put HTML inside their "plain" part.
       const isExternalSender = !sender;
+      const cleanBody = emailBodyToPlainText({ text: finalBodyText, html: emailData.html });
       const messageContent = isExternalSender
-        ? `From: ${fromParsed.name || fromParsed.email} <${fromParsed.email}>\n\n${finalBodyText || finalBodyHtml.replace(/<[^>]*>/g, "")}`
-        : finalBodyText || finalBodyHtml.replace(/<[^>]*>/g, "");
+        ? `From: ${fromParsed.name || fromParsed.email} <${fromParsed.email}>\n\n${cleanBody}`
+        : cleanBody;
 
       const message = await db.message.create({
         data: {
