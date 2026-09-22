@@ -6,6 +6,7 @@ const creatorEmailThreadsReplyLogger = logger.child({ module: "creator-email-thr
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { sendEmail, escapeHtmlForEmail } from "@/lib/email";
+import { htmlToPlainText, looksLikeHtml } from "@/lib/email/email-to-text";
 
 export const dynamic = "force-dynamic";
 
@@ -37,6 +38,15 @@ export async function POST(
 
     const body = await request.json();
     const { content, attachments } = body;
+    // Rich-editor guard: some compose surfaces produce editor HTML
+    // ("<p style=...>Hey, Justin!</p>"), and this system is two-channel —
+    // the EMAIL can carry that HTML, but the mirrored Message is rendered as
+    // plain text everywhere, and escaping HTML into the email showed the
+    // recipient literal tags. So: rich input goes into the email as real
+    // HTML, and is converted to readable text for the message record.
+    const isRichHtml = looksLikeHtml(content || "");
+    const plainContent = isRichHtml ? htmlToPlainText(content) : (content || "").trim();
+
 
     if (!content?.trim()) {
       return NextResponse.json({ error: "Content is required" }, { status: 400 });
@@ -157,7 +167,7 @@ export async function POST(
           </div>
 
           <div style="padding: 20px 0;">
-            ${escapeHtmlForEmail(content.trim()).replace(/\n/g, '<br>')}
+            ${isRichHtml ? content.trim() : escapeHtmlForEmail(content.trim()).replace(/\n/g, '<br>')}
           </div>
 
           <div style="border-top: 1px solid #eee; padding-top: 20px; margin-top: 20px; text-align: center; color: #999; font-size: 12px;">
@@ -217,7 +227,7 @@ export async function POST(
         senderId: session.user.id,
         recipientId,
         subject,
-        content: content.trim(),
+        content: plainContent,
         read: false,
       },
       include: {

@@ -6,6 +6,7 @@ const creatorEmailThreadsForwardLogger = logger.child({ module: "creator-email-t
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { sendEmail, escapeHtmlForEmail } from "@/lib/email";
+import { htmlToPlainText, looksLikeHtml } from "@/lib/email/email-to-text";
 
 export const dynamic = "force-dynamic";
 
@@ -111,7 +112,13 @@ export async function POST(
       })
       .join("\n\n");
 
-    const fullContent = additionalMessage
+    // The forwarded originals are stored plain; only the creator's new note
+    // can arrive as rich-editor HTML — flatten it so the composite stays text.
+    const additionalPlain =
+      additionalMessage && looksLikeHtml(additionalMessage)
+        ? htmlToPlainText(additionalMessage)
+        : additionalMessage;
+    const fullContent = additionalPlain
       ? `${additionalMessage}\n\n${forwardedContent}`
       : forwardedContent;
 

@@ -6,6 +6,7 @@ const creatorEmailComposeLogger = logger.child({ module: "creator-email-compose"
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { sendEmail, escapeHtmlForEmail } from "@/lib/email";
+import { htmlToPlainText, looksLikeHtml } from "@/lib/email/email-to-text";
 
 export const dynamic = "force-dynamic";
 
@@ -21,6 +22,15 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
     const { to, subject, content, projectId, attachments } = body;
+    // Rich-editor guard: some compose surfaces produce editor HTML
+    // ("<p style=...>Hey, Justin!</p>"), and this system is two-channel —
+    // the EMAIL can carry that HTML, but the mirrored Message is rendered as
+    // plain text everywhere, and escaping HTML into the email showed the
+    // recipient literal tags. So: rich input goes into the email as real
+    // HTML, and is converted to readable text for the message record.
+    const isRichHtml = looksLikeHtml(content || "");
+    const plainContent = isRichHtml ? htmlToPlainText(content) : (content || "").trim();
+
 
     if (!to?.trim()) {
       return NextResponse.json({ error: "Recipient email is required" }, { status: 400 });
@@ -150,8 +160,8 @@ export async function POST(request: NextRequest) {
             </p>
           </div>
 
-          <div style="padding: 20px 0; white-space: pre-wrap;">
-            ${escapeHtmlForEmail(content.trim())}
+          <div style="padding: 20px 0;${isRichHtml ? "" : " white-space: pre-wrap;"}">
+            ${isRichHtml ? content.trim() : escapeHtmlForEmail(content.trim())}
           </div>
 
           <div style="border-top: 1px solid #eee; padding-top: 20px; margin-top: 20px; text-align: center; color: #999; font-size: 12px;">
@@ -166,7 +176,7 @@ export async function POST(request: NextRequest) {
       to: to.trim(),
       subject: emailSubject,
       html: htmlBody,
-      text: content.trim(),
+      text: plainContent,
       fromEmail: creatorEmail,
       fromName: senderName,
       replyTo: creatorEmail, // Replies go to the creator's email
@@ -222,7 +232,7 @@ export async function POST(request: NextRequest) {
           recipientId: recipient.id,
           projectId: projectId || null,
           subject: emailSubject,
-          content: content.trim(),
+          content: plainContent,
           read: false,
         },
         include: {
@@ -267,7 +277,7 @@ export async function POST(request: NextRequest) {
         createdAt: messageRecord.createdAt.toISOString(),
       } : {
         subject: emailSubject,
-        content: content.trim(),
+        content: plainContent,
         recipient: { email: to.trim() },
         createdAt: new Date().toISOString(),
       },

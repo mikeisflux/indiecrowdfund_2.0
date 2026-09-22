@@ -6,6 +6,7 @@ const messagesLogger = logger.child({ module: "messages" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { z } from "zod";
+import { htmlToPlainText, looksLikeHtml } from "@/lib/email/email-to-text";
 import { sendEmail } from "@/lib/email";
 import {
   getDelegatedProjectCreators,
@@ -82,7 +83,9 @@ export async function POST(req: NextRequest) {
         senderId: session.user.id,
         recipientId: data.recipientId,
         subject: data.subject,
-        content: data.content,
+        // Messages render as plain text on every surface; a rich-editor
+        // client posting HTML here would otherwise show its markup verbatim.
+        content: looksLikeHtml(data.content) ? htmlToPlainText(data.content) : data.content,
       },
       include: {
         sender: {
