@@ -7,6 +7,7 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { sendEmail, escapeHtmlForEmail } from "@/lib/email";
 import { htmlToPlainText, looksLikeHtml } from "@/lib/email/email-to-text";
+import { storeMessageAttachments, type IncomingAttachment } from "@/lib/messages/attachments";
 
 export const dynamic = "force-dynamic";
 
@@ -221,6 +222,19 @@ export async function POST(
     }
 
     // Create the reply message record
+    // Mirror the emailed files onto the in-app message.
+    let storedAttachments: Awaited<ReturnType<typeof storeMessageAttachments>> = [];
+    if (attachments && attachments.length > 0) {
+      try {
+        storedAttachments = await storeMessageAttachments(attachments as IncomingAttachment[]);
+      } catch (attErr) {
+        creatorEmailThreadsReplyLogger.warn(
+          { err: String(attErr) },
+          "Attachment mirror failed; email was already sent with the files"
+        );
+      }
+    }
+
     const message = await db.message.create({
       data: {
         projectId: hasProject ? projectId : null,
@@ -228,6 +242,7 @@ export async function POST(
         recipientId,
         subject,
         content: plainContent,
+        attachments: storedAttachments.length > 0 ? storedAttachments : undefined,
         read: false,
       },
       include: {

@@ -59,6 +59,13 @@ export function htmlToPlainText(html: string): string {
   s = s.replace(/<li\b[^>]*>/gi, "\n• ");
   s = s.replace(/<\/(p|div|tr|li|h[1-6]|blockquote|table|ul|ol|section|header|footer)\s*>/gi, "\n");
 
+  // Inline images survive as a visible reference — flattening a message
+  // that is MOSTLY a picture into silence is how "I sent pictures and they
+  // didn't come through" happens. Runs before the generic tag strip.
+  s = s.replace(/<img\b[^>]*src=["']([^"']+)["'][^>]*>/gi, (_, src: string) =>
+    src.startsWith("data:") ? "\n[Image]\n" : `\n[Image: ${src}]\n`
+  );
+
   // Keep link targets when they differ from the link text — an emailed link
   // must survive into the plain rendering or the message loses its point.
   s = s.replace(

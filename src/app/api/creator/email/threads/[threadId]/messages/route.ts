@@ -57,6 +57,7 @@ export async function GET(
       id: msg.id,
       threadId,
       content: msg.content,
+      attachments: msg.attachments ?? [],
       sender: {
         id: msg.sender.id,
         name: msg.sender.name || "Unknown",

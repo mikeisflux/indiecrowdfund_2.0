@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { emailBodyToPlainText } from "@/lib/email/email-to-text";
+import { storeMessageAttachments } from "@/lib/messages/attachments";
 import { db } from "@/lib/db";
 import { getR2Storage, generateEmailAttachmentKey } from "@/lib/r2";
 import { isSenderBlocked, recordBlockHit } from "@/lib/email/inbound-blocklist";
@@ -420,12 +421,35 @@ export async function POST(request: NextRequest) {
         ? `From: ${fromParsed.name || fromParsed.email} <${fromParsed.email}>\n\n${cleanBody}`
         : cleanBody;
 
+      // Attachments used to be silently dropped on this branch (the admin
+      // mailbox branch stored them; the creator-message branch never did) —
+      // an external sender's pictures simply vanished. Non-fatal on failure:
+      // the message text must still land.
+      let inboundAttachments: Awaited<ReturnType<typeof storeMessageAttachments>> = [];
+      if (emailData.attachmentFiles && emailData.attachmentFiles.length > 0) {
+        try {
+          inboundAttachments = await storeMessageAttachments(
+            emailData.attachmentFiles.map((f) => ({
+              filename: f.filename,
+              contentType: f.contentType,
+              data: f.data,
+            }))
+          );
+        } catch (attErr) {
+          webhooksEmailInboundLogger.warn(
+            { err: String(attErr) },
+            "[Inbound Email] Creator-message attachment store failed"
+          );
+        }
+      }
+
       const message = await db.message.create({
         data: {
           // For external senders, use creator as sender (like a self-delivered message to inbox)
           // projectId is null for creator inbox emails (not tied to a specific project)
           senderId: sender?.id || creator.id,
           recipientId: creator.id,
+          attachments: inboundAttachments.length > 0 ? inboundAttachments : undefined,
           subject: isExternalSender
             ? `[External] ${emailData.subject}`
             : emailData.subject,

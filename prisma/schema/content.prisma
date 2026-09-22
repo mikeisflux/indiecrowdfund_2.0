@@ -71,6 +71,12 @@ model Message {
   recipientId String
   subject     String?
   content     String  @db.Text
+  // Files carried by this message: [{ filename, contentType, size, url }].
+  // The files themselves live under uploads/message-attachments (served by
+  // /api/uploads); this is the manifest. Json rather than a join table: read
+  // and written only with their message, never queried across messages, and
+  // nullable so the ALTER is catalog-only on the live DB.
+  attachments Json?
   read        Boolean @default(false)
   isSpam      Boolean @default(false)
 

@@ -7,6 +7,7 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { z } from "zod";
 import { htmlToPlainText, looksLikeHtml } from "@/lib/email/email-to-text";
+import { storeMessageAttachments } from "@/lib/messages/attachments";
 import { sendEmail } from "@/lib/email";
 import {
   getDelegatedProjectCreators,
@@ -30,6 +31,17 @@ const createMessageSchema = z.object({
   recipientId: z.string(),
   subject: z.string().max(500).optional(),
   content: z.string().min(1).max(50000),
+  // base64 payloads, same shape the email compose APIs accept.
+  attachments: z
+    .array(
+      z.object({
+        filename: z.string().max(200).optional(),
+        contentType: z.string().max(100).optional(),
+        data: z.string().min(1).max(15_000_000), // ~10MB after base64 inflation
+      })
+    )
+    .max(5)
+    .optional(),
 });
 
 export async function POST(req: NextRequest) {
@@ -77,12 +89,27 @@ export async function POST(req: NextRequest) {
       select: { name: true },
     });
 
+    // Persist attachments first so a storage failure is a clean 400 with the
+    // filename named, not a message that claims files it doesn't have.
+    let storedAttachments: Awaited<ReturnType<typeof storeMessageAttachments>> = [];
+    if (data.attachments && data.attachments.length > 0) {
+      try {
+        storedAttachments = await storeMessageAttachments(data.attachments);
+      } catch (err) {
+        return NextResponse.json(
+          { error: err instanceof Error ? err.message : "Attachment upload failed" },
+          { status: 400 }
+        );
+      }
+    }
+
     const message = await db.message.create({
       data: {
         projectId: data.projectId ?? null,
         senderId: session.user.id,
         recipientId: data.recipientId,
         subject: data.subject,
+        attachments: storedAttachments.length > 0 ? storedAttachments : undefined,
         // Messages render as plain text on every surface; a rich-editor
         // client posting HTML here would otherwise show its markup verbatim.
         content: looksLikeHtml(data.content) ? htmlToPlainText(data.content) : data.content,

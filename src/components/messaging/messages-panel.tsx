@@ -50,6 +50,7 @@ import {
   MAX_ATTACHMENT_BYTES,
   type EmailSetupState,
 } from "./creator-email-tools";
+import { MessageAttachments, type MessageAttachmentItem } from "@/components/messaging/message-attachments";
 
 interface User {
   id: string;
@@ -67,6 +68,7 @@ interface Project {
 interface Message {
   id: string;
   content: string;
+  attachments?: MessageAttachmentItem[] | null;
   subject?: string;
   senderId: string;
   recipientId: string;
@@ -390,7 +392,11 @@ export function MessagesPanel({
           // creator isn't dead-ended.
           res = await apiFetch("/api/messages", {
             method: "POST",
-            json: { recipientId: targetRecipientId, content: newMessage.trim() },
+            json: {
+              recipientId: targetRecipientId,
+              content: newMessage.trim(),
+              ...(emailAttachments ? { attachments: emailAttachments } : {}),
+            },
           });
           usedEmailPath = false;
         } else if (res.status === 400) {
@@ -401,6 +407,8 @@ export function MessagesPanel({
           }
         }
       } else {
+        const directAttachments =
+          attachments.length > 0 ? await filesToAttachments(attachments) : undefined;
         res = await apiFetch("/api/messages", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -408,6 +416,7 @@ export function MessagesPanel({
             recipientId: targetRecipientId,
             ...(targetProjectId ? { projectId: targetProjectId } : {}),
             content: newMessage.trim(),
+            ...(directAttachments ? { attachments: directAttachments } : {}),
           }),
         });
       }
@@ -961,6 +970,7 @@ export function MessagesPanel({
                           : "bg-muted rounded-bl-sm"
                       )}>
                         <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+                        <MessageAttachments attachments={msg.attachments} />
                         <div className={cn(
                           "flex items-center gap-1 mt-1",
                           isOwn ? "justify-end" : "justify-start"

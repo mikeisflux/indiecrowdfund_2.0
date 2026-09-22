@@ -1,6 +1,7 @@
 "use client";
 
 import { apiFetch } from "@/lib/fetch-utils";
+import { MessageAttachments } from "@/components/messaging/message-attachments";
 import { useState, useEffect, useCallback } from "react";
 import { format, formatDistanceToNow } from "date-fns";
 import { Button } from "@/components/ui/button";
@@ -84,6 +85,7 @@ interface EmailMessage {
   id: string;
   threadId: string;
   content: string;
+  attachments?: { filename: string; contentType: string; size: number; url: string }[];
   sender: {
     id: string;
     name: string;
@@ -936,6 +938,7 @@ export function InboxTab({ projectId }: InboxTabProps) {
                             <div className="prose prose-sm dark:prose-invert max-w-none">
                               <p className="whitespace-pre-wrap">{message.content}</p>
                             </div>
+                            <MessageAttachments attachments={message.attachments} />
                           </div>
                         </div>
                       ))}
