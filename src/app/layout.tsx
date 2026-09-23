@@ -131,14 +131,16 @@ const baseMetadata: Metadata = {
 };
 
 // Dynamic so the admin-uploaded favicon (Settings > General > Logo &
-// Branding) actually reaches the <head>. Falls back to app/favicon.ico
-// when none is uploaded.
+// Branding) actually reaches the <head>. The default .ico lives in
+// public/ (NOT app/) on purpose: the app/favicon.ico file convention
+// emits its own <link rel="icon"> that competes with metadata.icons,
+// and browsers kept picking the stale one. With exactly one icon link
+// in the head, the uploaded favicon wins everywhere, admin included.
 export async function generateMetadata(): Promise<Metadata> {
   const branding = await getBranding();
-  if (!branding.faviconUrl) return baseMetadata;
   return {
     ...baseMetadata,
-    icons: { icon: branding.faviconUrl },
+    icons: { icon: branding.faviconUrl || "/favicon.ico" },
   };
 }
 

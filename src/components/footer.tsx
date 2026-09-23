@@ -6,7 +6,7 @@ export function Footer() {
       <div className="container">
         <div className="grid gap-8 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
           <div>
-            <h4 className="mb-4 font-semibold">IndieCrowdfund</h4>
+            <h4 className="mb-4 font-semibold">IndieCrowdFund</h4>
             <p className="text-sm text-muted-foreground">
               The best Kickstarter alternative for independent creators. Crowdfund your creative projects with lower fees, better tools, and a passionate backer community.
             </p>

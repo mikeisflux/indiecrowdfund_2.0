@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
+import NextImage from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { useSession } from "@/components/providers/auth-provider";
 import { logout } from "@/lib/auth/actions";
@@ -182,6 +183,16 @@ export default function AdminLayout({
   const router = useRouter();
   const { data: session, status } = useSession();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  // Admin-uploaded site logo (Settings > General > Logo & Branding).
+  // This layout is a client shell, so it reads the public branding
+  // endpoint instead of the DB.
+  const [brandLogoUrl, setBrandLogoUrl] = useState<string | null>(null);
+  useEffect(() => {
+    fetch("/api/branding")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((b) => setBrandLogoUrl(b?.logoUrl || null))
+      .catch(() => {});
+  }, []);
   const [stats, setStats] = useState<SidebarStats | null>(null);
   const [adminSearchQuery, setAdminSearchQuery] = useState("");
   const [adminSearchResults, setAdminSearchResults] = useState<NavItem[]>([]);
@@ -306,11 +317,22 @@ export default function AdminLayout({
         {/* Logo */}
         <div className="flex h-16 items-center justify-between border-b border-border px-4">
           <Link href="/admin" className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600">
-              <Zap className="h-5 w-5 text-white" />
-            </div>
+            {brandLogoUrl ? (
+              <NextImage
+                src={brandLogoUrl}
+                alt="IndieCrowdFund"
+                width={90}
+                height={32}
+                unoptimized
+                className="h-8 w-auto max-w-[90px] object-contain"
+              />
+            ) : (
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600">
+                <Zap className="h-5 w-5 text-white" />
+              </div>
+            )}
             <div>
-              <span className="font-semibold text-foreground">IndieCrowdfund</span>
+              <span className="font-semibold text-foreground">IndieCrowdFund</span>
               <Badge variant="secondary" className="ml-2 text-[10px]">Admin</Badge>
             </div>
           </Link>

@@ -213,25 +213,24 @@ export function SiteHeader({ logoUrl }: { logoUrl?: string | null }) {
         <div className="flex items-center gap-8">
           <Link href="/" className="text-xl font-bold gradient-text-brand flex items-center gap-2 group">
             {logoUrl ? (
-              // Admin-uploaded logo (Settings > General > Logo & Branding).
-              // unoptimized: served verbatim from /api/uploads.
+              // Admin-uploaded logo (Settings > General > Logo & Branding),
+              // with the wordmark kept beside it. unoptimized: served
+              // verbatim from /api/uploads.
               <Image
                 src={logoUrl}
-                alt="IndieCrowdfund"
-                width={160}
+                alt="IndieCrowdFund"
+                width={120}
                 height={32}
                 unoptimized
                 priority
-                className="h-8 w-auto max-w-[160px] object-contain"
+                className="h-8 w-auto max-w-[120px] object-contain"
               />
             ) : (
-              <>
-                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-cyan-500 flex items-center justify-center glow-pulse">
-                  <Sparkles className="w-4 h-4 text-white" />
-                </div>
-                <span className="hidden sm:inline">IndieCrowdfund</span>
-              </>
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-cyan-500 flex items-center justify-center glow-pulse">
+                <Sparkles className="w-4 h-4 text-white" />
+              </div>
             )}
+            <span className="hidden sm:inline">IndieCrowdFund</span>
           </Link>
           <nav className="hidden md:flex items-center gap-6">
             <NavLink href="/projects/new">Start a Project</NavLink>
