@@ -19,6 +19,7 @@ import { GoogleAnalytics } from "@/components/google-analytics";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { getUiEffects } from "@/lib/ui-effects";
+import { getBranding } from "@/lib/branding";
 import "./globals.css";
 
 const geistSans = localFont({
@@ -38,7 +39,7 @@ const geistMono = localFont({
 
 const SITE_URL = process.env.NEXT_PUBLIC_APP_URL || "https://indiecrowdfund.com";
 
-export const metadata: Metadata = {
+const baseMetadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   // Lead with what the site actually is — a comic crowdfunding platform. The
   // previous "creative projects" wording matched nothing anyone searches for,
@@ -129,6 +130,18 @@ export const metadata: Metadata = {
   },
 };
 
+// Dynamic so the admin-uploaded favicon (Settings > General > Logo &
+// Branding) actually reaches the <head>. Falls back to app/favicon.ico
+// when none is uploaded.
+export async function generateMetadata(): Promise<Metadata> {
+  const branding = await getBranding();
+  if (!branding.faviconUrl) return baseMetadata;
+  return {
+    ...baseMetadata,
+    icons: { icon: branding.faviconUrl },
+  };
+}
+
 export default async function RootLayout({
   children,
   modal,
@@ -204,6 +217,8 @@ export default async function RootLayout({
   // Visual-effects switches (/admin/themes -> Effects). Cached per request,
   // defaults on any failure, so this can never take the layout down.
   const fx = await getUiEffects();
+  // Admin-uploaded logo for the header (same failure-proof pattern).
+  const branding = await getBranding();
 
   return (
     <html lang="en" suppressHydrationWarning>
@@ -307,7 +322,7 @@ export default async function RootLayout({
                 <AnnouncementBar initialAnnouncements={announcements} />
                 <PromoPopup />
                 <ConsentBanner />
-                <SiteHeader />
+                <SiteHeader logoUrl={branding.logoUrl} />
                 <EmailVerificationBanner />
               </HideOnEmbed>
               <main id="main-content">

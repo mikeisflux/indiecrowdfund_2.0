@@ -62,7 +62,7 @@ const HIDDEN_PATH_PREFIXES = [
   "/retailers/apply",
 ];
 
-export function SiteHeader() {
+export function SiteHeader({ logoUrl }: { logoUrl?: string | null }) {
   const pathname = usePathname();
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
@@ -212,10 +212,26 @@ export function SiteHeader() {
       <div className="container flex h-16 items-center justify-between">
         <div className="flex items-center gap-8">
           <Link href="/" className="text-xl font-bold gradient-text-brand flex items-center gap-2 group">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-cyan-500 flex items-center justify-center glow-pulse">
-              <Sparkles className="w-4 h-4 text-white" />
-            </div>
-            <span className="hidden sm:inline">IndieCrowdfund</span>
+            {logoUrl ? (
+              // Admin-uploaded logo (Settings > General > Logo & Branding).
+              // unoptimized: served verbatim from /api/uploads.
+              <Image
+                src={logoUrl}
+                alt="IndieCrowdfund"
+                width={160}
+                height={32}
+                unoptimized
+                priority
+                className="h-8 w-auto max-w-[160px] object-contain"
+              />
+            ) : (
+              <>
+                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-cyan-500 flex items-center justify-center glow-pulse">
+                  <Sparkles className="w-4 h-4 text-white" />
+                </div>
+                <span className="hidden sm:inline">IndieCrowdfund</span>
+              </>
+            )}
           </Link>
           <nav className="hidden md:flex items-center gap-6">
             <NavLink href="/projects/new">Start a Project</NavLink>

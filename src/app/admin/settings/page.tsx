@@ -53,6 +53,8 @@ interface PlatformSettings {
   maintenanceEndsAt: string;
   maintenanceMessage: string;
   googlePlacesApiKey: string | null;
+  logoUrl: string | null;
+  faviconUrl: string | null;
   stripeEnabled: boolean;
   stripePublishableKey: string | null;
   stripeSecretKey: string | null;
@@ -225,6 +227,8 @@ export default function SettingsPage() {
     maintenanceEndsAt: "",
     maintenanceMessage: "",
     googlePlacesApiKey: "",
+    logoUrl: "",
+    faviconUrl: "",
   });
 
   const [paymentSettings, setPaymentSettings] = useState({
@@ -441,6 +445,8 @@ export default function SettingsPage() {
           : "",
         maintenanceMessage: settings.maintenanceMessage || "",
         googlePlacesApiKey: settings.googlePlacesApiKey || "",
+        logoUrl: settings.logoUrl || "",
+        faviconUrl: settings.faviconUrl || "",
       });
 
       setPaymentSettings((prev) => ({

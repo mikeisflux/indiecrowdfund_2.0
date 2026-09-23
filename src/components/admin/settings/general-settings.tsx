@@ -1,3 +1,6 @@
+import { useRef, useState } from "react";
+import Image from "next/image";
+import { toast } from "sonner";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,7 +16,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Globe, Upload } from "lucide-react";
+import { Globe, Upload, Loader2, X } from "lucide-react";
+import { apiFetch } from "@/lib/fetch-utils";
 
 interface GeneralSettingsProps {
   settings: {
@@ -28,12 +32,68 @@ interface GeneralSettingsProps {
     maintenanceEndsAt: string;
     maintenanceMessage: string;
     googlePlacesApiKey: string;
+    logoUrl: string;
+    faviconUrl: string;
   };
   onSettingsChange: (settings: GeneralSettingsProps["settings"]) => void;
   onSave: () => void;
 }
 
 export function GeneralSettings({ settings, onSettingsChange, onSave }: GeneralSettingsProps) {
+  // Branding uploads persist immediately via /api/admin/settings/branding
+  // (no separate Save step) — onSettingsChange just refreshes the preview.
+  const logoInputRef = useRef<HTMLInputElement>(null);
+  const faviconInputRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState<"logo" | "favicon" | null>(null);
+
+  const uploadBranding = async (kind: "logo" | "favicon", file: File) => {
+    setUploading(kind);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("kind", kind);
+      const res = await apiFetch("/api/admin/settings/branding", {
+        method: "POST",
+        body: formData,
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Upload failed");
+      onSettingsChange({
+        ...settings,
+        [kind === "logo" ? "logoUrl" : "faviconUrl"]: data.url,
+      });
+      toast.success(
+        kind === "logo"
+          ? "Logo uploaded — it's live in the site header now"
+          : "Favicon uploaded — browsers pick it up on their next visit"
+      );
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Upload failed");
+    } finally {
+      setUploading(null);
+    }
+  };
+
+  const removeBranding = async (kind: "logo" | "favicon") => {
+    setUploading(kind);
+    try {
+      const res = await apiFetch(`/api/admin/settings/branding?kind=${kind}`, {
+        method: "DELETE",
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to remove");
+      onSettingsChange({
+        ...settings,
+        [kind === "logo" ? "logoUrl" : "faviconUrl"]: "",
+      });
+      toast.success(kind === "logo" ? "Logo removed — header is back to the default" : "Favicon removed");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to remove");
+    } finally {
+      setUploading(null);
+    }
+  };
+
   return (
     <TabsContent value="general" className="mt-6 space-y-6">
       <Card>
@@ -195,26 +255,122 @@ export function GeneralSettings({ settings, onSettingsChange, onSave }: GeneralS
           <div className="grid gap-6 md:grid-cols-2">
             <div className="space-y-4">
               <Label>Site Logo</Label>
+              <p className="text-xs text-muted-foreground -mt-2">
+                Shown in the site header. PNG, JPEG, or WebP up to 2MB — transparent PNG at
+                roughly 320×64 looks best.
+              </p>
               <div className="flex items-center gap-4">
-                <div className="flex h-24 w-48 items-center justify-center rounded-lg border-2 border-dashed border-border bg-muted/50">
-                  <span className="text-2xl font-bold text-muted-foreground">Logo</span>
+                <div className="flex h-24 w-48 items-center justify-center overflow-hidden rounded-lg border-2 border-dashed border-border bg-muted/50">
+                  {settings.logoUrl ? (
+                    <Image
+                      src={settings.logoUrl}
+                      alt="Site logo"
+                      width={192}
+                      height={96}
+                      unoptimized
+                      className="max-h-24 w-auto max-w-48 object-contain"
+                    />
+                  ) : (
+                    <span className="text-2xl font-bold text-muted-foreground">Logo</span>
+                  )}
                 </div>
-                <Button variant="outline">
-                  <Upload className="mr-2 h-4 w-4" />
-                  Upload
-                </Button>
+                <div className="flex flex-col gap-2">
+                  <input
+                    ref={logoInputRef}
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) uploadBranding("logo", file);
+                      e.target.value = "";
+                    }}
+                  />
+                  <Button
+                    variant="outline"
+                    disabled={uploading === "logo"}
+                    onClick={() => logoInputRef.current?.click()}
+                  >
+                    {uploading === "logo" ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      <Upload className="mr-2 h-4 w-4" />
+                    )}
+                    Upload
+                  </Button>
+                  {settings.logoUrl && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-muted-foreground"
+                      disabled={uploading === "logo"}
+                      onClick={() => removeBranding("logo")}
+                    >
+                      <X className="mr-1 h-3.5 w-3.5" />
+                      Remove
+                    </Button>
+                  )}
+                </div>
               </div>
             </div>
             <div className="space-y-4">
               <Label>Favicon</Label>
+              <p className="text-xs text-muted-foreground -mt-2">
+                The browser-tab icon. PNG or ICO up to 512KB — 64×64 or larger square PNG
+                recommended.
+              </p>
               <div className="flex items-center gap-4">
-                <div className="flex h-16 w-16 items-center justify-center rounded-lg border-2 border-dashed border-border bg-muted/50">
-                  <Globe className="h-6 w-6 text-muted-foreground" />
+                <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-lg border-2 border-dashed border-border bg-muted/50">
+                  {settings.faviconUrl ? (
+                    <Image
+                      src={settings.faviconUrl}
+                      alt="Favicon"
+                      width={64}
+                      height={64}
+                      unoptimized
+                      className="h-12 w-12 object-contain"
+                    />
+                  ) : (
+                    <Globe className="h-6 w-6 text-muted-foreground" />
+                  )}
                 </div>
-                <Button variant="outline">
-                  <Upload className="mr-2 h-4 w-4" />
-                  Upload
-                </Button>
+                <div className="flex flex-col gap-2">
+                  <input
+                    ref={faviconInputRef}
+                    type="file"
+                    accept="image/png,image/x-icon,image/vnd.microsoft.icon,.ico"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) uploadBranding("favicon", file);
+                      e.target.value = "";
+                    }}
+                  />
+                  <Button
+                    variant="outline"
+                    disabled={uploading === "favicon"}
+                    onClick={() => faviconInputRef.current?.click()}
+                  >
+                    {uploading === "favicon" ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      <Upload className="mr-2 h-4 w-4" />
+                    )}
+                    Upload
+                  </Button>
+                  {settings.faviconUrl && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-muted-foreground"
+                      disabled={uploading === "favicon"}
+                      onClick={() => removeBranding("favicon")}
+                    >
+                      <X className="mr-1 h-3.5 w-3.5" />
+                      Remove
+                    </Button>
+                  )}
+                </div>
               </div>
             </div>
           </div>
