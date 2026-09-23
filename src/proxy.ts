@@ -52,7 +52,6 @@ const csrfExemptRoutes = [
 // Routes that allow Shopify iframe embedding
 const shopifyIframeRoutes = [
   "/dashboard/indiekit/shopify/",
-  "/api/creator/indiekit/shopify/install",
 ];
 
 // ============ Google Crawler Allowlist ============

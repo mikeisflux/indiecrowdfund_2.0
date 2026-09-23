@@ -67,7 +67,37 @@ export default function PayoutsPage() {
   });
   const [selectedCreator, setSelectedCreator] = useState<CreatorBalance | null>(null);
   const [showCreatorBalanceDialog, setShowCreatorBalanceDialog] = useState(false);
-  const [activeTab, setActiveTab] = useState<"projects" | "balances">("projects");
+  const [activeTab, setActiveTab] = useState<"projects" | "balances" | "paypal">("projects");
+  // Legacy PayPal payout history — the servicing route existed with no
+  // admin screen in front of it.
+  interface PayPalPayoutRow {
+    id: string;
+    amount: number;
+    status: string;
+    createdAt: string;
+    project: { title: string; slug: string } | null;
+    payoutConfig: { paypalEmail: string; user: { name: string | null; email: string } | null } | null;
+    paypalBankAccount: { user: { name: string | null; email: string } | null } | null;
+  }
+  const [paypalPayouts, setPaypalPayouts] = useState<PayPalPayoutRow[]>([]);
+  const [paypalLoading, setPaypalLoading] = useState(false);
+  const [paypalLoaded, setPaypalLoaded] = useState(false);
+
+  const loadPaypalPayouts = async () => {
+    setPaypalLoading(true);
+    try {
+      const res = await fetch("/api/admin/payouts/paypal");
+      if (res.ok) {
+        const data = await res.json();
+        setPaypalPayouts(data.payouts || []);
+      }
+    } catch {
+      // list stays empty; tab shows the empty state
+    } finally {
+      setPaypalLoading(false);
+      setPaypalLoaded(true);
+    }
+  };
 
   // Whop projects state
   const [whopProjects, setWhopProjects] = useState<CreatorProject[]>([]);
@@ -422,6 +452,19 @@ export default function PayoutsPage() {
         >
           Creator Balances ({balanceStats.totalCreatorsWithBalance})
         </button>
+        <button
+          onClick={() => {
+            setActiveTab("paypal");
+            if (!paypalLoaded) loadPaypalPayouts();
+          }}
+          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+            activeTab === "paypal"
+              ? "border-teal-600 text-teal-600"
+              : "border-transparent text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          PayPal (Legacy)
+        </button>
       </div>
 
       {/* Projects Tab Content — every processor in one list.
@@ -440,6 +483,51 @@ export default function PayoutsPage() {
           onSelectProject={setSelectedProject}
           formatCurrency={formatCurrency}
         />
+      )}
+
+      {/* Legacy PayPal payouts — read-only history from the servicing
+          route. PayPal is withdrawn for new pledges; campaigns that ran
+          on it still owe/owed creator payouts, and this is where those
+          payouts are visible. */}
+      {activeTab === "paypal" && (
+        <div className="rounded-lg border">
+          {paypalLoading ? (
+            <p className="p-8 text-center text-sm text-muted-foreground">Loading PayPal payouts…</p>
+          ) : paypalPayouts.length === 0 ? (
+            <p className="p-8 text-center text-sm text-muted-foreground">
+              No PayPal payouts recorded. Legacy campaigns that ran on PayPal show their
+              payouts here once created.
+            </p>
+          ) : (
+            <div className="divide-y">
+              {paypalPayouts.map((p) => {
+                const payee =
+                  p.payoutConfig?.user?.name ||
+                  p.paypalBankAccount?.user?.name ||
+                  p.payoutConfig?.user?.email ||
+                  p.paypalBankAccount?.user?.email ||
+                  "Unknown creator";
+                return (
+                  <div key={p.id} className="flex flex-wrap items-center justify-between gap-2 p-4">
+                    <div className="min-w-0">
+                      <p className="font-medium">{p.project?.title || "(no project)"}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {payee}
+                        {p.payoutConfig?.paypalEmail ? ` · ${p.payoutConfig.paypalEmail}` : ""}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-semibold tabular-nums">{formatCurrency(Number(p.amount))}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {p.status} · {new Date(p.createdAt).toLocaleDateString()}
+                      </p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
       )}
 
       {/* Creator Balances Tab Content */}

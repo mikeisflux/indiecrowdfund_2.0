@@ -15,6 +15,11 @@ import {
   Copy,
 } from "lucide-react";
 import { format } from "date-fns";
+import { useState } from "react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { toast } from "sonner";
+import { apiFetch } from "@/lib/fetch-utils";
 import type { UnifiedTransaction, TransactionDetail } from "./types";
 import { getTypeBadge, getStatusBadge, getProcessorBadge } from "./TransactionBadges";
 import { formatCurrency, copyToClipboard } from "./utils";
@@ -32,6 +37,39 @@ export function TransactionDetailDialog({
   isLoadingDetail,
   onClose,
 }: TransactionDetailDialogProps) {
+  // Manual chargeback recording (backed by /api/admin/pledges/chargeback,
+  // which was curl-only). Flips the pledge to CHARGEBACK and runs the
+  // same bookkeeping the webhook path uses.
+  const [showChargebackForm, setShowChargebackForm] = useState(false);
+  const [chargebackReason, setChargebackReason] = useState("");
+  const [recordingChargeback, setRecordingChargeback] = useState(false);
+
+  const recordChargeback = async () => {
+    if (!selectedTransaction) return;
+    setRecordingChargeback(true);
+    try {
+      const res = await apiFetch("/api/admin/pledges/chargeback", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          pledgeId: selectedTransaction.id,
+          processor: "Manual",
+          reason: chargebackReason.trim() || undefined,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Failed to record chargeback");
+      toast.success("Chargeback recorded — pledge marked CHARGEBACK");
+      setShowChargebackForm(false);
+      setChargebackReason("");
+      onClose();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to record chargeback");
+    } finally {
+      setRecordingChargeback(false);
+    }
+  };
+
   if (!selectedTransaction) return null;
 
   return (
@@ -525,6 +563,64 @@ export function TransactionDetailDialog({
                 </pre>
               </CardContent>
             </Card>
+            {/* Manual chargeback recording — only where it makes sense:
+                a completed pledge that a processor reported outside our
+                webhook flow. */}
+            {selectedTransaction.type === "PLEDGE" && selectedTransaction.status === "COMPLETED" && (
+              <Card className="border-red-200 dark:border-red-900">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm text-red-700 dark:text-red-400">
+                    Record Chargeback
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {showChargebackForm ? (
+                    <>
+                      <div className="space-y-2">
+                        <Label htmlFor="chargeback-reason">Reason (optional)</Label>
+                        <Input
+                          id="chargeback-reason"
+                          value={chargebackReason}
+                          onChange={(e) => setChargebackReason(e.target.value)}
+                          placeholder="e.g. Bank dispute reported by processor, case #123"
+                          maxLength={500}
+                        />
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Marks this pledge CHARGEBACK, adjusts project totals, and runs the
+                        standard chargeback bookkeeping. Use when a dispute arrives outside
+                        the webhook flow. This cannot be undone from here.
+                      </p>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          disabled={recordingChargeback}
+                          onClick={recordChargeback}
+                        >
+                          {recordingChargeback ? (
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          ) : null}
+                          Confirm Chargeback
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          disabled={recordingChargeback}
+                          onClick={() => setShowChargebackForm(false)}
+                        >
+                          Cancel
+                        </Button>
+                      </div>
+                    </>
+                  ) : (
+                    <Button variant="outline" size="sm" onClick={() => setShowChargebackForm(true)}>
+                      Record a chargeback on this pledge…
+                    </Button>
+                  )}
+                </CardContent>
+              </Card>
+            )}
           </div>
         ) : (
           <p className="text-center text-muted-foreground py-8">Failed to load details</p>

@@ -73,7 +73,12 @@ export function getOAuthConfig(provider: OAuthProvider): OAuthConfig | null {
 
 // Database field mapping for each provider's OAuth credentials
 const DB_CREDENTIAL_MAP: Record<OAuthProvider, { clientIdField: string; clientSecretField: string }> = {
-  twitter: { clientIdField: "twitterApiKey", clientSecretField: "twitterApiSecret" },
+  // Twitter deliberately has NO database fallback: the settings store
+  // OAuth 1.0a consumer keys for the AI Publicist, which are a
+  // different credential kind from the OAuth 2.0 client this flow
+  // needs. Feeding them in here produced guaranteed auth failures.
+  // Twitter sign-in works only via TWITTER_OAUTH2_* env vars.
+  twitter: { clientIdField: "", clientSecretField: "" },
   facebook: { clientIdField: "facebookAppId", clientSecretField: "facebookAppSecret" },
   instagram: { clientIdField: "facebookAppId", clientSecretField: "facebookAppSecret" },
   youtube: { clientIdField: "youtubeClientId", clientSecretField: "youtubeClientSecret" },
@@ -92,7 +97,7 @@ export async function getClientCredentials(provider: OAuthProvider): Promise<{ c
 
   // Fall back to database settings
   const dbMap = DB_CREDENTIAL_MAP[provider];
-  if (!dbMap) return null;
+  if (!dbMap || !dbMap.clientIdField) return null;
 
   try {
     const settings = await db.platformSettings.findFirst({
