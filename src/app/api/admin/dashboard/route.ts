@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
@@ -29,18 +29,22 @@ async function requireAdmin() {
   return { user: session.user };
 }
 
-// GET - Get dashboard statistics
-export async function GET() {
+// GET - Get dashboard statistics. ?days=1|7|30|90 sets the reporting
+// window (the page's time-range dropdown, which used to be decorative).
+export async function GET(req: NextRequest) {
   try {
     const authResult = await requireAdmin();
     if ('error' in authResult) {
       return NextResponse.json({ error: authResult.error }, { status: authResult.status });
     }
 
+    const daysParam = parseInt(req.nextUrl.searchParams.get("days") || "30", 10);
+    const days = [1, 7, 30, 90].includes(daysParam) ? daysParam : 30;
+
     const now = new Date();
-    const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-    const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-    const previousThirtyDays = new Date(now.getTime() - 60 * 24 * 60 * 60 * 1000);
+    const thirtyDaysAgo = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
+    const sevenDaysAgo = new Date(now.getTime() - Math.min(days, 30) * 24 * 60 * 60 * 1000);
+    const previousThirtyDays = new Date(now.getTime() - 2 * days * 24 * 60 * 60 * 1000);
 
     // Get all stats in parallel
     const [

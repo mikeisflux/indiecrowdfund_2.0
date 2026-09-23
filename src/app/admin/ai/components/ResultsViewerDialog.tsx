@@ -264,16 +264,6 @@ export function ResultsViewerDialog({
                             <Badge variant="outline" className="text-xs">+{segment.criteria.length - 3}</Badge>
                           )}
                         </div>
-                        <div className="mt-3 pt-3 border-t flex gap-2">
-                          <Button variant="outline" size="sm" className="h-7 text-xs flex-1">
-                            <Mail className="mr-1 h-3 w-3" />
-                            Email
-                          </Button>
-                          <Button variant="outline" size="sm" className="h-7 text-xs flex-1">
-                            <Eye className="mr-1 h-3 w-3" />
-                            View
-                          </Button>
-                        </div>
                       </div>
                     ))}
                   </div>

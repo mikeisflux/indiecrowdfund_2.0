@@ -127,13 +127,8 @@ export function AutoTaggingTab({
                 />
               </div>
 
-              <div className="flex items-center justify-between rounded-lg border p-4">
-                <div>
-                  <Label>Require Review</Label>
-                  <p className="text-sm text-muted-foreground">Require admin approval for auto-generated tags</p>
-                </div>
-                <Switch checked={false} />
-              </div>
+              {/* "Require Review" switch removed — it was checked={false}
+                  with no handler and no backing setting. */}
             </div>
           </div>
         </CardContent>

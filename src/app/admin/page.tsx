@@ -26,7 +26,6 @@ import {
 import {
   ArrowUpRight,
   ArrowDownRight,
-  MoreHorizontal,
   ExternalLink,
   Zap,
   Users,
@@ -39,7 +38,6 @@ import {
   FileText,
   Shield,
   Settings,
-  Bell,
   CheckCircle2,
   XCircle,
   AlertCircle,
@@ -145,7 +143,9 @@ export default function AdminDashboard() {
   const fetchDashboardData = useCallback(async () => {
     setIsLoading(true);
     try {
-      const response = await fetch("/api/admin/dashboard");
+      // The time-range dropdown drives the reporting window now.
+      const days = timeRange === "24h" ? 1 : timeRange === "7d" ? 7 : timeRange === "90d" ? 90 : 30;
+      const response = await fetch(`/api/admin/dashboard?days=${days}`);
       if (response.ok) {
         const data = await response.json();
         setStats(data.stats);
@@ -162,7 +162,7 @@ export default function AdminDashboard() {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [timeRange]);
 
   // Read the current flag from the same settings record the toggle writes, so
   // the tile reflects reality rather than whatever this tab last did.
@@ -390,12 +390,6 @@ export default function AdminDashboard() {
                   Send Email
                 </Link>
               </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link href="/admin/notifications">
-                  <Bell className="mr-2 h-4 w-4" />
-                  Send Notification
-                </Link>
-              </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem asChild>
                 <Link href="/admin/payouts">
@@ -527,9 +521,6 @@ export default function AdminDashboard() {
                       <Link href="/admin/projects?tab=pending">
                         <Button variant="outline" size="sm">Review</Button>
                       </Link>
-                      <Button variant="ghost" size="icon">
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
                     </div>
                   </div>
                 ))

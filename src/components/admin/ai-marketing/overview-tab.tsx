@@ -50,8 +50,6 @@ interface OverviewTabProps {
   userSegments: UserSegment[];
   behaviorEvents: BehaviorEvent[];
   emailCampaigns: EmailCampaign[];
-  isApplyingRecommendations: boolean;
-  handleApplyRecommendations: () => void;
   setShowSegmentManager: (show: boolean) => void;
   setShowCampaignDialog: (show: boolean) => void;
   handleViewCampaign: (campaign: EmailCampaign) => void;
@@ -62,8 +60,6 @@ export function OverviewTab({
   userSegments,
   behaviorEvents,
   emailCampaigns,
-  isApplyingRecommendations,
-  handleApplyRecommendations,
   setShowSegmentManager,
   setShowCampaignDialog,
   handleViewCampaign,
@@ -101,23 +97,6 @@ export function OverviewTab({
                 )}
               </ul>
             </div>
-            <Button
-              className="bg-violet-600 text-white hover:bg-violet-700"
-              onClick={handleApplyRecommendations}
-              disabled={isApplyingRecommendations || recommendations.length === 0}
-            >
-              {isApplyingRecommendations ? (
-                <>
-                  <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                  Applying...
-                </>
-              ) : (
-                <>
-                  <Wand2 className="mr-2 h-4 w-4" />
-                  Apply Recommendations
-                </>
-              )}
-            </Button>
           </div>
         </CardContent>
       </Card>

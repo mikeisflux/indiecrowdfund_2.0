@@ -287,9 +287,12 @@ export async function GET(request: Request) {
     }
 
     // Sort by date (newest first) and apply filters
-    let sortedNotifications = notifications.sort(
-      (a, b) => b.createdAt.getTime() - a.createdAt.getTime()
-    );
+    // Dismissed notifications stay dismissed across reloads (the old
+    // Delete button only hid the row until refresh).
+    const dismissed = await getDismissedNotificationIds(adminId);
+    let sortedNotifications = notifications
+      .filter((n) => !dismissed.has(n.id))
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
 
     if (unreadOnly) {
       sortedNotifications = sortedNotifications.filter(n => !n.read);
@@ -304,8 +307,15 @@ export async function GET(request: Request) {
       n => n.createdAt > oneDayAgo
     ).length;
 
+    // Preferences were saved by POST but never returned, so the
+    // switches reset on every reload.
+    const prefsRow = await db.adminSetting.findUnique({
+      where: { key: `admin_notification_prefs_${adminId}` },
+    });
+
     return NextResponse.json({
       notifications: sortedNotifications,
+      preferences: prefsRow?.value ?? null,
       stats: {
         total: notifications.length,
         unread: unreadCount,
@@ -349,6 +359,14 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: true });
     }
 
+    if (action === "dismiss") {
+      if (!Array.isArray(notificationIds) || notificationIds.length === 0) {
+        return NextResponse.json({ error: "notificationIds array required" }, { status: 400 });
+      }
+      await dismissNotifications(adminId, notificationIds);
+      return NextResponse.json({ success: true, dismissed: notificationIds.length });
+    }
+
     if (action === "updatePreferences" && preferences) {
       // Update notification preferences
       await updateNotificationPreferences(adminId, preferences);
@@ -363,6 +381,33 @@ export async function POST(request: Request) {
       { status: 500 }
     );
   }
+}
+
+async function getDismissedNotificationIds(adminId: string): Promise<Set<string>> {
+  try {
+    const setting = await db.adminSetting.findUnique({
+      where: { key: `admin_dismissed_notifications_${adminId}` },
+    });
+    if (setting?.value) {
+      const data = setting.value as { dismissedIds?: string[] };
+      return new Set(data.dismissedIds || []);
+    }
+  } catch {
+    // fall through
+  }
+  return new Set();
+}
+
+async function dismissNotifications(adminId: string, notificationIds: string[]) {
+  const key = `admin_dismissed_notifications_${adminId}`;
+  const existing = await getDismissedNotificationIds(adminId);
+  for (const id of notificationIds) existing.add(id);
+  const dismissedIds = Array.from(existing).slice(-500);
+  await db.adminSetting.upsert({
+    where: { key },
+    create: { key, value: { dismissedIds }, description: "Admin dismissed notification IDs" },
+    update: { value: { dismissedIds } },
+  });
 }
 
 // Helper functions for managing read state

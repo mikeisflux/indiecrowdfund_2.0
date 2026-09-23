@@ -462,6 +462,11 @@ export async function sendEmail({ to, subject, html, text, skipUnsubscribeCheck,
   // Use custom from address if provided, otherwise fall back to settings/defaults
   const fromEmail = customFromEmail || settings?.smtpFromEmail || process.env.EMAIL_FROM || "noreply@indiecrowdfund.com";
   const fromName = customFromName || settings?.smtpFromName || APP_NAME;
+  // Admin default Reply-To (Settings > Email). The column was selected
+  // here for ages and then ignored; per-message replyTo still wins.
+  if (!replyTo && settings?.smtpReplyToEmail) {
+    replyTo = settings.smtpReplyToEmail;
+  }
 
   // Add whitelist banner and unsubscribe footer to emails (unless it's a transactional email that should skip)
   let finalHtml = html;

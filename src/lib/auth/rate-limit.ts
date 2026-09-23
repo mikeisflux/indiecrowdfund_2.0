@@ -43,7 +43,6 @@ type RateLimitSettings = {
   loginRateLimitWindow: number;
   passwordResetRateLimitRequests: number;
   passwordResetRateLimitWindow: number;
-  maxLoginAttempts: number;
 };
 let cachedSettings: RateLimitSettings | null = null;
 let settingsCacheTime = 0;
@@ -62,7 +61,6 @@ const DEFAULT_SETTINGS: RateLimitSettings = {
   loginRateLimitWindow: 300,
   passwordResetRateLimitRequests: 3,
   passwordResetRateLimitWindow: 900,
-  maxLoginAttempts: 5,
 };
 
 // Load settings from database with caching
@@ -84,7 +82,6 @@ async function getSettings(): Promise<RateLimitSettings> {
         loginRateLimitWindow: true,
         passwordResetRateLimitRequests: true,
         passwordResetRateLimitWindow: true,
-        maxLoginAttempts: true,
       },
     });
 

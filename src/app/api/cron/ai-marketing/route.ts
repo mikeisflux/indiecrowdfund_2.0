@@ -34,6 +34,29 @@ export async function GET(req: NextRequest) {
     cronAiMarketingLogger.info("Starting automated AI marketing run");
 
     const startedAt = Date.now();
+
+    // Behavior-data retention (AI Marketing > Behavior Analytics >
+    // Data Retention). The setting existed with no purge job behind it,
+    // so "90 days" meant "forever". Runs before the marketing pass.
+    try {
+      const settings = await db.platformSettings.findFirst({
+        select: { aiRetentionDays: true },
+      });
+      const retentionDays = Math.max(7, settings?.aiRetentionDays ?? 90);
+      const cutoff = new Date(Date.now() - retentionDays * 24 * 60 * 60 * 1000);
+      const purged = await db.userBehavior.deleteMany({
+        where: { timestamp: { lt: cutoff } },
+      });
+      if (purged.count > 0) {
+        cronAiMarketingLogger.info(
+          { purged: purged.count, retentionDays },
+          "Purged behavior events past retention"
+        );
+      }
+    } catch (e) {
+      cronAiMarketingLogger.error({ err: formatError(e) }, "Behavior retention purge failed");
+    }
+
     const result = await runAutomatedMarketing();
 
     cronAiMarketingLogger.info(

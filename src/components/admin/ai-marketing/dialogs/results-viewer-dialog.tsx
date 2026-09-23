@@ -36,7 +36,7 @@ import {
   Download,
 } from "lucide-react";
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 type AIRunResult = { success: boolean; message: string; data?: any; timestamp: string };
 
 interface ResultsViewerDialogProps {
@@ -147,7 +147,7 @@ export function ResultsViewerDialog({
   );
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 function EmptyState({ icon: Icon, title, subtitle }: { icon: any; title: string; subtitle: string }) {
   return (
     <div className="flex flex-col items-center justify-center h-64 text-muted-foreground">
@@ -158,7 +158,7 @@ function EmptyState({ icon: Icon, title, subtitle }: { icon: any; title: string;
   );
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 function PredictiveAnalyticsContent({ data, sortConfig, onSort }: { data: any; sortConfig: { key: string; direction: "asc" | "desc" }; onSort: (key: string) => void }) {
   const summary = data.summary || {};
   const topProspects = data.topProspects || [];
@@ -284,7 +284,7 @@ function PredictiveAnalyticsContent({ data, sortConfig, onSort }: { data: any; s
   );
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 function SegmentationContent({ data }: { data: any }) {
   const segments = data.segments || [];
   const totalUsers = data.totalUsers || 0;
@@ -334,16 +334,6 @@ function SegmentationContent({ data }: { data: any }) {
                   <Badge variant="outline" className="text-xs">+{segment.criteria.length - 3} more</Badge>
                 )}
               </div>
-              <div className="mt-3 pt-3 border-t flex gap-2">
-                <Button variant="outline" size="sm" className="h-7 text-xs flex-1">
-                  <Mail className="mr-1 h-3 w-3" />
-                  Email Segment
-                </Button>
-                <Button variant="outline" size="sm" className="h-7 text-xs flex-1">
-                  <Eye className="mr-1 h-3 w-3" />
-                  View Users
-                </Button>
-              </div>
             </div>
           ))}
         </div>
@@ -352,7 +342,7 @@ function SegmentationContent({ data }: { data: any }) {
   );
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 function SendTimeContent({ data, timestamp }: { data: any; timestamp: string }) {
   const summary = data.summary || {};
   const hourlyDistribution = data.hourlyDistribution || [];
@@ -440,7 +430,7 @@ function SendTimeContent({ data, timestamp }: { data: any; timestamp: string }) 
   );
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 function TaggingContent({ data }: { data: any }) {
   const results = data.results || [];
   const successCount = results.filter((r: { success: boolean }) => r.success).length;

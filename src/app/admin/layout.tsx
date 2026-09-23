@@ -109,6 +109,7 @@ const navigation: NavSection[] = [
       { name: "AI Marketing", href: "/admin/ai-marketing", icon: Zap, staticBadge: "AI" },
       { name: "AI Publicist", href: "/admin/social-publicist", icon: Megaphone, staticBadge: "AI" },
       { name: "SEO Suite", href: "/admin/seo", icon: Search, staticBadge: "SEO" },
+      { name: "API Docs", href: "/admin/api", icon: HelpCircle },
     ],
   },
   {
@@ -402,8 +403,8 @@ export default function AdminLayout({
             <p className="mb-3 text-sm text-white/80">
               Check our documentation for guides and tutorials.
             </p>
-            <Button size="sm" variant="secondary" className="w-full">
-              View Docs
+            <Button size="sm" variant="secondary" className="w-full" asChild>
+              <Link href="/admin/api">View Docs</Link>
             </Button>
           </div>
         </ScrollArea>

@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -25,6 +26,7 @@ import { getBusinessTypeBadge, getRetailerStatusBadge } from "./utils";
 
 interface RetailerTableProps {
   retailers: Retailer[];
+  /* client-side name/email filter (the box used to be decorative) */
   stats: RetailerStats;
   isLoading: boolean;
   statusFilter: string;
@@ -50,6 +52,16 @@ export function RetailerTable({
   onRejectRetailer,
   onSendApprovalEmail,
 }: RetailerTableProps) {
+  const [search, setSearch] = useState("");
+  const q = search.trim().toLowerCase();
+  const visibleRetailers = q
+    ? retailers.filter(
+        (r) =>
+          (r.businessName || "").toLowerCase().includes(q) ||
+          (r.contactName || "").toLowerCase().includes(q) ||
+          (r.email || "").toLowerCase().includes(q)
+      )
+    : retailers;
   return (
     <>
       {/* ════════════════════════════════════════════
@@ -82,6 +94,8 @@ export function RetailerTable({
           <Input
             placeholder="Search retailers by name or email…"
             className="pl-9"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
           />
         </div>
         <Select value={statusFilter} onValueChange={onStatusFilterChange}>
@@ -107,7 +121,7 @@ export function RetailerTable({
             <RefreshCw className="h-6 w-6 animate-spin text-muted-foreground" />
             <p className="text-sm text-muted-foreground">Loading retailers…</p>
           </div>
-        ) : retailers.length === 0 ? (
+        ) : visibleRetailers.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-48 gap-3">
             <div className="flex h-14 w-14 items-center justify-center rounded-full bg-muted dark:bg-zinc-800">
               <Store className="h-7 w-7 text-muted-foreground" />
@@ -115,7 +129,7 @@ export function RetailerTable({
             <p className="text-sm text-muted-foreground">No retailer applications found</p>
           </div>
         ) : (
-          retailers.map((retailer) => (
+          visibleRetailers.map((retailer) => (
             <Card key={retailer.id} className="overflow-hidden">
               <CardContent className="p-4">
                 {/* Header: icon + business name + status badge */}
@@ -255,7 +269,7 @@ export function RetailerTable({
                       <p className="text-sm text-muted-foreground">Loading retailers…</p>
                     </td>
                   </tr>
-                ) : retailers.length === 0 ? (
+                ) : visibleRetailers.length === 0 ? (
                   <tr>
                     <td colSpan={7} className="p-12 text-center">
                       <div className="flex flex-col items-center gap-3">
@@ -267,7 +281,7 @@ export function RetailerTable({
                     </td>
                   </tr>
                 ) : (
-                  retailers.map((retailer) => (
+                  visibleRetailers.map((retailer) => (
                     <tr
                       key={retailer.id}
                       className="transition-colors hover:bg-muted/50 dark:hover:bg-zinc-800/50"

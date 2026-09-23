@@ -24,8 +24,6 @@ interface GeneralSettingsProps {
     siteName: string;
     siteDescription: string;
     supportEmail: string;
-    timezone: string;
-    currency: string;
     platformFee: string;
     maintenanceMode: boolean;
     maintenanceStartsAt: string;
@@ -132,42 +130,7 @@ export function GeneralSettings({ settings, onSettingsChange, onSave }: GeneralS
             />
           </div>
 
-          <div className="grid gap-6 sm:grid-cols-2 md:grid-cols-3">
-            <div className="space-y-2">
-              <Label htmlFor="timezone">Timezone</Label>
-              <Select
-                value={settings.timezone}
-                onValueChange={(v) => onSettingsChange({ ...settings, timezone: v })}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="America/New_York">Eastern Time (ET)</SelectItem>
-                  <SelectItem value="America/Chicago">Central Time (CT)</SelectItem>
-                  <SelectItem value="America/Denver">Mountain Time (MT)</SelectItem>
-                  <SelectItem value="America/Los_Angeles">Pacific Time (PT)</SelectItem>
-                  <SelectItem value="UTC">UTC</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="currency">Default Currency</Label>
-              <Select
-                value={settings.currency}
-                onValueChange={(v) => onSettingsChange({ ...settings, currency: v })}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="USD">USD ($)</SelectItem>
-                  <SelectItem value="EUR">EUR (&euro;)</SelectItem>
-                  <SelectItem value="GBP">GBP (&pound;)</SelectItem>
-                  <SelectItem value="CAD">CAD (C$)</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+          <div className="grid gap-6 sm:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="platformFee">Grant Administration Fee (%)</Label>
               <Input
@@ -178,6 +141,13 @@ export function GeneralSettings({ settings, onSettingsChange, onSave }: GeneralS
                 value={settings.platformFee}
                 onChange={(e) => onSettingsChange({ ...settings, platformFee: e.target.value })}
               />
+            </div>
+            <div className="rounded-lg border p-4 text-sm text-muted-foreground">
+              {/* The Timezone and Currency dropdowns were removed: they were
+                  stored but nothing read them — dates are reckoned in US
+                  Central (lib/platform-time.ts) and all pledges are USD. */}
+              The platform reckons dates in <span className="font-medium text-foreground">US Central time</span> and
+              all pledges are in <span className="font-medium text-foreground">USD</span>.
             </div>
           </div>
 

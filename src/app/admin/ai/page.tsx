@@ -1,5 +1,6 @@
 "use client";
 
+import { toast } from "sonner";
 import { apiFetch } from "@/lib/fetch-utils";
 import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -53,6 +54,72 @@ import type { AIService, CronJob, RunResults } from "./types";
 
 // Components
 import { ResultsViewerDialog, getStatusColor, getStatusBadge } from "./components";
+
+
+// Next fire time of a 5-field cron expression, walked minute-by-minute
+// (same semantics as the executor in /api/cron/ai-services, which runs
+// these schedules every 15 minutes). Returns null for bad expressions.
+function nextCronRun(expr: string): Date | null {
+  const parts = expr.trim().split(/\s+/);
+  if (parts.length !== 5) return null;
+  const fieldMatches = (field: string, value: number, min: number, max: number): boolean => {
+    if (field === "*") return true;
+    for (const part of field.split(",")) {
+      if (part.includes("/")) {
+        const [range, stepStr] = part.split("/");
+        const step = parseInt(stepStr, 10);
+        if (!step || step < 1) continue;
+        const lo = range === "*" ? min : parseInt(range.split("-")[0], 10);
+        const hi = range === "*" || !range.includes("-") ? max : parseInt(range.split("-")[1], 10);
+        for (let v = lo; v <= hi; v += step) if (v === value) return true;
+      } else if (part.includes("-")) {
+        const [lo, hi] = part.split("-").map((n) => parseInt(n, 10));
+        if (value >= lo && value <= hi) return true;
+      } else if (parseInt(part, 10) === value) {
+        return true;
+      }
+    }
+    return false;
+  };
+  const [min, hour, dom, month, dow] = parts;
+  let t = Math.ceil(Date.now() / 60000) * 60000 + 60000;
+  for (let i = 0; i < 40 * 24 * 60; i++, t += 60000) {
+    const d = new Date(t);
+    if (
+      fieldMatches(min, d.getMinutes(), 0, 59) &&
+      fieldMatches(hour, d.getHours(), 0, 23) &&
+      fieldMatches(dom, d.getDate(), 1, 31) &&
+      fieldMatches(month, d.getMonth() + 1, 1, 12) &&
+      fieldMatches(dow, d.getDay(), 0, 6)
+    ) {
+      return d;
+    }
+  }
+  return null;
+}
+
+function formatNextRun(expr: string): string {
+  const next = nextCronRun(expr);
+  if (!next) return "invalid schedule";
+  const now = new Date();
+  const sameDay = next.toDateString() === now.toDateString();
+  const tomorrow = new Date(now.getTime() + 86400000).toDateString() === next.toDateString();
+  const time = next.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+  if (sameDay) return `Today ${time}`;
+  if (tomorrow) return `Tomorrow ${time}`;
+  return `${next.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })} ${time}`;
+}
+
+// Services the executor cron can actually run on a schedule
+// (ACTION_BY_SERVICE in /api/cron/ai-services).
+const SCHEDULABLE_SERVICES: Array<{ id: string; name: string }> = [
+  { id: "auto-tagging", name: "Auto-Tagging" },
+  { id: "predictive-analytics", name: "Predictive Analytics" },
+  { id: "smart-segmentation", name: "Smart Segmentation" },
+  { id: "send-time-optimization", name: "Send-Time Optimization" },
+  { id: "user-profiling", name: "User Profiling" },
+  { id: "automation", name: "Marketing Automation" },
+];
 
 export default function AIControlPage() {
   const [services, setServices] = useState<AIService[]>([
@@ -113,10 +180,10 @@ export default function AIControlPage() {
   ]);
 
   const defaultCronJobs: CronJob[] = [
-    { id: "cron-1", service: "auto-tagging", schedule: "0 2 * * *", enabled: false, nextRun: "Tomorrow 2:00 AM" },
-    { id: "cron-2", service: "predictive-analytics", schedule: "0 3 * * *", enabled: false, nextRun: "Tomorrow 3:00 AM" },
-    { id: "cron-3", service: "smart-segmentation", schedule: "0 4 * * 0", enabled: false, nextRun: "Sunday 4:00 AM" },
-    { id: "cron-4", service: "send-time-optimization", schedule: "0 1 * * *", enabled: false, nextRun: "Tomorrow 1:00 AM" },
+    { id: "cron-1", service: "auto-tagging", schedule: "0 2 * * *", enabled: false },
+    { id: "cron-2", service: "predictive-analytics", schedule: "0 3 * * *", enabled: false },
+    { id: "cron-3", service: "smart-segmentation", schedule: "0 4 * * 0", enabled: false },
+    { id: "cron-4", service: "send-time-optimization", schedule: "0 1 * * *", enabled: false },
   ];
 
   const [cronJobs, setCronJobs] = useState<CronJob[]>(defaultCronJobs);
@@ -330,6 +397,29 @@ export default function AIControlPage() {
   };
 
   // Update cron schedule
+  // Custom CRON card state — used to be a dead dropdown, a dead input,
+  // and a button with no onClick.
+  const [customService, setCustomService] = useState("auto-tagging");
+  const [customCron, setCustomCron] = useState("");
+
+  const addCustomSchedule = () => {
+    const expr = customCron.trim();
+    if (!nextCronRun(expr)) {
+      toast.error("That isn't a valid 5-field CRON expression");
+      return;
+    }
+    setCronJobs((prev) => {
+      const existing = prev.find((j) => j.service === customService);
+      const updated = existing
+        ? prev.map((j) => (j.service === customService ? { ...j, schedule: expr, enabled: true } : j))
+        : [...prev, { id: `cron-${customService}`, service: customService, schedule: expr, enabled: true }];
+      saveCronSchedules(updated);
+      return updated;
+    });
+    toast.success(`Scheduled ${customService} — next run ${formatNextRun(expr)}`);
+    setCustomCron("");
+  };
+
   const updateCronSchedule = (jobId: string, schedule: string) => {
     setCronJobs((prev) => {
       const updated = prev.map((job) =>
@@ -618,8 +708,8 @@ export default function AIControlPage() {
                               <SelectItem value="0 0 1 * *">Monthly (1st at midnight)</SelectItem>
                             </SelectContent>
                           </Select>
-                          {job.enabled && job.nextRun && (
-                            <p className="text-xs text-muted-foreground mt-1">Next: {job.nextRun}</p>
+                          {job.enabled && (
+                            <p className="text-xs text-muted-foreground mt-1">Next: {formatNextRun(job.schedule)}</p>
                           )}
                         </div>
                         <Button
@@ -639,11 +729,11 @@ export default function AIControlPage() {
                 <div className="flex items-start gap-3">
                   <AlertTriangle className="h-5 w-5 text-amber-600 mt-0.5" />
                   <div>
-                    <p className="font-medium text-amber-800 dark:text-amber-200">Note on CRON Jobs</p>
+                    <p className="font-medium text-amber-800 dark:text-amber-200">How these run</p>
                     <p className="text-sm text-amber-700 dark:text-amber-300">
-                      CRON jobs require a background job processor (like Vercel Cron, AWS Lambda, or a dedicated worker).
-                      The schedules shown here are saved but need external infrastructure to execute automatically.
-                      You can use the &quot;Run Now&quot; buttons to trigger jobs manually.
+                      The server checks these schedules every 15 minutes (/api/cron/ai-services)
+                      and runs whichever enabled jobs have come due. &quot;Run Now&quot; triggers a job
+                      immediately.
                     </p>
                   </div>
                 </div>
@@ -661,14 +751,14 @@ export default function AIControlPage() {
               <div className="grid gap-4 md:grid-cols-2">
                 <div>
                   <Label>Service</Label>
-                  <Select defaultValue="auto-tagging">
+                  <Select value={customService} onValueChange={setCustomService}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {services.map((s) => (
-                        <SelectItem key={s.id} value={s.id}>
-                          {s.name}
+                      {SCHEDULABLE_SERVICES.map((svc) => (
+                        <SelectItem key={svc.id} value={svc.id}>
+                          {svc.name}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -676,7 +766,18 @@ export default function AIControlPage() {
                 </div>
                 <div>
                   <Label>CRON Expression</Label>
-                  <Input placeholder="0 2 * * *" />
+                  <Input
+                    placeholder="0 2 * * *"
+                    value={customCron}
+                    onChange={(e) => setCustomCron(e.target.value)}
+                  />
+                  {customCron.trim() && (
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {nextCronRun(customCron.trim())
+                        ? `Next run: ${formatNextRun(customCron.trim())}`
+                        : "Invalid expression"}
+                    </p>
+                  )}
                 </div>
               </div>
               <div className="text-xs text-muted-foreground">
@@ -689,7 +790,7 @@ export default function AIControlPage() {
                   <li><code>0 0 1 * *</code> - First day of every month</li>
                 </ul>
               </div>
-              <Button variant="outline">
+              <Button variant="outline" onClick={addCustomSchedule}>
                 <Calendar className="mr-2 h-4 w-4" />
                 Add Custom Schedule
               </Button>

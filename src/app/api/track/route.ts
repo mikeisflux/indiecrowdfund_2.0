@@ -59,6 +59,76 @@ export async function OPTIONS() {
 }
 
 // POST - Log a behavior event
+
+// ── Admin tracking switches (AI Marketing > Behavior Analytics) ──
+// These toggles saved fine for months while this route recorded
+// everything regardless. Each event type now checks its switch;
+// aiBehaviorTracking is the master. Cached 60s; failure = defaults.
+const EVENT_FLAG: Record<string, keyof TrackingFlags> = {
+  PAGE_VIEW: "aiTrackPageViews",
+  PAGE_EXIT: "aiTrackTimeOnPage",
+  SCROLL_DEPTH: "aiTrackScrollDepth",
+  HOVER: "aiTrackHovers",
+  VIDEO_PLAY: "aiTrackVideoEngagement",
+  VIDEO_COMPLETE: "aiTrackVideoEngagement",
+  REWARD_CLICK: "aiTrackRewardComparisons",
+  PROJECT_CLICK: "aiTrackClicks",
+  PLEDGE_START: "aiTrackAbandonedCarts",
+  // PROJECT_VIEW / SEARCH / FILTER_APPLY / PROJECT_SAVE / PROJECT_SHARE /
+  // COMMENT_POST / PLEDGE_COMPLETE / CREATOR_VIEW ride the master switch
+  // only — they feed recommendations and revenue attribution.
+};
+
+interface TrackingFlags {
+  aiBehaviorTracking: boolean;
+  aiTrackPageViews: boolean;
+  aiTrackScrollDepth: boolean;
+  aiTrackTimeOnPage: boolean;
+  aiTrackClicks: boolean;
+  aiTrackHovers: boolean;
+  aiTrackVideoEngagement: boolean;
+  aiTrackRewardComparisons: boolean;
+  aiTrackAbandonedCarts: boolean;
+}
+
+let flagsCache: { value: TrackingFlags; at: number } | null = null;
+
+async function getTrackingFlags(): Promise<TrackingFlags> {
+  if (flagsCache && Date.now() - flagsCache.at < 60_000) return flagsCache.value;
+  const defaults: TrackingFlags = {
+    aiBehaviorTracking: true,
+    aiTrackPageViews: true,
+    aiTrackScrollDepth: true,
+    aiTrackTimeOnPage: true,
+    aiTrackClicks: true,
+    aiTrackHovers: true,
+    aiTrackVideoEngagement: true,
+    aiTrackRewardComparisons: true,
+    aiTrackAbandonedCarts: true,
+  };
+  try {
+    const settings = await db.platformSettings.findFirst({
+      select: {
+        aiBehaviorTracking: true,
+        aiTrackPageViews: true,
+        aiTrackScrollDepth: true,
+        aiTrackTimeOnPage: true,
+        aiTrackClicks: true,
+        aiTrackHovers: true,
+        aiTrackVideoEngagement: true,
+        aiTrackRewardComparisons: true,
+        aiTrackAbandonedCarts: true,
+      },
+    });
+    if (!settings) return defaults;
+    const value = { ...defaults, ...settings };
+    flagsCache = { value, at: Date.now() };
+    return value;
+  } catch {
+    return defaults;
+  }
+}
+
 export async function POST(request: Request) {
   try {
     // Guard against empty or malformed request bodies (bots often send empty POSTs)
@@ -127,6 +197,14 @@ export async function POST(request: Request) {
         { error: `Invalid event type. Must be one of: ${validEventTypes.join(", ")}` },
         { status: 400 }
       );
+    }
+
+    // Honor the admin tracking switches. A disabled event is accepted
+    // and dropped (success response) so clients don't retry or error.
+    const flags = await getTrackingFlags();
+    const flagKey = EVENT_FLAG[eventType];
+    if (!flags.aiBehaviorTracking || (flagKey && !flags[flagKey])) {
+      return NextResponse.json({ success: true, dropped: true });
     }
 
     // Cap metadata payload so the unauthenticated, CSRF-exempt,

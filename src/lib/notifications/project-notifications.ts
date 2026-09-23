@@ -137,17 +137,58 @@ export async function notifyProjectLaunched(projectId: string) {
       if (f.email) emailsToSend.push(f.email);
     });
 
-  // Notify all followers (except the creator) - in-app notifications
-  const notifications = project.followers
-    .filter((f: { userId: string | null }): f is { userId: string } => f.userId !== null && f.userId !== project.creatorId)
-    .map((follower: { userId: string }) => ({
-      userId: follower.userId,
+  // Creator-followers who opted into new-project alerts. The
+  // notifyNewProjects preference was written by the follow UI and read
+  // by nothing — launches only ever reached PROJECT followers. Now
+  // following a CREATOR means hearing about their next campaign.
+  const creatorFollows = await db.creatorFollow.findMany({
+    where: { creatorId: project.creatorId, notifyNewProjects: true },
+    select: { followerId: true, follower: { select: { email: true, deletedAt: true } } },
+  });
+  const projectFollowerIds = new Set(
+    project.followers
+      .filter((f: { userId: string | null }) => f.userId)
+      .map((f: { userId: string | null }) => f.userId as string)
+  );
+  const creatorFollowerNotifs = creatorFollows
+    .filter(
+      (cf: (typeof creatorFollows)[number]) =>
+        cf.followerId !== project.creatorId && !projectFollowerIds.has(cf.followerId)
+    )
+    .map((cf: (typeof creatorFollows)[number]) => ({
+      userId: cf.followerId,
       type: "PROJECT_LAUNCHED" as NotificationType,
-      title: "Project Launched!",
-      message: `"${project.title}" is now live!`,
+      title: "New campaign from a creator you follow",
+      message: `"${project.title}" by ${project.creator?.name || "a creator you follow"} is now live!`,
       actionUrl: projectUrlPath,
       projectId,
     }));
+  creatorFollows.forEach((cf: (typeof creatorFollows)[number]) => {
+    if (
+      cf.followerId !== project.creatorId &&
+      !projectFollowerIds.has(cf.followerId) &&
+      cf.follower &&
+      !cf.follower.deletedAt &&
+      cf.follower.email
+    ) {
+      emailsToSend.push(cf.follower.email);
+    }
+  });
+
+  // Notify all followers (except the creator) - in-app notifications
+  const notifications = [
+    ...creatorFollowerNotifs,
+    ...project.followers
+      .filter((f: { userId: string | null }): f is { userId: string } => f.userId !== null && f.userId !== project.creatorId)
+      .map((follower: { userId: string }) => ({
+        userId: follower.userId,
+        type: "PROJECT_LAUNCHED" as NotificationType,
+        title: "Project Launched!",
+        message: `"${project.title}" is now live!`,
+        actionUrl: projectUrlPath,
+        projectId,
+      })),
+  ];
 
   if (notifications.length > 0) {
     await db.notification.createMany({ data: notifications });
@@ -235,6 +276,13 @@ export async function notifyProjectUpdate(
   project.followers.forEach((f: { userId: string | null }) => {
     if (f.userId) userIds.add(f.userId);
   });
+  // Creator-followers who opted into update alerts (notifyUpdates was
+  // written by the follow UI and read by nothing until now).
+  const updateFollows = await db.creatorFollow.findMany({
+    where: { creatorId: project.creatorId, notifyUpdates: true },
+    select: { followerId: true },
+  });
+  updateFollows.forEach((cf: { followerId: string }) => userIds.add(cf.followerId));
   userIds.delete(project.creatorId);
 
   const notifications = Array.from(userIds).map((userId) => ({

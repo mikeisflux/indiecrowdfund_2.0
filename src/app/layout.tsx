@@ -139,8 +139,23 @@ const baseMetadata: Metadata = {
 // in the head, the uploaded favicon wins everywhere, admin included.
 export async function generateMetadata(): Promise<Metadata> {
   const branding = await getBranding();
+  // Admin-set Site Name / Site Description (Settings > General) now
+  // actually reach the metadata; the SEO-tuned defaults above apply
+  // when they're unset or unchanged.
+  const overrides: Metadata = {};
+  if (branding.siteName && branding.siteName !== "IndieCrowdfund") {
+    overrides.title = {
+      default: `${branding.siteName} — Comic Book Crowdfunding`,
+      template: `%s | ${branding.siteName}`,
+    };
+    overrides.applicationName = branding.siteName;
+  }
+  if (branding.siteDescription) {
+    overrides.description = branding.siteDescription;
+  }
   return {
     ...baseMetadata,
+    ...overrides,
     icons: { icon: branding.faviconUrl || "/favicon.ico" },
   };
 }

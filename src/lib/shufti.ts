@@ -16,6 +16,8 @@ export interface ShuftiConfig {
   callbackUrl?: string;
   redirectUrl?: string;
   mode: "sandbox" | "production";
+  /** Admin-set minimum age (Settings > ID Verify). Floor of 18. */
+  minAge?: number;
 }
 
 export interface ShuftiVerificationRequest {
@@ -156,7 +158,10 @@ export class ShuftiService {
           last_name: userName.split(" ").slice(1).join(" ") || "",
         } : undefined,
         age: {
-          min: 18,
+          // Admin-configured minimum (Settings > ID Verify), floored at
+          // 18 — this platform hosts adult content, so no admin typo may
+          // lower the bar below legal adulthood.
+          min: Math.max(18, this.config.minAge ?? 18),
         },
       },
       face: {
@@ -427,6 +432,7 @@ export async function getShuftiService(): Promise<ShuftiService | null> {
       shuftiCallbackUrl: true,
       shuftiRedirectUrl: true,
       idVerificationMode: true,
+      idVerificationMinAge: true,
     },
   });
 
@@ -440,6 +446,7 @@ export async function getShuftiService(): Promise<ShuftiService | null> {
     callbackUrl: settings.shuftiCallbackUrl || undefined,
     redirectUrl: settings.shuftiRedirectUrl || undefined,
     mode: (settings.idVerificationMode as "sandbox" | "production") || "production",
+    minAge: settings.idVerificationMinAge ?? undefined,
   });
 }
 

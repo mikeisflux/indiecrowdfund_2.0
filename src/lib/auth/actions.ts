@@ -1,6 +1,7 @@
 "use server";
 
 import { db } from "@/lib/db";
+import { checkPasswordPolicy } from "@/lib/auth/password-policy";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { checkBanEvasion, BAN_EVASION_MESSAGE } from "@/lib/moderation/ban-evasion";
@@ -120,6 +121,12 @@ export async function register(formData: FormData, callbackUrl?: string | null) 
 
     const { name, email: rawEmail, password } = validatedFields.data;
     const email = rawEmail.toLowerCase();
+
+    // Admin-configured password policy (Settings > Security).
+    const policyError = await checkPasswordPolicy(password);
+    if (policyError) {
+      return { error: { password: [policyError] } };
+    }
 
     // Validate name is not gibberish (bot detection)
     const nameValidation = validateNameNotGibberish(name);
@@ -550,6 +557,12 @@ export async function resetPassword(formData: FormData, token: string) {
   }
 
   const { password } = validatedFields.data;
+
+  // Admin-configured password policy (Settings > Security).
+  const resetPolicyError = await checkPasswordPolicy(password);
+  if (resetPolicyError) {
+    return { error: { password: [resetPolicyError] } };
+  }
 
   try {
     // Verify token

@@ -125,7 +125,6 @@ export default function AIMarketingPage() {
     })();
     return () => { cancelled = true; };
   }, [viewerCampaignId]);
-  const [isApplyingRecommendations, setIsApplyingRecommendations] = useState(false);
   const [activityLogs, setActivityLogs] = useState<Array<{ id: string; action: string; details: string; timestamp: string }>>([]);
   const [showTagReview, setShowTagReview] = useState(false);
   const [pendingTagUpdates, setPendingTagUpdates] = useState<PendingTagUpdate[]>([]);
@@ -133,7 +132,7 @@ export default function AIMarketingPage() {
   const [selectedCampaignType, setSelectedCampaignType] = useState<"subscriber" | "backer" | "creator" | "retailer" | null>(null);
   const [isApplyingTags, setIsApplyingTags] = useState(false);
   const [showCSVImportDialog, setShowCSVImportDialog] = useState(false);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   const [aiRunResults, setAiRunResults] = useState<Record<string, { success: boolean; message: string; data?: any; timestamp: string }>>({});
   const [showResultsViewer, setShowResultsViewer] = useState(false);
   const [resultsViewerTab, setResultsViewerTab] = useState("predictive");
@@ -636,44 +635,35 @@ export default function AIMarketingPage() {
     });
   };
 
-  const handleApplyRecommendations = async () => {
-    setIsApplyingRecommendations(true);
-    try {
-      // Create campaigns based on recommendations
-      const recommendations = [
-        { name: "High Engagement Projects", targetAudience: "all", projectCategory: "all" },
-        { name: "Tech Category Spotlight", targetAudience: "backers", projectCategory: "technology" },
-        { name: "High-Value Backer Outreach", targetAudience: "high-value", projectCategory: "all" },
-      ];
-
-      for (const rec of recommendations) {
-        await apiFetch("/api/admin/ai-marketing/campaigns", {
-          method: "POST",
-          headers: { "Content-Type": "application/json", },
-          body: JSON.stringify({
-            name: rec.name,
-            targetAudience: rec.targetAudience,
-            projectCategory: rec.projectCategory,
-            autoGenerateCopy: true,
-          }),
-        });
-      }
-
-      // Reload data to show new campaigns
-      await loadData();
-      setSaveMessage("Recommendations applied - 3 campaigns created");
-      setTimeout(() => setSaveMessage(null), 3000);
-    } catch (error) {
-      console.error("Error applying recommendations:", error);
-      setSaveMessage("Failed to apply recommendations");
-    } finally {
-      setIsApplyingRecommendations(false);
-    }
-  };
+  // "Apply Recommendations" was removed: it ignored the recommendations
+  // on screen and always created the same three hardcoded campaigns.
 
   const handleViewCampaign = (campaign: EmailCampaign) => {
     setSelectedCampaign(campaign);
     setShowCampaignViewer(true);
+  };
+
+  // Sends the draft via the manage/[id]/send endpoint. The button
+  // existed for months with no onClick at all.
+  const [isSendingCampaign, setIsSendingCampaign] = useState(false);
+  const handleSendCampaign = async () => {
+    if (!selectedCampaign) return;
+    setIsSendingCampaign(true);
+    try {
+      const res = await apiFetch(`/api/admin/ai-marketing/campaigns/manage/${selectedCampaign.id}/send`, {
+        method: "POST",
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Failed to send campaign");
+      setSaveMessage(`Campaign "${selectedCampaign.name}" is sending`);
+      setShowCampaignViewer(false);
+      await loadData();
+    } catch (error) {
+      setSaveMessage(error instanceof Error ? `Failed: ${error.message}` : "Failed to send campaign");
+    } finally {
+      setIsSendingCampaign(false);
+      setTimeout(() => setSaveMessage(null), 4000);
+    }
   };
 
   const handleConfigureCampaignType = (type: "subscriber" | "backer" | "creator" | "retailer") => {
@@ -682,28 +672,32 @@ export default function AIMarketingPage() {
   };
 
   const loadActivityLogs = async () => {
-    // Generate activity logs from campaigns and settings changes
-    const logs = [
-      ...emailCampaigns.slice(0, 5).map((c, i) => ({
+    // Real history: sent/created campaigns (live data) + AiRunLog rows
+    // from the run endpoint. The old version fabricated entries with
+    // invented timestamps.
+    try {
+      const res = await fetch("/api/admin/ai-marketing/run?limit=25");
+      const data = res.ok ? await res.json() : { runs: [] };
+      const runLogs = (data.runs || []).map((r: { id: string; action: string; message: string | null; trigger: string; createdAt: string }) => ({
+        id: `run-${r.id}`,
+        action: r.action.replace(/^run/, "").replace(/([A-Z])/g, " $1").trim() || r.action,
+        details: `${r.message || ""}${r.trigger === "cron" ? " (scheduled)" : ""}`.trim(),
+        timestamp: r.createdAt,
+      }));
+      const campaignLogs = emailCampaigns.slice(0, 10).map((c) => ({
         id: `campaign-${c.id}`,
         action: c.status === "sent" ? "Campaign Sent" : c.status === "scheduled" ? "Campaign Scheduled" : "Campaign Created",
         details: `"${c.name}" - ${c.recipients.toLocaleString()} recipients`,
-        timestamp: c.sentAt || new Date(Date.now() - i * 86400000).toISOString(),
-      })),
-      {
-        id: "settings-1",
-        action: "AI Settings Updated",
-        details: "Auto-tagging enabled, confidence threshold set to 75%",
-        timestamp: new Date(Date.now() - 172800000).toISOString(),
-      },
-      {
-        id: "tagging-1",
-        action: "Auto-Tagging Run",
-        details: `${projectTags.length} projects tagged automatically`,
-        timestamp: new Date(Date.now() - 259200000).toISOString(),
-      },
-    ];
-    setActivityLogs(logs.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()));
+        timestamp: c.sentAt || new Date().toISOString(),
+      }));
+      setActivityLogs(
+        [...runLogs, ...campaignLogs].sort(
+          (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+        )
+      );
+    } catch {
+      setActivityLogs([]);
+    }
     setShowActivityLog(true);
   };
 
@@ -857,8 +851,6 @@ export default function AIMarketingPage() {
             userSegments={userSegments}
             behaviorEvents={behaviorEvents}
             emailCampaigns={emailCampaigns}
-            isApplyingRecommendations={isApplyingRecommendations}
-            handleApplyRecommendations={handleApplyRecommendations}
             setShowSegmentManager={setShowSegmentManager}
             setShowCampaignDialog={setShowCampaignDialog}
             handleViewCampaign={handleViewCampaign}
@@ -1103,8 +1095,12 @@ export default function AIMarketingPage() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowCampaignViewer(false)}>Close</Button>
             {selectedCampaign?.status === "draft" && (
-              <Button>
-                <Send className="mr-2 h-4 w-4" />
+              <Button onClick={handleSendCampaign} disabled={isSendingCampaign}>
+                {isSendingCampaign ? (
+                  <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Send className="mr-2 h-4 w-4" />
+                )}
                 Send Campaign
               </Button>
             )}

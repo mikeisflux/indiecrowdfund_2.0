@@ -43,10 +43,6 @@ import {
 interface EmailSettingsProps {
   settings: {
     provider: string;
-    smtpHost: string;
-    smtpPort: string;
-    smtpUser: string;
-    smtpPassword: string;
     fromEmail: string;
     fromName: string;
     sendgridApiKey: string;
@@ -99,7 +95,6 @@ export function EmailSettings({ settings, onSettingsChange, onSave }: EmailSetti
                 <SelectContent>
                   <SelectItem value="sendgrid">SendGrid</SelectItem>
                   <SelectItem value="mailgun">Mailgun</SelectItem>
-                  <SelectItem value="postmark">Postmark</SelectItem>
                 </SelectContent>
               </Select>
             </div>

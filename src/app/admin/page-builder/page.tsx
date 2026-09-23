@@ -350,6 +350,45 @@ export default function PageBuilderPage() {
     setHasUnsavedChanges(true);
   };
 
+  // Which section the Add Component dialog inserts into (it used to
+  // always add to the first section regardless of where you clicked).
+  const [addTargetSection, setAddTargetSection] = useState<string | null>(null);
+
+  const updateSelectedSectionSetting = (key: string, value: string) => {
+    if (!selectedComponent) return;
+    setPageContent((prev) =>
+      prev.map((sec) =>
+        sec.id === selectedComponent
+          ? { ...sec, settings: { ...sec.settings, [key]: value } }
+          : sec
+      )
+    );
+    setHasUnsavedChanges(true);
+  };
+
+  const duplicateSection = (sectionId: string) => {
+    setPageContent((prev) => {
+      const idx = prev.findIndex((sec) => sec.id === sectionId);
+      if (idx === -1) return prev;
+      const source = prev[idx];
+      const stamp = Date.now();
+      const clone: PageComponent = {
+        ...source,
+        id: `${source.type}-${stamp}`,
+        settings: { ...source.settings },
+        children: (source.children || []).map((child, i) => ({
+          ...child,
+          id: `${child.type}-${stamp}-${i}`,
+          settings: { ...child.settings },
+        })),
+      };
+      const next = [...prev];
+      next.splice(idx + 1, 0, clone);
+      return next;
+    });
+    setHasUnsavedChanges(true);
+  };
+
   const addNewSection = () => {
     const newSection: PageComponent = {
       id: `section-${Date.now()}`,
@@ -486,7 +525,7 @@ export default function PageBuilderPage() {
           <div className="flex items-center gap-2">
             {selectedPage && (
               <Button variant="outline" size="sm" asChild>
-                <a href={`/${selectedPage.slug}`} target="_blank">
+                <a href={`/pages/${selectedPage.slug}`} target="_blank">
                   <Eye className="h-4 w-4 mr-1" />
                   Preview
                 </a>
@@ -573,7 +612,15 @@ export default function PageBuilderPage() {
                   </div>
 
                   <div className="absolute -right-10 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col gap-1">
-                    <Button variant="outline" size="icon" className="h-8 w-8">
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        duplicateSection(section.id);
+                      }}
+                    >
                       <Copy className="h-4 w-4" />
                     </Button>
                     <Button
@@ -608,9 +655,6 @@ export default function PageBuilderPage() {
                       >
                         {/* Component controls */}
                         <div className="absolute -right-2 -top-2 opacity-0 group-hover/child:opacity-100 transition-opacity flex gap-1">
-                          <Button variant="secondary" size="icon" className="h-6 w-6">
-                            <Settings className="h-3 w-3" />
-                          </Button>
                           <Button
                             variant="secondary"
                             size="icon"
@@ -680,7 +724,10 @@ export default function PageBuilderPage() {
                       variant="outline"
                       size="sm"
                       className="w-full border-dashed"
-                      onClick={() => setShowAddDialog(true)}
+                      onClick={() => {
+                        setAddTargetSection(section.id);
+                        setShowAddDialog(true);
+                      }}
                     >
                       <Plus className="h-4 w-4 mr-1" />
                       Add Component
@@ -720,14 +767,28 @@ export default function PageBuilderPage() {
             <div className="space-y-2">
               <Label>Background Color</Label>
               <div className="flex gap-2">
-                <div className="h-10 w-10 rounded-lg border bg-white" />
-                <Input value="#FFFFFF" className="font-mono" />
+                <input
+                  type="color"
+                  aria-label="Section background color"
+                  className="h-10 w-10 cursor-pointer rounded-lg border bg-transparent p-0.5"
+                  value={(pageContent.find(sec => sec.id === selectedComponent)?.settings.background as string) || "#FFFFFF"}
+                  onChange={(e) => updateSelectedSectionSetting("background", e.target.value)}
+                />
+                <Input
+                  value={(pageContent.find(sec => sec.id === selectedComponent)?.settings.background as string) || "#FFFFFF"}
+                  onChange={(e) => updateSelectedSectionSetting("background", e.target.value)}
+                  className="font-mono"
+                  maxLength={7}
+                />
               </div>
             </div>
 
             <div className="space-y-2">
               <Label>Padding</Label>
-              <Select defaultValue="60">
+              <Select
+                value={String(pageContent.find(sec => sec.id === selectedComponent)?.settings.padding ?? "60px").replace("px", "")}
+                onValueChange={(v) => updateSelectedSectionSetting("padding", `${v}px`)}
+              >
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
@@ -765,7 +826,6 @@ export default function PageBuilderPage() {
                       <button
                         key={item.type}
                         onClick={() => {
-                          // Add component to first section
                           if (pageContent.length > 0) {
                             const newComponent: PageComponent = {
                               id: `${item.type}-${Date.now()}`,
@@ -773,14 +833,18 @@ export default function PageBuilderPage() {
                               content: item.type === "heading" ? "New Heading" : item.type === "text" ? "New text content" : undefined,
                               settings: { align: "left" },
                             };
-                            setPageContent(prev => prev.map((section, i) =>
-                              i === 0
+                            // Insert into the section whose Add button opened
+                            // the dialog; fall back to the first section.
+                            const targetId = addTargetSection ?? pageContent[0]?.id;
+                            setPageContent(prev => prev.map((section) =>
+                              section.id === targetId
                                 ? { ...section, children: [...(section.children || []), newComponent] }
                                 : section
                             ));
                             setHasUnsavedChanges(true);
                           }
                           setShowAddDialog(false);
+                          setAddTargetSection(null);
                         }}
                         className="flex items-center gap-2 rounded-lg border p-3 hover:bg-muted/50 dark:hover:bg-zinc-800 transition-colors text-left"
                       >

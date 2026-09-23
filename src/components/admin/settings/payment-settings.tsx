@@ -20,26 +20,18 @@ import {
 
 interface PaymentSettingsProps {
   settings: {
-    stripeEnabled: boolean;
-    stripePublicKey: string;
-    stripeSecretKey: string;
-    stripeWebhookSecret: string;
-    stripeConnectWebhookSecret: string;
     // Divinity Payments - Credit redemption payment solution
     divinityCoinEnabled: boolean;
     divinityCoinApiKey: string;
     divinityCoinWebhookSecret: string;
     divinityCoinPartnerId: string;
-    divinityCoinSettlementFrequency: string;
     divinityCoinStripePublishableKey: string;
     // PayPal settings
-    paypalEnabled: boolean;
     paypalClientId: string;
     paypalClientSecret: string;
     paypalWebhookId: string;
     paypalMode: string;
     // PayPal Connect (Complete Payments Platform) settings
-    paypalConnectEnabled: boolean;
     paypalConnectClientId: string;
     paypalConnectClientSecret: string;
     paypalConnectBnCode: string;
@@ -65,9 +57,6 @@ interface PaymentSettingsProps {
     recaptchaEnabled: boolean;
     recaptchaSiteKey: string;
     recaptchaSecretKey: string;
-    autoPayouts: boolean;
-    payoutThreshold: string;
-    payoutSchedule: string;
   };
   onSettingsChange: (settings: PaymentSettingsProps["settings"]) => void;
   onSave: () => void;
@@ -100,86 +89,10 @@ export function PaymentSettings({ settings, onSettingsChange, onSave }: PaymentS
         </Button>
       </div>
 
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle>Stripe Configuration</CardTitle>
-              <CardDescription>Primary payment processor settings</CardDescription>
-            </div>
-            <Badge variant={settings.stripeEnabled ? "default" : "secondary"}>
-              {settings.stripeEnabled ? "Enabled" : "Disabled"}
-            </Badge>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="flex items-center justify-between rounded-lg border p-4">
-            <div className="space-y-0.5">
-              <Label>Enable Stripe</Label>
-              <p className="text-sm text-muted-foreground">Accept payments via Stripe</p>
-            </div>
-            <Switch
-              checked={settings.stripeEnabled}
-              onCheckedChange={(checked) =>
-                onSettingsChange({ ...settings, stripeEnabled: checked })
-              }
-            />
-          </div>
-
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="space-y-2">
-              <Label>Publishable Key</Label>
-              <SecureKeyInput
-                value={settings.stripePublicKey}
-                onChange={(value) => onSettingsChange({ ...settings, stripePublicKey: value })}
-                onSave={onSave}
-                hasExistingValue={settings.stripePublicKey === "••••••••"}
-                placeholder="pk_live_..."
-                forceShowValue={showAllKeys}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Secret Key</Label>
-              <SecureKeyInput
-                value={settings.stripeSecretKey}
-                onChange={(value) => onSettingsChange({ ...settings, stripeSecretKey: value })}
-                onSave={onSave}
-                hasExistingValue={settings.stripeSecretKey === "••••••••"}
-                placeholder="sk_live_..."
-                forceShowValue={showAllKeys}
-              />
-            </div>
-          </div>
-
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="space-y-2">
-              <Label>Webhook Secret</Label>
-              <SecureKeyInput
-                value={settings.stripeWebhookSecret}
-                onChange={(value) => onSettingsChange({ ...settings, stripeWebhookSecret: value })}
-                onSave={onSave}
-                hasExistingValue={settings.stripeWebhookSecret === "••••••••"}
-                placeholder="whsec_..."
-                forceShowValue={showAllKeys}
-              />
-              <p className="text-xs text-muted-foreground">For regular Stripe events (payments, etc.)</p>
-            </div>
-            <div className="space-y-2">
-              <Label>Connect Webhook Secret</Label>
-              <SecureKeyInput
-                value={settings.stripeConnectWebhookSecret}
-                onChange={(value) => onSettingsChange({ ...settings, stripeConnectWebhookSecret: value })}
-                onSave={onSave}
-                hasExistingValue={settings.stripeConnectWebhookSecret === "••••••••"}
-                placeholder="whsec_..."
-                forceShowValue={showAllKeys}
-              />
-              <p className="text-xs text-muted-foreground">For Connect events (account updates, etc.)</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
+      {/* The Stripe card was removed: the platform has no direct Stripe
+          integration (no Stripe SDK anywhere; DivinityCoin wraps Stripe on
+          their side). The keys it collected powered nothing but a
+          misleading health-check entry. Columns remain in the DB. */}
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
@@ -240,23 +153,7 @@ export function PaymentSettings({ settings, onSettingsChange, onSave }: PaymentS
                 forceShowValue={showAllKeys}
               />
             </div>
-            <div className="space-y-2">
-              <Label>Settlement Frequency</Label>
-              <Select
-                value={settings.divinityCoinSettlementFrequency || "weekly"}
-                onValueChange={(v) => onSettingsChange({ ...settings, divinityCoinSettlementFrequency: v })}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="daily">Daily</SelectItem>
-                  <SelectItem value="weekly">Weekly (Monday)</SelectItem>
-                  <SelectItem value="biweekly">Bi-weekly</SelectItem>
-                  <SelectItem value="monthly">Monthly (1st)</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            {/* Settlement Frequency removed — DC settlements are created manually; nothing read it. */}
           </div>
 
           <div className="space-y-2">
@@ -291,26 +188,13 @@ export function PaymentSettings({ settings, onSettingsChange, onSave }: PaymentS
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle>PayPal Configuration</CardTitle>
-              <CardDescription>Advanced Checkout with inline card fields + PayPal wallet. Payouts API for creator settlements.</CardDescription>
+              <CardTitle>PayPal (Servicing Only)</CardTitle>
+              <CardDescription>PayPal is withdrawn for NEW pledges. These credentials keep legacy servicing working: captures of already-authorized pledges, refunds, webhooks, and creator payouts.</CardDescription>
             </div>
-            <Badge variant={settings.paypalEnabled ? "default" : "secondary"}>
-              {settings.paypalEnabled ? "Enabled" : "Disabled"}
-            </Badge>
+            <Badge variant="secondary">Servicing</Badge>
           </div>
         </CardHeader>
         <CardContent className="space-y-6">
-          <div className="flex items-center justify-between rounded-lg border p-4">
-            <div className="space-y-0.5">
-              <Label>Enable PayPal</Label>
-              <p className="text-sm text-muted-foreground">Allow creators to use PayPal as their payment processor</p>
-            </div>
-            <Switch
-              checked={settings.paypalEnabled}
-              onCheckedChange={(checked) => onSettingsChange({ ...settings, paypalEnabled: checked })}
-            />
-          </div>
-
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
               <Label>Client ID</Label>
@@ -385,23 +269,10 @@ export function PaymentSettings({ settings, onSettingsChange, onSave }: PaymentS
               <CardTitle>PayPal Connect Configuration</CardTitle>
               <CardDescription>Marketplace (Complete Payments Platform). Pledges pay creators directly with an automatic grant administration fee. Uses a SEPARATE PayPal Platform app from standard PayPal above.</CardDescription>
             </div>
-            <Badge variant={settings.paypalConnectEnabled ? "default" : "secondary"}>
-              {settings.paypalConnectEnabled ? "Enabled" : "Disabled"}
-            </Badge>
+            <Badge variant="secondary">Servicing</Badge>
           </div>
         </CardHeader>
         <CardContent className="space-y-6">
-          <div className="flex items-center justify-between rounded-lg border p-4">
-            <div className="space-y-0.5">
-              <Label>Enable PayPal Connect</Label>
-              <p className="text-sm text-muted-foreground">Allow creators to connect their own PayPal account and receive pledges directly</p>
-            </div>
-            <Switch
-              checked={settings.paypalConnectEnabled}
-              onCheckedChange={(checked) => onSettingsChange({ ...settings, paypalConnectEnabled: checked })}
-            />
-          </div>
-
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
               <Label>Client ID</Label>
@@ -596,56 +467,9 @@ export function PaymentSettings({ settings, onSettingsChange, onSave }: PaymentS
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Payout Settings</CardTitle>
-          <CardDescription>Configure automatic creator payouts</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="flex items-center justify-between rounded-lg border p-4">
-            <div className="space-y-0.5">
-              <Label>Automatic Payouts</Label>
-              <p className="text-sm text-muted-foreground">Automatically process creator payouts</p>
-            </div>
-            <Switch
-              checked={settings.autoPayouts}
-              onCheckedChange={(checked) =>
-                onSettingsChange({ ...settings, autoPayouts: checked })
-              }
-            />
-          </div>
-
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="space-y-2">
-              <Label>Minimum Payout Amount ($)</Label>
-              <Input
-                type="number"
-                min="0"
-                value={settings.payoutThreshold}
-                onChange={(e) => onSettingsChange({ ...settings, payoutThreshold: e.target.value })}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Payout Schedule</Label>
-              <Select
-                value={settings.payoutSchedule}
-                onValueChange={(v) => onSettingsChange({ ...settings, payoutSchedule: v })}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="daily">Daily</SelectItem>
-                  <SelectItem value="weekly">Weekly</SelectItem>
-                  <SelectItem value="biweekly">Bi-weekly</SelectItem>
-                  <SelectItem value="monthly">Monthly</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
+      {/* "Payout Settings" removed: Automatic Payouts, Minimum Payout and
+          Schedule were placebo — every payout is created manually from
+          Admin > Payouts and nothing read these values. */}
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">

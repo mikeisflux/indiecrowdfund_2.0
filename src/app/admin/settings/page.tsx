@@ -1,6 +1,7 @@
 "use client";
 
 import { apiFetch } from "@/lib/fetch-utils";
+import { toast } from "sonner";
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useSearchParams } from "next/navigation";
@@ -67,10 +68,7 @@ interface PlatformSettings {
   divinityCoinSettlementFrequency: string;
   divinityCoinStripePublishableKey: string | null;
   emailProvider: string;
-  smtpHost: string | null;
-  smtpPort: number;
-  smtpUser: string | null;
-  smtpPassword: string | null;
+  smtpReplyToEmail: string | null;
   smtpFromEmail: string | null;
   smtpFromName: string | null;
   sendgridApiKey: string | null;
@@ -219,8 +217,6 @@ export default function SettingsPage() {
     siteName: "IndieCrowdfund",
     siteDescription: "The independent crowdfunding platform for creators",
     supportEmail: "support@indiecrowdfund.com",
-    timezone: "America/New_York",
-    currency: "USD",
     platformFee: "5",
     maintenanceMode: false,
     maintenanceStartsAt: "",
@@ -232,25 +228,17 @@ export default function SettingsPage() {
   });
 
   const [paymentSettings, setPaymentSettings] = useState({
-    stripeEnabled: false,
-    stripePublicKey: "",
-    stripeSecretKey: "",
-    stripeWebhookSecret: "",
-    stripeConnectWebhookSecret: "",
     divinityCoinEnabled: false,
     divinityCoinApiKey: "",
     divinityCoinWebhookSecret: "",
     divinityCoinPartnerId: "",
-    divinityCoinSettlementFrequency: "weekly",
     divinityCoinStripePublishableKey: "",
     // PayPal settings
-    paypalEnabled: true,
     paypalClientId: "",
     paypalClientSecret: "",
     paypalWebhookId: "",
     paypalMode: "sandbox",
     // PayPal Connect settings
-    paypalConnectEnabled: false,
     paypalConnectClientId: "",
     paypalConnectClientSecret: "",
     paypalConnectBnCode: "",
@@ -273,9 +261,6 @@ export default function SettingsPage() {
     recaptchaSiteKey: "",
     recaptchaSecretKey: "",
     // Local UI settings (not in DB yet)
-    autoPayouts: true,
-    payoutThreshold: "100",
-    payoutSchedule: "weekly",
   });
 
   // Ref to track latest payment settings for save handler (avoids stale closure)
@@ -286,11 +271,6 @@ export default function SettingsPage() {
 
   const [emailSettings, setEmailSettings] = useState({
     provider: "sendgrid",
-    // SMTP settings
-    smtpHost: "",
-    smtpPort: "587",
-    smtpUser: "",
-    smtpPassword: "",
     fromEmail: "",
     fromName: "",
     // Third-party providers
@@ -300,7 +280,6 @@ export default function SettingsPage() {
     mailgunWebhookSigningKey: "",
     // SendGrid webhook verification
     sendgridWebhookVerificationKey: "",
-    // Local UI settings (not in DB)
     replyToEmail: "",
     emailVerificationRequired: true,
     welcomeEmailEnabled: true,
@@ -309,64 +288,35 @@ export default function SettingsPage() {
   });
 
   const [securitySettings, setSecuritySettings] = useState({
-    require2FA: false,
-    sessionDuration: "7",
-    maxLoginAttempts: "5",
-    lockoutDuration: "30",
     passwordMinLength: "8",
     requireSpecialChar: true,
-    ipWhitelist: "",
-    // Global Rate Limiting
     globalRateLimitEnabled: true,
     globalRateLimit: "100",
     globalRateLimitWindow: "60",
-    // Login Rate Limiting
     loginRateLimitEnabled: true,
     loginRateLimit: "5",
     loginRateLimitWindow: "300",
-    // Password Reset Rate Limiting
     passwordResetRateLimit: "3",
     passwordResetRateLimitWindow: "900",
-    csrfProtection: true,
-    contentSecurityPolicy: true,
   });
 
   const [aiSettings, setAiSettings] = useState({
-    anthropicEnabled: false,
     anthropicApiKey: "",
-    anthropicModel: "claude-sonnet-4-6",
     autoTagging: false,
-    marketingCopy: false,
     contentModeration: false,
     fraudDetection: false,
-    moderationThreshold: "0.7",
   });
 
   const [socialSettings, setSocialSettings] = useState({
-    // Facebook/Instagram (Meta)
-    facebookEnabled: false,
     facebookAppId: "",
     facebookAppSecret: "",
-    facebookPageAccessToken: "",
-    instagramEnabled: false,
-    // YouTube
-    youtubeEnabled: false,
     youtubeClientId: "",
     youtubeClientSecret: "",
-    youtubeApiKey: "",
-    // Twitter/X
-    twitterEnabled: false,
     twitterApiKey: "",
     twitterApiSecret: "",
-    twitterBearerToken: "",
     twitterAccessToken: "",
     twitterAccessSecret: "",
-    // Content Generation
-    stabilityEnabled: false,
-    stabilityApiKey: "",
-    // General Settings
     autoPostEnabled: false,
-    defaultHashtags: "#crowdfunding #indiecrowdfund",
     postApprovalRequired: true,
   });
 
@@ -431,8 +381,6 @@ export default function SettingsPage() {
         siteName: settings.siteName || "IndieCrowdfund",
         siteDescription: settings.siteDescription || "",
         supportEmail: settings.supportEmail || "",
-        timezone: settings.timezone || "America/New_York",
-        currency: settings.currency || "USD",
         platformFee: String(settings.platformFee || 5),
         maintenanceMode: settings.maintenanceMode || false,
         // <input type="datetime-local"> wants "YYYY-MM-DDTHH:mm" with no zone
@@ -451,24 +399,15 @@ export default function SettingsPage() {
 
       setPaymentSettings((prev) => ({
         ...prev,
-        stripeEnabled: settings.stripeEnabled || false,
-        stripePublicKey: settings.stripePublishableKey || "",
-        stripeSecretKey: settings.stripeSecretKey || "",
-        stripeWebhookSecret: settings.stripeWebhookSecret || "",
-        stripeConnectWebhookSecret: settings.stripeConnectWebhookSecret || "",
         divinityCoinEnabled: settings.divinityCoinEnabled || false,
         divinityCoinApiKey: settings.divinityCoinApiKey || "",
         divinityCoinWebhookSecret: settings.divinityCoinWebhookSecret || "",
         divinityCoinPartnerId: settings.divinityCoinPartnerId || "",
-        divinityCoinSettlementFrequency: settings.divinityCoinSettlementFrequency || "weekly",
         divinityCoinStripePublishableKey: settings.divinityCoinStripePublishableKey || "",
-        autoPayouts: settings.autoPayouts || false,
-        paypalEnabled: settings.paypalEnabled || false,
         paypalClientId: settings.paypalClientId || "",
         paypalClientSecret: settings.paypalClientSecret || "",
         paypalWebhookId: settings.paypalWebhookId || "",
         paypalMode: settings.paypalMode || "sandbox",
-        paypalConnectEnabled: settings.paypalConnectEnabled || false,
         paypalConnectClientId: settings.paypalConnectClientId || "",
         paypalConnectClientSecret: settings.paypalConnectClientSecret || "",
         paypalConnectBnCode: settings.paypalConnectBnCode || "",
@@ -492,11 +431,8 @@ export default function SettingsPage() {
       setEmailSettings((prev) => ({
         ...prev,
         provider: settings.emailProvider || "sendgrid",
-        smtpHost: settings.smtpHost || "",
-        smtpPort: String(settings.smtpPort || 587),
-        smtpUser: settings.smtpUser || "",
-        smtpPassword: settings.smtpPassword || "",
         fromEmail: settings.smtpFromEmail || "",
+        replyToEmail: settings.smtpReplyToEmail || "",
         fromName: settings.smtpFromName || "",
         sendgridApiKey: settings.sendgridApiKey || "",
         sendgridWebhookVerificationKey: (settings as unknown as Record<string, unknown>).sendgridWebhookVerificationKey as string || "",
@@ -511,65 +447,37 @@ export default function SettingsPage() {
 
       setSecuritySettings((prev) => ({
         ...prev,
-        require2FA: settings.twoFactorRequired || false,
-        sessionDuration: String(settings.sessionTimeout || 7),
-        maxLoginAttempts: String(settings.maxLoginAttempts || 5),
         passwordMinLength: String(settings.passwordMinLength || 8),
         requireSpecialChar: settings.requireSpecialChars !== false,
-        // Global Rate Limiting
         globalRateLimitEnabled: settings.globalRateLimitEnabled !== false,
-        globalRateLimit: String(settings.globalRateLimitRequests || settings.ipRateLimitRequests || 100),
-        globalRateLimitWindow: String(settings.globalRateLimitWindow || settings.ipRateLimitWindow || 60),
-        // Login Rate Limiting
+        globalRateLimit: String(settings.globalRateLimitRequests || 100),
+        globalRateLimitWindow: String(settings.globalRateLimitWindow || 60),
         loginRateLimitEnabled: settings.loginRateLimitEnabled !== false,
         loginRateLimit: String(settings.loginRateLimitRequests || 5),
         loginRateLimitWindow: String(settings.loginRateLimitWindow || 300),
-        // Password Reset Rate Limiting
         passwordResetRateLimit: String(settings.passwordResetRateLimitRequests || 3),
         passwordResetRateLimitWindow: String(settings.passwordResetRateLimitWindow || 900),
-        csrfProtection: settings.csrfProtection !== false,
-        contentSecurityPolicy: settings.contentSecurityPolicy !== false,
       }));
 
       setAiSettings((prev) => ({
         ...prev,
-        anthropicEnabled: !!settings.anthropicApiKey,
         anthropicApiKey: settings.anthropicApiKey || "",
         autoTagging: settings.aiAutoTagging || false,
         contentModeration: settings.aiAutoModeration || false,
-        marketingCopy: settings.aiContentGeneration || false,
         fraudDetection: settings.aiFraudDetection !== false,
       }));
 
-      // Set enabled flags based on whether API keys exist
-      // Note: API returns masked values like "••••••••" for existing secrets
-      const hasFacebookKeys = !!settings.facebookAppId && settings.facebookAppId !== "";
-      const hasYoutubeKeys = !!settings.youtubeClientId && settings.youtubeClientId !== "";
-      const hasTwitterKeys = !!settings.twitterApiKey && settings.twitterApiKey !== "";
-      const hasStabilityKey = !!settings.stabilityApiKey && settings.stabilityApiKey !== "";
-
       setSocialSettings((prev) => ({
         ...prev,
-        // Set enabled flags based on existing keys
-        facebookEnabled: hasFacebookKeys,
-        instagramEnabled: hasFacebookKeys, // Instagram uses same Facebook OAuth
-        youtubeEnabled: hasYoutubeKeys,
-        twitterEnabled: hasTwitterKeys,
-        stabilityEnabled: hasStabilityKey,
         // API keys (may be masked with "••••••••")
         facebookAppId: settings.facebookAppId || "",
         facebookAppSecret: settings.facebookAppSecret || "",
-        facebookPageAccessToken: settings.facebookPageAccessToken || "",
         youtubeClientId: settings.youtubeClientId || "",
         youtubeClientSecret: settings.youtubeClientSecret || "",
-        youtubeApiKey: settings.youtubeApiKey || "",
         twitterApiKey: settings.twitterApiKey || "",
         twitterApiSecret: settings.twitterApiSecret || "",
-        twitterBearerToken: settings.twitterBearerToken || "",
         twitterAccessToken: settings.twitterAccessToken || "",
         twitterAccessSecret: settings.twitterAccessSecret || "",
-        stabilityApiKey: settings.stabilityApiKey || "",
-        // Auto-posting settings
         autoPostEnabled: settings.autoPostEnabled || false,
         postApprovalRequired: settings.postApprovalRequired !== false,
       }));
@@ -630,31 +538,44 @@ export default function SettingsPage() {
     twitter: "idle",
   });
 
+  // Real connection tests — each hits /api/admin/settings/test-connection,
+  // which talks to the actual service with the STORED credentials.
+  // (The old handlers slept 2s and reported success for non-empty fields.)
+  const runConnectionTest = async (provider: "facebook" | "youtube" | "twitter"): Promise<boolean> => {
+    try {
+      const res = await apiFetch("/api/admin/settings/test-connection", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ provider }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (data.message) {
+        if (data.ok) toast.success(data.message);
+        else toast.error(data.message);
+      }
+      return !!data.ok;
+    } catch {
+      toast.error("Connection test failed");
+      return false;
+    }
+  };
+
   const testFacebook = async () => {
     setSocialTestResults((prev) => ({ ...prev, facebook: "testing" }));
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-    setSocialTestResults((prev) => ({
-      ...prev,
-      facebook: socialSettings.facebookAppId && socialSettings.facebookAppSecret ? "success" : "error",
-    }));
+    const ok = await runConnectionTest("facebook");
+    setSocialTestResults((prev) => ({ ...prev, facebook: ok ? "success" : "error" }));
   };
 
   const testYoutube = async () => {
     setSocialTestResults((prev) => ({ ...prev, youtube: "testing" }));
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-    setSocialTestResults((prev) => ({
-      ...prev,
-      youtube: socialSettings.youtubeClientId && socialSettings.youtubeClientSecret ? "success" : "error",
-    }));
+    const ok = await runConnectionTest("youtube");
+    setSocialTestResults((prev) => ({ ...prev, youtube: ok ? "success" : "error" }));
   };
 
   const testTwitter = async () => {
     setSocialTestResults((prev) => ({ ...prev, twitter: "testing" }));
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-    setSocialTestResults((prev) => ({
-      ...prev,
-      twitter: socialSettings.twitterApiKey && socialSettings.twitterApiSecret ? "success" : "error",
-    }));
+    const ok = await runConnectionTest("twitter");
+    setSocialTestResults((prev) => ({ ...prev, twitter: ok ? "success" : "error" }));
   };
 
   const [aiTestResults, setAiTestResults] = useState<{
@@ -665,12 +586,22 @@ export default function SettingsPage() {
 
   const testAnthropic = async () => {
     setAiTestResults((prev) => ({ ...prev, anthropic: "testing" }));
-    // Simulate API test
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-    setAiTestResults((prev) => ({
-      ...prev,
-      anthropic: aiSettings.anthropicApiKey ? "success" : "error",
-    }));
+    try {
+      const res = await apiFetch("/api/admin/settings/test-connection", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ provider: "anthropic" }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (data.message) {
+        if (data.ok) toast.success(data.message);
+        else toast.error(data.message);
+      }
+      setAiTestResults((prev) => ({ ...prev, anthropic: data.ok ? "success" : "error" }));
+    } catch {
+      toast.error("Connection test failed");
+      setAiTestResults((prev) => ({ ...prev, anthropic: "error" }));
+    }
   };
 
   const [r2TestResult, setR2TestResult] = useState<"idle" | "testing" | "success" | "error">("idle");
@@ -716,8 +647,6 @@ export default function SettingsPage() {
             siteName: generalSettings.siteName,
             siteDescription: generalSettings.siteDescription,
             supportEmail: generalSettings.supportEmail,
-            timezone: generalSettings.timezone,
-            currency: generalSettings.currency,
             platformFee: parseFloat(generalSettings.platformFee),
             maintenanceMode: generalSettings.maintenanceMode,
             // Empty means "no bound", which has to reach the API as null
@@ -733,24 +662,15 @@ export default function SettingsPage() {
           // Use ref to get latest values (avoids stale closure from blur events)
           const currentPaymentSettings = paymentSettingsRef.current;
           data = {
-            stripeEnabled: currentPaymentSettings.stripeEnabled,
-            stripePublishableKey: currentPaymentSettings.stripePublicKey,
-            stripeSecretKey: currentPaymentSettings.stripeSecretKey,
-            stripeWebhookSecret: currentPaymentSettings.stripeWebhookSecret,
-            stripeConnectWebhookSecret: currentPaymentSettings.stripeConnectWebhookSecret,
             divinityCoinEnabled: currentPaymentSettings.divinityCoinEnabled,
             divinityCoinApiKey: currentPaymentSettings.divinityCoinApiKey,
             divinityCoinWebhookSecret: currentPaymentSettings.divinityCoinWebhookSecret,
             divinityCoinPartnerId: currentPaymentSettings.divinityCoinPartnerId,
-            divinityCoinSettlementFrequency: currentPaymentSettings.divinityCoinSettlementFrequency,
             divinityCoinStripePublishableKey: currentPaymentSettings.divinityCoinStripePublishableKey,
-            autoPayouts: currentPaymentSettings.autoPayouts,
-            paypalEnabled: currentPaymentSettings.paypalEnabled,
             paypalClientId: currentPaymentSettings.paypalClientId,
             paypalClientSecret: currentPaymentSettings.paypalClientSecret,
             paypalWebhookId: currentPaymentSettings.paypalWebhookId,
             paypalMode: currentPaymentSettings.paypalMode,
-            paypalConnectEnabled: currentPaymentSettings.paypalConnectEnabled,
             paypalConnectClientId: currentPaymentSettings.paypalConnectClientId,
             paypalConnectClientSecret: currentPaymentSettings.paypalConnectClientSecret,
             paypalConnectBnCode: currentPaymentSettings.paypalConnectBnCode,
@@ -775,12 +695,10 @@ export default function SettingsPage() {
           section = "email";
           data = {
             emailProvider: emailSettings.provider,
-            smtpHost: emailSettings.smtpHost,
-            smtpPort: parseInt(emailSettings.smtpPort) || 587,
-            smtpUser: emailSettings.smtpUser,
-            smtpPassword: emailSettings.smtpPassword,
             smtpFromEmail: emailSettings.fromEmail,
             smtpFromName: emailSettings.fromName,
+            // The "Reply-To" field finally persists (and sendEmail uses it).
+            smtpReplyToEmail: emailSettings.replyToEmail,
             sendgridApiKey: emailSettings.sendgridApiKey,
             sendgridWebhookVerificationKey: emailSettings.sendgridWebhookVerificationKey,
             mailgunApiKey: emailSettings.mailgunApiKey,
@@ -797,16 +715,12 @@ export default function SettingsPage() {
           data = {
             facebookAppId: socialSettings.facebookAppId,
             facebookAppSecret: socialSettings.facebookAppSecret,
-            facebookPageAccessToken: socialSettings.facebookPageAccessToken,
             youtubeClientId: socialSettings.youtubeClientId,
             youtubeClientSecret: socialSettings.youtubeClientSecret,
-            youtubeApiKey: socialSettings.youtubeApiKey,
             twitterApiKey: socialSettings.twitterApiKey,
             twitterApiSecret: socialSettings.twitterApiSecret,
-            twitterBearerToken: socialSettings.twitterBearerToken,
             twitterAccessToken: socialSettings.twitterAccessToken,
             twitterAccessSecret: socialSettings.twitterAccessSecret,
-            stabilityApiKey: socialSettings.stabilityApiKey,
             autoPostEnabled: socialSettings.autoPostEnabled,
             postApprovalRequired: socialSettings.postApprovalRequired,
           };
@@ -818,35 +732,22 @@ export default function SettingsPage() {
             anthropicApiKey: aiSettings.anthropicApiKey,
             aiAutoModeration: aiSettings.contentModeration,
             aiAutoTagging: aiSettings.autoTagging,
-            aiContentGeneration: aiSettings.marketingCopy,
             aiFraudDetection: aiSettings.fraudDetection,
           };
           break;
         case "security":
           section = "security";
           data = {
-            twoFactorRequired: securitySettings.require2FA,
-            sessionTimeout: parseInt(securitySettings.sessionDuration),
-            maxLoginAttempts: parseInt(securitySettings.maxLoginAttempts),
             passwordMinLength: parseInt(securitySettings.passwordMinLength),
             requireSpecialChars: securitySettings.requireSpecialChar,
-            // Global Rate Limiting
             globalRateLimitEnabled: securitySettings.globalRateLimitEnabled,
             globalRateLimitRequests: parseInt(securitySettings.globalRateLimit),
             globalRateLimitWindow: parseInt(securitySettings.globalRateLimitWindow),
-            // Login Rate Limiting
             loginRateLimitEnabled: securitySettings.loginRateLimitEnabled,
             loginRateLimitRequests: parseInt(securitySettings.loginRateLimit),
             loginRateLimitWindow: parseInt(securitySettings.loginRateLimitWindow),
-            // Password Reset Rate Limiting
             passwordResetRateLimitRequests: parseInt(securitySettings.passwordResetRateLimit),
             passwordResetRateLimitWindow: parseInt(securitySettings.passwordResetRateLimitWindow),
-            // Legacy fields for backwards compatibility
-            ipRateLimitEnabled: securitySettings.globalRateLimitEnabled,
-            ipRateLimitRequests: parseInt(securitySettings.globalRateLimit),
-            ipRateLimitWindow: parseInt(securitySettings.globalRateLimitWindow),
-            csrfProtection: securitySettings.csrfProtection,
-            contentSecurityPolicy: securitySettings.contentSecurityPolicy,
           };
           break;
         case "idverify":

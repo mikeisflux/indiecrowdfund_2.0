@@ -12,9 +12,16 @@ import { db } from "@/lib/db";
 export interface Branding {
   logoUrl: string | null;
   faviconUrl: string | null;
+  siteName: string | null;
+  siteDescription: string | null;
 }
 
-const DEFAULTS: Branding = { logoUrl: null, faviconUrl: null };
+const DEFAULTS: Branding = {
+  logoUrl: null,
+  faviconUrl: null,
+  siteName: null,
+  siteDescription: null,
+};
 
 // Module-level TTL cache on top of the per-request React cache: the
 // root layout runs for every page view, and branding changes about
@@ -27,11 +34,13 @@ export const getBranding = cache(async (): Promise<Branding> => {
   if (cached && Date.now() - cached.at < TTL_MS) return cached.value;
   try {
     const settings = await db.platformSettings.findFirst({
-      select: { logoUrl: true, faviconUrl: true },
+      select: { logoUrl: true, faviconUrl: true, siteName: true, siteDescription: true },
     });
     const value: Branding = {
       logoUrl: settings?.logoUrl || null,
       faviconUrl: settings?.faviconUrl || null,
+      siteName: settings?.siteName?.trim() || null,
+      siteDescription: settings?.siteDescription?.trim() || null,
     };
     cached = { value, at: Date.now() };
     return value;

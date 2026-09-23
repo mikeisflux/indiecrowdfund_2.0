@@ -71,6 +71,12 @@ export default function NotificationsPage() {
 
       const data = await response.json();
 
+      // Server-stored preferences (the switches used to reset on reload
+      // because the GET never returned them).
+      if (data.preferences && typeof data.preferences === "object") {
+        setPreferences((prev) => ({ ...prev, ...data.preferences }));
+      }
+
       // Convert date strings to Date objects
       const notificationsWithDates = data.notifications.map((n: Notification & { createdAt: string }) => ({
         ...n,
@@ -150,9 +156,19 @@ export default function NotificationsPage() {
     }
   };
 
-  const deleteNotification = (id: string) => {
-    // Local delete only (these are virtual notifications)
+  const deleteNotification = async (id: string) => {
+    // Persist the dismissal server-side so it doesn't come back on
+    // refresh (the old version only hid the row locally).
     setNotifications(prev => prev.filter(n => n.id !== id));
+    try {
+      await apiFetch("/api/admin/notifications", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "dismiss", notificationIds: [id] }),
+      });
+    } catch {
+      toast.error("Could not dismiss — it may reappear on refresh");
+    }
   };
 
   const savePreferences = async () => {

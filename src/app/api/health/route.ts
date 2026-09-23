@@ -24,9 +24,6 @@ interface HealthResponse {
 
 // Platform settings cache for health checks
 interface PlatformSettingsCache {
-  stripeSecretKey: string | null;
-  stripePublishableKey: string | null;
-  stripeWebhookSecret: string | null;
   sendgridApiKey: string | null;
   smtpFromEmail: string | null;
   emailProvider: string | null;
@@ -70,9 +67,6 @@ export async function GET() {
         db.platformSettings.findUnique({
           where: { id: "default" },
           select: {
-            stripeSecretKey: true,
-            stripePublishableKey: true,
-            stripeWebhookSecret: true,
             sendgridApiKey: true,
             smtpFromEmail: true,
             emailProvider: true,
@@ -96,10 +90,10 @@ export async function GET() {
     }
   }
 
-  // Check external services (using database settings primarily, env vars as fallback)
-  const stripeCheck = checkStripeConfig(platformSettings);
-  checks.push(stripeCheck);
-
+  // Check external services (using database settings primarily, env vars
+  // as fallback). No Stripe check: the platform has no direct Stripe
+  // integration, and reporting stored-but-unused keys as "healthy" was
+  // misleading.
   const emailCheck = checkEmailConfig(platformSettings);
   checks.push(emailCheck);
 
@@ -158,28 +152,6 @@ async function checkDatabase(): Promise<HealthCheck> {
   }
 }
 
-function checkStripeConfig(settings: PlatformSettingsCache | null): HealthCheck {
-  // Check database settings first, then fall back to env vars
-  const hasSecretKey = !!(settings?.stripeSecretKey || process.env.STRIPE_SECRET_KEY);
-  const hasPublishableKey = !!(settings?.stripePublishableKey || process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY);
-  const hasWebhookSecret = !!(settings?.stripeWebhookSecret || process.env.STRIPE_WEBHOOK_SECRET);
-
-  if (hasSecretKey && hasPublishableKey && hasWebhookSecret) {
-    return { name: "stripe", status: "healthy" };
-  } else if (hasSecretKey && hasPublishableKey) {
-    return {
-      name: "stripe",
-      status: "degraded",
-      error: "Webhook secret not configured",
-    };
-  } else {
-    return {
-      name: "stripe",
-      status: "unhealthy",
-      error: "Stripe keys not configured",
-    };
-  }
-}
 
 function checkEmailConfig(settings: PlatformSettingsCache | null): HealthCheck {
   // Check database settings first, then fall back to env vars

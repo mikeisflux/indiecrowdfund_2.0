@@ -42,33 +42,48 @@ export function LocationAutocomplete({
 
   // Load Google Maps script
   useEffect(() => {
-    if (typeof window !== "undefined" && !window.google?.maps?.places) {
-      // Check if script already exists
-      const existingScript = document.querySelector('script[src*="maps.googleapis.com"]');
-      if (existingScript) {
-        const handleLoad = () => setIsGoogleLoaded(true);
-        existingScript.addEventListener("load", handleLoad);
-        return () => existingScript.removeEventListener("load", handleLoad);
-      }
+    if (typeof window === "undefined") return;
+    if (window.google?.maps?.places) {
+      setIsGoogleLoaded(true);
+      return;
+    }
 
-      // Get API key from environment or window config
-      const apiKey = process.env.NEXT_PUBLIC_GOOGLE_PLACES_API_KEY;
-      if (!apiKey) {
-        // Silently disable - UI shows fallback message when autocomplete isn't available
-        return;
-      }
+    // Check if script already exists
+    const existingScript = document.querySelector('script[src*="maps.googleapis.com"]');
+    if (existingScript) {
+      const handleLoad = () => setIsGoogleLoaded(true);
+      existingScript.addEventListener("load", handleLoad);
+      return () => existingScript.removeEventListener("load", handleLoad);
+    }
 
+    let cancelled = false;
+    const inject = (apiKey: string) => {
+      if (cancelled || document.querySelector('script[src*="maps.googleapis.com"]')) return;
       const script = document.createElement("script");
       script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places`;
       script.async = true;
       script.defer = true;
-      script.onload = () => {
-        setIsGoogleLoaded(true);
-      };
+      script.onload = () => setIsGoogleLoaded(true);
       document.head.appendChild(script);
-    } else if (window.google?.maps?.places) {
-      setIsGoogleLoaded(true);
+    };
+
+    // Build-time env var wins; otherwise the admin-saved key (Settings >
+    // General) via /api/public-config — that field used to be decorative.
+    const envKey = process.env.NEXT_PUBLIC_GOOGLE_PLACES_API_KEY;
+    if (envKey) {
+      inject(envKey);
+    } else {
+      fetch("/api/public-config")
+        .then((r) => (r.ok ? r.json() : null))
+        .then((cfg) => {
+          if (cfg?.googlePlacesApiKey) inject(cfg.googlePlacesApiKey);
+          // No key anywhere: silently disable — UI shows the fallback input.
+        })
+        .catch(() => {});
     }
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   // Initialize autocomplete service

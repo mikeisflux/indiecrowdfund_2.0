@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
+import { checkPasswordPolicy } from "@/lib/auth/password-policy";
 
 const creatorAccountPasswordLogger = logger.child({ module: "creator-account-password" });
 import { auth, BCRYPT_COST } from "@/lib/auth";
@@ -21,6 +22,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Both passwords required" }, { status: 400 });
     }
 
+    const policyError = await checkPasswordPolicy(newPassword);
+    if (policyError) {
+      return NextResponse.json({ error: policyError }, { status: 400 });
+    }
     if (newPassword.length < 8 || newPassword.length > 1000) {
       return NextResponse.json({ error: "Password must be between 8 and 1000 characters" }, { status: 400 });
     }
