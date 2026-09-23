@@ -168,13 +168,6 @@ export interface PackageGroup {
   totalWeight: { lbs: number; oz: number };
 }
 
-export interface ShippingService {
-  id: string;
-  name: string;
-  connected: boolean;
-  connectedAt?: string;
-  icon: string;
-}
 
 export interface DigitalFile {
   id: string;

@@ -19,6 +19,22 @@ const segmentSchema = z.object({
   staticBackerIds: z.array(z.string()).optional(),
 });
 
+// Shared owner-or-collaborator check used by every method below.
+async function verifyProjectAccess(userId: string, projectId: string): Promise<boolean> {
+  const project = await db.project.findFirst({
+    where: {
+      id: projectId,
+      deletedAt: null,
+      OR: [
+        { creatorId: userId },
+        { collaborators: { some: { userId, status: "ACCEPTED" } } },
+      ],
+    },
+    select: { id: true },
+  });
+  return !!project;
+}
+
 // GET - List segments for a project
 export async function GET(req: NextRequest) {
   try {
@@ -166,5 +182,85 @@ export async function POST(req: NextRequest) {
       { error: "Failed to create segment" },
       { status: 500 }
     );
+  }
+}
+
+// PATCH - Rename / re-describe a segment. The segments tab has offered
+// Edit since it shipped; this is the server side it never had.
+export async function PATCH(req: NextRequest) {
+  try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const body = await req.json();
+    const { projectId, segmentId } = body as { projectId?: string; segmentId?: string };
+    if (!projectId || !segmentId) {
+      return NextResponse.json({ error: "Project ID and segment ID required" }, { status: 400 });
+    }
+    if (!(await verifyProjectAccess(session.user.id, projectId))) {
+      return NextResponse.json({ error: "Project not found or access denied" }, { status: 403 });
+    }
+
+    const patchSchema = z
+      .object({
+        name: z.string().trim().min(1).max(100).optional(),
+        description: z.string().max(500).optional(),
+      })
+      .strict();
+    const parsed = patchSchema.safeParse({ name: body.name, description: body.description });
+    if (!parsed.success) {
+      return NextResponse.json({ error: "Invalid segment fields" }, { status: 400 });
+    }
+
+    const updated = await db.backerSegment.updateMany({
+      where: { id: segmentId, projectId },
+      data: {
+        ...(parsed.data.name !== undefined ? { name: parsed.data.name } : {}),
+        ...(parsed.data.description !== undefined ? { description: parsed.data.description } : {}),
+      },
+    });
+    if (updated.count === 0) {
+      return NextResponse.json({ error: "Segment not found" }, { status: 404 });
+    }
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    creatorIndiekitSegmentsLogger.error({ err: formatError(error) }, "IndieKit segment update error:");
+    return NextResponse.json({ error: "Failed to update segment" }, { status: 500 });
+  }
+}
+
+// DELETE - Remove a segment (?segmentId=&projectId=). Deleting a
+// segment never touches pledges — it's just the saved grouping.
+export async function DELETE(req: NextRequest) {
+  try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { searchParams } = new URL(req.url);
+    const projectId = searchParams.get("projectId");
+    const segmentId = searchParams.get("segmentId");
+    if (!projectId || !segmentId) {
+      return NextResponse.json({ error: "Project ID and segment ID required" }, { status: 400 });
+    }
+    if (!(await verifyProjectAccess(session.user.id, projectId))) {
+      return NextResponse.json({ error: "Project not found or access denied" }, { status: 403 });
+    }
+
+    const deleted = await db.backerSegment.deleteMany({
+      where: { id: segmentId, projectId },
+    });
+    if (deleted.count === 0) {
+      return NextResponse.json({ error: "Segment not found" }, { status: 404 });
+    }
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    creatorIndiekitSegmentsLogger.error({ err: formatError(error) }, "IndieKit segment delete error:");
+    return NextResponse.json({ error: "Failed to delete segment" }, { status: 500 });
   }
 }

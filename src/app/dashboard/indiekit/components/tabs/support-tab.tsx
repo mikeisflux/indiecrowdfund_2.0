@@ -179,7 +179,7 @@ export function SupportTab({ backers = [], projectId, onRefresh }: SupportTabPro
     setIsSaving(true);
     try {
       const res = await apiFetch("/api/creator/indiekit/address", {
-        method: "PUT",
+        method: "POST",
         headers: { "Content-Type": "application/json", },
         body: JSON.stringify({
           pledgeId: selectedBacker.id,

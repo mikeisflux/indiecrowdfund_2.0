@@ -294,6 +294,12 @@ model PlatformSettings {
   // readers treat null as "all defaults".
   uiEffects Json?
 
+  // Admin theme overrides (/admin/themes): light-mode brand colors,
+  // corner radius, default theme mode. One JSON blob, same rationale
+  // and null-means-defaults posture as uiEffects. The old flat
+  // primaryColor/... columns above predate this and are unused.
+  themeConfig Json?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }

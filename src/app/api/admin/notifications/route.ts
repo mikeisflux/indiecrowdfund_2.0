@@ -171,7 +171,7 @@ export async function GET(request: Request) {
             message: `"${project.title}" by ${project.creator?.name || "Unknown"} is awaiting review`,
             read: readNotifications.has(notifId),
             createdAt: project.createdAt,
-            actionUrl: `/admin/projects/${project.id}`,
+            actionUrl: "/admin/projects",
             metadata: { projectId: project.id },
           });
         }
@@ -230,7 +230,7 @@ export async function GET(request: Request) {
           message: `${user.name || user.email} has ${isRetailer ? "applied for retailer access" : "created a new account"}`,
           read: readNotifications.has(notifId),
           createdAt: user.createdAt,
-          actionUrl: `/admin/users/${user.id}`,
+          actionUrl: "/admin/users",
           metadata: { userId: user.id },
         });
       }
@@ -248,7 +248,7 @@ export async function GET(request: Request) {
           message: `$${amount} pledge received for "${pledge.project?.title || "Unknown Project"}"`,
           read: readNotifications.has(notifId),
           createdAt: pledge.createdAt,
-          actionUrl: pledge.project ? `/admin/projects/${pledge.project.id}` : undefined,
+          actionUrl: "/admin/projects",
           metadata: { pledgeId: pledge.id, amount: Number(pledge.amount) },
         });
       }
@@ -265,7 +265,7 @@ export async function GET(request: Request) {
           message: `${report.title} - from ${report.user?.name || report.name || "Unknown"}`,
           read: readNotifications.has(notifId),
           createdAt: report.createdAt,
-          actionUrl: `/admin/bug-reports/${report.id}`,
+          actionUrl: "/admin/bug-reports",
           metadata: { reportId: report.id, priority: report.priority },
         });
       }

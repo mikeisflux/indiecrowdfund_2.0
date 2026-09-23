@@ -78,7 +78,6 @@ import type {
   WorkflowStep,
   Backer,
   PackageGroup,
-  ShippingService,
   DigitalFile,
   DistributionRule,
   EmailCampaign,
@@ -91,7 +90,7 @@ import type {
   Product,
   SurveyQuestion,
 } from "./types";
-import { WORKFLOW_STEPS, SHIPPING_SERVICES } from "./constants";
+import { WORKFLOW_STEPS } from "./constants";
 import { SELECTED_PROJECT_KEY, useInitialProjectId } from "./constants";
 
 // Import dialogs directly from v1
@@ -226,7 +225,6 @@ export default function IndieKitPage() {
   const [workflowSteps, setWorkflowSteps] = useState<WorkflowStep[]>(WORKFLOW_STEPS);
   const [backers, setBackers] = useState<Backer[]>([]);
   const [packageGroups, setPackageGroups] = useState<PackageGroup[]>([]);
-  const [shippingServices] = useState<ShippingService[]>(SHIPPING_SERVICES);
   const [digitalFiles, setDigitalFiles] = useState<DigitalFile[]>([]);
   const [distributionRules, setDistributionRules] = useState<DistributionRule[]>([]);
   const [emailCampaigns, setEmailCampaigns] = useState<EmailCampaign[]>([]);
@@ -916,7 +914,6 @@ export default function IndieKitPage() {
                   packageGroups={packageGroups}
                   packageGroupFilter={packageGroupFilter}
                   onPackageGroupFilterChange={setPackageGroupFilter}
-                  shippingServices={shippingServices}
                   hasActiveCampaign={hasActiveCampaign}
                   projectId={selectedProjectId}
                   onRefresh={fetchData}

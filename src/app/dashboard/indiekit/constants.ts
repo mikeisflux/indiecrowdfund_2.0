@@ -1,6 +1,6 @@
 import { Mail, Lock, CreditCard, MapPin, Truck, CheckCircle2 } from "lucide-react";
 import { createContext, useContext } from "react";
-import type { WorkflowStep, ShippingService, FulfillmentPhase } from "./types";
+import type { WorkflowStep, FulfillmentPhase } from "./types";
 
 // Context for passing projectId from parent when embedded in the main dashboard.
 // Avoids relying on URL params / localStorage which can be stale.
@@ -43,9 +43,3 @@ export const WORKFLOW_STEPS: WorkflowStep[] = [
   { id: "shipped", label: "Shipped", description: "Mark orders as complete", icon: CheckCircle2, status: "locked", targetTab: "packages" },
 ];
 
-export const SHIPPING_SERVICES: ShippingService[] = [
-  { id: "shipstation", name: "ShipStation", connected: false, icon: "📦" },
-  { id: "shippo", name: "Shippo", connected: false, icon: "🚚" },
-  { id: "easypost", name: "EasyPost", connected: false, icon: "📬" },
-  { id: "pirateship", name: "Pirate Ship", connected: false, icon: "🏴‍☠️" },
-];

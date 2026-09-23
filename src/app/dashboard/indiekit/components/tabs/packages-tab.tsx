@@ -212,32 +212,26 @@ export function PackagesTab({
     }
   };
 
-  const handleSearchPackageGroup = async () => {
-    if (!projectId || !searchGroupId.trim()) {
-      toast.error("Please enter a group ID to search");
+  const handleSearchPackageGroup = () => {
+    // The full group list is already loaded as a prop — resolve locally.
+    // (This used to GET a ?action=get_group endpoint that never existed
+    // server-side, so search failed with a 405 every time.)
+    if (!searchGroupId.trim()) {
+      toast.error("Please enter a group ID or name to search");
       return;
     }
 
     setIsSearching(true);
-    try {
-      const res = await fetch(`/api/creator/indiekit/fulfillment?projectId=${projectId}&action=get_group&groupId=${searchGroupId}`);
-
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || "Group not found");
-      }
-
-      const data = await res.json();
-      if (data.group) {
-        setViewingGroup(data.group);
-      } else {
-        toast.error(`Package group #${searchGroupId} not found`);
-      }
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Search failed");
-    } finally {
-      setIsSearching(false);
+    const q = searchGroupId.trim().toLowerCase();
+    const group =
+      packageGroups.find((g) => g.id.toLowerCase() === q) ||
+      packageGroups.find((g) => g.name.toLowerCase().includes(q));
+    if (group) {
+      setViewingGroup(group);
+    } else {
+      toast.error(`No package group matching "${searchGroupId}"`);
     }
+    setIsSearching(false);
   };
 
   const handlePushAllOrders = async () => {

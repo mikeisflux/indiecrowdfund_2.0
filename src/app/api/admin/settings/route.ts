@@ -8,6 +8,7 @@ import { invalidatePayPalConfigCache } from "@/lib/payments/paypal";
 import { invalidatePayPalConnectConfigCache } from "@/lib/payments/paypal-connect";
 import { invalidateWhopConfigCache } from "@/lib/payments/whop";
 import { encryptSecret } from "@/lib/vault";
+import { invalidateThemeConfig } from "@/lib/theme-config";
 
 const settingsLogger = logger.child({ module: "admin-settings" });
 
@@ -62,7 +63,7 @@ export async function GET() {
           id: true, siteName: true, siteDescription: true, supportEmail: true, timezone: true,
           currency: true, platformFee: true, maintenanceMode: true, googlePlacesApiKey: true,
           maintenanceStartsAt: true, maintenanceEndsAt: true, maintenanceMessage: true,
-          logoUrl: true, faviconUrl: true,
+          logoUrl: true, faviconUrl: true, themeConfig: true,
           stripeEnabled: true, stripePublishableKey: true, stripeSecretKey: true, stripeWebhookSecret: true, stripeConnectWebhookSecret: true,
           divinityCoinEnabled: true, divinityCoinApiKey: true, divinityCoinWebhookSecret: true, divinityCoinPartnerId: true,
           divinityCoinSettlementFrequency: true, divinityCoinStripePublishableKey: true,
@@ -165,7 +166,7 @@ export async function GET() {
             id: true, siteName: true, siteDescription: true, supportEmail: true, timezone: true,
             currency: true, platformFee: true, maintenanceMode: true, googlePlacesApiKey: true,
             maintenanceStartsAt: true, maintenanceEndsAt: true, maintenanceMessage: true,
-            logoUrl: true, faviconUrl: true,
+            logoUrl: true, faviconUrl: true, themeConfig: true,
             stripeEnabled: true, stripePublishableKey: true, stripeSecretKey: true, stripeWebhookSecret: true, stripeConnectWebhookSecret: true,
             divinityCoinEnabled: true, divinityCoinApiKey: true, divinityCoinWebhookSecret: true, divinityCoinPartnerId: true,
             divinityCoinSettlementFrequency: true, divinityCoinStripePublishableKey: true,
@@ -417,6 +418,9 @@ export async function PATCH(req: NextRequest) {
         "shuftiCallbackUrl", "shuftiRedirectUrl", "idVerificationMinAge", "idVerificationMode"
       ],
       theme: [
+        // themeConfig is the one the /admin/themes page actually saves
+        // and the layout consumes; the flat columns are legacy.
+        "themeConfig",
         "primaryColor", "secondaryColor", "accentColor",
         "backgroundColor", "textColor", "fontFamily", "borderRadius"
       ],
@@ -538,6 +542,10 @@ export async function PATCH(req: NextRequest) {
         changes,
         details: { section, fieldCount: Object.keys(changes).length },
       });
+    }
+
+    if (section === "theme") {
+      invalidateThemeConfig();
     }
 
     // Invalidate payment config caches if payment settings were changed

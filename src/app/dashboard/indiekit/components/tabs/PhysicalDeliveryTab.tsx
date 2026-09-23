@@ -8,13 +8,12 @@ import { Box, Truck } from "lucide-react";
 import { PackagesTab } from "./index";
 import { ShippingTab } from "./index";
 
-import type { PackageGroup, ShippingService } from "../../types";
+import type { PackageGroup } from "../../types";
 
 interface PhysicalDeliveryTabProps {
   packageGroups: PackageGroup[];
   packageGroupFilter: string;
   onPackageGroupFilterChange: (filter: string) => void;
-  shippingServices: ShippingService[];
   hasActiveCampaign: boolean;
   projectId: string;
   onRefresh: () => void;
@@ -32,7 +31,6 @@ export function PhysicalDeliveryTab({
   packageGroups,
   packageGroupFilter,
   onPackageGroupFilterChange,
-  shippingServices,
   hasActiveCampaign,
   projectId,
   onRefresh,
@@ -67,7 +65,7 @@ export function PhysicalDeliveryTab({
         </TabsContent>
 
         <TabsContent value="shipping">
-          <ShippingTab shippingServices={shippingServices} projectId={projectId} onRefresh={onRefresh} />
+          <ShippingTab projectId={projectId} onRefresh={onRefresh} />
         </TabsContent>
       </Tabs>
     </div>

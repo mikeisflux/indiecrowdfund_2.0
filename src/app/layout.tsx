@@ -20,6 +20,7 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { getUiEffects } from "@/lib/ui-effects";
 import { getBranding } from "@/lib/branding";
+import { getThemeConfig, buildThemeCssOverrides } from "@/lib/theme-config";
 import "./globals.css";
 
 const geistSans = localFont({
@@ -221,6 +222,10 @@ export default async function RootLayout({
   const fx = await getUiEffects();
   // Admin-uploaded logo for the header (same failure-proof pattern).
   const branding = await getBranding();
+  // Admin theme overrides (/admin/themes): light-palette token
+  // overrides injected below, and the default mode for new visitors.
+  const themeConfig = await getThemeConfig();
+  const themeCss = buildThemeCssOverrides(themeConfig);
 
   return (
     <html lang="en" suppressHydrationWarning>
@@ -297,9 +302,14 @@ export default async function RootLayout({
               with no stored preference are affected: next-themes keeps an
               explicit Light/Dark/System choice in localStorage, so anyone who
               picked dark on purpose stays dark. */}
+          {themeCss && (
+            // Token overrides from /admin/themes. Scoped to the light
+            // palette (plus --radius globally); dark stays designed.
+            <style id="admin-theme-overrides">{themeCss}</style>
+          )}
           <ThemeProvider
             attribute="class"
-            defaultTheme="light"
+            defaultTheme={themeConfig?.defaultMode || "light"}
             enableSystem
             disableTransitionOnChange
           >

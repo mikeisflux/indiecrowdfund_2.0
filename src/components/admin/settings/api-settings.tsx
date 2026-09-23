@@ -410,89 +410,11 @@ export function ApiSettings() {
         </CardHeader>
         <CardContent>
           <div className="space-y-6">
-            {/* Stripe Webhook */}
-            <div className="rounded-lg border p-4 space-y-4">
-              <div className="flex items-center gap-3">
-                <Webhook className="h-5 w-5 text-[#635BFF]" />
-                <div>
-                  <p className="font-medium">Stripe Webhook</p>
-                  <p className="text-sm text-muted-foreground">Receives payment events from Stripe</p>
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label>Endpoint URL</Label>
-                <div className="flex gap-2">
-                  <Input
-                    readOnly
-                    value={`${typeof window !== 'undefined' ? window.location.origin : 'https://yourdomain.com'}/api/webhooks/stripe`}
-                    className="font-mono text-sm"
-                  />
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={() => {
-                      if (typeof window !== 'undefined') {
-                        navigator.clipboard.writeText(`${window.location.origin}/api/webhooks/stripe`);
-                      }
-                    }}
-                    aria-label="Copy Stripe webhook URL"
-                  >
-                    <Copy className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                <Badge variant="secondary">payment_intent.succeeded</Badge>
-                <Badge variant="secondary">payment_intent.payment_failed</Badge>
-                <Badge variant="secondary">setup_intent.succeeded</Badge>
-                <Badge variant="secondary">checkout.session.completed</Badge>
-              </div>
-              <p className="text-xs text-muted-foreground">
-                For payment events. Use the signing secret in &quot;Webhook Secret&quot; field above.
-              </p>
-            </div>
-
-            {/* Stripe Connect Webhook */}
-            <div className="rounded-lg border p-4 space-y-4">
-              <div className="flex items-center gap-3">
-                <Webhook className="h-5 w-5 text-[#635BFF]" />
-                <div>
-                  <p className="font-medium">Stripe Connect Webhook</p>
-                  <p className="text-sm text-muted-foreground">Receives connected account events</p>
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label>Endpoint URL</Label>
-                <div className="flex gap-2">
-                  <Input
-                    readOnly
-                    value={`${typeof window !== 'undefined' ? window.location.origin : 'https://yourdomain.com'}/api/webhooks/stripe_connect`}
-                    className="font-mono text-sm"
-                  />
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={() => {
-                      if (typeof window !== 'undefined') {
-                        navigator.clipboard.writeText(`${window.location.origin}/api/webhooks/stripe_connect`);
-                      }
-                    }}
-                    aria-label="Copy Stripe Connect webhook URL"
-                  >
-                    <Copy className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                <Badge variant="secondary">account.updated</Badge>
-                <Badge variant="secondary">account.application.deauthorized</Badge>
-              </div>
-              <p className="text-xs text-muted-foreground">
-                For Connect events. Select &quot;Listen to events on Connected accounts&quot; in Stripe.
-                Use the signing secret in &quot;Connect Webhook Secret&quot; field above.
-              </p>
-            </div>
-
+            {/* Stripe webhook cards used to sit here, telling admins to
+                register /api/webhooks/stripe and /api/webhooks/stripe_connect
+                in Stripe — neither route exists (the platform has no direct
+                Stripe integration; DivinityCoin wraps Stripe on their side),
+                so registered endpoints just failed silently. Removed. */}
             {/* ID Verification Webhook */}
             <div className="rounded-lg border p-4 space-y-4">
               <div className="flex items-center gap-3">

@@ -95,8 +95,8 @@ export function OverviewTab({
                   ))
                 ) : (
                   <li className="flex items-center gap-2">
-                    <CheckCircle className="h-4 w-4" />
-                    <span>Loading recommendations...</span>
+                    <CheckCircle className="h-4 w-4 text-emerald-600" />
+                    <span>No recommendations right now — everything looks on track.</span>
                   </li>
                 )}
               </ul>
