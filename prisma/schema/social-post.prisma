@@ -1,0 +1,55 @@
+// ============================================
+// SOCIAL POST QUEUE (AI Publicist)
+// ============================================
+//
+// The outward-facing half of AI marketing. The email automation
+// (src/lib/ai/automation.ts) can only reach people already in the
+// database; this queue is how the platform advertises itself to NEW
+// audiences. The AI publicist (src/lib/social/publicist.ts) detects
+// postable moments — campaign launches, funding milestones, ending-soon
+// windows, weekly platform stats — writes the copy, and queues a row
+// here. The cron (/api/cron/social-publicist) publishes APPROVED rows
+// to the platform's own social accounts.
+//
+// Approval flow follows PlatformSettings.postApprovalRequired:
+// true  -> rows are born PENDING and wait in /admin/social-publicist
+// false -> rows are born APPROVED and post on the next cron tick
+
+model SocialPost {
+  id String @id @default(cuid())
+
+  // Only "twitter" is implemented (X allows adult-adjacent content;
+  // Meta does not, which matters for this platform's catalog).
+  platform String @default("twitter")
+
+  // launch | milestone_50 | milestone_100 | ending_soon | weekly_roundup
+  postType String
+
+  // One post per moment, ever: "twitter:launch:<projectId>",
+  // "twitter:weekly_roundup:2026-W39". Regenerating can't duplicate.
+  dedupeKey String @unique
+
+  // Set for project moments, null for platform-level posts. Plain
+  // column (no relation) so deleting a project never breaks the audit
+  // trail of what was posted publicly.
+  projectId String?
+
+  content  String  @db.Text
+  imageUrl String?
+
+  // PENDING | APPROVED | POSTED | REJECTED | FAILED
+  status String @default("PENDING")
+
+  // Failure detail (API error body) for the admin queue.
+  error String? @db.Text
+
+  // Platform-side id (tweet id) once posted.
+  externalId String?
+  postedAt   DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status, createdAt])
+  @@index([projectId])
+}
