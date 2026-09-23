@@ -7,6 +7,7 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { sendPayoutCreatedEmail } from "@/lib/notifications/email-templates";
 import { calculateInternationalFees } from "@/lib/payouts/international-fees";
+import { loadChargebackCards } from "@/lib/payouts/chargeback-card-summary";
 import {
   calculateDivinityCoinOwed,
   remainingToSettle,
@@ -133,6 +134,13 @@ export async function GET(request: NextRequest) {
 
     // Fetch refund data for all projects in batch
     const projectIds = projects.map((p) => p.id);
+
+    // Chargeback protection cards (project-level with account-level
+    // fallback) — the recoup target the dialog shows next to the money.
+    const chargebackCards = await loadChargebackCards(
+      projectIds,
+      [...new Set(projects.map((p) => p.creator.id))]
+    );
 
     // Get fully refunded pledges per project
     const refundedPledges = await db.pledge.findMany({
@@ -393,6 +401,7 @@ export async function GET(request: NextRequest) {
               }
             : null,
         },
+        chargebackCard: chargebackCards.forProject(project.id, project.creator.id),
         settlements: settlements.map((s: { id: string; amount: unknown; status: string; processedAt: Date | null; completedAt: Date | null }) => ({
           id: s.id,
           amount: Number(s.amount),

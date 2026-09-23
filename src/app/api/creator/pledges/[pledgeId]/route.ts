@@ -6,6 +6,10 @@ const creatorPledgesLogger = logger.child({ module: "creator-pledges" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { callDivinityCoinAPI } from "@/lib/payments/divinitycoin";
+import {
+  isCampaignClosedForRefunds,
+  CLOSED_CAMPAIGN_REFUND_MESSAGE,
+} from "@/lib/payments/refund-policy";
 import { sendEmail } from "@/lib/email";
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
@@ -167,6 +171,7 @@ export async function PATCH(
         id: string;
         title: string;
         status: string;
+        endDate: Date | null;
         currentAmount: number;
         goalAmount: number;
       };
@@ -222,6 +227,16 @@ export async function PATCH(
         return NextResponse.json(
           { error: "Can only refund completed pledges" },
           { status: 400 }
+        );
+      }
+
+      // Refund window: only while the campaign is running. Post-close
+      // refunds come out of settled payout money and create negative
+      // creator balances, so they go through admin/support instead.
+      if (isCampaignClosedForRefunds(typedPledge.project)) {
+        return NextResponse.json(
+          { error: CLOSED_CAMPAIGN_REFUND_MESSAGE },
+          { status: 403 }
         );
       }
 

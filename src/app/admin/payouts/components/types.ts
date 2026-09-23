@@ -70,6 +70,18 @@ export interface CreatorProject {
       isVerified: boolean;
     } | null;
   };
+  // Chargeback protection card covering this project — the recoup
+  // target when refunds/chargebacks push the balance negative.
+  // "project" = legacy per-project card, "account" = creator-wide card.
+  chargebackCard?: {
+    cardBrand: string | null;
+    cardLastFour: string;
+    expMonth: number;
+    expYear: number;
+    source: "project" | "account";
+    vaultTokenized: boolean;
+    expired: boolean;
+  } | null;
   settlements: {
     id: string;
     amount: number;

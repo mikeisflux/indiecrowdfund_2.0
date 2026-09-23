@@ -8,6 +8,7 @@ import {
   Building,
   CheckCircle,
   Clock,
+  CreditCard,
   Loader2,
   XCircle,
   AlertCircle,
@@ -414,6 +415,67 @@ export function ProjectDetailDialog({
                   </div>
                 </div>
               )}
+
+              {/* Chargeback Protection Card — the recoup target when the
+                  balance goes negative (refunds/chargebacks after payout). */}
+              <div>
+                <h4 className="font-medium mb-3">Chargeback Protection Card</h4>
+                {selectedProject.chargebackCard ? (
+                  <div className="p-4 rounded-lg border">
+                    <div className="flex items-center gap-3">
+                      <CreditCard className="w-5 h-5 text-muted-foreground" />
+                      <div>
+                        <p className="font-medium">
+                          {selectedProject.chargebackCard.cardBrand || "Card"} ending in ****{selectedProject.chargebackCard.cardLastFour}
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          Expires {String(selectedProject.chargebackCard.expMonth).padStart(2, "0")}/{selectedProject.chargebackCard.expYear}
+                          {" · "}
+                          {selectedProject.chargebackCard.source === "project"
+                            ? "Saved for this project"
+                            : "Account-wide card"}
+                        </p>
+                      </div>
+                      <div className="ml-auto flex flex-col items-end gap-1">
+                        {selectedProject.chargebackCard.expired ? (
+                          <Badge className="bg-red-100 text-red-700">
+                            <AlertTriangle className="w-3 h-3 mr-1" />
+                            Expired
+                          </Badge>
+                        ) : (
+                          <Badge className="bg-emerald-100 text-emerald-700">
+                            <CheckCircle className="w-3 h-3 mr-1" />
+                            Active
+                          </Badge>
+                        )}
+                        {!selectedProject.chargebackCard.vaultTokenized && (
+                          <Badge variant="outline" className="text-amber-700 border-amber-300">
+                            Legacy — manual recoup
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                    {selectedProject.remainingAmount < 0 && selectedProject.chargebackCard.expired && (
+                      <p className="mt-3 text-xs text-red-600">
+                        This card is expired — a recoup charge for the amount owed back will decline.
+                        Ask the creator to update their chargeback card.
+                      </p>
+                    )}
+                  </div>
+                ) : (
+                  <Alert
+                    variant={selectedProject.remainingAmount < 0 ? "destructive" : "default"}
+                  >
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertTitle>No chargeback card on file</AlertTitle>
+                    <AlertDescription>
+                      {selectedProject.remainingAmount < 0
+                        ? "This creator owes money back and there is no card to recoup against. Recovery will have to be manual."
+                        : "There is no card to charge if refunds or chargebacks push this project's balance negative after payout."}
+                    </AlertDescription>
+                  </Alert>
+                )}
+              </div>
 
               {/* Settlement History */}
               {selectedProject.settlements.length > 0 && (

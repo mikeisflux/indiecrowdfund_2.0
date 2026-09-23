@@ -7,6 +7,10 @@ import { callDivinityCoinAPI } from "@/lib/payments/divinitycoin";
 import { getPayPalConfig, getPayPalAccessToken } from "@/lib/payments/paypal";
 import { getWhopClient } from "@/lib/payments/whop";
 import { notifyRefundRequestDecision } from "@/lib/notifications/pledge-notifications";
+import {
+  isCampaignClosedForRefunds,
+  CLOSED_CAMPAIGN_REFUND_MESSAGE,
+} from "@/lib/payments/refund-policy";
 
 const refundRequestLogger = logger.child({ module: "creator-refund-request" });
 
@@ -46,6 +50,8 @@ export async function PATCH(
             creatorId: true,
             title: true,
             paymentProcessor: true,
+            status: true,
+            endDate: true,
           },
         },
         pledge: {
@@ -114,6 +120,19 @@ export async function PATCH(
     }
 
     // action === "approve" — process the actual refund
+    //
+    // Refund window: approving moves real money, so it obeys the same
+    // rule as direct creator refunds — only while the campaign is
+    // running. After close the money is (being) settled to the creator
+    // and a refund would create a negative balance; the request stays
+    // PENDING for support/admin to resolve. Denying stays allowed.
+    if (isCampaignClosedForRefunds(refundRequest.project)) {
+      return NextResponse.json(
+        { error: CLOSED_CAMPAIGN_REFUND_MESSAGE },
+        { status: 403 }
+      );
+    }
+
     const pledge = refundRequest.pledge;
     const processor = pledge.paymentProcessor;
 

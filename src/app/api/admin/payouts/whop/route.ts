@@ -6,6 +6,7 @@ const adminPayoutsWhopLogger = logger.child({ module: "admin-payouts-whop" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { calculateInternationalFees } from "@/lib/payouts/international-fees";
+import { loadChargebackCards } from "@/lib/payouts/chargeback-card-summary";
 
 export const dynamic = "force-dynamic";
 
@@ -97,6 +98,13 @@ export async function GET(request: NextRequest) {
     });
 
     const projectIds = projects.map((p) => p.id);
+
+    // Chargeback protection cards (project-level with account-level
+    // fallback) — the recoup target the dialog shows next to the money.
+    const chargebackCards = await loadChargebackCards(
+      projectIds,
+      [...new Set(projects.map((p) => p.creator.id))]
+    );
 
     // Fetch refund data for all projects in batch
     const refundedPledges = await db.pledge.findMany({
@@ -267,6 +275,7 @@ export async function GET(request: NextRequest) {
             ? { id: bankAccount.id, bankName: bankAccount.bankNameDisplay, accountLastFour: bankAccount.accountLastFour, accountType: bankAccount.accountType, isVerified: bankAccount.isVerified }
             : null,
         },
+        chargebackCard: chargebackCards.forProject(project.id, project.creator.id),
         settlements: settlements.map((s: { id: string; amount: unknown; status: string; processedAt: Date | null; completedAt: Date | null }) => ({
           id: s.id,
           amount: Number(s.amount),
