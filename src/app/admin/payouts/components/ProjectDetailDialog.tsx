@@ -52,6 +52,54 @@ export function ProjectDetailDialog({
   formatCurrency,
 }: ProjectDetailDialogProps) {
   const [sendingRequest, setSendingRequest] = useState(false);
+
+  // Full chargeback-card reveal (decrypted server-side, audit-logged).
+  interface RevealedCard {
+    vaultOnly?: boolean;
+    vaultId?: string | null;
+    cardNumber?: string;
+    expMonth?: string | number;
+    expYear?: string | number;
+    cvc?: string | null;
+    billingName?: string | null;
+    billingLine1?: string | null;
+    billingLine2?: string | null;
+    billingCity?: string | null;
+    billingState?: string | null;
+    billingZip?: string | null;
+    billingCountry?: string | null;
+    lastFour?: string;
+    brand?: string | null;
+  }
+  const [revealedCard, setRevealedCard] = useState<RevealedCard | null>(null);
+  const [revealedForProject, setRevealedForProject] = useState<string | null>(null);
+  const [isRevealing, setIsRevealing] = useState(false);
+
+  const handleRevealCard = async (projectId: string) => {
+    if (revealedForProject === projectId && revealedCard) {
+      // Toggle off
+      setRevealedCard(null);
+      setRevealedForProject(null);
+      return;
+    }
+    setIsRevealing(true);
+    try {
+      const res = await apiFetch(`/api/projects/${projectId}/chargeback-card`, {
+        method: "PUT",
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Failed to load card details");
+      setRevealedCard(data);
+      setRevealedForProject(projectId);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to load card details");
+    } finally {
+      setIsRevealing(false);
+    }
+  };
+
+  const formatCardNumber = (num?: string) =>
+    num ? num.replace(/(.{4})/g, "$1 ").trim() : "";
   // projectId -> creator email the request was sent to (this admin session
   // only). The dialog stays mounted across project selections, so track
   // per-project rather than a single flag.
@@ -448,9 +496,13 @@ export function ProjectDetailDialog({
                             Active
                           </Badge>
                         )}
-                        {!selectedProject.chargebackCard.vaultTokenized && (
+                        {selectedProject.chargebackCard.vaultTokenized ? (
+                          <Badge variant="outline" className="text-emerald-700 border-emerald-300">
+                            Vault — auto-chargeable
+                          </Badge>
+                        ) : (
                           <Badge variant="outline" className="text-amber-700 border-amber-300">
-                            Legacy — manual recoup
+                            Card on file — charge manually
                           </Badge>
                         )}
                       </div>
@@ -460,6 +512,72 @@ export function ProjectDetailDialog({
                         This card is expired — a recoup charge for the amount owed back will decline.
                         Ask the creator to update their chargeback card.
                       </p>
+                    )}
+
+                    {selectedProject.chargebackCard.source === "project" ? (
+                      <div className="mt-3">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleRevealCard(selectedProject.id)}
+                          disabled={isRevealing}
+                        >
+                          {isRevealing
+                            ? "Decrypting..."
+                            : revealedForProject === selectedProject.id
+                              ? "Hide card details"
+                              : "View card details"}
+                        </Button>
+                        <p className="mt-1 text-[11px] text-muted-foreground">
+                          Views are audit-logged.
+                        </p>
+                      </div>
+                    ) : (
+                      <p className="mt-3 text-xs text-muted-foreground">
+                        Account-wide card — the number is held in the PaymentCloud Customer Vault
+                        (never stored here). Charge it from PaymentCloud using the vault record.
+                      </p>
+                    )}
+
+                    {revealedForProject === selectedProject.id && revealedCard && (
+                      revealedCard.vaultOnly ? (
+                        <div className="mt-3 rounded-lg border bg-muted/40 p-3 text-sm space-y-1">
+                          <p className="font-medium">Stored in the PaymentCloud Customer Vault</p>
+                          <p className="text-muted-foreground">
+                            The full number never touches our database for vaulted cards — charge it
+                            through PaymentCloud{revealedCard.vaultId ? <> (vault ID <span className="font-mono">{revealedCard.vaultId}</span>)</> : null}.
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="mt-3 rounded-lg border bg-muted/40 p-3 text-sm space-y-1.5">
+                          <p className="font-mono text-base tracking-wide">
+                            {formatCardNumber(revealedCard.cardNumber)}
+                          </p>
+                          <p>
+                            <span className="text-muted-foreground">Exp:</span>{" "}
+                            {String(revealedCard.expMonth).padStart(2, "0")}/{revealedCard.expYear}
+                            {revealedCard.cvc && (
+                              <>
+                                {" · "}
+                                <span className="text-muted-foreground">CVC:</span> {revealedCard.cvc}
+                              </>
+                            )}
+                          </p>
+                          {revealedCard.billingName && (
+                            <div className="pt-1 text-muted-foreground">
+                              <p className="text-foreground">{revealedCard.billingName}</p>
+                              {revealedCard.billingLine1 && <p>{revealedCard.billingLine1}</p>}
+                              {revealedCard.billingLine2 && <p>{revealedCard.billingLine2}</p>}
+                              <p>
+                                {[revealedCard.billingCity, revealedCard.billingState, revealedCard.billingZip]
+                                  .filter(Boolean)
+                                  .join(", ")}
+                              </p>
+                              {revealedCard.billingCountry && <p>{revealedCard.billingCountry}</p>}
+                            </div>
+                          )}
+                        </div>
+                      )
                     )}
                   </div>
                 ) : (

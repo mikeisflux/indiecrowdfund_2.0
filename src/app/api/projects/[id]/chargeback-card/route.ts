@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { encrypt, decrypt, getLastDigits } from "@/lib/encryption";
+import { auditLog } from "@/lib/audit";
 
 export const dynamic = "force-dynamic";
 
@@ -303,19 +304,43 @@ export async function PUT(
       return NextResponse.json({ error: "No chargeback card on file" }, { status: 404 });
     }
 
-    // Decrypt for admin viewing
+    // Card details are viewed for a reason (usually a manual recoup
+    // charge) — leave a trail of who looked and when.
+    auditLog({
+      action: "CHARGEBACK_CARD_VIEW",
+      actorId: session.user.id,
+      targetType: "PROJECT",
+      targetId: projectId,
+      details: { lastFour: card.cardLastFour, vaultTokenized: !!card.nmiCustomerVaultId },
+    });
+
+    // Vault-tokenized cards never store the PAN on our side — the number
+    // lives in the PaymentCloud Customer Vault and is charged there.
+    // (Decrypting the null columns used to crash this endpoint.)
+    if (!card.cardNumberEncrypted) {
+      return NextResponse.json({
+        vaultOnly: true,
+        vaultId: card.nmiCustomerVaultId,
+        lastFour: card.cardLastFour,
+        brand: card.cardBrand,
+        expMonth: card.expMonth,
+        expYear: card.expYear,
+      });
+    }
+
+    // Decrypt for admin viewing (legacy rows that pre-date vaulting)
     return NextResponse.json({
       cardNumber: decrypt(card.cardNumberEncrypted),
-      expMonth: decrypt(card.expMonthEncrypted),
-      expYear: decrypt(card.expYearEncrypted),
-      cvc: decrypt(card.cvcEncrypted),
-      billingName: decrypt(card.billingNameEncrypted),
-      billingLine1: decrypt(card.billingLine1Encrypted),
+      expMonth: card.expMonthEncrypted ? decrypt(card.expMonthEncrypted) : String(card.expMonth),
+      expYear: card.expYearEncrypted ? decrypt(card.expYearEncrypted) : String(card.expYear),
+      cvc: card.cvcEncrypted ? decrypt(card.cvcEncrypted) : null,
+      billingName: card.billingNameEncrypted ? decrypt(card.billingNameEncrypted) : null,
+      billingLine1: card.billingLine1Encrypted ? decrypt(card.billingLine1Encrypted) : null,
       billingLine2: card.billingLine2Encrypted ? decrypt(card.billingLine2Encrypted) : null,
-      billingCity: decrypt(card.billingCityEncrypted),
-      billingState: decrypt(card.billingStateEncrypted),
-      billingZip: decrypt(card.billingZipEncrypted),
-      billingCountry: decrypt(card.billingCountryEncrypted),
+      billingCity: card.billingCityEncrypted ? decrypt(card.billingCityEncrypted) : null,
+      billingState: card.billingStateEncrypted ? decrypt(card.billingStateEncrypted) : null,
+      billingZip: card.billingZipEncrypted ? decrypt(card.billingZipEncrypted) : null,
+      billingCountry: card.billingCountryEncrypted ? decrypt(card.billingCountryEncrypted) : null,
       lastFour: card.cardLastFour,
       brand: card.cardBrand,
     });

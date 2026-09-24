@@ -34,6 +34,8 @@ export type AuditAction =
   | "PAYOUT_RETRY"
   | "PAYOUT_CANCEL"
   | "BANK_ACCOUNT_VIEW"
+  // Admin revealed a chargeback card's full (decrypted) details.
+  | "CHARGEBACK_CARD_VIEW"
   | "BANK_ACCOUNT_ADMIN_EDIT"
   | "IP_BLOCK"
   | "IP_UNBLOCK"

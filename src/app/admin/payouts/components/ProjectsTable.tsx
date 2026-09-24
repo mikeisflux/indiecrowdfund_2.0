@@ -195,6 +195,7 @@ export function ProjectsTable({
                       <TableHead className="text-right">Refunds</TableHead>
                       <TableHead className="text-right">Amount Owed</TableHead>
                       <TableHead className="text-right">Remaining</TableHead>
+                      <TableHead className="text-right">Owes Back</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead className="w-[50px]"></TableHead>
                     </TableRow>
@@ -254,6 +255,15 @@ export function ProjectsTable({
                           <span className={`font-bold ${remainingColor(project.remainingAmount)}`}>
                             {formatRemaining(project.remainingAmount)}
                           </span>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {project.remainingAmount < 0 ? (
+                            <span className="font-bold text-red-600">
+                              {formatCurrency(Math.abs(project.remainingAmount))}
+                            </span>
+                          ) : (
+                            <span className="text-muted-foreground">-</span>
+                          )}
                         </TableCell>
                         <TableCell>{getSettlementBadge(project.settlementStatus)}</TableCell>
                         <TableCell>
@@ -322,6 +332,14 @@ export function ProjectsTable({
                           {formatRemaining(project.remainingAmount)}
                         </p>
                       </div>
+                      {project.remainingAmount < 0 && (
+                        <div className="rounded-lg bg-red-50 dark:bg-red-900/10 px-3 py-2">
+                          <p className="text-[10px] uppercase tracking-wide text-muted-foreground mb-0.5">Owes Back</p>
+                          <p className="text-sm font-bold text-red-600">
+                            {formatCurrency(Math.abs(project.remainingAmount))}
+                          </p>
+                        </div>
+                      )}
                       {project.totalRefunded > 0 && (
                         <div className="rounded-lg bg-red-50 dark:bg-red-900/10 px-3 py-2">
                           <p className="text-[10px] uppercase tracking-wide text-muted-foreground mb-0.5">Refunds</p>
