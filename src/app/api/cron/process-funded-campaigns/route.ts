@@ -4,6 +4,7 @@ import { logger } from "@/lib/logger";
 
 const cronProcessFundedCampaignsLogger = logger.child({ module: "cron-process-funded-campaigns" });
 import { db } from "@/lib/db";
+import { getIndiekitSettings } from "@/lib/indiekit-settings";
 import { captureAuthorizedPaypalPledges } from "@/lib/payments/paypal";
 import {
   chargeDcSavedPaymentMethod,
@@ -63,6 +64,13 @@ async function captureDcPendingPledges(projectId: string): Promise<{
   });
 
   const BACKOFF_HOURS = [1, 6, 24, 72, 168];
+
+  // Creator toggle: IndieKit Settings > Payments > "Auto-Retry Failed
+  // Payments". Off = one attempt per pledge; a decline is terminal and
+  // the backer is pointed at the retry-payment page instead of being
+  // re-charged on a backoff schedule.
+  const projectSettings = await getIndiekitSettings(projectId);
+  const autoRetry = projectSettings.payments.autoRetry;
 
   result.total = pledges.length;
   for (const p of pledges) {
@@ -178,7 +186,7 @@ async function captureDcPendingPledges(projectId: string): Promise<{
           code: charge.code,
           fallbackError: charge.error,
         });
-        if (newRetryCount >= MAX_DC_RETRIES) {
+        if (newRetryCount >= MAX_DC_RETRIES || !autoRetry) {
           await db.pledge.update({
             where: { id: p.id },
             data: {
@@ -186,7 +194,9 @@ async function captureDcPendingPledges(projectId: string): Promise<{
               chargedImmediately: false,
               retryCount: newRetryCount,
               nextRetryAt: null,
-              lastFailureReason: `${reason} (after ${newRetryCount} attempts)`,
+              lastFailureReason: autoRetry
+                ? `${reason} (after ${newRetryCount} attempts)`
+                : `${reason} (auto-retry disabled for this campaign)`,
               // Terminal — nothing will retry, so drop the scaffolding.
               metadata: withDcChargeState(p.metadata, null),
             },

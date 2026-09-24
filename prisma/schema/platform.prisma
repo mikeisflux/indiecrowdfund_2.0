@@ -471,6 +471,9 @@ enum NotificationType {
   SURVEY_SENT
   SURVEY_REMINDER
   SURVEY_UPDATE_REQUESTED
+  // A backer completed their survey (creator-facing, gated by IndieKit
+  // Settings > Notifications). Added by migrations/add_indiekit_settings.sql.
+  SURVEY_RESPONSE
   FOLLOWED_PROJECT_LAUNCHED
   MARKETPLACE_BOOK_APPROVED
   MARKETPLACE_BOOK_REJECTED

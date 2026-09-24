@@ -861,10 +861,7 @@ export default function IndieKitPage() {
               )}
 
               {activeSection === "always" && activeAlwaysTab === "settings" && (
-                <SettingsTab
-                  projectId={selectedProjectId}
-                  projectName={projects.find(p => p.id === selectedProjectId)?.title}
-                />
+                <SettingsTab projectId={selectedProjectId} onRefresh={fetchData} />
               )}
 
               {activeSection === "always" && activeAlwaysTab === "account" && (

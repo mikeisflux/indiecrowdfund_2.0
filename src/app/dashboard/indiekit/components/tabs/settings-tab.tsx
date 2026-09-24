@@ -28,9 +28,6 @@ import {
 type SettingsSection = "general" | "survey" | "shipping" | "payments" | "notifications" | "integrations" | "shopify" | "shipstation" | "shippo" | "easypost" | "stamps" | "team";
 
 interface SettingsTabProps {
-  projectName?: string;
-  currency?: string;
-  timezone?: string;
   projectId?: string;
   onRefresh?: () => void;
 }
@@ -51,9 +48,6 @@ const settingsNav = [
 ] as const;
 
 export function SettingsTab({
-  projectName,
-  currency,
-  timezone,
   projectId,
   onRefresh,
 }: SettingsTabProps) {
@@ -108,13 +102,7 @@ export function SettingsTab({
         {/* Main Content */}
         <div className="space-y-6">
           {activeSection === "general" && (
-            <GeneralSection
-              projectId={projectId}
-              projectName={projectName}
-              currency={currency}
-              timezone={timezone}
-              onRefresh={onRefresh}
-            />
+            <GeneralSection projectId={projectId} onRefresh={onRefresh} />
           )}
 
           {activeSection === "survey" && (
@@ -122,7 +110,7 @@ export function SettingsTab({
           )}
 
           {activeSection === "shipping" && (
-            <ShippingSection projectId={projectId} />
+            <ShippingSection projectId={projectId} onRefresh={onRefresh} />
           )}
 
           {activeSection === "payments" && (

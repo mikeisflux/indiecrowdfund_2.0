@@ -23,6 +23,8 @@ export interface SavedAddress {
 }
 
 export interface SurveyData {
+  /** Backer may still edit the shipping address on a submitted survey. */
+  allowAddressChanges?: boolean;
   survey: {
     id: string;
     introTitle?: string;

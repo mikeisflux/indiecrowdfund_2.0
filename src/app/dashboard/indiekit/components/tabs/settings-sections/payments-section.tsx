@@ -143,6 +143,22 @@ export function PaymentsSection({ projectId }: PaymentsSectionProps) {
     failedNotifications: true,
   });
 
+  // Load the stored toggles (Project.indiekitSettings) — these gate the
+  // real receipt email, failed-payment email, and charge auto-retry.
+  useEffect(() => {
+    if (!projectId) return;
+    let cancelled = false;
+    fetch(`/api/creator/indiekit/settings?projectId=${projectId}`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (!cancelled && data?.settings?.payments) setPaymentSettings(data.settings.payments);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [projectId]);
+
   // Fetch project processor
   useEffect(() => {
     if (!projectId) { setProcessorLoading(false); return; }
@@ -278,7 +294,12 @@ export function PaymentsSection({ projectId }: PaymentsSectionProps) {
       const res = await apiFetch("/api/creator/indiekit/settings", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ projectId, section: "payments", settings: paymentSettings }),
+        body: JSON.stringify({
+          projectId,
+          action: "update_section_settings",
+          section: "payments",
+          settings: paymentSettings,
+        }),
       });
       if (!res.ok) {
         const data = await res.json();

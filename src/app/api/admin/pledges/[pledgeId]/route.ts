@@ -204,7 +204,10 @@ export async function PATCH(
           undefined, // shippingAmount
           undefined, // paymentMethod
           pledge.backerNumber,
-          pledge.id
+          pledge.id,
+          // Admin resend: a human asked for this receipt explicitly, so
+          // it bypasses the creator's sendReceipts toggle.
+          true
         );
 
         if (result.success) {

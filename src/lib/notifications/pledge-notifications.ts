@@ -2,6 +2,7 @@ import { db } from "@/lib/db";
 import { sendPledgeConfirmationEmail, sendPledgeModificationEmail, sendPledgeCancellationEmail } from "@/lib/email";
 import { sendRefundRequestDecisionEmail } from "@/lib/email/email-templates-pledge";
 import { sendPledgeChargeFailedEmail } from "./email-templates";
+import { getIndiekitSettings } from "@/lib/indiekit-settings";
 import { createNotification, notifyProjectTeam } from "./core";
 import type { NotificationType } from "./types";
 
@@ -24,6 +25,7 @@ export async function notifyPledgeReceived(
     select: {
       title: true,
       slug: true,
+      endDate: true,
       creator: { select: { vanityUrl: true } },
     },
   });
@@ -35,12 +37,21 @@ export async function notifyPledgeReceived(
     ? `/projects/${project.creator.vanityUrl}/${project.slug}`
     : `/projects/${project.slug}`;
 
+  // A pledge after the campaign's end date is a late pledge / pre-order —
+  // called out as such, and gated by the creator's Settings >
+  // Notifications > "New Pre-orders" toggle.
+  const isPreOrder = !!(project.endDate && project.endDate < new Date());
+  if (isPreOrder) {
+    const settings = await getIndiekitSettings(projectId);
+    if (!settings.notifications.newPreorders) return;
+  }
+
   // Creator + accepted collaborators. creatorId stays in the signature for
   // callers, but the team helper resolves the full recipient list.
   await notifyProjectTeam(projectId, {
     type: "PLEDGE_RECEIVED",
-    title: "New Pledge!",
-    message: `${backerName} backed "${project.title}" for $${Number(amount).toFixed(2)}`,
+    title: isPreOrder ? "New Pre-order!" : "New Pledge!",
+    message: `${backerName} ${isPreOrder ? "pre-ordered from" : "backed"} "${project.title}" for $${Number(amount).toFixed(2)}`,
     actionUrl: projectUrlPath,
     projectId,
   });
@@ -114,8 +125,12 @@ export async function notifyNmiChargeFailed(pledgeId: string) {
     projectId: pledge.project.id,
   });
 
-  // Email with retry link
-  if (pledge.user.email) {
+  const projectSettings = await getIndiekitSettings(pledge.project.id);
+
+  // Email with retry link — gated on the creator's IndieKit Settings >
+  // Payments > "Failed Payment Notifications" toggle (in-app stays on:
+  // a backer must always be able to see why their pledge failed).
+  if (pledge.user.email && projectSettings.payments.failedNotifications) {
     try {
       await sendPledgeChargeFailedEmail(
         pledge.user.email,
@@ -130,6 +145,25 @@ export async function notifyNmiChargeFailed(pledgeId: string) {
         { err: String(err), pledgeId: pledge.id },
         "Failed to send NMI charge-failed email"
       );
+    }
+  }
+
+  // Creator-side heads-up, gated on Settings > Notifications >
+  // "Failed Payments".
+  if (projectSettings.notifications.failedPayments) {
+    const creator = await db.project.findFirst({
+      where: { id: pledge.project.id },
+      select: { creatorId: true },
+    });
+    if (creator) {
+      await createNotification({
+        userId: creator.creatorId,
+        type: "PLEDGE_FAILED",
+        title: "A backer's payment failed",
+        message: `A $${Number(pledge.amount).toFixed(2)} pledge on "${pledge.project.title}" could not be charged${pledge.lastFailureReason ? ` (${pledge.lastFailureReason})` : ""}. The backer was asked to update their card.`,
+        actionUrl: `/dashboard/indiekit?project=${pledge.project.id}&tab=backers`,
+        projectId: pledge.project.id,
+      }).catch(() => {});
     }
   }
 }

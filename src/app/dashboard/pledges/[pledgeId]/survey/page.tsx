@@ -11,6 +11,7 @@ import { loadStripe, Stripe } from "@stripe/stripe-js";
 import { SurveyData, SavedAddress, Step, ShippingAddressForm } from "./components/types";
 import { SurveyErrorState } from "./components/SurveyErrorState";
 import { SurveyLockedState } from "./components/SurveyLockedState";
+import { SurveyCompletedState } from "./components/SurveyCompletedState";
 import { SurveyHeader } from "./components/SurveyHeader";
 import { SurveyIntroStep } from "./components/SurveyIntroStep";
 import { SurveyItemsStep } from "./components/SurveyItemsStep";
@@ -521,6 +522,16 @@ export default function BackerSurveyPage() {
   // If survey is locked, show read-only notice
   if (isSurveyLocked) {
     return <SurveyLockedState data={data} />;
+  }
+
+  // Already submitted (but not locked): read-only summary with address
+  // editing where the creator allows it. The full flow used to re-render
+  // here and the final Submit bounced off the server's already-submitted
+  // error.
+  if (data.response.isComplete) {
+    return (
+      <SurveyCompletedState data={data} pledgeId={pledgeId} onAddressSaved={fetchSurvey} />
+    );
   }
 
   return (

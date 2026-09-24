@@ -87,6 +87,7 @@ export async function GET(req: NextRequest) {
             createdAt: true,
             deletedAt: true,
             location: true,
+            currency: true,
             creator: {
               select: {
                 vanityUrl: true,
@@ -902,8 +903,8 @@ export async function GET(req: NextRequest) {
         // Localized currency display — creator's country pulled
         // from Project.location, USD-equivalent shown below in
         // the UI for non-US creators.
-        currentAmountDisplay: await resolveCampaignDisplay(selectedProject.location, actualCurrentAmount),
-        goalAmountDisplay: await resolveCampaignDisplay(selectedProject.location, Number(selectedProject.goalAmount)),
+        currentAmountDisplay: await resolveCampaignDisplay(selectedProject.location, actualCurrentAmount, selectedProject.currency),
+        goalAmountDisplay: await resolveCampaignDisplay(selectedProject.location, Number(selectedProject.goalAmount), selectedProject.currency),
         backerCount: actualBackerCount,
         daysRemaining,
         endDate: selectedProject.endDate,

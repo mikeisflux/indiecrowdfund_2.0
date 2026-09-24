@@ -33,6 +33,9 @@ const addressSchemaStrict = z.object({
 
 const responseValueSchema = z.union([z.string().max(10000), z.array(z.string().max(500)).max(50)]);
 
+import { getIndiekitSettings } from "@/lib/indiekit-settings";
+import { createNotification } from "@/lib/notifications/core";
+
 const responseSchema = z.object({
   itemResponses: z.record(
     z.string().max(100),
@@ -265,6 +268,17 @@ export async function GET(
         alreadyPurchased: addonIds.includes(addon.id),
       }));
 
+    // Whether this backer may still change their shipping address on a
+    // submitted survey: the creator's toggle (IndieKit Settings > Survey),
+    // no lock in place, and the order hasn't shipped.
+    const projectSettings = await getIndiekitSettings(pledge.projectId);
+    const allowAddressChanges =
+      projectSettings.survey.allowAddressChanges &&
+      !survey.addressesLocked &&
+      !response.addressLocked &&
+      pledge.fulfillmentStatus !== "SHIPPED" &&
+      pledge.fulfillmentStatus !== "DELIVERED";
+
     return NextResponse.json({
       survey: {
         id: survey.id,
@@ -275,6 +289,7 @@ export async function GET(
         addressesLocked: survey.addressesLocked,
         requiresShipping,
       },
+      allowAddressChanges,
       pledge: {
         id: pledge.id,
         projectId: pledge.projectId,
@@ -639,7 +654,27 @@ export async function POST(
         },
       });
 
-      // Send survey completion confirmation email
+      // Send survey completion confirmation email (creator toggle:
+      // IndieKit Settings > Survey > "Send Confirmation Email") and,
+      // separately, notify the creator when they asked to hear about
+      // completions (Settings > Notifications > "Survey Completions").
+      const completionSettings = await getIndiekitSettings(pledge.projectId);
+      if (completionSettings.notifications.surveyCompletions) {
+        const projectRow = await db.project.findFirst({
+          where: { id: pledge.projectId },
+          select: { creatorId: true, title: true },
+        });
+        if (projectRow) {
+          await createNotification({
+            userId: projectRow.creatorId,
+            type: "SURVEY_RESPONSE",
+            title: "Survey completed",
+            message: `A backer completed their survey for "${projectRow.title}".`,
+            actionUrl: `/dashboard/indiekit?project=${pledge.projectId}&tab=backers`,
+            projectId: pledge.projectId,
+          }).catch(() => {});
+        }
+      }
       try {
         const pledgeWithDetails = await db.pledge.findFirst({
           where: { id: pledgeId , deletedAt: null },
@@ -650,7 +685,7 @@ export async function POST(
           },
         });
 
-        if (pledgeWithDetails?.user.email) {
+        if (pledgeWithDetails?.user.email && completionSettings.survey.sendConfirmationEmail) {
           const { sendSurveyCompletionEmail } = await import("@/lib/email/email-templates-pledge");
           const projectUrlPath = pledgeWithDetails.project.creator.vanityUrl
             ? `/${pledgeWithDetails.project.creator.vanityUrl}/${pledgeWithDetails.project.slug}`
@@ -735,5 +770,96 @@ export async function POST(
       { error: "Failed to submit survey response" },
       { status: 500 }
     );
+  }
+}
+
+// PATCH - update the shipping address on an already-submitted survey.
+//
+// Available while the creator's "Allow Address Changes" toggle (IndieKit
+// Settings > Survey) is on, no address lock is in place, and the order
+// hasn't shipped. Before this existed, a moved backer's only option was
+// messaging the creator to edit it for them.
+export async function PATCH(
+  req: NextRequest,
+  { params }: { params: Promise<{ pledgeId: string }> }
+) {
+  try {
+    const session = await auth();
+    if (!session?.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { pledgeId } = await params;
+    const pledge = await db.pledge.findFirst({
+      where: { id: pledgeId, deletedAt: null },
+      select: {
+        id: true,
+        userId: true,
+        projectId: true,
+        fulfillmentStatus: true,
+        surveyResponse: {
+          select: { id: true, isComplete: true, addressLocked: true },
+        },
+      },
+    });
+    if (!pledge || pledge.userId !== session.user.id) {
+      return NextResponse.json({ error: "Pledge not found" }, { status: 404 });
+    }
+    if (!pledge.surveyResponse?.isComplete) {
+      return NextResponse.json(
+        { error: "Submit your survey first — the address is part of it" },
+        { status: 400 }
+      );
+    }
+
+    const survey = await db.survey.findUnique({
+      where: { projectId: pledge.projectId },
+      select: { addressesLocked: true },
+    });
+    const settings = await getIndiekitSettings(pledge.projectId);
+    if (
+      !settings.survey.allowAddressChanges ||
+      survey?.addressesLocked ||
+      pledge.surveyResponse.addressLocked
+    ) {
+      return NextResponse.json(
+        { error: "Address changes are locked for this campaign — contact the creator" },
+        { status: 403 }
+      );
+    }
+    if (pledge.fulfillmentStatus === "SHIPPED" || pledge.fulfillmentStatus === "DELIVERED") {
+      return NextResponse.json(
+        { error: "This order has already shipped — the address can no longer change" },
+        { status: 400 }
+      );
+    }
+
+    const body = await req.json();
+    const address = addressSchemaPartial.parse(body.shippingAddress ?? {});
+    if (!address.line1 || !address.city || !address.country || !address.postalCode) {
+      return NextResponse.json(
+        { error: "Address line 1, city, postal code, and country are required" },
+        { status: 400 }
+      );
+    }
+
+    await db.surveyResponse.update({
+      where: { id: pledge.surveyResponse.id },
+      data: { shippingAddress: address },
+    });
+    // Keep the pledge mirror in sync — exports and pushes read the survey
+    // address first, but older tooling reads the pledge column.
+    await db.pledge.update({
+      where: { id: pledge.id },
+      data: { shippingAddress: address },
+    });
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return NextResponse.json({ error: error.issues[0].message }, { status: 400 });
+    }
+    surveysRespondLogger.error({ err: formatError(error) }, "Survey address update failed");
+    return NextResponse.json({ error: "Failed to update address" }, { status: 500 });
   }
 }

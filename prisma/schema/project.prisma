@@ -20,6 +20,11 @@ model Project {
   goalAmount           Decimal @db.Decimal(10, 2)
   currency             String  @default("USD")
 
+  // IndieKit Settings toggles (survey / payments / notifications
+  // sections), shaped by src/lib/indiekit-settings.ts. Null = defaults.
+  // Added by migrations/add_indiekit_settings.sql.
+  indiekitSettings Json?
+
   // Duration
   durationType DurationType
   durationDays Int?

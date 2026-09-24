@@ -235,8 +235,8 @@ export async function GET(
       // showUsdSecondary=false; for non-US locations (e.g. Blue
       // Orchid Books in Doncaster, England) it returns GBP
       // primary + USD secondary, etc.
-      currentAmountDisplay: await resolveCampaignDisplay(project.location, liveStats.currentAmount),
-      goalAmountDisplay: await resolveCampaignDisplay(project.location, Number(project.goalAmount)),
+      currentAmountDisplay: await resolveCampaignDisplay(project.location, liveStats.currentAmount, project.currency),
+      goalAmountDisplay: await resolveCampaignDisplay(project.location, Number(project.goalAmount), project.currency),
       // Duration
       durationType: project.durationType,
       durationDays: project.durationDays,

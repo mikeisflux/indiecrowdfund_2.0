@@ -217,6 +217,7 @@ export async function GET(req: NextRequest) {
         category: project.category,
         imageUrl: project.imageUrl || "",
         location: project.location || "",
+        displayCurrency: project.currency || "USD",
         creator: {
           id: project.creator.id,
           name: project.creator.name || "Creator",
@@ -240,10 +241,10 @@ export async function GET(req: NextRequest) {
     // read + one Frankfurter call per unique non-USD currency, not
     // per project). For US-only lists this is effectively free.
     const currentDisplays = await batchResolveCampaignDisplays(
-      formattedProjects.map((p) => ({ location: p.location, usdAmount: p.currentAmount }))
+      formattedProjects.map((p) => ({ location: p.location, usdAmount: p.currentAmount, preferredCurrency: p.displayCurrency }))
     );
     const goalDisplays = await batchResolveCampaignDisplays(
-      formattedProjects.map((p) => ({ location: p.location, usdAmount: p.goalAmount }))
+      formattedProjects.map((p) => ({ location: p.location, usdAmount: p.goalAmount, preferredCurrency: p.displayCurrency }))
     );
     const projectsWithDisplay = formattedProjects.map((p, i) => ({
       ...p,

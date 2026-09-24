@@ -1,5 +1,7 @@
 import { sendEmail } from "./email-config";
 import { safeEmailImageUrl } from "./safe-image-url";
+import { db } from "@/lib/db";
+import { parseIndiekitSettings } from "@/lib/indiekit-settings";
 
 const APP_NAME = process.env.NEXT_PUBLIC_APP_NAME || "IndieCrowdfund";
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
@@ -40,8 +42,35 @@ export async function sendPledgeConfirmationEmail(
   shippingAmount?: number,
   paymentMethod?: "STRIPE" | "DIVINITYCOIN" | "PAYPAL",
   backerNumber?: number | null,
-  confirmationNumber?: string
+  confirmationNumber?: string,
+  // true bypasses the creator's "Send Payment Receipts" toggle — used by
+  // the admin manual-resend path, where a human explicitly asked.
+  force?: boolean
 ) {
+  // Creator toggle: IndieKit Settings > Payments > "Send Payment
+  // Receipts". Looked up by slug (unique) because this legacy positional
+  // signature predates projectId being passed around.
+  if (!force) {
+    try {
+      const projectRow = await db.project.findUnique({
+        where: { slug: projectSlug },
+        select: { indiekitSettings: true },
+      });
+      const settings = parseIndiekitSettings(projectRow?.indiekitSettings ?? null);
+      if (!settings.payments.sendReceipts) {
+        return {
+          success: true,
+          skipped: "sendReceipts disabled for this campaign",
+          subject: "",
+          html: "",
+          error: undefined as string | undefined,
+        };
+      }
+    } catch {
+      // A settings hiccup must not block the receipt.
+    }
+  }
+
   // Use provided projectUrlPath if available (for vanity URLs), otherwise fallback to legacy format
   const projectUrl = projectUrlPath ? `${APP_URL}${projectUrlPath}` : `${APP_URL}/projects/${projectSlug}`;
   const dashboardUrl = `${APP_URL}/dashboard`;

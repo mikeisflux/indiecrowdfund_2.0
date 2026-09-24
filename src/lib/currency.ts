@@ -165,6 +165,18 @@ export function parseCountryFromLocation(location: string | null | undefined): s
  * Currency info for a given location string. Falls back to USD when
  * the location is empty / unparseable.
  */
+// Currency code -> symbol, derived from the country map so the two can't
+// drift. Drives the IndieKit "Display currency" select and the explicit
+// per-campaign override below.
+export const CURRENCY_SYMBOLS: Record<string, string> = Object.values(
+  COUNTRY_TO_CURRENCY
+).reduce((acc, { currency, symbol }) => {
+  acc[currency] = symbol;
+  return acc;
+}, {} as Record<string, string>);
+
+export const SUPPORTED_DISPLAY_CURRENCIES = Object.keys(CURRENCY_SYMBOLS).sort();
+
 export function currencyForLocation(location: string | null | undefined): {
   country: string;
   currency: string;
@@ -340,9 +352,15 @@ function buildDisplay(usdAmount: number, currency: string, symbol: string, rate:
  */
 export async function resolveCampaignDisplay(
   location: string | null | undefined,
-  usdAmount: number
+  usdAmount: number,
+  // Explicit per-campaign display currency (Project.currency, chosen in
+  // IndieKit Settings > General). Overrides the location-derived one.
+  preferredCurrency?: string | null
 ): Promise<CampaignDisplay> {
-  const { currency, symbol } = currencyForLocation(location);
+  const located = currencyForLocation(location);
+  const currency =
+    preferredCurrency && CURRENCY_SYMBOLS[preferredCurrency] ? preferredCurrency : located.currency;
+  const symbol = CURRENCY_SYMBOLS[currency] ?? located.symbol;
   const rate = currency === "USD" ? 1 : await getUsdRateTo(currency);
   return buildDisplay(usdAmount, currency, symbol, rate);
 }
@@ -359,15 +377,29 @@ export async function resolveCampaignDisplay(
  * input order so callers can `inputs[i] -> outputs[i]`.
  */
 export async function batchResolveCampaignDisplays(
-  inputs: Array<{ location: string | null | undefined; usdAmount: number }>
+  inputs: Array<{
+    location: string | null | undefined;
+    usdAmount: number;
+    preferredCurrency?: string | null;
+  }>
 ): Promise<CampaignDisplay[]> {
   if (inputs.length === 0) return [];
 
-  // Resolve currency per input first (cheap, no IO).
-  const resolved = inputs.map((i) => ({
-    usdAmount: i.usdAmount,
-    ...currencyForLocation(i.location),
-  }));
+  // Resolve currency per input first (cheap, no IO). An explicit
+  // per-campaign display currency wins over the location-derived one.
+  const resolved = inputs.map((i) => {
+    const located = currencyForLocation(i.location);
+    const currency =
+      i.preferredCurrency && CURRENCY_SYMBOLS[i.preferredCurrency]
+        ? i.preferredCurrency
+        : located.currency;
+    return {
+      usdAmount: i.usdAmount,
+      country: located.country,
+      currency,
+      symbol: CURRENCY_SYMBOLS[currency] ?? located.symbol,
+    };
+  });
 
   const neededCurrencies = Array.from(
     new Set(resolved.map((r) => r.currency).filter((c) => c !== "USD"))
