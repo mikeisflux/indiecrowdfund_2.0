@@ -1,0 +1,71 @@
+// ============================================
+// CREATOR SOCIAL HUB
+// ============================================
+//
+// Per-creator X (Twitter) posting — the creator-side counterpart to the
+// platform's AI publicist (social-post.prisma). Creators connect their
+// OWN X developer app credentials (X's API has no share-on-behalf grant
+// without an approved OAuth app, so each creator brings their own keys,
+// exactly like the platform account does under Admin Settings > Social).
+// Posts are written/scheduled from the dashboard Social Hub and
+// published by /api/cron/social-publicist using the creator's keys.
+//
+// Tables created by prisma/migrations/add_creator_social.sql.
+
+model CreatorSocialAccount {
+  id     String @id @default(cuid())
+  userId String
+
+  // Only "twitter" for now, same reasoning as SocialPost.platform.
+  platform String @default("twitter")
+
+  // OAuth 1.0a user-context credentials, encrypted with lib/vault
+  // encryptSecret before storage.
+  apiKey       String
+  apiSecret    String
+  accessToken  String
+  accessSecret String
+
+  // Verified @username from GET /2/users/me at connect time.
+  handle String?
+
+  // Auto-queue milestone posts (launch / 50% / funded / ending soon)
+  // for this creator's own campaigns, posted from THEIR account.
+  autoPostEnabled Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, platform])
+}
+
+model CreatorSocialPost {
+  id        String  @id @default(cuid())
+  userId    String
+  accountId String
+  platform  String  @default("twitter")
+  projectId String?
+
+  content  String  @db.Text
+  imageUrl String?
+
+  // Auto-generated milestone posts dedupe per moment, like SocialPost:
+  // "twitter:<userId>:launch:<projectId>". Null for hand-written posts.
+  dedupeKey String? @unique
+
+  // Null = post on the next cron tick; set = hold until then.
+  scheduledFor DateTime?
+
+  // SCHEDULED | POSTED | FAILED | CANCELLED
+  status String @default("SCHEDULED")
+
+  error      String? @db.Text
+  externalId String?
+  postedAt   DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status, scheduledFor])
+  @@index([userId, createdAt])
+}

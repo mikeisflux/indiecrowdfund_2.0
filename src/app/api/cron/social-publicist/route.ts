@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 import { generateSocialPosts, publishApprovedPosts } from "@/lib/social/publicist";
+import { generateCreatorAutoPosts, publishDueCreatorPosts } from "@/lib/social/creator-social";
 
 const cronSocialLogger = logger.child({ module: "cron-social-publicist" });
 
@@ -35,8 +36,21 @@ async function handle(req: NextRequest) {
     const generated = await generateSocialPosts();
     const published = await publishApprovedPosts();
 
-    const message = `Queued ${generated.queued} post(s), published ${published.posted}, ${published.failed} failed`;
-    cronSocialLogger.info({ generated, published }, "Social publicist tick complete");
+    // Creator Social Hub: auto-post moments for creators who opted in,
+    // then send everything due (scheduled or auto-queued) from THEIR
+    // accounts. Isolated so a creator credential failure never blocks
+    // the platform queue, and vice versa.
+    let creatorGenerated = { queued: 0, notes: [] as string[] };
+    let creatorPublished = { posted: 0, failed: 0, notes: [] as string[] };
+    try {
+      creatorGenerated = await generateCreatorAutoPosts();
+      creatorPublished = await publishDueCreatorPosts();
+    } catch (error) {
+      cronSocialLogger.error({ err: formatError(error) }, "Creator social publish pass failed");
+    }
+
+    const message = `Queued ${generated.queued} post(s), published ${published.posted}, ${published.failed} failed; creators: queued ${creatorGenerated.queued}, published ${creatorPublished.posted}, ${creatorPublished.failed} failed`;
+    cronSocialLogger.info({ generated, published, creatorGenerated, creatorPublished }, "Social publicist tick complete");
 
     await db.aiRunLog
       .create({
@@ -45,7 +59,7 @@ async function handle(req: NextRequest) {
           serviceId: "social-publicist",
           success: published.failed === 0,
           message,
-          resultJson: { generated, published } as object,
+          resultJson: { generated, published, creatorGenerated, creatorPublished } as object,
           trigger: "cron",
           durationMs: Date.now() - startedAt,
         },
@@ -54,7 +68,7 @@ async function handle(req: NextRequest) {
         cronSocialLogger.error({ err: formatError(e) }, "Failed to write AI run log")
       );
 
-    return NextResponse.json({ ok: true, generated, published });
+    return NextResponse.json({ ok: true, generated, published, creatorGenerated, creatorPublished });
   } catch (error) {
     cronSocialLogger.error({ err: formatError(error) }, "Social publicist cron error");
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });

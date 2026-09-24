@@ -778,6 +778,12 @@ export async function generateSocialPostCopy(params: {
     newCampaignsThisWeek: number;
   };
   url: string;
+  /**
+   * Whose voice the post is written in. "platform" (default) speaks as
+   * @IndieCrowdfund; "creator" speaks as the campaign's own creator
+   * posting from their personal account (the dashboard Social Hub).
+   */
+  voice?: "platform" | "creator";
 }): Promise<string> {
   const angle: Record<typeof params.postType, string> = {
     launch: "A campaign just went LIVE. Fresh, exciting, be-an-early-backer energy.",
@@ -787,9 +793,16 @@ export async function generateSocialPostCopy(params: {
     weekly_roundup: "Weekly platform pulse: what's live and funding on IndieCrowdfund right now.",
   };
 
-  const systemPrompt = `You write social posts for @IndieCrowdfund, a crowdfunding platform for
+  const voiceIntro =
+    params.voice === "creator"
+      ? `You write social posts for an independent comic creator promoting THEIR OWN
+crowdfunding campaign from their personal account. Voice: first person ("my campaign",
+"we hit"), genuine and grateful, direct, zero corporate speak`
+      : `You write social posts for @IndieCrowdfund, a crowdfunding platform for
 independent comic creators. Voice: enthusiastic fan of indie comics, direct, zero corporate
-speak, at most one emoji, at most two hashtags (from: #indiecomics #crowdfunding #comics
+speak`;
+
+  const systemPrompt = `${voiceIntro}, at most one emoji, at most two hashtags (from: #indiecomics #crowdfunding #comics
 #makecomics). Never invent numbers, quotes, or details beyond what's provided. Keep the post
 UNDER 240 characters — the campaign link is appended after you, and it costs 24.
 

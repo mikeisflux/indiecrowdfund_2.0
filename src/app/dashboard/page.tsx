@@ -49,6 +49,7 @@ import { ProductionOrderView } from "./components/ProductionOrderView";
 import { CollaborationsTab } from "./components/CollaborationsTab";
 import { PostUpdatesTab } from "./components/PostUpdatesTab";
 import { IndieKitTab } from "./components/IndieKitTab";
+import { SocialHubTab } from "./components/SocialHubTab";
 import { PrintingComicsTab } from "./indiekit/components/tabs/PrintingComicsTab";
 // The old Email tab UI was merged into Messages (unified inbox); its
 // EmailTab/InboxTab components have been removed.
@@ -65,6 +66,7 @@ const NAV_TIPS: Record<string, { tip: string; href: string }> = {
   "backers": { tip: "Every transaction on your project — pledges, add-ons, and charges.", href: "/creator-handbook?tab=manage" },
   "messages": { tip: "Your unified inbox — replies reach backers as real email from your creator address.", href: "/creator-handbook?tab=manage" },
   "live-stream": { tip: "Go live for your backers right from the dashboard.", href: "/creator-handbook?tab=promotion" },
+  "social": { tip: "Post and schedule X posts from your own account, with AI drafts from your campaign data.", href: "/creator-handbook?tab=promotion" },
   "updates": { tip: "Post progress updates that notify everyone who backed or follows you.", href: "/creator-handbook?tab=manage" },
   "indiekit": { tip: "The fulfillment toolkit — surveys, payments, shipping, and delivery.", href: "/indiekit-handbook" },
   "printing-comics": { tip: "Order print runs and hard-copy proofs for your book.", href: "/indiekit-handbook?tab=printing-comics" },
@@ -461,6 +463,7 @@ export default function CreatorDashboard() {
                   <div className="flex flex-wrap gap-1">
                     {([
                       { value: "updates", icon: FileText, label: "Post Updates", gradient: "from-amber-500 to-orange-500" },
+                      { value: "social", icon: Sparkles, label: "Social Hub", gradient: "from-pink-500 to-rose-500" },
                     ] as const).map(({ value, icon: Icon, label, gradient }) => (
                       <HelpTooltip key={value} tip={NAV_TIPS[value]?.tip || label} href={NAV_TIPS[value]?.href}>
                         <button
@@ -568,6 +571,13 @@ export default function CreatorDashboard() {
 
               <TabsContent value="updates" className="space-y-6">
                 <PostUpdatesTab projectId={selectedProjectId} />
+              </TabsContent>
+
+              <TabsContent value="social" className="space-y-6">
+                <SocialHubTab
+                  projects={data.projects.map((p) => ({ id: p.id, title: p.title }))}
+                  selectedProjectId={selectedProjectId}
+                />
               </TabsContent>
 
               <TabsContent value="indiekit" className="space-y-6">

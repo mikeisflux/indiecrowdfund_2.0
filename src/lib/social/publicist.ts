@@ -294,7 +294,7 @@ export interface PublishResult {
 }
 
 /** Fetch a post image, tolerant of same-origin paths and remote URLs. */
-async function fetchImage(
+export async function fetchImage(
   imageUrl: string
 ): Promise<{ buffer: Buffer; contentType: string } | null> {
   const base = process.env.NEXT_PUBLIC_APP_URL || "https://indiecrowdfund.com";
