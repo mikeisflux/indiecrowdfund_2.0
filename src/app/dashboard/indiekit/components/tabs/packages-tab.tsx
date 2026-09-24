@@ -1,7 +1,7 @@
 "use client";
 
 import { apiFetch } from "@/lib/fetch-utils";
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -49,34 +49,38 @@ import {
   PackageGroupCard,
   SkuMappingContent,
   ConnectServiceDialog,
-  CreateGroupDialog,
   ViewGroupDialog,
   EditCustomsDialog,
 } from "./packages-sections";
-
-interface ConnectedService {
-  id: string;
-  name: string;
-  accountId: string;
-  connectedAt: string;
-}
+import type { EditingCustomsItem } from "./packages-sections";
 
 interface PackagesTabProps {
   packageGroups: PackageGroup[];
   packageGroupFilter: string;
   onPackageGroupFilterChange: (filter: string) => void;
   hasActiveCampaign?: boolean;
-  connectedServices?: ConnectedService[];
   projectId?: string;
   onRefresh?: () => void;
 }
+
+const PROVIDER_LABELS: Record<string, string> = {
+  shopify: "Shopify",
+  shipstation: "ShipStation",
+  shippo: "Shippo",
+  easypost: "EasyPost",
+};
+
+type IntegrationState = {
+  connected: boolean;
+  storeName?: string | null;
+  lastSyncError?: string | null;
+};
 
 export function PackagesTab({
   packageGroups,
   packageGroupFilter,
   onPackageGroupFilterChange,
   hasActiveCampaign = true,
-  connectedServices = [],
   projectId,
   onRefresh,
 }: PackagesTabProps) {
@@ -85,18 +89,110 @@ export function PackagesTab({
   const [lastRefreshed, setLastRefreshed] = useState(new Date().toLocaleString());
   const [isConnectDialogOpen, setIsConnectDialogOpen] = useState(false);
   const [isPushing, setIsPushing] = useState(false);
-  const [fulfillmentMethod, setFulfillmentMethod] = useState("shipstation");
+  const [fulfillmentMethod, setFulfillmentMethodState] = useState("shipstation");
+  const [integrations, setIntegrations] = useState<Record<string, IntegrationState>>({});
   const [isSyncingStatus, setIsSyncingStatus] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
   const [isRetrying, setIsRetrying] = useState(false);
-  const [showCreateGroupDialog, setShowCreateGroupDialog] = useState(false);
   const [viewingGroup, setViewingGroup] = useState<PackageGroup | null>(null);
-  const [editingCustomsItem, setEditingCustomsItem] = useState<{ groupId: string; itemName: string } | null>(null);
+  const [editingCustomsItem, setEditingCustomsItem] = useState<EditingCustomsItem | null>(null);
+
+  // Remember the chosen method per campaign; before this the tab silently
+  // reset to ShipStation on every mount and the "Connected Service" box was
+  // hardcoded to "ShipStation (NDM Express)" regardless of reality.
+  const methodStorageKey = projectId ? `indiekit-fulfillment-method-${projectId}` : null;
+  const setFulfillmentMethod = useCallback(
+    (method: string) => {
+      setFulfillmentMethodState(method);
+      try {
+        if (methodStorageKey) localStorage.setItem(methodStorageKey, method);
+      } catch {
+        // Private-mode storage failures shouldn't break the switch.
+      }
+    },
+    [methodStorageKey]
+  );
+
+  const loadIntegrations = useCallback(async () => {
+    if (!projectId) return;
+    try {
+      const res = await fetch(`/api/creator/indiekit/integrations?projectId=${projectId}`);
+      if (!res.ok) return;
+      const data = await res.json();
+      const fulfillment = (data.fulfillmentIntegrations || {}) as Record<string, IntegrationState>;
+      setIntegrations(fulfillment);
+      // Initial method: the saved choice, else whichever service is
+      // actually connected, else keep the default.
+      let saved: string | null = null;
+      try {
+        saved = methodStorageKey ? localStorage.getItem(methodStorageKey) : null;
+      } catch {
+        saved = null;
+      }
+      if (saved) {
+        setFulfillmentMethodState(saved);
+      } else {
+        const connected = Object.entries(fulfillment).find(([, v]) => v?.connected);
+        if (connected) setFulfillmentMethodState(connected[0]);
+      }
+    } catch {
+      // Leave state as-is; the card will show "Not connected".
+    }
+  }, [projectId, methodStorageKey]);
+
+  useEffect(() => {
+    loadIntegrations();
+  }, [loadIntegrations]);
+
+  const activeIntegration = integrations[fulfillmentMethod];
+  const isServiceMethod = fulfillmentMethod === "shopify" || fulfillmentMethod === "shipstation";
+  const serviceConnected = !isServiceMethod || !!activeIntegration?.connected;
+  const methodLabel = PROVIDER_LABELS[fulfillmentMethod]
+    || (fulfillmentMethod === "csv" ? "CSV Export" : fulfillmentMethod === "manual" ? "Manual Fulfillment" : fulfillmentMethod);
+
+  const connectedServices = Object.entries(integrations)
+    .filter(([, v]) => v?.connected)
+    .map(([provider, v]) => ({
+      id: provider,
+      name: PROVIDER_LABELS[provider] || provider,
+      accountId: v?.storeName || "Connected",
+    }));
+
+  const reportPushResult = (data: { pushed?: number; count?: number; failed?: number; errors?: string[]; remaining?: number; message?: string }, serviceName: string) => {
+    const pushed = data.pushed ?? data.count ?? 0;
+    if (data.failed) {
+      toast.error(
+        `${data.failed} order(s) failed to push${data.errors?.[0] ? ` — ${data.errors[0]}` : ""}`
+      );
+    }
+    if (pushed > 0 || !data.failed) {
+      toast.success(data.message || `Pushed ${pushed} order(s) to ${serviceName}`);
+    }
+    if (data.remaining) {
+      toast.info(`${data.remaining} order(s) still queued — push again to continue`);
+    }
+  };
 
   const handlePushOrders = async (groupId?: string) => {
     if (!projectId) {
       toast.error("No project selected");
+      return;
+    }
+    const group = groupId ? packageGroups.find((g) => g.id === groupId) : undefined;
+
+    // CSV / manual methods have nothing to push to — the equivalent action
+    // is exporting the orders.
+    if (fulfillmentMethod === "csv") {
+      handleExport(groupId || "", "csv");
+      return;
+    }
+    if (fulfillmentMethod === "manual") {
+      toast.info("Manual fulfillment: export orders or update statuses from the Backers tab");
+      return;
+    }
+    if (!serviceConnected) {
+      toast.error(`${methodLabel} isn't connected — add it under step 1 (Connect)`);
       return;
     }
 
@@ -115,6 +211,9 @@ export function PackagesTab({
             projectId,
             action: "push_orders",
             groupId,
+            // Groups are generated per reward tier, so the server resolves
+            // the group's orders by its name (the reward title).
+            groupName: group?.name,
           };
 
       const res = await apiFetch(endpoint, {
@@ -129,8 +228,7 @@ export function PackagesTab({
       }
 
       const data = await res.json();
-      const serviceName = fulfillmentMethod === "shopify" ? "Shopify" : "fulfillment";
-      toast.success(`Pushed ${data.pushed || data.count || 0} orders to ${serviceName}`);
+      reportPushResult(data, methodLabel);
       onRefresh?.();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Push failed");
@@ -139,26 +237,21 @@ export function PackagesTab({
     }
   };
 
-  const handleUpdateConnection = async (service: ConnectedService) => {
-    if (!projectId) return;
-
-    try {
-      const res = await fetch(`/api/creator/indiekit/integrations?projectId=${projectId}&serviceId=${service.id}`);
-
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || "Failed to get connection details");
-      }
-
-      toast.info(`Updating ${service.name} connection...`);
-      setIsConnectDialogOpen(true);
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to update connection");
-    }
+  const handleUpdateConnection = (service: { name: string }) => {
+    toast.info(`Re-enter your ${service.name} credentials to update the connection`);
+    setIsConnectDialogOpen(true);
   };
 
   const handleSyncOrderStatus = async () => {
     if (!projectId) return;
+    if (!isServiceMethod) {
+      toast.info("Status sync needs a connected service (Shopify or ShipStation)");
+      return;
+    }
+    if (!serviceConnected) {
+      toast.error(`${methodLabel} isn't connected — add it under step 1 (Connect)`);
+      return;
+    }
 
     setIsSyncingStatus(true);
     try {
@@ -181,8 +274,7 @@ export function PackagesTab({
       }
 
       const data = await res.json();
-      const serviceName = fulfillmentMethod === "shopify" ? "Shopify" : fulfillmentMethod;
-      toast.success(data.message || `Synced ${data.updated || 0} orders from ${serviceName}`);
+      toast.success(data.message || `Synced ${data.updated || 0} order(s) from ${methodLabel}`);
       setLastRefreshed(new Date().toLocaleString());
       onRefresh?.();
     } catch (error) {
@@ -236,6 +328,18 @@ export function PackagesTab({
 
   const handlePushAllOrders = async () => {
     if (!projectId) return;
+    if (fulfillmentMethod === "csv") {
+      handleExport("", "csv");
+      return;
+    }
+    if (fulfillmentMethod === "manual") {
+      toast.info("Manual fulfillment: export orders or update statuses from the Backers tab");
+      return;
+    }
+    if (!serviceConnected) {
+      toast.error(`${methodLabel} isn't connected — add it under step 1 (Connect)`);
+      return;
+    }
 
     setIsPushing(true);
     try {
@@ -266,8 +370,7 @@ export function PackagesTab({
       }
 
       const data = await res.json();
-      const serviceName = fulfillmentMethod === "shopify" ? "Shopify" : fulfillmentMethod;
-      toast.success(`Pushed ${data.pushed || data.count || 0} orders to ${serviceName}`);
+      reportPushResult(data, methodLabel);
       onRefresh?.();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Push failed");
@@ -307,6 +410,7 @@ export function PackagesTab({
 
   const handleExport = async (groupId: string, format: "csv" | "excel" | "packing_slips" | "shipping_labels") => {
     if (!projectId) return;
+    const group = groupId ? packageGroups.find((g) => g.id === groupId) : undefined;
 
     try {
       const res = await apiFetch("/api/creator/indiekit/fulfillment", {
@@ -316,6 +420,7 @@ export function PackagesTab({
           projectId,
           action: "export",
           groupId,
+          groupName: group?.name,
           format,
         }),
       });
@@ -326,11 +431,22 @@ export function PackagesTab({
       }
 
       const data = await res.json();
-      if (data.downloadUrl) {
+      if (data.csv) {
+        const blob = new Blob([data.csv], { type: "text/csv;charset=utf-8;" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = data.filename || "orders.csv";
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+        toast.success(`Exported ${data.count ?? 0} order(s)`);
+      } else if (data.downloadUrl) {
         window.open(data.downloadUrl, "_blank");
-        toast.success(`Export ready for download`);
+        toast.success("Export ready for download");
       } else {
-        toast.success(`Export is being prepared. You'll receive an email when it's ready.`);
+        toast.error("Export returned no file");
       }
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Export failed");
@@ -424,8 +540,7 @@ export function PackagesTab({
                   <TableHeader>
                     <TableRow>
                       <TableHead>Service</TableHead>
-                      <TableHead>Account</TableHead>
-                      <TableHead>Connected</TableHead>
+                      <TableHead>Account / Store</TableHead>
                       <TableHead className="w-20"></TableHead>
                     </TableRow>
                   </TableHeader>
@@ -440,9 +555,6 @@ export function PackagesTab({
                         </TableCell>
                         <TableCell className="text-muted-foreground">
                           {service.accountId}
-                        </TableCell>
-                        <TableCell className="text-muted-foreground">
-                          {service.connectedAt}
                         </TableCell>
                         <TableCell>
                           <Button variant="ghost" size="sm" className="text-teal-600" onClick={() => handleUpdateConnection(service)}>
@@ -497,13 +609,25 @@ export function PackagesTab({
           <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3">
             <Card>
               <CardContent className="pt-6">
-                <h4 className="text-sm font-medium text-muted-foreground mb-2">Connected Service</h4>
-                <p className="font-semibold">{fulfillmentMethod === "shopify" ? "Shopify" : fulfillmentMethod === "shipstation" ? "ShipStation" : fulfillmentMethod.charAt(0).toUpperCase() + fulfillmentMethod.slice(1)}</p>
-                <p className="text-sm text-muted-foreground">{fulfillmentMethod === "shopify" ? "(Fulfillment Orders)" : fulfillmentMethod === "shipstation" ? "(NDM Express)" : ""}</p>
-                <Button variant="link" className="text-teal-600 p-0 h-auto mt-2" onClick={handleSyncOrderStatus} disabled={isSyncingStatus}>
-                  {isSyncingStatus ? "Syncing..." : "Update Order Status"}
-                  {!isSyncingStatus && <ArrowRight className="h-3 w-3 ml-1" />}
-                </Button>
+                <h4 className="text-sm font-medium text-muted-foreground mb-2">Fulfillment Method</h4>
+                <p className="font-semibold">{methodLabel}</p>
+                {isServiceMethod ? (
+                  serviceConnected ? (
+                    <p className="text-sm text-green-600">
+                      Connected{activeIntegration?.storeName ? ` · ${activeIntegration.storeName}` : ""}
+                    </p>
+                  ) : (
+                    <p className="text-sm text-red-600">Not connected — see step 1 (Connect)</p>
+                  )
+                ) : (
+                  <p className="text-sm text-muted-foreground">No service connection needed</p>
+                )}
+                {isServiceMethod && serviceConnected && (
+                  <Button variant="link" className="text-teal-600 p-0 h-auto mt-2" onClick={handleSyncOrderStatus} disabled={isSyncingStatus}>
+                    {isSyncingStatus ? "Syncing..." : "Update Order Status"}
+                    {!isSyncingStatus && <ArrowRight className="h-3 w-3 ml-1" />}
+                  </Button>
+                )}
               </CardContent>
             </Card>
             <Card>
@@ -637,13 +761,25 @@ export function PackagesTab({
           <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3">
             <Card>
               <CardContent className="pt-6">
-                <h4 className="text-sm font-medium text-muted-foreground mb-2">Connected Service</h4>
-                <p className="font-semibold">{fulfillmentMethod === "shopify" ? "Shopify" : fulfillmentMethod === "shipstation" ? "ShipStation" : fulfillmentMethod.charAt(0).toUpperCase() + fulfillmentMethod.slice(1)}</p>
-                <p className="text-sm text-muted-foreground">{fulfillmentMethod === "shopify" ? "(Fulfillment Orders)" : fulfillmentMethod === "shipstation" ? "(NDM Express)" : ""}</p>
-                <Button variant="link" className="text-teal-600 p-0 h-auto mt-2" onClick={handleSyncOrderStatus} disabled={isSyncingStatus}>
-                  {isSyncingStatus ? "Syncing..." : "Update Order Status"}
-                  {!isSyncingStatus && <ArrowRight className="h-3 w-3 ml-1" />}
-                </Button>
+                <h4 className="text-sm font-medium text-muted-foreground mb-2">Fulfillment Method</h4>
+                <p className="font-semibold">{methodLabel}</p>
+                {isServiceMethod ? (
+                  serviceConnected ? (
+                    <p className="text-sm text-green-600">
+                      Connected{activeIntegration?.storeName ? ` · ${activeIntegration.storeName}` : ""}
+                    </p>
+                  ) : (
+                    <p className="text-sm text-red-600">Not connected — see step 1 (Connect)</p>
+                  )
+                ) : (
+                  <p className="text-sm text-muted-foreground">No service connection needed</p>
+                )}
+                {isServiceMethod && serviceConnected && (
+                  <Button variant="link" className="text-teal-600 p-0 h-auto mt-2" onClick={handleSyncOrderStatus} disabled={isSyncingStatus}>
+                    {isSyncingStatus ? "Syncing..." : "Update Order Status"}
+                    {!isSyncingStatus && <ArrowRight className="h-3 w-3 ml-1" />}
+                  </Button>
+                )}
               </CardContent>
             </Card>
             <Card>
@@ -722,10 +858,6 @@ export function PackagesTab({
                 {isRefreshing ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <RefreshCw className="h-4 w-4 mr-2" />}
                 {isRefreshing ? "Refreshing..." : "Refresh Groups"}
               </Button>
-              <Button className="bg-teal-600 hover:bg-teal-700" onClick={() => setShowCreateGroupDialog(true)}>
-                <Plus className="h-4 w-4 mr-2" />
-                Create Group
-              </Button>
             </div>
           </div>
 
@@ -742,7 +874,17 @@ export function PackagesTab({
                 onPushOrders={handlePushOrders}
                 onViewGroup={setViewingGroup}
                 onExport={handleExport}
-                onEditCustoms={(groupId, itemName) => setEditingCustomsItem({ groupId, itemName })}
+                onEditCustoms={(groupId, item) =>
+                  setEditingCustomsItem({
+                    groupId,
+                    itemName: item.name,
+                    customsDescription: item.customsDescription,
+                    countryOfOrigin: item.countryOfOrigin,
+                    declaredValue: item.declaredValue,
+                    customsCode: item.customsCode,
+                    weightOz: item.weightOz,
+                  })
+                }
               />
             ))}
           </div>
@@ -756,15 +898,9 @@ export function PackagesTab({
         projectId={projectId}
         onConnected={(service) => {
           setFulfillmentMethod(service);
+          loadIntegrations();
           onRefresh?.();
         }}
-      />
-
-      <CreateGroupDialog
-        open={showCreateGroupDialog}
-        onOpenChange={setShowCreateGroupDialog}
-        projectId={projectId}
-        onRefresh={onRefresh}
       />
 
       <ViewGroupDialog

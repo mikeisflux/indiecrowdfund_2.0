@@ -249,6 +249,42 @@ export default function PageBuilderPage() {
     }
   };
 
+  // Publish / unpublish. Without this, every page stayed a draft
+  // forever and the /pages/[slug] renderer (published-only) 404'd —
+  // there was no way to flip isPublished from the UI at all.
+  const [isPublishing, setIsPublishing] = useState(false);
+  const togglePublish = async () => {
+    if (!selectedPage) return;
+    setIsPublishing(true);
+    try {
+      const response = await apiFetch("/api/admin/pages", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: selectedPage.id,
+          isPublished: !selectedPage.isPublished,
+        }),
+      });
+      if (!response.ok) throw new Error();
+      setPages((prev) =>
+        prev.map((pg) =>
+          pg.id === selectedPage.id ? { ...pg, isPublished: !selectedPage.isPublished } : pg
+        )
+      );
+      setSaveMessage({
+        type: "success",
+        text: selectedPage.isPublished
+          ? "Page unpublished — it now 404s for visitors"
+          : `Published — live at /pages/${selectedPage.slug}`,
+      });
+      setTimeout(() => setSaveMessage(null), 4000);
+    } catch {
+      setSaveMessage({ type: "error", text: "Failed to update publish state" });
+    } finally {
+      setIsPublishing(false);
+    }
+  };
+
   // Create new page
   const createNewPage = async () => {
     if (!newPageTitle || !newPageSlug) return;
@@ -523,12 +559,25 @@ export default function PageBuilderPage() {
           </div>
 
           <div className="flex items-center gap-2">
-            {selectedPage && (
+            {selectedPage && selectedPage.isPublished && (
               <Button variant="outline" size="sm" asChild>
                 <a href={`/pages/${selectedPage.slug}`} target="_blank">
                   <Eye className="h-4 w-4 mr-1" />
-                  Preview
+                  View Live
                 </a>
+              </Button>
+            )}
+            {selectedPage && (
+              <Button
+                variant={selectedPage.isPublished ? "secondary" : "default"}
+                size="sm"
+                onClick={togglePublish}
+                disabled={isPublishing}
+              >
+                {isPublishing ? (
+                  <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                ) : null}
+                {selectedPage.isPublished ? "Unpublish" : "Publish"}
               </Button>
             )}
             <Button size="sm" onClick={savePage} disabled={isSaving || !hasUnsavedChanges}>

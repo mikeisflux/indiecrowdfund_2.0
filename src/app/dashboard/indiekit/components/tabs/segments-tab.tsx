@@ -54,6 +54,7 @@ import { toast } from "sonner";
 interface Segment {
   id: string;
   name: string;
+  description?: string;
   type: "pledge_level" | "addon" | "survey_status" | "shipping_region" | "payment_status" | "custom";
   criteria: string;
   backerCount: number;
@@ -196,7 +197,7 @@ export function SegmentsTab({ segments = [], projectId, onRefresh }: SegmentsTab
   const handleEditSegment = (segment: Segment) => {
     setEditingSegment(segment);
     setSegmentName(segment.name);
-    setSegmentDescription("");
+    setSegmentDescription(segment.description || "");
   };
 
   const handleSaveEdit = async () => {

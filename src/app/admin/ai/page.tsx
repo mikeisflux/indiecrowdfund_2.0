@@ -90,7 +90,7 @@ function nextCronRun(expr: string): Date | null {
       fieldMatches(hour, d.getHours(), 0, 23) &&
       fieldMatches(dom, d.getDate(), 1, 31) &&
       fieldMatches(month, d.getMonth() + 1, 1, 12) &&
-      fieldMatches(dow, d.getDay(), 0, 6)
+      fieldMatches(dow.replace(/\b7\b/g, "0"), d.getDay(), 0, 6)
     ) {
       return d;
     }
@@ -98,6 +98,8 @@ function nextCronRun(expr: string): Date | null {
   return null;
 }
 
+// NOTE: evaluated in the browser's clock; the executor runs on the
+// server's clock. When they differ, the shown time is approximate.
 function formatNextRun(expr: string): string {
   const next = nextCronRun(expr);
   if (!next) return "invalid schedule";
@@ -296,14 +298,28 @@ export default function AIControlPage() {
             schedule: string;
             enabled: boolean;
           }>;
-          setCronJobs((prev) =>
-            prev.map((job) => {
-              const saved = savedSchedules.find((s) => s.id === job.id);
+          setCronJobs((prev) => {
+            // Merge saved values onto defaults, then APPEND any saved
+            // schedule that isn't a default (custom user-profiling /
+            // automation jobs). The old id-only merge dropped custom
+            // jobs from state, and the next edit re-saved without them
+            // — silently deleting a schedule the server was running.
+            const merged = prev.map((job) => {
+              const saved = savedSchedules.find((sch) => sch.id === job.id);
               return saved
                 ? { ...job, schedule: saved.schedule, enabled: saved.enabled }
                 : job;
-            })
-          );
+            });
+            const extras = savedSchedules
+              .filter((sch) => !prev.some((job) => job.id === sch.id))
+              .map((sch) => ({
+                id: sch.id,
+                service: sch.service,
+                schedule: sch.schedule,
+                enabled: sch.enabled,
+              }));
+            return [...merged, ...extras];
+          });
         } catch {
           // Use defaults if parse fails
         }
@@ -681,7 +697,11 @@ export default function AIControlPage() {
                           {service?.icon}
                         </div>
                         <div>
-                          <p className="font-medium">{service?.name}</p>
+                          <p className="font-medium">
+                            {service?.name ||
+                              SCHEDULABLE_SERVICES.find((svc) => svc.id === job.service)?.name ||
+                              job.service}
+                          </p>
                           <p className="text-xs text-muted-foreground">{service?.description}</p>
                         </div>
                       </div>

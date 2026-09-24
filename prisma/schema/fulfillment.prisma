@@ -26,6 +26,8 @@ model FulfillmentProduct {
   customsCode        String? // HS/Tariff code
   countryOfOrigin    String?
   customsDescription String?
+  // Declared value in USD. Added by migrations/add_fulfillment_failed_status.sql.
+  declaredValue      Decimal? @db.Decimal(10, 2)
 
   // Status
   status ProductStatus @default(INCOMPLETE)

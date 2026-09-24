@@ -59,7 +59,8 @@ export async function storeMessageAttachments(
     throw new Error(`Too many attachments — up to ${MAX_MESSAGE_ATTACHMENTS} per message`);
   }
 
-  const dir = path.join(process.cwd(), "uploads", "message-attachments", "files");
+  // Honor UPLOADS_DIR like the serving route (see uploads/[...path]).
+  const dir = path.join(process.env.UPLOADS_DIR || path.join(process.cwd(), "uploads"), "message-attachments", "files");
   await mkdir(dir, { recursive: true });
 
   const stored: StoredMessageAttachment[] = [];

@@ -45,7 +45,6 @@ export async function POST() {
     const exportData = await gatherUserData(userId);
 
     // Store as JSON in the request record
-    const exportJson = JSON.stringify(exportData, null, 2);
 
     await db.dataExportRequest.update({
       where: { id: request.id },
@@ -58,19 +57,17 @@ export async function POST() {
 
     logger.info({ userId, requestId: request.id }, "GDPR data export completed");
 
+    // Plain JSON response — the Settings page builds the download file
+    // client-side. (This used to set Content-Length from the size of
+    // the pretty-printed export alone while sending a differently-sized
+    // wrapper body, which could truncate or hang the response.)
     return NextResponse.json({
       success: true,
       requestId: request.id,
       data: exportData,
       exportedAt: new Date().toISOString(),
       format: "json",
-      note: "This export contains all personal data we hold about you. Download link expires in 7 days.",
-    }, {
-      headers: {
-        "Content-Disposition": `attachment; filename="data-export-${userId}.json"`,
-        "Content-Type": "application/json",
-        "Content-Length": String(Buffer.byteLength(exportJson)),
-      },
+      note: "This export contains all personal data we hold about you.",
     });
   } catch (error) {
     await db.dataExportRequest.update({

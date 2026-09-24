@@ -92,7 +92,9 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const dir = path.join(process.cwd(), "uploads", "branding", "images");
+    // Same base the serving route uses — honoring UPLOADS_DIR keeps
+    // uploads readable when production points it elsewhere.
+    const dir = path.join(process.env.UPLOADS_DIR || path.join(process.cwd(), "uploads"), "branding", "images");
     await mkdir(dir, { recursive: true });
     const filename = `${kind}-${crypto.randomUUID()}${EXT_BY_TYPE[effectiveType] || ""}`;
     await writeFile(path.join(dir, filename), Buffer.from(await file.arrayBuffer()));

@@ -317,7 +317,9 @@ export async function GET(req: NextRequest) {
       }) : Promise.resolve([]),
 
       // Get products for this project
-      shouldInclude("products") ? db.fulfillmentProduct.findMany({
+      // Package groups (built from the backers section) read weight/customs
+      // off these rows too, so fetch them whenever backers are wanted.
+      shouldInclude("products") || shouldInclude("backers") ? db.fulfillmentProduct.findMany({
         where: { projectId: selectedProjectId },
         orderBy: { createdAt: "desc" },
       }) : Promise.resolve([]),
@@ -418,8 +420,19 @@ export async function GET(req: NextRequest) {
     // Process backers for display
     const processedBackers = processBackers(pledges, surveyResponseMap);
 
-    // Build package groups
-    const packageGroups = buildPackageGroups(processedBackers);
+    // Build package groups. Weight / customs saved via the Packages tab's
+    // Edit Customs dialog live on FulfillmentProduct rows keyed by name.
+    const packageGroups = buildPackageGroups(
+      processedBackers,
+      (products as { name: string; weight: number | null; customsDescription: string | null; countryOfOrigin: string | null; declaredValue: unknown; customsCode: string | null }[]).map(pr => ({
+        name: pr.name,
+        weight: pr.weight,
+        customsDescription: pr.customsDescription,
+        countryOfOrigin: pr.countryOfOrigin,
+        declaredValue: pr.declaredValue == null ? null : Number(pr.declaredValue),
+        customsCode: pr.customsCode,
+      }))
+    );
 
     // Calculate workflow context data
     const addressesComplete = surveyResponses.filter(sr => {

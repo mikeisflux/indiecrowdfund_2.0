@@ -171,6 +171,11 @@ export function ProjectBuilder() {
         quantityAvailable: reward.quantityAvailable != null ? Number(reward.quantityAvailable) : null,
         isEnded: reward.isEnded || false,
         visibility: reward.visibility || "PUBLIC",
+        // Pass through so the batch save can't sever shared-stock pairs
+        // or rotate secret links the rewards step already saved.
+        // undefined (not null) = server leaves the stored value alone.
+        sharedStockWithId: reward.sharedStockWithId ?? undefined,
+        secretToken: reward.secretToken ?? undefined,
         items: reward.items?.map((item) => {
           // Find the full item details from the items store
           const fullItem = items.find((i) => i.id === item.id);
@@ -508,6 +513,10 @@ export function ProjectBuilder() {
             allowRetailerPledges: payment.allowRetailerPledges || false,
             retailerDiscount: Number(payment.retailerDiscount) || 50,
             retailerMinQuantity: Number(payment.retailerMinQuantity) || 5,
+            retailerMaxQuantity:
+              payment.retailerMaxQuantity != null && Number(payment.retailerMaxQuantity) > 0
+                ? Number(payment.retailerMaxQuantity)
+                : null,
           }
         : {
             projectType: payment.projectType || "INDIVIDUAL",
@@ -519,6 +528,10 @@ export function ProjectBuilder() {
             allowRetailerPledges: payment.allowRetailerPledges || false,
             retailerDiscount: Number(payment.retailerDiscount) || 50,
             retailerMinQuantity: Number(payment.retailerMinQuantity) || 5,
+            retailerMaxQuantity:
+              payment.retailerMaxQuantity != null && Number(payment.retailerMaxQuantity) > 0
+                ? Number(payment.retailerMaxQuantity)
+                : null,
           };
       savePromises.push(
         apiFetch(`/api/projects/${projectId}/payment`, {
@@ -548,6 +561,8 @@ export function ProjectBuilder() {
             customReferralTags: promotion.customReferralTags || [],
             googleAnalyticsId: promotion.googleAnalyticsId,
             metaPixelId: promotion.metaPixelId,
+            googleAnalyticsSecret: promotion.googleAnalyticsSecret,
+            metaConversionsToken: promotion.metaConversionsToken,
           }),
         })
       );

@@ -164,6 +164,12 @@ export interface PackageGroup {
     weight: { lbs: number; oz: number };
     customsValid: boolean;
     sku?: string;
+    // Saved via the Edit Customs dialog (FulfillmentProduct server-side).
+    customsDescription?: string | null;
+    countryOfOrigin?: string | null;
+    declaredValue?: number | null;
+    customsCode?: string | null;
+    weightOz?: number;
   }[];
   totalWeight: { lbs: number; oz: number };
 }

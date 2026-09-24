@@ -17,6 +17,7 @@ export const dynamic = "force-dynamic";
 const bulkActionSchema = z.object({
   action: z.enum([
     "send_survey_reminder",
+    "cancel_order",
     "charge_cards",
     "lock_orders",
     "lock_addresses",
@@ -93,6 +94,28 @@ export async function POST(req: NextRequest) {
 
     if (!project) {
       return NextResponse.json({ error: "Project not found or access denied" }, { status: 403 });
+    }
+
+    // Cancel a backer's order (backer dialog). Only PENDING pledges can
+    // be cancelled here — a completed pledge means money moved, and that
+    // goes through the refund flow (in-campaign) or support (after).
+    // The dialog sent this action for months against an enum that
+    // rejected it with a 400.
+    if (action === "cancel_order") {
+      const cancelled = await db.pledge.updateMany({
+        where: { id: { in: pledgeIds }, projectId, status: "PENDING", deletedAt: null },
+        data: { status: "CANCELLED", lastFailureReason: "Cancelled by creator" },
+      });
+      if (cancelled.count === 0) {
+        return NextResponse.json(
+          {
+            error:
+              "This order can't be cancelled here — it has already been charged. Use a refund while the campaign is running, or contact support after it ends.",
+          },
+          { status: 400 }
+        );
+      }
+      return NextResponse.json({ success: true, cancelled: cancelled.count });
     }
 
     // Idempotency check for charge_cards to prevent duplicate charges

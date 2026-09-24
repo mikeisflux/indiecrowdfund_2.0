@@ -40,6 +40,9 @@ const paymentSchema = z.object({
   allowRetailerPledges: z.boolean().optional(),
   retailerDiscount: z.number().min(0).max(100).optional(),
   retailerMinQuantity: z.number().int().min(1).optional(),
+  // Collected by the builder's retailer section but dropped here, while
+  // the retailer order route enforces it — so the cap was unsettable.
+  retailerMaxQuantity: z.number().int().min(1).nullable().optional(),
 });
 
 // POST - Update project payment settings
@@ -75,6 +78,7 @@ export async function POST(
       "allowRetailerPledges",
       "retailerDiscount",
       "retailerMinQuantity",
+      "retailerMaxQuantity",
       // NSFW content flags can always be toggled — if flipping to NSFW on a live
       // project, we also auto-correct campaignType/paymentProcessor below.
       "hasAdultContent",
@@ -134,6 +138,7 @@ export async function POST(
     if (data.allowRetailerPledges !== undefined) updateData.allowRetailerPledges = data.allowRetailerPledges;
     if (data.retailerDiscount !== undefined) updateData.retailerDiscount = data.retailerDiscount;
     if (data.retailerMinQuantity !== undefined) updateData.retailerMinQuantity = data.retailerMinQuantity;
+    if (data.retailerMaxQuantity !== undefined) updateData.retailerMaxQuantity = data.retailerMaxQuantity;
 
     // Handle explicit payment processor change
     if (data.paymentProcessor !== undefined) {
@@ -183,6 +188,7 @@ export async function POST(
         allowRetailerPledges: true,
         retailerDiscount: true,
         retailerMinQuantity: true,
+        retailerMaxQuantity: true,
       },
     });
 
@@ -245,6 +251,7 @@ export async function GET(
         allowRetailerPledges: true,
         retailerDiscount: true,
         retailerMinQuantity: true,
+        retailerMaxQuantity: true,
       },
     });
 

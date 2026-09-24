@@ -74,7 +74,6 @@ export function RefundDialog({
   const [reason, setReason] = useState(suggestedReason || "");
   const [notes, setNotes] = useState("");
   const [notifyBacker, setNotifyBacker] = useState(true);
-  const [cancelOrder, setCancelOrder] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
 
   // Reset state when dialog opens with new suggestion
@@ -85,7 +84,6 @@ export function RefundDialog({
       setAmount(suggestion ? suggestedAmount.toFixed(2) : totalPaid.toString());
       setReason(suggestedReason || "");
       setNotes("");
-      setCancelOrder(false);
     }
   }, [open, suggestedAmount, suggestedReason, totalPaid]);
 
@@ -120,7 +118,6 @@ export function RefundDialog({
           amount: isPartial ? refundAmount : undefined, // Only send amount for partial refunds
           reason: `${reason}${notes ? `: ${notes}` : ""}`,
           notifyBacker,
-          cancelOrder,
         }),
       });
 
@@ -259,16 +256,10 @@ export function RefundDialog({
                 Send refund notification email to backer
               </Label>
             </div>
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="cancel"
-                checked={cancelOrder}
-                onCheckedChange={(checked) => setCancelOrder(checked as boolean)}
-              />
-              <Label htmlFor="cancel" className="text-sm cursor-pointer">
-                Cancel order after refund
-              </Label>
-            </div>
+            {/* "Cancel order after refund" was removed: it was never
+                implemented server-side. A full refund already cancels
+                fulfillment (status REFUNDED); a partial refund keeps
+                the order alive by design. */}
           </div>
 
           {/* Warning */}

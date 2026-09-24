@@ -1,7 +1,7 @@
 "use client";
 
 import { apiFetch } from "@/lib/fetch-utils";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -225,118 +225,6 @@ export function ConnectServiceDialog({
   );
 }
 
-// --- Create Group Dialog ---
-
-interface CreateGroupDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  projectId?: string;
-  onRefresh?: () => void;
-}
-
-export function CreateGroupDialog({
-  open,
-  onOpenChange,
-  projectId,
-  onRefresh,
-}: CreateGroupDialogProps) {
-  const [newGroupName, setNewGroupName] = useState("");
-  const [newGroupType, setNewGroupType] = useState<string>("domestic");
-  const [isCreatingGroup, setIsCreatingGroup] = useState(false);
-
-  const handleCreateGroup = async () => {
-    if (!projectId || !newGroupName.trim()) {
-      toast.error("Please enter a group name");
-      return;
-    }
-
-    setIsCreatingGroup(true);
-    try {
-      const res = await apiFetch("/api/creator/indiekit/fulfillment", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", },
-        body: JSON.stringify({
-          projectId,
-          action: "create_group",
-          name: newGroupName,
-          type: newGroupType,
-        }),
-      });
-
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || "Failed to create group");
-      }
-
-      toast.success(`Created package group "${newGroupName}"`);
-      onOpenChange(false);
-      setNewGroupName("");
-      setNewGroupType("domestic");
-      onRefresh?.();
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to create group");
-    } finally {
-      setIsCreatingGroup(false);
-    }
-  };
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Create Package Group</DialogTitle>
-          <DialogDescription>
-            Create a new package group to organize orders for fulfillment
-          </DialogDescription>
-        </DialogHeader>
-        <div className="space-y-4 py-4">
-          <div className="space-y-2">
-            <Label htmlFor="groupName">Group Name</Label>
-            <Input
-              id="groupName"
-              placeholder="e.g., US Domestic Orders"
-              value={newGroupName}
-              onChange={(e) => setNewGroupName(e.target.value)}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="groupType">Group Type</Label>
-            <Select value={newGroupType} onValueChange={setNewGroupType}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="domestic">Domestic</SelectItem>
-                <SelectItem value="international">International</SelectItem>
-                <SelectItem value="incomplete">Incomplete</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
-          </Button>
-          <Button
-            className="bg-teal-600 hover:bg-teal-700"
-            onClick={handleCreateGroup}
-            disabled={isCreatingGroup}
-          >
-            {isCreatingGroup ? (
-              <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Creating...
-              </>
-            ) : (
-              "Create Group"
-            )}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
 // --- View Group Dialog ---
 
 interface ViewGroupDialogProps {
@@ -441,8 +329,18 @@ export function ViewGroupDialog({
 
 // --- Edit Customs Dialog ---
 
+export interface EditingCustomsItem {
+  groupId: string;
+  itemName: string;
+  customsDescription?: string | null;
+  countryOfOrigin?: string | null;
+  declaredValue?: number | null;
+  customsCode?: string | null;
+  weightOz?: number;
+}
+
 interface EditCustomsDialogProps {
-  editingItem: { groupId: string; itemName: string } | null;
+  editingItem: EditingCustomsItem | null;
   onClose: () => void;
   projectId?: string;
   onRefresh?: () => void;
@@ -457,13 +355,30 @@ export function EditCustomsDialog({
   const [customsDescription, setCustomsDescription] = useState("");
   const [customsValue, setCustomsValue] = useState("");
   const [customsCountry, setCustomsCountry] = useState("US");
+  const [customsCode, setCustomsCode] = useState("");
+  const [weightLbs, setWeightLbs] = useState("");
+  const [weightOz, setWeightOz] = useState("");
   const [isSavingCustoms, setIsSavingCustoms] = useState(false);
+
+  // Prefill from what was saved before, so editing doesn't wipe fields the
+  // creator isn't touching.
+  useEffect(() => {
+    if (!editingItem) return;
+    setCustomsDescription(editingItem.customsDescription || "");
+    setCustomsValue(editingItem.declaredValue ? String(editingItem.declaredValue) : "");
+    setCustomsCountry(editingItem.countryOfOrigin || "US");
+    setCustomsCode(editingItem.customsCode || "");
+    const oz = editingItem.weightOz || 0;
+    setWeightLbs(oz > 0 ? String(Math.floor(oz / 16)) : "");
+    setWeightOz(oz > 0 ? String(Math.round((oz % 16) * 10) / 10) : "");
+  }, [editingItem]);
 
   const handleSaveCustoms = async () => {
     if (!projectId || !editingItem) return;
 
     setIsSavingCustoms(true);
     try {
+      const totalOz = (parseFloat(weightLbs) || 0) * 16 + (parseFloat(weightOz) || 0);
       const res = await apiFetch("/api/creator/indiekit/fulfillment", {
         method: "POST",
         headers: { "Content-Type": "application/json", },
@@ -476,6 +391,8 @@ export function EditCustomsDialog({
             description: customsDescription,
             value: parseFloat(customsValue) || 0,
             countryOfOrigin: customsCountry,
+            customsCode: customsCode.trim() || undefined,
+            weightOz: totalOz > 0 ? totalOz : undefined,
           },
         }),
       });
@@ -485,11 +402,8 @@ export function EditCustomsDialog({
         throw new Error(data.error || "Failed to update customs info");
       }
 
-      toast.success("Customs information updated");
+      toast.success("Customs information saved");
       onClose();
-      setCustomsDescription("");
-      setCustomsValue("");
-      setCustomsCountry("US");
       onRefresh?.();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to update customs");
@@ -502,30 +416,69 @@ export function EditCustomsDialog({
     <Dialog open={!!editingItem} onOpenChange={(open) => !open && onClose()}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Edit Customs Information</DialogTitle>
+          <DialogTitle>Edit Customs & Weight</DialogTitle>
           <DialogDescription>
-            Update customs details for {editingItem?.itemName}
+            Shipping details for {editingItem?.itemName}
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-4">
           <div className="space-y-2">
-            <Label htmlFor="customsDescription">Description</Label>
+            <Label htmlFor="customsDescription">Customs Description</Label>
             <Input
               id="customsDescription"
-              placeholder="Brief description of the item"
+              placeholder="Brief description of the item (e.g., Printed comic book)"
               value={customsDescription}
               onChange={(e) => setCustomsDescription(e.target.value)}
             />
           </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="customsValue">Declared Value (USD)</Label>
+              <Input
+                id="customsValue"
+                type="number"
+                min="0"
+                step="0.01"
+                placeholder="0.00"
+                value={customsValue}
+                onChange={(e) => setCustomsValue(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="customsCode">HS / Tariff Code (optional)</Label>
+              <Input
+                id="customsCode"
+                placeholder="e.g., 4901.99"
+                value={customsCode}
+                onChange={(e) => setCustomsCode(e.target.value)}
+              />
+            </div>
+          </div>
           <div className="space-y-2">
-            <Label htmlFor="customsValue">Declared Value (USD)</Label>
-            <Input
-              id="customsValue"
-              type="number"
-              placeholder="0.00"
-              value={customsValue}
-              onChange={(e) => setCustomsValue(e.target.value)}
-            />
+            <Label>Package Weight</Label>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="flex items-center gap-2">
+                <Input
+                  type="number"
+                  min="0"
+                  placeholder="0"
+                  value={weightLbs}
+                  onChange={(e) => setWeightLbs(e.target.value)}
+                />
+                <span className="text-sm text-muted-foreground">lb</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Input
+                  type="number"
+                  min="0"
+                  step="0.1"
+                  placeholder="0"
+                  value={weightOz}
+                  onChange={(e) => setWeightOz(e.target.value)}
+                />
+                <span className="text-sm text-muted-foreground">oz</span>
+              </div>
+            </div>
           </div>
           <div className="space-y-2">
             <Label htmlFor="customsCountry">Country of Origin</Label>
@@ -535,8 +488,9 @@ export function EditCustomsDialog({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="US">United States</SelectItem>
+                <SelectItem value="CA">Canada</SelectItem>
                 <SelectItem value="CN">China</SelectItem>
-                <SelectItem value="UK">United Kingdom</SelectItem>
+                <SelectItem value="GB">United Kingdom</SelectItem>
                 <SelectItem value="DE">Germany</SelectItem>
                 <SelectItem value="JP">Japan</SelectItem>
                 <SelectItem value="KR">South Korea</SelectItem>
@@ -560,7 +514,7 @@ export function EditCustomsDialog({
                 Saving...
               </>
             ) : (
-              "Save Customs Info"
+              "Save"
             )}
           </Button>
         </DialogFooter>

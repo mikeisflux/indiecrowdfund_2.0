@@ -89,6 +89,7 @@ export function AddonDialog({
           description: description.trim(),
           amount: parseFloat(price),
           quantityAvailable: quantityLimit ? parseInt(quantityLimit) : null,
+          isActive,
         }),
       });
 

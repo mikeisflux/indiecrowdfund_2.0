@@ -155,6 +155,9 @@ export async function PATCH(
 
     const body = await req.json();
     const { action, reason, amount: refundRequestAmount } = body;
+    // Refund dialog options — notifyBacker was rendered for months and
+    // ignored; the email always went out.
+    const notifyBacker = body.notifyBacker !== false;
 
     const typedPledge = pledge as {
       id: string;
@@ -374,8 +377,9 @@ export async function PATCH(
 
           creatorPledgesLogger.info(`[DivinityCoin Refund] Processed ${isPartialRefund ? "partial" : "full"} refund ($${refundAmount.toFixed(2)}) for pledge ${pledgeId} via DC API`);
 
-          // Send refund notification email to backer
-          if (typedPledge.user.email) {
+          // Send refund notification email to backer (unless the
+          // creator unchecked it in the refund dialog)
+          if (notifyBacker && typedPledge.user.email) {
             try {
               await sendEmail({
                 to: typedPledge.user.email,

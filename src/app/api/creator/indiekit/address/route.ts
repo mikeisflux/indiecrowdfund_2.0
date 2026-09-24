@@ -44,19 +44,36 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Pledge not found" }, { status: 404 });
     }
 
-    // Update the survey response with new address
+    if (!address || typeof address !== "object") {
+      return NextResponse.json({ error: "Address is required" }, { status: 400 });
+    }
+
+    // MERGE into the stored address. Survey addresses also carry the
+    // recipient's name and phone (used on labels and exports); a
+    // wholesale replace from the edit form — which only holds street
+    // fields — was silently wiping both.
     const surveyResponse = await db.surveyResponse.findFirst({
       where: { pledgeId },
     });
 
-    if (surveyResponse) {
-      await db.surveyResponse.update({
-        where: { id: surveyResponse.id },
-        data: {
-          shippingAddress: address,
-        },
-      });
+    if (!surveyResponse) {
+      // Previously returned success without saving anything.
+      return NextResponse.json(
+        { error: "This backer hasn't submitted a survey yet, so there is no address to edit." },
+        { status: 404 }
+      );
     }
+
+    const existing =
+      surveyResponse.shippingAddress && typeof surveyResponse.shippingAddress === "object"
+        ? (surveyResponse.shippingAddress as Record<string, unknown>)
+        : {};
+    await db.surveyResponse.update({
+      where: { id: surveyResponse.id },
+      data: {
+        shippingAddress: { ...existing, ...address },
+      },
+    });
 
     return NextResponse.json({ success: true });
   } catch (error) {

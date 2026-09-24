@@ -14,6 +14,10 @@ const promotionSchema = z.object({
   customReferralTags: z.array(z.string()).optional(),
   googleAnalyticsId: z.string().optional().nullable(),
   metaPixelId: z.string().optional().nullable(),
+  // The builder collected these two for months while the schema
+  // silently dropped them — server-side GA4 / Meta CAPI never worked.
+  googleAnalyticsSecret: z.string().max(200).optional().nullable(),
+  metaConversionsToken: z.string().max(500).optional().nullable(),
 });
 
 // POST - Update promotion settings
@@ -47,6 +51,8 @@ export async function POST(
     if (data.customReferralTags !== undefined) updateData.customReferralTags = data.customReferralTags;
     if (data.googleAnalyticsId !== undefined) updateData.googleAnalyticsId = data.googleAnalyticsId;
     if (data.metaPixelId !== undefined) updateData.metaPixelId = data.metaPixelId;
+    if (data.googleAnalyticsSecret !== undefined) updateData.googleAnalyticsSecret = data.googleAnalyticsSecret;
+    if (data.metaConversionsToken !== undefined) updateData.metaConversionsToken = data.metaConversionsToken;
 
     const updated = await db.project.update({
       where: { id: projectId },

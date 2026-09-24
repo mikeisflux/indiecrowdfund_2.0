@@ -23,6 +23,9 @@ const MIME_TYPES: Record<string, string> = {
   ".webm": "video/webm",
   ".mov": "video/quicktime",
   ".pdf": "application/pdf",
+  // Favicons uploaded via Settings > General > Logo & Branding. Without
+  // this entry the serving route answered 400 for its own upload.
+  ".ico": "image/x-icon",
 };
 
 export async function GET(

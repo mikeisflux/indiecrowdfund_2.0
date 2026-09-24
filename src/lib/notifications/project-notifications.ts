@@ -150,10 +150,20 @@ export async function notifyProjectLaunched(projectId: string) {
       .filter((f: { userId: string | null }) => f.userId)
       .map((f: { userId: string | null }) => f.userId as string)
   );
+  // Team members get their own "your project is live" notification —
+  // don't double-notify a collaborator who also follows the creator.
+  const collaboratorRows = await db.projectCollaborator.findMany({
+    where: { projectId, status: "ACCEPTED" },
+    select: { userId: true },
+  });
+  const teamIds = new Set(collaboratorRows.map((c: { userId: string }) => c.userId));
   const creatorFollowerNotifs = creatorFollows
     .filter(
       (cf: (typeof creatorFollows)[number]) =>
-        cf.followerId !== project.creatorId && !projectFollowerIds.has(cf.followerId)
+        cf.followerId !== project.creatorId &&
+        !projectFollowerIds.has(cf.followerId) &&
+        !teamIds.has(cf.followerId) &&
+        !cf.follower?.deletedAt
     )
     .map((cf: (typeof creatorFollows)[number]) => ({
       userId: cf.followerId,
@@ -167,6 +177,7 @@ export async function notifyProjectLaunched(projectId: string) {
     if (
       cf.followerId !== project.creatorId &&
       !projectFollowerIds.has(cf.followerId) &&
+      !teamIds.has(cf.followerId) &&
       cf.follower &&
       !cf.follower.deletedAt &&
       cf.follower.email
@@ -265,24 +276,39 @@ export async function notifyProjectUpdate(
 
   if (!project) return;
 
+  // BACKERS_ONLY updates must not leak to followers of any kind — the
+  // notification carries a content preview. Look the visibility up
+  // from the update itself when we have its id.
+  let backersOnly = false;
+  if (updateId) {
+    const updateRow = await db.update.findUnique({
+      where: { id: updateId },
+      select: { visibility: true },
+    });
+    backersOnly = updateRow?.visibility === "BACKERS_ONLY";
+  }
+
   // Build project URL with vanity URL if available
   const projectUrlPath = project.creator?.vanityUrl
     ? `/projects/${project.creator.vanityUrl}/${project.slug}`
     : `/projects/${project.slug}`;
 
-  // Combine backers and followers (unique users except creator)
+  // Combine recipients (unique users except creator). Backers always;
+  // project followers and creator-followers only for PUBLIC updates.
   const userIds = new Set<string>();
   project.pledges.forEach((p: { userId: string }) => userIds.add(p.userId));
-  project.followers.forEach((f: { userId: string | null }) => {
-    if (f.userId) userIds.add(f.userId);
-  });
-  // Creator-followers who opted into update alerts (notifyUpdates was
-  // written by the follow UI and read by nothing until now).
-  const updateFollows = await db.creatorFollow.findMany({
-    where: { creatorId: project.creatorId, notifyUpdates: true },
-    select: { followerId: true },
-  });
-  updateFollows.forEach((cf: { followerId: string }) => userIds.add(cf.followerId));
+  if (!backersOnly) {
+    project.followers.forEach((f: { userId: string | null }) => {
+      if (f.userId) userIds.add(f.userId);
+    });
+    // Creator-followers who opted into update alerts (notifyUpdates was
+    // written by the follow UI and read by nothing until now).
+    const updateFollows = await db.creatorFollow.findMany({
+      where: { creatorId: project.creatorId, notifyUpdates: true },
+      select: { followerId: true },
+    });
+    updateFollows.forEach((cf: { followerId: string }) => userIds.add(cf.followerId));
+  }
   userIds.delete(project.creatorId);
 
   const notifications = Array.from(userIds).map((userId) => ({
@@ -320,12 +346,15 @@ export async function notifyProjectUpdate(
     users.forEach((u) => emailsToSend.push(u.email));
   }
 
-  // Add email-only followers
-  project.followers
-    .filter((f: { userId: string | null; email: string | null }) => !f.userId && f.email)
-    .forEach((f: { email: string | null }) => {
-      if (f.email) emailsToSend.push(f.email);
-    });
+  // Add email-only followers — PUBLIC updates only; a backers-only
+  // update must not email people who never pledged.
+  if (!backersOnly) {
+    project.followers
+      .filter((f: { userId: string | null; email: string | null }) => !f.userId && f.email)
+      .forEach((f: { email: string | null }) => {
+        if (f.email) emailsToSend.push(f.email);
+      });
+  }
 
   const uniqueEmails = Array.from(new Set(emailsToSend));
   const creatorName = project.creator?.name || "Creator";

@@ -92,6 +92,10 @@ async function canActivatePrelaunchImmediately(userId: string): Promise<boolean>
 // Schema for reward items
 const rewardItemSchema = z.object({
   id: z.string().optional(),
+  // Link back to the campaign's item catalog. Dropping it here made
+  // every PATCH (e.g. publishing the pre-launch page) recreate items
+  // with projectItemId null, severing survey/fulfillment item links.
+  projectItemId: z.string().nullable().optional(),
   title: z.string().max(200),
   description: z.string().max(1000).optional(),
   imageUrl: z.string().max(8192).optional(),
@@ -755,6 +759,7 @@ export async function PATCH(
                 await tx.rewardItem.createMany({
                   data: reward.items.map(item => ({
                     rewardId: reward.id!,
+                    projectItemId: item.projectItemId || null,
                     title: item.title,
                     description: item.description || null,
                     imageUrl: item.imageUrl || null,
@@ -814,6 +819,7 @@ export async function PATCH(
                   await tx.rewardItem.createMany({
                     data: reward.items.map(item => ({
                       rewardId: reward.id!,
+                      projectItemId: item.projectItemId || null,
                       title: item.title,
                       description: item.description || null,
                       imageUrl: item.imageUrl || null,
@@ -841,6 +847,7 @@ export async function PATCH(
                 await tx.rewardItem.createMany({
                   data: reward.items.map(item => ({
                     rewardId: newReward.id,
+                    projectItemId: item.projectItemId || null,
                     title: item.title,
                     description: item.description || null,
                     imageUrl: item.imageUrl || null,

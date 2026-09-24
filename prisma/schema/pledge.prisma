@@ -238,6 +238,10 @@ enum FulfillmentStatus {
   IN_PROGRESS
   SHIPPED
   DELIVERED
+  // The last push to the fulfillment provider failed for this pledge.
+  // Surfaced as "Push Errored" on the Packages tab; retry_errored re-pushes.
+  // Added by migrations/add_fulfillment_failed_status.sql.
+  FAILED
 }
 
 enum OrderLockStatus {

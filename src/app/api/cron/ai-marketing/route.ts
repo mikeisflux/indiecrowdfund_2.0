@@ -37,19 +37,32 @@ export async function GET(req: NextRequest) {
 
     // Behavior-data retention (AI Marketing > Behavior Analytics >
     // Data Retention). The setting existed with no purge job behind it,
-    // so "90 days" meant "forever". Runs before the marketing pass.
+    // so "90 days" meant "forever".
+    //
+    // Hard floor of 366 days: admin analytics offers a 1-year window
+    // and the creator dashboard accepts up to 365 days, so purging
+    // below that silently blanks screens that still ask for the data.
+    // The setting can only EXTEND retention beyond a year. Deletes run
+    // in bounded batches so the first run can't lock the table.
     try {
       const settings = await db.platformSettings.findFirst({
         select: { aiRetentionDays: true },
       });
-      const retentionDays = Math.max(7, settings?.aiRetentionDays ?? 90);
+      const retentionDays = Math.max(366, settings?.aiRetentionDays ?? 366);
       const cutoff = new Date(Date.now() - retentionDays * 24 * 60 * 60 * 1000);
-      const purged = await db.userBehavior.deleteMany({
-        where: { timestamp: { lt: cutoff } },
-      });
-      if (purged.count > 0) {
+      let purgedTotal = 0;
+      for (let i = 0; i < 20; i++) {
+        const batch: number = await db.$executeRaw`
+          DELETE FROM "UserBehavior"
+          WHERE "id" IN (
+            SELECT "id" FROM "UserBehavior" WHERE "timestamp" < ${cutoff} LIMIT 5000
+          )`;
+        purgedTotal += batch;
+        if (batch < 5000) break;
+      }
+      if (purgedTotal > 0) {
         cronAiMarketingLogger.info(
-          { purged: purged.count, retentionDays },
+          { purged: purgedTotal, retentionDays },
           "Purged behavior events past retention"
         );
       }

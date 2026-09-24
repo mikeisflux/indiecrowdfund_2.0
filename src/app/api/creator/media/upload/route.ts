@@ -76,7 +76,8 @@ export async function POST(req: NextRequest) {
     const subDir = "images";
 
     // Create upload directory if it doesn't exist
-    const uploadDir = path.join(process.cwd(), "uploads", folder, subDir);
+    // Honor UPLOADS_DIR like the serving route (uploads/[...path]).
+    const uploadDir = path.join(process.env.UPLOADS_DIR || path.join(process.cwd(), "uploads"), folder, subDir);
     await mkdir(uploadDir, { recursive: true });
 
     // Convert file to buffer

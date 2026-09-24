@@ -14,7 +14,24 @@ type ProcessedBacker = {
   items: { name: string; quantity: number; sku?: string }[];
 };
 
-export function buildPackageGroups(processedBackers: ProcessedBacker[]) {
+/**
+ * Weight / customs details saved through the Packages tab's Edit Customs
+ * dialog (persisted as FulfillmentProduct rows keyed by name).
+ */
+export type PackageProductInfo = {
+  name: string;
+  weight: number | null; // oz
+  customsDescription: string | null;
+  countryOfOrigin: string | null;
+  declaredValue: number | null;
+  customsCode: string | null;
+};
+
+export function buildPackageGroups(
+  processedBackers: ProcessedBacker[],
+  products: PackageProductInfo[] = []
+) {
+  const productByName = new Map(products.map(p => [p.name, p]));
   // Generate package groups based on reward tiers and locations
   // This is a simplified version - in production you'd have actual package configurations
   const rewardGroups = new Map<string, { backers: ProcessedBacker[]; rewardTitle: string }>();
@@ -47,24 +64,42 @@ export function buildPackageGroups(processedBackers: ProcessedBacker[]) {
     const type: "domestic" | "international" | "incomplete" =
       hasIncomplete ? "incomplete" : hasInternational ? "international" : "domestic";
 
-    // Build items with full structure
+    // Build items with full structure. Weight and customs come from the
+    // FulfillmentProduct saved via Edit Customs; without one, weight shows
+    // 0 and international groups flag the item as customs-incomplete
+    // instead of pretending a hardcoded 8 oz / customs-valid default.
     const firstBackerItems = group.backers[0]?.items || [];
-    const items = firstBackerItems.map((item: { name: string; quantity: number; sku?: string }) => ({
-      name: item.name,
-      quantity: item.quantity,
-      weight: { lbs: 0, oz: 8 }, // Default weight - would come from product data
-      customsValid: true,
-      sku: item.sku,
-    }));
+    const items = firstBackerItems.map((item: { name: string; quantity: number; sku?: string }) => {
+      const product = productByName.get(item.name);
+      const totalOz = product?.weight ?? 0;
+      const customsComplete = !!(product?.customsDescription && product?.countryOfOrigin);
+      return {
+        name: item.name,
+        quantity: item.quantity,
+        weight: { lbs: Math.floor(totalOz / 16), oz: totalOz % 16 },
+        // Customs only matters when the package leaves the country.
+        customsValid: type !== "international" || customsComplete,
+        sku: item.sku,
+        customsDescription: product?.customsDescription ?? null,
+        countryOfOrigin: product?.countryOfOrigin ?? null,
+        declaredValue: product?.declaredValue ?? null,
+        customsCode: product?.customsCode ?? null,
+        weightOz: totalOz,
+      };
+    });
 
-    // Calculate total weight
-    const totalWeight = items.reduce(
+    // Calculate total weight, carrying ounces into pounds.
+    const rawTotal = items.reduce(
       (acc: { lbs: number; oz: number }, item: { weight: { lbs: number; oz: number } }) => ({
         lbs: acc.lbs + item.weight.lbs,
         oz: acc.oz + item.weight.oz,
       }),
       { lbs: 0, oz: 0 }
     );
+    const totalWeight = {
+      lbs: rawTotal.lbs + Math.floor(rawTotal.oz / 16),
+      oz: rawTotal.oz % 16,
+    };
 
     return {
       id: `pg-${idx + 1}`,

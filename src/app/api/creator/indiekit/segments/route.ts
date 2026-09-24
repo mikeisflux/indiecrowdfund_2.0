@@ -79,10 +79,13 @@ export async function GET(req: NextRequest) {
     });
 
     // Map to frontend format
-    type SegmentType = { id: string; name: string; type: string; criteria: unknown; backerCount: number; createdAt: Date };
+    type SegmentType = { id: string; name: string; description: string | null; type: string; criteria: unknown; backerCount: number; createdAt: Date };
     const formattedSegments = segments.map((segment: SegmentType) => ({
       id: segment.id,
       name: segment.name,
+      // Included so the edit dialog can round-trip it — omitting it
+      // meant every rename overwrote the description with "".
+      description: segment.description || "",
       type: segment.type.toLowerCase(),
       criteria: segment.criteria ? JSON.stringify(segment.criteria) : "",
       backerCount: segment.backerCount,
@@ -112,6 +115,33 @@ export async function POST(req: NextRequest) {
 
     if (!projectId) {
       return NextResponse.json({ error: "Project ID required" }, { status: 400 });
+    }
+
+    // Duplicate an existing segment. The tab has offered this since it
+    // shipped; the request used to fall into the create schema and 400.
+    if (body.action === "duplicate" && typeof body.segmentId === "string") {
+      if (!(await verifyProjectAccess(session.user.id, projectId))) {
+        return NextResponse.json({ error: "Project not found or access denied" }, { status: 403 });
+      }
+      const source = await db.backerSegment.findFirst({
+        where: { id: body.segmentId, projectId },
+      });
+      if (!source) {
+        return NextResponse.json({ error: "Segment not found" }, { status: 404 });
+      }
+      const copy = await db.backerSegment.create({
+        data: {
+          projectId,
+          name: `${source.name} (Copy)`.slice(0, 100),
+          description: source.description,
+          type: source.type,
+          criteria: source.criteria ?? undefined,
+          isDynamic: source.isDynamic,
+          staticBackerIds: source.staticBackerIds,
+          backerCount: source.backerCount,
+        },
+      });
+      return NextResponse.json({ segment: copy }, { status: 201 });
     }
 
     const validatedData = segmentSchema.parse(segmentData);

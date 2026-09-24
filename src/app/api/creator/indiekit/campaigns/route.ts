@@ -4,6 +4,9 @@ import { db } from "@/lib/db";
 import { checkEmailAccess } from "@/lib/auth/email-access";
 import { logger } from "@/lib/logger";
 import { stripBase64FromHtml } from "@/lib/email/strip-base64-html";
+import { resolveSegmentPledges } from "@/lib/segments";
+import { queueEmail, EMAIL_PRIORITY } from "@/lib/email";
+import { escapeHtmlForEmail } from "@/lib/email/email-config";
 
 const campaignLogger = logger.child({ module: "campaigns" });
 
@@ -190,6 +193,91 @@ export async function POST(req: NextRequest) {
       });
 
       return NextResponse.json({ campaign, campaignId: campaign.id });
+    }
+
+    if (action === "send_to_segment") {
+      // "Email this segment" from the Segments tab. This action was
+      // sent by the UI for months against a route that answered 400
+      // "Unknown action" every time.
+      const segmentId = body.segmentId as string | undefined;
+      const messageBody = String(body.body || "").trim();
+      const messageSubject = String(subject || "").trim();
+      if (!projectId || !segmentId) {
+        return NextResponse.json({ error: "Project ID and segment ID required" }, { status: 400 });
+      }
+      if (!messageSubject || messageSubject.length > 200) {
+        return NextResponse.json({ error: "Subject is required (max 200 characters)" }, { status: 400 });
+      }
+      if (!messageBody || messageBody.length > 20000) {
+        return NextResponse.json({ error: "Message body is required (max 20,000 characters)" }, { status: 400 });
+      }
+
+      // Owner-or-collaborator check on the project the segment belongs to.
+      const project = await db.project.findFirst({
+        where: {
+          id: projectId,
+          deletedAt: null,
+          OR: [
+            { creatorId: session.user.id },
+            { collaborators: { some: { userId: session.user.id, status: "ACCEPTED" } } },
+          ],
+        },
+        select: { id: true, title: true },
+      });
+      if (!project) {
+        return NextResponse.json({ error: "Project not found or access denied" }, { status: 403 });
+      }
+
+      const resolved = await resolveSegmentPledges(segmentId, projectId);
+      if (!resolved) {
+        return NextResponse.json({ error: "Segment not found" }, { status: 404 });
+      }
+
+      // Dedupe recipients by email; creator-composed plain text is
+      // escaped, never trusted as HTML.
+      const emails = new Map<string, string>();
+      for (const pledge of resolved.pledges) {
+        const email = pledge.user?.email;
+        if (email) emails.set(email.toLowerCase(), pledge.user?.name || "");
+      }
+      if (emails.size === 0) {
+        return NextResponse.json({ error: "This segment has no emailable backers" }, { status: 400 });
+      }
+
+      const safeBodyHtml = escapeHtmlForEmail(messageBody).replace(/\n/g, "<br />");
+      const html = `<div style="font-family: Arial, sans-serif; font-size: 15px; line-height: 1.6; color: #222;">
+        ${safeBodyHtml}
+        <p style="margin-top: 24px; font-size: 12px; color: #888;">Sent by the creator of "${escapeHtmlForEmail(project.title)}" via IndieCrowdFund.</p>
+      </div>`;
+
+      let queued = 0;
+      for (const [email] of emails) {
+        const result = await queueEmail({
+          to: email,
+          subject: messageSubject,
+          html,
+          priority: EMAIL_PRIORITY.CREATOR,
+          isCreatorEmail: true,
+        });
+        if (result.success) queued++;
+      }
+
+      // Record it alongside other campaigns so there is a send history.
+      await db.emailCampaign.create({
+        data: {
+          name: `Segment email — ${resolved.segment.name}`,
+          subject: messageSubject,
+          htmlContent: html,
+          status: "SENT",
+          sentAt: new Date(),
+          recipientCount: emails.size,
+          sentCount: queued,
+          createdBy: session.user.id,
+          filters: { projectId, segmentId, segmentEmail: true },
+        },
+      });
+
+      return NextResponse.json({ success: true, queued, recipients: emails.size });
     }
 
     if (action === "duplicate" && campaignId) {

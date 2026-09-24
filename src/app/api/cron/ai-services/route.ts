@@ -75,7 +75,8 @@ function cronMatches(expr: string, d: Date): boolean {
     fieldMatches(hour, d.getHours(), 0, 23) &&
     fieldMatches(dom, d.getDate(), 1, 31) &&
     fieldMatches(month, d.getMonth() + 1, 1, 12) &&
-    fieldMatches(dow, d.getDay(), 0, 6)
+    // "7" as Sunday (common cron dialect) normalizes to 0.
+    fieldMatches(dow.replace(/\b7\b/g, "0"), d.getDay(), 0, 6)
   );
 }
 

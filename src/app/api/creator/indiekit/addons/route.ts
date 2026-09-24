@@ -56,7 +56,7 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { projectId, action, addonId, addonIds, title, description, amount, quantityAvailable } = body;
+    const { projectId, action, addonId, addonIds, title, description, amount, quantityAvailable, isActive } = body;
 
     if (!projectId) {
       return NextResponse.json({ error: "Project ID required" }, { status: 400 });
@@ -83,6 +83,8 @@ export async function POST(req: NextRequest) {
           shippingType: "NO_SHIPPING",
           shippingCountries: [],
           showInSurvey: true,
+          // "Make available immediately" checkbox — previously ignored.
+          ...(isActive === false ? { isEnded: true, endedAt: new Date() } : {}),
         },
       });
 
@@ -102,7 +104,16 @@ export async function POST(req: NextRequest) {
     if (action === "update" && addonId) {
       const result = await db.reward.updateMany({
         where: { id: addonId, projectId, type: "ADDON" },
-        data: { title, description, amount, quantityAvailable },
+        data: {
+          title,
+          description,
+          amount,
+          quantityAvailable,
+          // "Available for purchase" checkbox — previously ignored.
+          ...(typeof isActive === "boolean"
+            ? { isEnded: !isActive, endedAt: isActive ? null : new Date() }
+            : {}),
+        },
       });
       if (result.count === 0) {
         return NextResponse.json({ error: "Addon not found" }, { status: 404 });

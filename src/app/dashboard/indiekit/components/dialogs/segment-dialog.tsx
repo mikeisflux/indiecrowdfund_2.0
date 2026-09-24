@@ -135,7 +135,7 @@ export function SegmentDialog({
           name: name.trim(),
           description: description.trim(),
           criteria: validRules,
-          type: "custom",
+          type: "CUSTOM",
         }),
       });
 

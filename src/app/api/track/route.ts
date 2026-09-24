@@ -62,8 +62,12 @@ export async function OPTIONS() {
 
 // ── Admin tracking switches (AI Marketing > Behavior Analytics) ──
 // These toggles saved fine for months while this route recorded
-// everything regardless. Each event type now checks its switch;
-// aiBehaviorTracking is the master. Cached 60s; failure = defaults.
+// everything regardless. Each MAPPED event type checks its switch, and
+// the master switch turns the mapped set off together. Events with no
+// mapping (PROJECT_VIEW, SEARCH, PLEDGE_COMPLETE, ...) are creator
+// analytics — view counts, traffic sources, revenue attribution — and
+// are NEVER gated by the AI-marketing switches: an AI panel toggle must
+// not silently freeze creator dashboards. Cached 60s; failure = record.
 const EVENT_FLAG: Record<string, keyof TrackingFlags> = {
   PAGE_VIEW: "aiTrackPageViews",
   PAGE_EXIT: "aiTrackTimeOnPage",
@@ -127,6 +131,29 @@ async function getTrackingFlags(): Promise<TrackingFlags> {
   } catch {
     return defaults;
   }
+}
+
+
+// CCPA opt-outs, cached so high-volume tracking doesn't hit the table
+// per event. 60s TTL, bounded size.
+const ccpaCache = new Map<string, { optedOut: boolean; at: number }>();
+
+async function isCcpaOptedOut(userId: string): Promise<boolean> {
+  const hit = ccpaCache.get(userId);
+  if (hit && Date.now() - hit.at < 60_000) return hit.optedOut;
+  let optedOut = false;
+  try {
+    const row = await db.ccpaOptOut.findFirst({
+      where: { userId, reinstatedAt: null },
+      select: { id: true },
+    });
+    optedOut = !!row;
+  } catch {
+    optedOut = false;
+  }
+  if (ccpaCache.size > 5000) ccpaCache.clear();
+  ccpaCache.set(userId, { optedOut, at: Date.now() });
+  return optedOut;
 }
 
 export async function POST(request: Request) {
@@ -199,13 +226,15 @@ export async function POST(request: Request) {
       );
     }
 
-    // Honor the admin tracking switches. A disabled event is accepted
-    // and dropped (success response) so clients don't retry or error.
+    // Honor the admin tracking switches for MAPPED events only. A
+    // disabled event is accepted and dropped (success response) so
+    // clients don't retry or error.
     const flags = await getTrackingFlags();
     const flagKey = EVENT_FLAG[eventType];
-    if (!flags.aiBehaviorTracking || (flagKey && !flags[flagKey])) {
+    if (flagKey && (!flags.aiBehaviorTracking || !flags[flagKey])) {
       return NextResponse.json({ success: true, dropped: true });
     }
+
 
     // Cap metadata payload so the unauthenticated, CSRF-exempt,
     // wildcard-CORS POST surface can't be used to bloat UserBehavior
@@ -234,6 +263,13 @@ export async function POST(request: Request) {
       userId = session?.user?.id || null;
     } catch {
       // Not authenticated, that's fine
+    }
+
+    // CCPA "do not sell or share": a signed-in user's opt-out drops
+    // their behavior events entirely. (The Settings toggle previously
+    // stored the preference without anything honoring it.)
+    if (userId && (await isCcpaOptedOut(userId))) {
+      return NextResponse.json({ success: true, dropped: true });
     }
 
     // Get request metadata

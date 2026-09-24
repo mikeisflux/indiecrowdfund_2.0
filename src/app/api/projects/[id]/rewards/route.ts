@@ -218,16 +218,18 @@ async function validSharedStockId(
 async function saveReward(projectId: string, reward: RewardData) {
   // Only keep projectItemId references that exist in this project.
   const validItemIds = await existingProjectItemIds(reward.items, projectId);
-  const sharedStockId = await validSharedStockId(
-    reward.sharedStockWithId,
-    projectId,
-    reward.id
-  );
-  // Generate secret token for SECRET visibility if not provided
-  let secretToken = reward.secretToken || null;
-  if (reward.visibility === "SECRET" && !secretToken) {
-    secretToken = randomBytes(16).toString("hex");
-  }
+
+  // ABSENT means "leave alone", null means "clear". The builder's
+  // step-navigation batch save omits these fields, and treating absent
+  // as null was cutting every shared-stock link and rotating every
+  // secret reward's token (breaking links creators had already shared)
+  // on every Next click.
+  const sharedStockProvided = reward.sharedStockWithId !== undefined;
+  const sharedStockId = sharedStockProvided
+    ? await validSharedStockId(reward.sharedStockWithId, projectId, reward.id)
+    : undefined;
+
+  let secretToken: string | null = reward.secretToken || null;
   // Clear secret token if visibility is not SECRET
   if (reward.visibility !== "SECRET") {
     secretToken = null;
@@ -243,6 +245,13 @@ async function saveReward(projectId: string, reward: RewardData) {
 
     if (!existingReward) {
       throw new Error("Reward not found");
+    }
+
+    // SECRET reward with no token in the payload: KEEP the existing
+    // token (the shared link stays valid); only mint one if the reward
+    // never had one.
+    if (reward.visibility === "SECRET" && !secretToken) {
+      secretToken = existingReward.secretToken || randomBytes(16).toString("hex");
     }
 
     // Update reward and manage items
@@ -275,7 +284,8 @@ async function saveReward(projectId: string, reward: RewardData) {
           // seconds after it was saved. An explicit null still clears it,
           // which is how the form turns a goal lock back off.
           unlockAtAmount: reward.unlockAtAmount,
-          sharedStockWithId: sharedStockId,
+          // undefined = leave the stored link alone (see above).
+          sharedStockWithId: sharedStockProvided ? sharedStockId : undefined,
           visibility: reward.visibility,
           secretToken,
           isEnded: reward.isEnded,
@@ -302,6 +312,11 @@ async function saveReward(projectId: string, reward: RewardData) {
 
   // Otherwise, create new reward
   const displayOrder = await nextDisplayOrder(projectId, reward.type);
+  // New SECRET reward with no supplied token: mint one now.
+  if (reward.visibility === "SECRET" && !secretToken) {
+    secretToken = randomBytes(16).toString("hex");
+  }
+
   const created = await db.reward.create({
     data: {
       projectId,
@@ -318,7 +333,7 @@ async function saveReward(projectId: string, reward: RewardData) {
       shippingCost: reward.shippingCost,
       quantityAvailable: reward.quantityAvailable,
       unlockAtAmount: reward.unlockAtAmount,
-      sharedStockWithId: sharedStockId,
+      sharedStockWithId: sharedStockId ?? null,
       visibility: reward.visibility,
       secretToken,
       isEnded: reward.isEnded,

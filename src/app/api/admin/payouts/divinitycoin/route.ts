@@ -595,6 +595,76 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Creator-balance payout (marketplace / IndieKit earnings, no
+    // project). The Creator Balances tab sent this for months and got
+    // "Project ID is required" every time — no route handled it.
+    if (body.type === "BALANCE_PAYOUT") {
+      const creatorId = body.creatorId as string | undefined;
+      if (!creatorId) {
+        return NextResponse.json({ error: "Creator ID is required" }, { status: 400 });
+      }
+      const creator = await db.user.findFirst({
+        where: { id: creatorId, deletedAt: null },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          divinityCoinBankAccount: { select: { id: true } },
+          marketplaceBooks: {
+            select: {
+              purchases: {
+                where: { status: "COMPLETED" },
+                select: { creatorPayout: true },
+              },
+            },
+          },
+        },
+      });
+      if (!creator) {
+        return NextResponse.json({ error: "Creator not found" }, { status: 404 });
+      }
+      if (!creator.divinityCoinBankAccount) {
+        return NextResponse.json({ error: "Creator has no bank account on file" }, { status: 400 });
+      }
+
+      // Available = lifetime marketplace earnings minus balance payouts
+      // already made (settlements on this bank account with no project).
+      const earned = creator.marketplaceBooks
+        .flatMap((b: { purchases: { creatorPayout: unknown }[] }) => b.purchases)
+        .reduce((sum: number, pu: { creatorPayout: unknown }) => sum + Number(pu.creatorPayout || 0), 0);
+      const paidAgg = await db.divinityCoinSettlement.aggregate({
+        where: {
+          bankAccountId: creator.divinityCoinBankAccount.id,
+          projectId: null,
+          status: { not: "FAILED" },
+        },
+        _sum: { amount: true },
+      });
+      const alreadyPaid = Number(paidAgg._sum.amount || 0);
+      const available = Math.round((earned - alreadyPaid) * 100) / 100;
+      if (amount > available + 0.005) {
+        return NextResponse.json(
+          { error: `Amount exceeds the creator's available balance (${available.toFixed(2)})` },
+          { status: 400 }
+        );
+      }
+
+      const settlement = await db.divinityCoinSettlement.create({
+        data: {
+          bankAccountId: creator.divinityCoinBankAccount.id,
+          projectId: null,
+          projectName: "Creator balance payout (marketplace/IndieKit)",
+          amount,
+          status: "COMPLETED",
+          completedAt: new Date(),
+          adminNotes: adminNotes || null,
+          processedBy: authResult.user.id,
+        },
+      });
+
+      return NextResponse.json({ success: true, settlement });
+    }
+
     if (!projectId) {
       return NextResponse.json(
         { error: "Project ID is required" },

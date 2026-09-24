@@ -35,7 +35,7 @@ interface PackageGroupCardProps {
   onPushOrders: (groupId: string) => void;
   onViewGroup: (group: PackageGroup) => void;
   onExport: (groupId: string, format: "csv" | "excel" | "packing_slips" | "shipping_labels") => void;
-  onEditCustoms: (groupId: string, itemName: string) => void;
+  onEditCustoms: (groupId: string, item: PackageGroup["items"][number]) => void;
 }
 
 export function PackageGroupCard({
@@ -131,12 +131,19 @@ export function PackageGroupCard({
                   <TableCell>
                     <div>
                       <p className="text-sm">{item.name}</p>
-                      {!item.customsValid && (
+                      {!item.customsValid ? (
                         <p className="text-xs text-red-600 flex items-center gap-1">
                           <AlertCircle className="h-3 w-3" />
                           Not Valid for Customs
-                          <button className="text-teal-600 underline ml-1" onClick={() => onEditCustoms(group.id, item.name)}>edit</button>
+                          <button className="text-teal-600 underline ml-1" onClick={() => onEditCustoms(group.id, item)}>edit</button>
                         </p>
+                      ) : (
+                        <button
+                          className="text-xs text-teal-600 underline"
+                          onClick={() => onEditCustoms(group.id, item)}
+                        >
+                          edit customs & weight
+                        </button>
                       )}
                     </div>
                   </TableCell>

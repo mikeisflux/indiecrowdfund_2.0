@@ -8,6 +8,7 @@ import { useSession } from "@/components/providers/auth-provider";
 import { useProjectTracking } from "@/components/tracking-provider";
 import Image from "next/image";
 import { ProjectVideoPlayer } from "@/components/project-details/project-video-player";
+import { CreatorAnalytics } from "@/components/project-details/creator-analytics";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import {
@@ -527,6 +528,14 @@ export default function ProjectPage() {
 
   return (
     <div className="min-h-screen bg-background overflow-x-hidden relative">
+      {/* Creator's own GA4 / Meta Pixel — the builder collected these
+          IDs for months and nothing ever loaded them on the page. */}
+      {project.id && (
+        <CreatorAnalytics
+          googleAnalyticsId={(project as { googleAnalyticsId?: string | null }).googleAnalyticsId}
+          metaPixelId={(project as { metaPixelId?: string | null }).metaPixelId}
+        />
+      )}
       {/* Background Effects */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         <div className="floating-orb absolute -top-40 -right-40 w-[500px] h-[500px] bg-primary/10" />
