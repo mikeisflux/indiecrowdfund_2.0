@@ -967,6 +967,7 @@ export default function ProjectPage() {
             faqs={project.faqs}
             similarProjects={similarProjects}
             fullWidth={(project.layoutVersion ?? 1) >= 2}
+            askQuestionHref={`/dashboard/messages?projectId=${project.id}&recipientId=${project.creatorId}`}
           />
         )}
 

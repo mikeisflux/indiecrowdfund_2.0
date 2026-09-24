@@ -78,11 +78,15 @@ function MessagesContent() {
             </Badge>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="ghost" size="icon" className="relative hidden sm:flex">
-              <Bell className="h-5 w-5" />
+            <Button variant="ghost" size="icon" className="relative hidden sm:flex" asChild>
+              <Link href="/dashboard/notifications" aria-label="Notifications">
+                <Bell className="h-5 w-5" />
+              </Link>
             </Button>
-            <Button variant="ghost" size="icon" className="hidden sm:flex">
-              <Settings className="h-5 w-5" />
+            <Button variant="ghost" size="icon" className="hidden sm:flex" asChild>
+              <Link href="/dashboard/settings" aria-label="Settings">
+                <Settings className="h-5 w-5" />
+              </Link>
             </Button>
             <Avatar className="ring-2 ring-primary/20 h-8 w-8 sm:h-10 sm:w-10">
               <AvatarImage src={session.user.image || undefined} />

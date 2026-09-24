@@ -343,7 +343,7 @@ export function DigitalTab({
           </div>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={() => toast.info("Documentation for digital downloads is coming soon.")}>
+          <Button variant="outline" onClick={() => window.open("/indiekit-handbook?tab=digital-delivery", "_blank")}>
             Learn More
           </Button>
           <Button variant="outline" onClick={() => setShowViewDownloads(true)}>

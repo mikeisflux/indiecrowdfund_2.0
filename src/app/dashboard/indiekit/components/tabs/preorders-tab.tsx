@@ -188,11 +188,11 @@ export function PreOrdersTab({ stats, hasActiveCampaign = false }: PreOrdersTabP
         <CardContent>
           <div className="text-center py-8 text-muted-foreground">
             <AlertCircle className="h-12 w-12 mx-auto mb-4 opacity-50" />
-            <p>Pre-order store not yet configured</p>
-            <p className="text-sm mb-4">Set up your pre-order store after your campaign ends</p>
-            <Button variant="outline" disabled>
-              Configure Pre-Order Store
-            </Button>
+            <p>Pre-order stores aren&apos;t available yet</p>
+            <p className="text-sm">
+              Late pledges arriving through your campaign page after it ends show up
+              here automatically.
+            </p>
           </div>
         </CardContent>
       </Card>

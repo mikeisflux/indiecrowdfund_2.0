@@ -90,7 +90,6 @@ interface BackersTabProps {
   onToggleBackerSelection: (backerId: string) => void;
   onSelectAllBackers: () => void;
   onOpenBackerDetail: (backer: Backer) => void;
-  onPushSelectedOrders: () => void;
   hasActiveCampaign?: boolean;
   projectId?: string;
   onRefresh?: () => void;

@@ -8,6 +8,8 @@ import { Suspense, useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useSearchParams, useRouter } from "next/navigation";
+import { toast } from "sonner";
+import { apiFetch } from "@/lib/fetch-utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -774,6 +776,31 @@ function ProjectCard({ project }: { project: Project }) {
   );
 }
 
+// Follows a prelaunch campaign in place. The button sits inside the card's
+// Link, so without a handler a click just navigated (the "Follow" label
+// did nothing at all).
+async function followPrelaunch(e: React.MouseEvent, projectId: string) {
+  e.preventDefault();
+  e.stopPropagation();
+  try {
+    const res = await apiFetch("/api/user/following", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ projectId, type: "prelaunch" }),
+    });
+    if (res.ok) {
+      toast.success("Following — we'll notify you when this campaign launches");
+    } else if (res.status === 401) {
+      window.location.href = `/login?returnTo=${encodeURIComponent(window.location.pathname)}`;
+    } else {
+      const data = await res.json().catch(() => ({}));
+      toast.error(data.error || "Couldn't follow this campaign");
+    }
+  } catch {
+    toast.error("Couldn't follow this campaign");
+  }
+}
+
 function ProjectListItem({ project }: { project: Project }) {
   const fundingPercent = (Number(project.currentAmount) / Number(project.goalAmount)) * 100;
   const isPrelaunch = project.isPrelaunch;
@@ -876,7 +903,12 @@ function ProjectListItem({ project }: { project: Project }) {
                 by <span className="font-medium text-foreground/80">{project.creator.name}</span>
               </p>
               {isPrelaunch ? (
-                <Button variant="ghost" size="sm" className="text-amber-600 dark:text-amber-400 hover:text-amber-700 hover:bg-amber-100 dark:hover:bg-amber-900/30">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-amber-600 dark:text-amber-400 hover:text-amber-700 hover:bg-amber-100 dark:hover:bg-amber-900/30"
+                  onClick={(e) => followPrelaunch(e, project.id)}
+                >
                   <Bell className="mr-1.5 h-3.5 w-3.5" />
                   Follow to get notified
                 </Button>

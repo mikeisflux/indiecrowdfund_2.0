@@ -541,14 +541,6 @@ export default function IndieKitPage() {
     setIsBackerDialogOpen(true);
   };
 
-  const pushSelectedOrders = async () => {
-    if (selectedBackers.length === 0) {
-      toast.error("Please select orders to push");
-      return;
-    }
-    toast.success(`Pushing ${selectedBackers.length} orders to fulfillment...`);
-  };
-
   // Handle navigating from the workflow sidebar
   const handleNavigateFromWorkflow = (tab: string) => {
     // Map v1 tab names to v2 navigation
@@ -835,7 +827,6 @@ export default function IndieKitPage() {
                   onToggleBackerSelection={toggleBackerSelection}
                   onSelectAllBackers={selectAllBackers}
                   onOpenBackerDetail={openBackerDetail}
-                  onPushSelectedOrders={pushSelectedOrders}
                   hasActiveCampaign={hasActiveCampaign}
                   projectId={selectedProjectId}
                   onRefresh={fetchData}
@@ -877,7 +868,7 @@ export default function IndieKitPage() {
               )}
 
               {activeSection === "always" && activeAlwaysTab === "account" && (
-                <AccountSettingsTab />
+                <AccountSettingsTab userEmail={userEmail} />
               )}
 
               {activeSection === "always" && activeAlwaysTab === "refund-requests" && (

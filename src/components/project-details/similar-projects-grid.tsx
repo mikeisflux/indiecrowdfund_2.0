@@ -1,11 +1,15 @@
 "use client";
 
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
+import { toast } from "sonner";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Bookmark, Clock, Heart } from "lucide-react";
 import { formatTimeRemaining } from "@/lib/utils";
+import { apiFetch } from "@/lib/fetch-utils";
 import { SimilarProject } from "./types";
 
 interface SimilarProjectsGridProps {
@@ -18,6 +22,55 @@ interface SimilarProjectsGridProps {
 // nowhere — consolidating them here so the image/link/format rules
 // only live in one place and can't drift apart again.
 export function SimilarProjectsGrid({ projects }: SimilarProjectsGridProps) {
+  const router = useRouter();
+  const [followedIds, setFollowedIds] = useState<Set<string>>(new Set());
+  const [followingId, setFollowingId] = useState<string | null>(null);
+
+  // The bookmark sits inside the card's Link, so stop the navigation and
+  // follow the project instead (same API as the project page's Follow).
+  const handleBookmark = async (e: React.MouseEvent, projectId: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (followingId) return;
+    if (followedIds.has(projectId)) {
+      setFollowingId(projectId);
+      try {
+        const res = await apiFetch(`/api/user/following?projectId=${projectId}`, { method: "DELETE" });
+        if (res.ok) {
+          setFollowedIds((prev) => {
+            const next = new Set(prev);
+            next.delete(projectId);
+            return next;
+          });
+          toast.success("Removed from your followed projects");
+        }
+      } finally {
+        setFollowingId(null);
+      }
+      return;
+    }
+    setFollowingId(projectId);
+    try {
+      const res = await apiFetch("/api/user/following", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ projectId, type: "live" }),
+      });
+      if (res.ok) {
+        setFollowedIds((prev) => new Set(prev).add(projectId));
+        toast.success("Following — you'll get updates about this project");
+      } else if (res.status === 401) {
+        router.push(`/login?returnTo=${encodeURIComponent(window.location.pathname)}`);
+      } else {
+        toast.error("Couldn't follow this project");
+      }
+    } catch {
+      toast.error("Couldn't follow this project");
+    } finally {
+      setFollowingId(null);
+    }
+  };
+
   if (projects.length === 0) return null;
 
   return (
@@ -36,8 +89,8 @@ export function SimilarProjectsGrid({ projects }: SimilarProjectsGridProps) {
     <div className="relative z-40 isolate bg-background">
       <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
         <h3 className="text-lg font-semibold">Similar projects to check out</h3>
-        <Button variant="outline" size="sm">
-          See more
+        <Button variant="outline" size="sm" asChild>
+          <Link href="/crowdfunds">See more</Link>
         </Button>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -87,8 +140,15 @@ export function SimilarProjectsGrid({ projects }: SimilarProjectsGridProps) {
                     <span>{project.fundedPercent}% funded</span>
                   </div>
                 </div>
-                <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0" aria-label="Bookmark">
-                  <Bookmark className="h-4 w-4" />
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 flex-shrink-0"
+                  aria-label={followedIds.has(project.id) ? "Unfollow project" : "Follow project"}
+                  onClick={(e) => handleBookmark(e, project.id)}
+                  disabled={followingId === project.id}
+                >
+                  <Bookmark className={`h-4 w-4 ${followedIds.has(project.id) ? "fill-current text-primary" : ""}`} />
                 </Button>
               </div>
             </Link>

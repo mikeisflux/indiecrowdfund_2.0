@@ -48,11 +48,10 @@ import { BackersList } from "./components/BackersList";
 import { ProductionOrderView } from "./components/ProductionOrderView";
 import { CollaborationsTab } from "./components/CollaborationsTab";
 import { PostUpdatesTab } from "./components/PostUpdatesTab";
-import { SocialHubTab } from "./components/SocialHubTab";
 import { IndieKitTab } from "./components/IndieKitTab";
 import { PrintingComicsTab } from "./indiekit/components/tabs/PrintingComicsTab";
-// The old Email tab UI was merged into Messages (unified inbox). The
-// EmailTab/InboxTab components stay in the repo but are no longer routed.
+// The old Email tab UI was merged into Messages (unified inbox); its
+// EmailTab/InboxTab components have been removed.
 import { LiveStreamTab } from "./components/LiveStreamTab";
 
 const SELECTED_PROJECT_KEY = "indiecrowdfund_selected_project";
@@ -67,7 +66,6 @@ const NAV_TIPS: Record<string, { tip: string; href: string }> = {
   "messages": { tip: "Your unified inbox — replies reach backers as real email from your creator address.", href: "/creator-handbook?tab=manage" },
   "live-stream": { tip: "Go live for your backers right from the dashboard.", href: "/creator-handbook?tab=promotion" },
   "updates": { tip: "Post progress updates that notify everyone who backed or follows you.", href: "/creator-handbook?tab=manage" },
-  "social": { tip: "Schedule and share campaign posts across your social accounts.", href: "/creator-handbook?tab=promotion" },
   "indiekit": { tip: "The fulfillment toolkit — surveys, payments, shipping, and delivery.", href: "/indiekit-handbook" },
   "printing-comics": { tip: "Order print runs and hard-copy proofs for your book.", href: "/indiekit-handbook?tab=printing-comics" },
   "production-order": { tip: "What to produce: per-item quantities, locked orders, and shipped counts.", href: "/indiekit-handbook?tab=reports" },
@@ -463,7 +461,6 @@ export default function CreatorDashboard() {
                   <div className="flex flex-wrap gap-1">
                     {([
                       { value: "updates", icon: FileText, label: "Post Updates", gradient: "from-amber-500 to-orange-500" },
-                      { value: "social", icon: Sparkles, label: "Social Hub", gradient: "from-pink-500 to-rose-500" },
                     ] as const).map(({ value, icon: Icon, label, gradient }) => (
                       <HelpTooltip key={value} tip={NAV_TIPS[value]?.tip || label} href={NAV_TIPS[value]?.href}>
                         <button
@@ -571,10 +568,6 @@ export default function CreatorDashboard() {
 
               <TabsContent value="updates" className="space-y-6">
                 <PostUpdatesTab projectId={selectedProjectId} />
-              </TabsContent>
-
-              <TabsContent value="social" className="space-y-6">
-                <SocialHubTab />
               </TabsContent>
 
               <TabsContent value="indiekit" className="space-y-6">

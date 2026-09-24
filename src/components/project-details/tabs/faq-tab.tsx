@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,6 +9,8 @@ import { SimilarProject } from "../types";
 import { SimilarProjectsGrid } from "../similar-projects-grid";
 
 interface FaqTabProps {
+  /** Where "Ask a question" goes — the message-the-creator thread. */
+  askQuestionHref?: string;
   faqs: { question: string; answer: string }[];
   similarProjects: SimilarProject[];
   /**
@@ -18,7 +21,7 @@ interface FaqTabProps {
   fullWidth?: boolean;
 }
 
-export function FaqTab({ faqs, similarProjects, fullWidth = false }: FaqTabProps) {
+export function FaqTab({ askQuestionHref, faqs, similarProjects, fullWidth = false }: FaqTabProps) {
   const [expandedFaqs, setExpandedFaqs] = useState<number[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -99,9 +102,11 @@ export function FaqTab({ faqs, similarProjects, fullWidth = false }: FaqTabProps
             <p className={fullWidth ? "text-muted-foreground" : "text-muted-foreground mb-4"}>
               Don&apos;t see the answer to your question? Ask the project creator directly.
             </p>
-            <Button variant="outline" className={fullWidth ? "sm:w-auto" : "w-full"}>
-              Ask a question
-            </Button>
+            {askQuestionHref ? (
+              <Button variant="outline" className={fullWidth ? "sm:w-auto" : "w-full"} asChild>
+                <Link href={askQuestionHref}>Ask a question</Link>
+              </Button>
+            ) : null}
           </div>
         </div>
       </div>
