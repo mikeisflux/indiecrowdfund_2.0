@@ -127,11 +127,20 @@ export async function POST(req: NextRequest) {
         }),
       });
       const data = (await res.json().catch(() => ({}))) as { error?: string };
-      const ok = data.error !== "invalid_client";
+      // Only the expected "wrong grant type" answers prove the client is
+      // valid; anything else (5xx, HTML error page, network oddity) must
+      // not read as a pass.
+      const ok = data.error === "unsupported_grant_type" || data.error === "invalid_grant";
       return NextResponse.json(
         ok
           ? { ok: true, message: "Google OAuth client credentials are valid" }
-          : { ok: false, message: "Google rejected the client ID/secret (invalid_client)" },
+          : {
+              ok: false,
+              message:
+                data.error === "invalid_client"
+                  ? "Google rejected the client ID/secret (invalid_client)"
+                  : `Google returned an unexpected response (${data.error || res.status}) — credentials could not be verified`,
+            },
         { status: ok ? 200 : 400 }
       );
     }

@@ -151,7 +151,7 @@ export function SettingsTab({
 
           <ShippingProvidersSection activeSection={activeSection} />
 
-          {activeSection === "team" && <TeamSection />}
+          {activeSection === "team" && <TeamSection projectId={projectId} />}
         </div>
       </div>
     </div>

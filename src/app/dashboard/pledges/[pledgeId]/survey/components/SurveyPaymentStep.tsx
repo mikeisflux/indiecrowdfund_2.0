@@ -45,7 +45,7 @@ function SurveyPaymentForm({
       const result = await stripe.confirmPayment({
         elements,
         confirmParams: {
-          return_url: `${window.location.origin}/dashboard/backer?tab=wallet`,
+          return_url: `${window.location.origin}/dashboard/backer?tab=backed`,
         },
         redirect: "if_required",
       });

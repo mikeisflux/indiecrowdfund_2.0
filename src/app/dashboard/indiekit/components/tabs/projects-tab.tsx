@@ -104,7 +104,7 @@ export function ProjectsTab({
             </p>
             <Button
               className="bg-teal-600 hover:bg-teal-700"
-              onClick={() => window.location.href = "/dashboard/create"}
+              onClick={() => window.location.href = "/projects/new"}
             >
               <Plus className="h-4 w-4 mr-2" />
               Create a Project
@@ -251,7 +251,7 @@ export function ProjectsTab({
             </p>
             <Button
               variant="outline"
-              onClick={() => window.location.href = "/dashboard/create"}
+              onClick={() => window.location.href = "/projects/new"}
             >
               <Plus className="h-4 w-4 mr-2" />
               Create Project
@@ -272,7 +272,7 @@ export function ProjectsTab({
             </p>
             <Button
               className="bg-teal-600 hover:bg-teal-700"
-              onClick={() => window.location.href = "/dashboard/create"}
+              onClick={() => window.location.href = "/projects/new"}
             >
               <Plus className="h-4 w-4 mr-2" />
               Create Your First Project
@@ -296,7 +296,7 @@ export function ProjectsTab({
                 className="w-full justify-start h-auto py-4 bg-teal-600 hover:bg-teal-700"
                 onClick={() => {
                   setIsConnectDialogOpen(false);
-                  window.location.href = "/dashboard/create";
+                  window.location.href = "/projects/new";
                 }}
               >
                 <div className="text-left">

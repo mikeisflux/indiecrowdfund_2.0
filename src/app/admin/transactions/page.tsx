@@ -175,6 +175,7 @@ export default function TransactionsPage() {
         transactionDetail={transactionDetail}
         isLoadingDetail={isLoadingDetail}
         onClose={handleCloseDetail}
+        onChanged={() => fetchTransactions(pagination.page)}
       />
     </div>
   );

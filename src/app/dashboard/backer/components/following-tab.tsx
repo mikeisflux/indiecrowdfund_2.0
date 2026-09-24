@@ -310,13 +310,13 @@ export function FollowingTab() {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
                           <Link
-                            href={creator.vanityUrl ? `/${creator.vanityUrl}` : `/creators/${creator.id}`}
+                            href={`/u/${creator.vanityUrl || creator.id}`}
                             className="font-semibold hover:text-primary transition-colors"
                           >
                             {creator.name}
                           </Link>
                           <Button variant="ghost" size="icon" className="h-6 w-6" asChild>
-                            <Link href={creator.vanityUrl ? `/${creator.vanityUrl}` : `/creators/${creator.id}`}>
+                            <Link href={`/u/${creator.vanityUrl || creator.id}`}>
                               <ExternalLink className="h-3 w-3" />
                             </Link>
                           </Button>

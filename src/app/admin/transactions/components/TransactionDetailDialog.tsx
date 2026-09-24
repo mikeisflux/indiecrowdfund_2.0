@@ -15,7 +15,7 @@ import {
   Copy,
 } from "lucide-react";
 import { format } from "date-fns";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
@@ -29,6 +29,8 @@ interface TransactionDetailDialogProps {
   transactionDetail: TransactionDetail | null;
   isLoadingDetail: boolean;
   onClose: () => void;
+  /** Called after a chargeback is recorded so the list reflects the new status. */
+  onChanged?: () => void;
 }
 
 export function TransactionDetailDialog({
@@ -36,6 +38,7 @@ export function TransactionDetailDialog({
   transactionDetail,
   isLoadingDetail,
   onClose,
+  onChanged,
 }: TransactionDetailDialogProps) {
   // Manual chargeback recording (backed by /api/admin/pledges/chargeback,
   // which was curl-only). Flips the pledge to CHARGEBACK and runs the
@@ -43,6 +46,13 @@ export function TransactionDetailDialog({
   const [showChargebackForm, setShowChargebackForm] = useState(false);
   const [chargebackReason, setChargebackReason] = useState("");
   const [recordingChargeback, setRecordingChargeback] = useState(false);
+
+  // The dialog component stays mounted across transactions — without this
+  // an open form and half-typed reason carry over to the next row opened.
+  useEffect(() => {
+    setShowChargebackForm(false);
+    setChargebackReason("");
+  }, [selectedTransaction?.id]);
 
   const recordChargeback = async () => {
     if (!selectedTransaction) return;
@@ -62,6 +72,7 @@ export function TransactionDetailDialog({
       toast.success("Chargeback recorded — pledge marked CHARGEBACK");
       setShowChargebackForm(false);
       setChargebackReason("");
+      onChanged?.();
       onClose();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed to record chargeback");

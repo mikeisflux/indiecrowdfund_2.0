@@ -109,7 +109,7 @@ interface HealthData {
 }
 
 export default function AdminDashboard() {
-  const [timeRange, setTimeRange] = useState("7d");
+  const [timeRange, setTimeRange] = useState("30d");
   // Maintenance mode, on the dashboard rather than four tabs deep in Settings.
   // Taking the site down is the thing you reach for when something is on fire,
   // and hunting for it through a scrolling tab strip is not what you want to be
@@ -263,7 +263,9 @@ export default function AdminDashboard() {
     {
       title: "Total Projects",
       value: stats.totalProjects.toLocaleString(),
-      change: `+${stats.projectsThisMonth} this month`,
+      // projectsThisMonth counts the SELECTED window server-side, so label
+      // it by the window instead of a hardcoded "this month".
+      change: `+${stats.projectsThisMonth} in ${timeRange === "24h" ? "24 hours" : timeRange === "7d" ? "7 days" : timeRange === "90d" ? "90 days" : "30 days"}`,
       trend: "up",
       color: "emerald",
       icon: FolderKanban,

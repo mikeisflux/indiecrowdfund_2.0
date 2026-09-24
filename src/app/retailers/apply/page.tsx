@@ -665,8 +665,8 @@ export default function RetailerApplyPage() {
                       />
                       <label htmlFor="agreeToTerms" className="text-sm">
                         I agree to the{" "}
-                        <Link href="/retailers/terms" className="text-emerald-600 hover:underline">
-                          Retailer Terms of Service
+                        <Link href="/terms" className="text-emerald-600 hover:underline">
+                          Terms of Service
                         </Link>{" "}
                         and understand the program requirements.
                       </label>

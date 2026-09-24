@@ -143,7 +143,7 @@ export function CommandPalette() {
               <CommandItem value="my pledges backer" onSelect={() => go("/dashboard/backer")}>
                 <HeartHandshake className="mr-2 h-4 w-4" /> My pledges
               </CommandItem>
-              <CommandItem value="start a campaign create" onSelect={() => go("/dashboard/create")}>
+              <CommandItem value="start a campaign create" onSelect={() => go("/projects/new")}>
                 <Rocket className="mr-2 h-4 w-4" /> Start a campaign
               </CommandItem>
             </CommandGroup>

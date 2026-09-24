@@ -179,10 +179,12 @@ export function TeaserPagesTab({ hasActiveCampaign = false }: TeaserPagesTabProp
   };
 
   const getPageUrl = (page: PrelaunchPage) => {
-    if (page.vanityUrl) {
-      return `/${page.vanityUrl}/${page.slug}/prelaunch`;
+    // The public prelaunch page lives under /projects/[vanityname]/[slug]/
+    // prelaunch — the old single-segment /<vanity>/<slug> URL was a 404.
+    if (page.vanityUrl && page.slug) {
+      return `/projects/${page.vanityUrl}/${page.slug}/prelaunch`;
     }
-    return `/projects/${page.id}/prelaunch`;
+    return null;
   };
 
   const getStatusBadge = (page: PrelaunchPage) => {
@@ -282,8 +284,12 @@ export function TeaserPagesTab({ hasActiveCampaign = false }: TeaserPagesTabProp
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => window.open(getPageUrl(page), "_blank")}
-                        disabled={actionLoading === page.id}
+                        onClick={() => {
+                          const url = getPageUrl(page);
+                          if (url) window.open(url, "_blank");
+                          else toast.error("Set a creator vanity URL to get a public prelaunch link");
+                        }}
+                        disabled={actionLoading === page.id || !getPageUrl(page)}
                       >
                         <Eye className="h-4 w-4 mr-2" />
                         View
@@ -332,9 +338,9 @@ export function TeaserPagesTab({ hasActiveCampaign = false }: TeaserPagesTabProp
                   <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
                     <div>
                       <p className="text-muted-foreground">URL</p>
-                      {page.prelaunchActive ? (
+                      {page.prelaunchActive && getPageUrl(page) ? (
                         <a
-                          href={getPageUrl(page)}
+                          href={getPageUrl(page)!}
                           className="text-teal-600 hover:underline flex items-center gap-1"
                           target="_blank"
                           rel="noopener noreferrer"

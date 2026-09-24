@@ -83,14 +83,20 @@ function nextCronRun(expr: string): Date | null {
   };
   const [min, hour, dom, month, dow] = parts;
   let t = Math.ceil(Date.now() / 60000) * 60000 + 60000;
-  for (let i = 0; i < 40 * 24 * 60; i++, t += 60000) {
+  // 400 days covers yearly schedules like "0 0 1 1 *", which the old
+  // 40-day scan wrongly reported as invalid.
+  for (let i = 0; i < 400 * 24 * 60; i++, t += 60000) {
     const d = new Date(t);
+    // Standard cron OR-semantics when both day fields are restricted.
+    const domMatch = fieldMatches(dom, d.getDate(), 1, 31);
+    const dowMatch = fieldMatches(dow.replace(/\b7\b/g, "0"), d.getDay(), 0, 6);
+    const dayMatch =
+      dom !== "*" && dow !== "*" ? domMatch || dowMatch : domMatch && dowMatch;
     if (
       fieldMatches(min, d.getMinutes(), 0, 59) &&
       fieldMatches(hour, d.getHours(), 0, 23) &&
-      fieldMatches(dom, d.getDate(), 1, 31) &&
       fieldMatches(month, d.getMonth() + 1, 1, 12) &&
-      fieldMatches(dow.replace(/\b7\b/g, "0"), d.getDay(), 0, 6)
+      dayMatch
     ) {
       return d;
     }

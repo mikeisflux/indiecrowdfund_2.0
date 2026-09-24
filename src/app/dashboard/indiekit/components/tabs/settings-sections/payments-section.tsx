@@ -198,23 +198,26 @@ export function PaymentsSection({ projectId }: PaymentsSectionProps) {
     fetchBankStatus();
   }, [projectProcessor]);
 
-  const handleMigrateToPayPal = async () => {
+  // Stripe (and PayPal) are retired pay-in processors. Legacy Stripe
+  // campaigns migrate onto Divinity Payments — never onto PayPal, which is
+  // withdrawn and must not take new pledges.
+  const handleMigrateToDivinity = async () => {
     if (!projectId) return;
     setIsMigrating(true);
     try {
       const res = await apiFetch(`/api/projects/${projectId}/payment`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ paymentProcessor: "PAYPAL" }),
+        body: JSON.stringify({ paymentProcessor: "DIVINITYCOIN" }),
       });
       if (!res.ok) {
         const data = await res.json();
         throw new Error(data.error || "Failed to switch processor");
       }
-      setProjectProcessor("PAYPAL");
-      toast.success("Switched to PayPal! New pledges will now use PayPal checkout.");
+      setProjectProcessor("DIVINITYCOIN");
+      toast.success("Switched to Divinity Payments! New pledges will now use Divinity checkout.");
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to switch to PayPal");
+      toast.error(err instanceof Error ? err.message : "Failed to switch processor");
     } finally {
       setIsMigrating(false);
     }
@@ -314,18 +317,18 @@ export function PaymentsSection({ projectId }: PaymentsSectionProps) {
               Your campaign is using Stripe (legacy processor)
             </p>
             <p className="text-sm text-amber-800 dark:text-amber-300 mt-0.5">
-              IndieCrowdfund has switched to PayPal as the primary payment processor. Switch your live campaign now — existing pledges are unaffected, and new pledges will use PayPal checkout immediately.
+              Stripe has been retired on IndieCrowdfund. Switch your campaign to Divinity Payments — existing pledges are unaffected, and new pledges will use Divinity checkout immediately.
             </p>
           </div>
           <Button
-            onClick={handleMigrateToPayPal}
+            onClick={handleMigrateToDivinity}
             disabled={isMigrating}
             className="bg-amber-600 hover:bg-amber-700 text-white whitespace-nowrap flex-shrink-0"
           >
             {isMigrating ? (
               <><Loader2 className="h-4 w-4 animate-spin mr-2" />Switching...</>
             ) : (
-              "Switch to PayPal"
+              "Switch to Divinity Payments"
             )}
           </Button>
         </div>

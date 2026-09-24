@@ -9,6 +9,7 @@ import { invalidatePayPalConnectConfigCache } from "@/lib/payments/paypal-connec
 import { invalidateWhopConfigCache } from "@/lib/payments/whop";
 import { encryptSecret } from "@/lib/vault";
 import { invalidateThemeConfig } from "@/lib/theme-config";
+import { invalidateBranding } from "@/lib/branding";
 
 const settingsLogger = logger.child({ module: "admin-settings" });
 
@@ -536,6 +537,12 @@ export async function PATCH(req: NextRequest) {
 
     if (section === "theme") {
       invalidateThemeConfig();
+    }
+
+    // Site name / description / logo / favicon feed the cached branding
+    // getter — without this a General save lags up to 60s per worker.
+    if (section === "general") {
+      invalidateBranding();
     }
 
     // Invalidate payment config caches if payment settings were changed

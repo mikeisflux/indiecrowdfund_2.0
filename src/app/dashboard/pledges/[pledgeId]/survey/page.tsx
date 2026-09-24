@@ -316,7 +316,7 @@ export default function BackerSurveyPage() {
       // Go to payment step - survey is saved, now we need to charge for addons
       setCurrentStep("payment");
     } else {
-      router.push("/dashboard/backer?tab=wallet");
+      router.push("/dashboard/backer?tab=backed");
     }
   };
 
@@ -437,7 +437,7 @@ export default function BackerSurveyPage() {
     }
 
     // Redirect to dashboard
-    router.push("/dashboard/backer?tab=wallet");
+    router.push("/dashboard/backer?tab=backed");
   };
 
   const handlePaymentError = (message: string) => {

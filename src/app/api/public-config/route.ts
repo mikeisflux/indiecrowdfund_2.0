@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { decryptSecret } from "@/lib/vault";
+import { getPasswordPolicy } from "@/lib/auth/password-policy";
 
 export const dynamic = "force-dynamic";
 
@@ -34,8 +35,13 @@ export async function GET() {
     googlePlacesApiKey = process.env.NEXT_PUBLIC_GOOGLE_PLACES_API_KEY || null;
   }
 
+  // The password policy is enforced server-side on register/reset/change;
+  // exposing it lets the strength meters show the SAME rules instead of a
+  // hardcoded list that can read all-green while the server still rejects.
+  const passwordPolicy = await getPasswordPolicy();
+
   return NextResponse.json(
-    { googlePlacesApiKey },
+    { googlePlacesApiKey, passwordPolicy },
     { headers: { "Cache-Control": "public, max-age=300" } }
   );
 }

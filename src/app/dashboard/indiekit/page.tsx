@@ -400,6 +400,49 @@ export default function IndieKitPage() {
     setActivePhaseTab(target as PhaseTab);
   }, [searchParams]);
 
+  // Deep-link handler: ?tab=<name>. Several flows link here with ?tab=
+  // (the email editor's back/after-send links, the Shopify install
+  // redirect, overview fallbacks) and the param used to be ignored —
+  // everyone landed on the default view.
+  const handledTabDeepLinkRef = useRef<string | null>(null);
+  useEffect(() => {
+    const target = searchParams?.get("tab");
+    if (!target) return;
+    if (handledTabDeepLinkRef.current === target) return;
+
+    const alwaysMap: Record<string, AlwaysAvailableTab> = {
+      emails: "email-marketing",
+      "email-marketing": "email-marketing",
+      backers: "backers",
+      updates: "updates",
+      settings: "settings",
+      projects: "projects",
+    };
+    const phaseMap: Record<string, PhaseTab> = {
+      packages: "physical-delivery",
+      "physical-delivery": "physical-delivery",
+      timeline: "reports",
+      reports: "reports",
+      surveys: "surveys",
+    };
+    if (alwaysMap[target]) {
+      handledTabDeepLinkRef.current = target;
+      setActiveSection("always");
+      setActiveAlwaysTab(alwaysMap[target]);
+    } else if (phaseMap[target]) {
+      handledTabDeepLinkRef.current = target;
+      const owner: [FulfillmentPhase, { id: PhaseTab }[]][] = [
+        ["pre-fulfillment", PRE_FULFILLMENT_TABS],
+        ["fulfillment", FULFILLMENT_TABS],
+        ["post-fulfillment", POST_FULFILLMENT_TABS],
+      ];
+      const match = owner.find(([, tabs]) => tabs.some((t) => t.id === phaseMap[target]));
+      if (match) setActivePhase(match[0]);
+      setActiveSection("phase");
+      setActivePhaseTab(phaseMap[target]);
+    }
+  }, [searchParams]);
+
   // Deep-link handler: ?backer=<pledgeId> auto-opens the BackerDialog
   // for that specific pledge once backers have loaded. Used by the
   // messaging "click a transaction" flow. Fires once per pledgeId so a
@@ -673,7 +716,7 @@ export default function IndieKitPage() {
               <div className="mb-6">
                 <WhatsNextBanner
                   upcomingProjectsCount={3}
-                  onTellUsClick={() => window.location.href = "/dashboard/create"}
+                  onTellUsClick={() => window.location.href = "/projects/new"}
                   onViewProjects={() => handleSelectAlwaysTab("projects")}
                 />
               </div>
@@ -765,8 +808,17 @@ export default function IndieKitPage() {
                       updates: "updates",
                       settings: "settings",
                     };
+                    // v1 phase-scoped tabs live under Fulfillment /
+                    // Reports in v2 ("Start Shipping", "View Report",
+                    // Recent Activity "View All" were dead without these).
+                    const phaseMapping: Record<string, PhaseTab> = {
+                      packages: "physical-delivery",
+                      timeline: "reports",
+                    };
                     if (alwaysMapping[tab]) {
                       handleSelectAlwaysTab(alwaysMapping[tab]);
+                    } else if (phaseMapping[tab]) {
+                      handleSelectPhaseTab(phaseMapping[tab]);
                     }
                   }}
                 />

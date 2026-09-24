@@ -13,8 +13,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader2, CheckCircle, XCircle, ArrowLeft } from "lucide-react";
+import { usePasswordPolicy } from "./register-form";
 
 export function ResetPasswordForm() {
+  const passwordPolicy = usePasswordPolicy();
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -173,12 +175,17 @@ export function ResetPasswordForm() {
             id="password"
             name="password"
             type="password"
-            placeholder="At least 8 characters"
+            placeholder={`At least ${passwordPolicy.minLength} characters`}
             autoComplete="new-password"
             required
-            minLength={8}
+            minLength={passwordPolicy.minLength}
             disabled={isLoading}
           />
+          {passwordPolicy.requireSpecialChars && (
+            <p className="text-xs text-muted-foreground">
+              Must include at least one special character (e.g. ! @ # $ %)
+            </p>
+          )}
         </div>
 
         <div className="space-y-2">

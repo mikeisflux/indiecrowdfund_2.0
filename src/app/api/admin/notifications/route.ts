@@ -50,7 +50,7 @@ export async function GET(request: Request) {
 
     // Get admin's read notifications from their preferences (stored in AdminSetting or a cache)
     const adminId = authResult.user.id;
-    const readNotifications = await getReadNotificationIds(adminId);
+    const { readIds: readNotifications, allReadBefore } = await getReadState(adminId);
 
     const notifications: AdminNotification[] = [];
     const now = new Date();
@@ -286,14 +286,23 @@ export async function GET(request: Request) {
       });
     }
 
+    // "Mark all read" stores a watermark; everything older than it reads
+    // as read even though its id isn't in the (500-capped) readIds list.
+    if (allReadBefore) {
+      for (const n of notifications) {
+        if (n.createdAt <= allReadBefore) n.read = true;
+      }
+    }
+
     // Sort by date (newest first) and apply filters
     // Dismissed notifications stay dismissed across reloads (the old
     // Delete button only hid the row until refresh).
     const dismissed = await getDismissedNotificationIds(adminId);
-    let sortedNotifications = notifications
+    const visibleNotifications = notifications
       .filter((n) => !dismissed.has(n.id))
       .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
 
+    let sortedNotifications = visibleNotifications;
     if (unreadOnly) {
       sortedNotifications = sortedNotifications.filter(n => !n.read);
     }
@@ -301,9 +310,10 @@ export async function GET(request: Request) {
     // Limit results
     sortedNotifications = sortedNotifications.slice(0, limit);
 
-    // Calculate stats
-    const unreadCount = notifications.filter(n => !n.read).length;
-    const todayCount = notifications.filter(
+    // Stats count what the admin can still see — a dismissed notification
+    // must not keep the Unread badge lit.
+    const unreadCount = visibleNotifications.filter(n => !n.read).length;
+    const todayCount = visibleNotifications.filter(
       n => n.createdAt > oneDayAgo
     ).length;
 
@@ -317,10 +327,10 @@ export async function GET(request: Request) {
       notifications: sortedNotifications,
       preferences: prefsRow?.value ?? null,
       stats: {
-        total: notifications.length,
+        total: visibleNotifications.length,
         unread: unreadCount,
         today: todayCount,
-        thisWeek: notifications.length,
+        thisWeek: visibleNotifications.length,
       },
     });
   } catch (error) {
@@ -412,18 +422,33 @@ async function dismissNotifications(adminId: string, notificationIds: string[]) 
 
 // Helper functions for managing read state
 async function getReadNotificationIds(adminId: string): Promise<Set<string>> {
+  return (await getReadState(adminId)).readIds;
+}
+
+/**
+ * Read-state = the individually-read ids PLUS the "Mark all read"
+ * watermark. markAllRead stores allReadBefore, which the GET previously
+ * never consulted — so one reload after "Mark all read" brought every
+ * notification back as unread.
+ */
+async function getReadState(
+  adminId: string
+): Promise<{ readIds: Set<string>; allReadBefore: Date | null }> {
   try {
     const setting = await db.adminSetting.findUnique({
       where: { key: `admin_read_notifications_${adminId}` },
     });
     if (setting?.value) {
-      const data = setting.value as { readIds?: string[] };
-      return new Set(data.readIds || []);
+      const data = setting.value as { readIds?: string[]; allReadBefore?: string };
+      return {
+        readIds: new Set(data.readIds || []),
+        allReadBefore: data.allReadBefore ? new Date(data.allReadBefore) : null,
+      };
     }
   } catch {
-    // Ignore errors, return empty set
+    // Ignore errors, return empty state
   }
-  return new Set();
+  return { readIds: new Set(), allReadBefore: null };
 }
 
 async function markNotificationsAsRead(adminId: string, notificationIds: string[]) {

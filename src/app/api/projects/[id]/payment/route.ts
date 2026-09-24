@@ -142,12 +142,20 @@ export async function POST(
 
     // Handle explicit payment processor change
     if (data.paymentProcessor !== undefined) {
-      // NSFW campaigns can NEVER switch to Stripe or PayPal
-      const isNsfw = (data.hasAdultContent ?? currentProject?.hasAdultContent) ||
-                     (data.hasRiskyContent ?? currentProject?.hasRiskyContent);
-      if ((data.paymentProcessor === "STRIPE" || data.paymentProcessor === "PAYPAL") && isNsfw) {
+      // PayPal and Stripe are withdrawn as pay-in processors: campaigns that
+      // ran on them are still serviced (captures, refunds, payouts), but no
+      // campaign may MOVE onto them and open new checkouts. The builder
+      // re-sends the stored processor on every save, so an unchanged value
+      // is a no-op rather than a rejection.
+      const isRetired = data.paymentProcessor === "STRIPE" || data.paymentProcessor === "PAYPAL";
+      if (isRetired && data.paymentProcessor !== currentProject?.paymentProcessor) {
         return NextResponse.json(
-          { error: "Projects with adult or controversial content cannot use Stripe or PayPal" },
+          {
+            error:
+              data.paymentProcessor === "PAYPAL"
+                ? "PayPal has been retired as a payment processor — new pledges can't be taken through it. Use Divinity Payments or Whop."
+                : "Stripe has been retired as a payment processor — use Divinity Payments or Whop.",
+          },
           { status: 400 }
         );
       }

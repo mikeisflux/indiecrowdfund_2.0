@@ -18,11 +18,53 @@ interface PasswordRequirement {
   met: boolean;
 }
 
-function PasswordStrengthIndicator({ password }: { password: string }) {
+export interface ClientPasswordPolicy {
+  minLength: number;
+  requireSpecialChars: boolean;
+}
+
+const DEFAULT_POLICY: ClientPasswordPolicy = { minLength: 8, requireSpecialChars: true };
+
+/**
+ * The admin-configured policy the server actually enforces, so the meter
+ * can't read all-green on a password the server will reject.
+ */
+export function usePasswordPolicy(): ClientPasswordPolicy {
+  const [policy, setPolicy] = useState<ClientPasswordPolicy>(DEFAULT_POLICY);
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/public-config")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (!cancelled && data?.passwordPolicy?.minLength) {
+          setPolicy({
+            minLength: data.passwordPolicy.minLength,
+            requireSpecialChars: data.passwordPolicy.requireSpecialChars !== false,
+          });
+        }
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+  return policy;
+}
+
+function PasswordStrengthIndicator({
+  password,
+  policy = DEFAULT_POLICY,
+}: {
+  password: string;
+  policy?: ClientPasswordPolicy;
+}) {
   const requirements: PasswordRequirement[] = [
-    { label: "At least 8 characters", met: password.length >= 8 },
+    { label: `At least ${policy.minLength} characters`, met: password.length >= policy.minLength },
     { label: "At least one uppercase letter", met: /[A-Z]/.test(password) },
     { label: "At least one number", met: /[0-9]/.test(password) },
+    ...(policy.requireSpecialChars
+      ? [{ label: "At least one special character (e.g. ! @ # $ %)", met: /[^a-zA-Z0-9]/.test(password) }]
+      : []),
   ];
 
   const metCount = requirements.filter((r) => r.met).length;
@@ -83,6 +125,7 @@ function PasswordStrengthIndicator({ password }: { password: string }) {
 }
 
 export function RegisterForm() {
+  const passwordPolicy = usePasswordPolicy();
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [password, setPassword] = useState("");
@@ -248,7 +291,7 @@ export function RegisterForm() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
           />
-          <PasswordStrengthIndicator password={password} />
+          <PasswordStrengthIndicator password={password} policy={passwordPolicy} />
         </div>
 
         {/* Honeypot field - hidden from users, bots will fill it */}

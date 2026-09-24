@@ -70,13 +70,21 @@ function cronMatches(expr: string, d: Date): boolean {
   const parts = expr.trim().split(/\s+/);
   if (parts.length !== 5) return false;
   const [min, hour, dom, month, dow] = parts;
+  // Standard cron: when BOTH day-of-month and day-of-week are restricted
+  // (neither is *), the day matches if EITHER does — "0 0 1 * 1" means the
+  // 1st of the month OR every Monday, not only a Monday-the-1st.
+  const domRestricted = dom !== "*";
+  const dowRestricted = dow !== "*";
+  const domMatch = fieldMatches(dom, d.getDate(), 1, 31);
+  // "7" as Sunday (common cron dialect) normalizes to 0.
+  const dowMatch = fieldMatches(dow.replace(/\b7\b/g, "0"), d.getDay(), 0, 6);
+  const dayMatch =
+    domRestricted && dowRestricted ? domMatch || dowMatch : domMatch && dowMatch;
   return (
     fieldMatches(min, d.getMinutes(), 0, 59) &&
     fieldMatches(hour, d.getHours(), 0, 23) &&
-    fieldMatches(dom, d.getDate(), 1, 31) &&
     fieldMatches(month, d.getMonth() + 1, 1, 12) &&
-    // "7" as Sunday (common cron dialect) normalizes to 0.
-    fieldMatches(dow.replace(/\b7\b/g, "0"), d.getDay(), 0, 6)
+    dayMatch
   );
 }
 
