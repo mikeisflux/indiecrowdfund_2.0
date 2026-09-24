@@ -889,6 +889,7 @@ export default function IndieKitPage() {
                 <SetupTab
                   products={products}
                   projectId={selectedProjectId}
+                  onRefresh={fetchData}
                 />
               )}
 

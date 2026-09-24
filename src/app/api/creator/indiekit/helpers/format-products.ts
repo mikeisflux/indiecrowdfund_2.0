@@ -10,6 +10,7 @@ export type ProductType = {
   height: number | null;
   dimensionUnit: string | null;
   customsCode: string | null;
+  customsDescription: string | null;
   countryOfOrigin: string | null;
 };
 
@@ -32,6 +33,7 @@ export function formatProducts(products: ProductType[]) {
         : undefined,
       customsCode: product.customsCode || undefined,
       countryOfOrigin: product.countryOfOrigin || undefined,
+      customsDescription: product.customsDescription || undefined,
       status,
     };
   });

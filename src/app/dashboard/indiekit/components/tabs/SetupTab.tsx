@@ -13,6 +13,7 @@ import type { Product } from "../../types";
 interface SetupTabProps {
   products: Product[];
   projectId: string;
+  onRefresh?: () => void;
 }
 
 /**
@@ -21,6 +22,7 @@ interface SetupTabProps {
 export function SetupTab({
   products,
   projectId,
+  onRefresh,
 }: SetupTabProps) {
   const [subTab, setSubTab] = useState("products");
 
@@ -41,7 +43,7 @@ export function SetupTab({
         </div>
 
         <TabsContent value="products">
-          <ProductsTab products={products} projectId={projectId} />
+          <ProductsTab products={products} projectId={projectId} onRefresh={onRefresh} />
         </TabsContent>
 
         <TabsContent value="sku-mapping">

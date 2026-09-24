@@ -5,6 +5,7 @@ import { apiFetch } from "@/lib/fetch-utils";
 import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -401,6 +402,33 @@ export default function PageBuilderPage() {
     );
     setHasUnsavedChanges(true);
   };
+
+  // Edit a CHILD component's content / settings from the sidebar. The
+  // panel used to show the section Background/Padding controls for a
+  // selected child, where changing them silently did nothing.
+  const updateSelectedChild = (patch: { content?: string; settings?: Record<string, ComponentSettingValue> }) => {
+    if (!selectedComponent) return;
+    setPageContent((prev) =>
+      prev.map((sec) => ({
+        ...sec,
+        children: (sec.children || []).map((child) =>
+          child.id === selectedComponent
+            ? {
+                ...child,
+                ...(patch.content !== undefined ? { content: patch.content } : {}),
+                ...(patch.settings ? { settings: { ...child.settings, ...patch.settings } } : {}),
+              }
+            : child
+        ),
+      }))
+    );
+    setHasUnsavedChanges(true);
+  };
+
+  const selectedSection = pageContent.find((sec) => sec.id === selectedComponent);
+  const selectedChild = selectedSection
+    ? undefined
+    : pageContent.flatMap((sec) => sec.children || []).find((c) => c.id === selectedComponent);
 
   const duplicateSection = (sectionId: string) => {
     setPageContent((prev) => {
@@ -806,11 +834,124 @@ export default function PageBuilderPage() {
         <div className="p-4 border-b">
           <h3 className="font-semibold">Component Settings</h3>
         </div>
-        {selectedComponent ? (
+        {selectedChild ? (
           <div className="p-4 space-y-6">
             <div className="space-y-2">
               <Label>Component Type</Label>
-              <Input value={pageContent.find(s => s.id === selectedComponent)?.type || "Section"} disabled />
+              <Input value={selectedChild.type} disabled />
+            </div>
+
+            {["heading", "text", "button", "list", "html", "embed", "video"].includes(selectedChild.type) && (
+              <div className="space-y-2">
+                <Label>
+                  {selectedChild.type === "video" || selectedChild.type === "embed"
+                    ? "URL"
+                    : selectedChild.type === "html"
+                      ? "HTML"
+                      : selectedChild.type === "list"
+                        ? "Items (one per line)"
+                        : "Content"}
+                </Label>
+                <Textarea
+                  value={selectedChild.content || ""}
+                  onChange={(e) => updateSelectedChild({ content: e.target.value })}
+                  rows={selectedChild.type === "html" || selectedChild.type === "list" ? 6 : 3}
+                />
+              </div>
+            )}
+
+            {selectedChild.type === "heading" && (
+              <div className="space-y-2">
+                <Label>Size</Label>
+                <Select
+                  value={String(selectedChild.settings.size || "h2")}
+                  onValueChange={(v) => updateSelectedChild({ settings: { size: v } })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="h1">H1 — Page title</SelectItem>
+                    <SelectItem value="h2">H2 — Section</SelectItem>
+                    <SelectItem value="h3">H3 — Subsection</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            {selectedChild.type === "list" && (
+              <div className="space-y-2">
+                <Label>Style</Label>
+                <Select
+                  value={String(selectedChild.settings.listStyle || "bullet")}
+                  onValueChange={(v) => updateSelectedChild({ settings: { listStyle: v } })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="bullet">Bulleted</SelectItem>
+                    <SelectItem value="number">Numbered</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            {["heading", "text", "button"].includes(selectedChild.type) && (
+              <div className="space-y-2">
+                <Label>Alignment</Label>
+                <Select
+                  value={String(selectedChild.settings.align || "left")}
+                  onValueChange={(v) => updateSelectedChild({ settings: { align: v } })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="left">Left</SelectItem>
+                    <SelectItem value="center">Center</SelectItem>
+                    <SelectItem value="right">Right</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            {selectedChild.type === "button" && (
+              <div className="space-y-2">
+                <Label>Link URL</Label>
+                <Input
+                  value={String(selectedChild.settings.href || "")}
+                  onChange={(e) => updateSelectedChild({ settings: { href: e.target.value } })}
+                  placeholder="/crowdfunds"
+                />
+              </div>
+            )}
+
+            {selectedChild.type === "image" && (
+              <>
+                <div className="space-y-2">
+                  <Label>Image URL</Label>
+                  <Input
+                    value={String(selectedChild.settings.src || selectedChild.content || "")}
+                    onChange={(e) => updateSelectedChild({ settings: { src: e.target.value } })}
+                    placeholder="https://..."
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Alt Text</Label>
+                  <Input
+                    value={String(selectedChild.settings.alt || "")}
+                    onChange={(e) => updateSelectedChild({ settings: { alt: e.target.value } })}
+                  />
+                </div>
+              </>
+            )}
+          </div>
+        ) : selectedComponent ? (
+          <div className="p-4 space-y-6">
+            <div className="space-y-2">
+              <Label>Component Type</Label>
+              <Input value="Section" disabled />
             </div>
 
             <div className="space-y-2">

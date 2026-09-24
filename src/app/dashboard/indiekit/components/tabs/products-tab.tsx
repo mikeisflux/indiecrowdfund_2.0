@@ -51,6 +51,7 @@ import {
   FileDigit,
 } from "lucide-react";
 import { toast } from "sonner";
+import { apiFetch } from "@/lib/fetch-utils";
 
 interface Product {
   id: string;
@@ -74,6 +75,7 @@ interface Product {
 interface ProductsTabProps {
   products?: Product[];
   projectId?: string;
+  onRefresh?: () => void;
 }
 
 const statusConfig = {
@@ -83,7 +85,7 @@ const statusConfig = {
   error: { label: "Error", icon: XCircle, className: "bg-red-100 text-red-700" },
 };
 
-export function ProductsTab({ products = [] }: ProductsTabProps) {
+export function ProductsTab({ products = [], projectId, onRefresh }: ProductsTabProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -98,6 +100,59 @@ export function ProductsTab({ products = [] }: ProductsTabProps) {
     const matchesStatus = statusFilter === "all" || product.status === statusFilter;
     return matchesSearch && matchesType && matchesStatus;
   });
+
+  const [isSavingProduct, setIsSavingProduct] = useState(false);
+
+  const productAction = async (payload: Record<string, unknown>, successMessage: string) => {
+    if (!projectId) {
+      toast.error("No project selected");
+      return false;
+    }
+    try {
+      const res = await apiFetch("/api/creator/indiekit/products", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ projectId, ...payload }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Request failed");
+      toast.success(successMessage);
+      onRefresh?.();
+      return true;
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Request failed");
+      return false;
+    }
+  };
+
+  const handleSaveProduct = async () => {
+    if (!editingProduct) return;
+    if (!editingProduct.sku.trim() || !editingProduct.name.trim()) {
+      toast.error("SKU and name are required");
+      return;
+    }
+    setIsSavingProduct(true);
+    const ok = await productAction(
+      {
+        action: "save",
+        product: {
+          ...(editingProduct.id ? { id: editingProduct.id } : {}),
+          sku: editingProduct.sku.trim(),
+          name: editingProduct.name.trim(),
+          type: editingProduct.type,
+          weight: editingProduct.weight ?? null,
+          weightUnit: editingProduct.weightUnit ?? null,
+          dimensions: editingProduct.dimensions ?? null,
+          customsCode: editingProduct.customsCode ?? null,
+          countryOfOrigin: editingProduct.countryOfOrigin ?? null,
+          customsDescription: editingProduct.customsDescription ?? null,
+        },
+      },
+      editingProduct.id ? "Product updated" : "Product added"
+    );
+    setIsSavingProduct(false);
+    if (ok) setShowEditDialog(false);
+  };
 
   const handleEditProduct = (product: Product) => {
     setEditingProduct({ ...product });
@@ -281,11 +336,18 @@ export function ProductsTab({ products = [] }: ProductsTabProps) {
                             <Edit className="h-4 w-4 mr-2" />
                             Edit Product
                           </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => toast.success(`Duplicated "${product.name}"`)}>
+                          <DropdownMenuItem onClick={() => productAction({ action: "duplicate", productId: product.id }, `Duplicated "${product.name}"`)}>
                             <Copy className="h-4 w-4 mr-2" />
                             Duplicate
                           </DropdownMenuItem>
-                          <DropdownMenuItem className="text-red-600" onClick={() => toast.success(`Deleted "${product.name}"`)}>
+                          <DropdownMenuItem
+                            className="text-red-600"
+                            onClick={() => {
+                              if (window.confirm(`Delete "${product.name}"?`)) {
+                                productAction({ action: "delete", productId: product.id }, `Deleted "${product.name}"`);
+                              }
+                            }}
+                          >
                             <Trash2 className="h-4 w-4 mr-2" />
                             Delete
                           </DropdownMenuItem>
@@ -554,11 +616,8 @@ export function ProductsTab({ products = [] }: ProductsTabProps) {
             <Button variant="outline" onClick={() => setShowEditDialog(false)}>
               Cancel
             </Button>
-            <Button className="bg-teal-600 hover:bg-teal-700" onClick={() => {
-              toast.success(editingProduct?.id ? "Product updated!" : "Product added!");
-              setShowEditDialog(false);
-            }}>
-              {editingProduct?.id ? "Save Changes" : "Add Product"}
+            <Button className="bg-teal-600 hover:bg-teal-700" onClick={handleSaveProduct} disabled={isSavingProduct}>
+              {isSavingProduct ? "Saving..." : editingProduct?.id ? "Save Changes" : "Add Product"}
             </Button>
           </DialogFooter>
         </DialogContent>
