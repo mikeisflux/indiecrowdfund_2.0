@@ -315,64 +315,31 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: "Campaign not found or access denied" }, { status: 403 });
       }
 
+      // Recipients + open-tracking ride in the filters JSON so the send
+      // path (and later reopens of the editor) get them back. These were
+      // collected by the editor and silently dropped before.
+      const existingFilters = (existing.filters as Record<string, unknown>) || {};
+      const nextFilters = { ...existingFilters };
+      if (typeof body.recipients === "string") nextFilters.recipients = body.recipients;
+      if (typeof body.trackOpens === "boolean") nextFilters.trackOpens = body.trackOpens;
+
       const campaign = await db.emailCampaign.update({
         where: { id: campaignId },
         data: {
           name: name || title,
           subject,
           htmlContent: htmlContent || undefined,
+          filters: nextFilters as object,
         },
       });
       return NextResponse.json({ campaign });
     }
 
-    if (action === "send" && campaignId) {
-      // Email access already validated at top of handler
-
-      // Get campaign — scope to owner
-      const campaign = await db.emailCampaign.findFirst({
-        where: { id: campaignId, createdBy: session.user.id },
-      });
-
-      if (!campaign) {
-        return NextResponse.json({ error: "Campaign not found or access denied" }, { status: 403 });
-      }
-
-      // Validate email template before sending
-      if (!campaign.subject || campaign.subject.trim().length === 0) {
-        return NextResponse.json({ error: "Email subject is required" }, { status: 400 });
-      }
-      if (campaign.subject.length > 200) {
-        return NextResponse.json({ error: "Email subject must be under 200 characters" }, { status: 400 });
-      }
-      if (!campaign.htmlContent || campaign.htmlContent.trim().length === 0) {
-        return NextResponse.json({ error: "Email body is required" }, { status: 400 });
-      }
-      if (campaign.status === "SENDING" || campaign.status === "SENT") {
-        return NextResponse.json({ error: "Campaign has already been sent" }, { status: 400 });
-      }
-
-      // Mark as sending with a CAS guard — the status check above is
-      // TOCTOU. Two concurrent sends (double-click, retry) would both
-      // pass the check and both queue background send jobs.
-      const sendCas = await db.emailCampaign.updateMany({
-        where: {
-          id: campaignId,
-          createdBy: session.user.id,
-          status: { notIn: ["SENDING", "SENT"] },
-        },
-        data: {
-          status: "SENDING",
-          sentAt: new Date(),
-        },
-      });
-
-      if (sendCas.count === 0) {
-        return NextResponse.json({ error: "Campaign has already been sent" }, { status: 400 });
-      }
-
-      return NextResponse.json({ success: true, message: "Campaign queued for sending" });
-    }
+    // NOTE: there is deliberately no "send" action here anymore. It used
+    // to flip status to SENDING and return — nothing ever watched that
+    // status, so campaigns sat "sending" forever. Real sends go through
+    // POST /api/creator/email/campaign (resendOfCampaignId), which
+    // resolves recipients, personalizes, tracks, and queues.
 
     if (action === "delete" && campaignId) {
       // Allow project collaborators to delete campaigns on the shared

@@ -51,6 +51,8 @@ interface EmailCampaign {
   filters: {
     projectId?: string;
     stageId?: string;
+    recipients?: string;
+    trackOpens?: boolean;
   } | null;
 }
 
@@ -104,6 +106,8 @@ export default function EmailCampaignEditPage() {
         setName(foundCampaign.name || "");
         setSubject(foundCampaign.subject || "");
         setHtmlContent(foundCampaign.htmlContent || "");
+        if (foundCampaign.filters?.recipients) setRecipientSegment(foundCampaign.filters.recipients);
+        if (typeof foundCampaign.filters?.trackOpens === "boolean") setTrackOpens(foundCampaign.filters.trackOpens);
       } else {
         throw new Error("Campaign not found");
       }
@@ -147,6 +151,8 @@ export default function EmailCampaignEditPage() {
           name,
           subject,
           content: htmlContent,
+          recipients: recipientSegment,
+          trackOpens,
         }),
       });
 
@@ -182,14 +188,14 @@ export default function EmailCampaignEditPage() {
         await handleSave();
       }
 
-      // Then send the campaign
-      const res = await apiFetch("/api/creator/indiekit/campaigns", {
+      // Send through the real batch-send endpoint (the old campaigns
+      // action:"send" only flipped a status flag nothing watched). It
+      // pulls subject/body/recipients from the just-saved draft row.
+      const res = await apiFetch("/api/creator/email/campaign", {
         method: "POST",
         headers: { "Content-Type": "application/json", },
         body: JSON.stringify({
-          action: "send",
-          campaignId,
-          projectId: campaign?.filters?.projectId,
+          resendOfCampaignId: campaignId,
         }),
       });
 
@@ -198,9 +204,21 @@ export default function EmailCampaignEditPage() {
         throw new Error(data.error || "Failed to send campaign");
       }
 
-      toast.success("Campaign is being sent!");
+      // The send endpoint records a new SENT campaign row — drop the
+      // now-redundant draft so the list shows just the sent copy.
+      await apiFetch("/api/creator/indiekit/campaigns", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", },
+        body: JSON.stringify({
+          projectId: campaign?.filters?.projectId,
+          action: "delete",
+          campaignId,
+        }),
+      }).catch(() => null);
+
+      toast.success(`Campaign sent to ${data.campaign?.sentCount ?? "all"} recipient(s)!`);
       setShowSendDialog(false);
-      router.push("/dashboard/indiekit?tab=email-campaigns");
+      router.push("/dashboard/indiekit?tab=emails");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to send campaign");
     } finally {
@@ -248,7 +266,7 @@ export default function EmailCampaignEditPage() {
             <p className="text-muted-foreground mb-4">
               The email campaign you&apos;re looking for doesn&apos;t exist or you don&apos;t have access to it.
             </p>
-            <Link href="/dashboard/indiekit?tab=email-campaigns">
+            <Link href="/dashboard/indiekit?tab=emails">
               <Button variant="outline">
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 Back to Campaigns
@@ -267,7 +285,7 @@ export default function EmailCampaignEditPage() {
         <div className="container max-w-6xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <Link href="/dashboard/indiekit?tab=email-campaigns">
+              <Link href="/dashboard/indiekit?tab=emails">
                 <Button variant="ghost" size="icon">
                   <ArrowLeft className="h-5 w-5" />
                 </Button>

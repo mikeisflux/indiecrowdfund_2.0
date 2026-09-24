@@ -35,7 +35,7 @@ interface EmailComposerDialogProps {
   onOpenChange: (open: boolean) => void;
   recipientEmail?: string;
   recipientName?: string;
-  onSend?: (email: EmailData) => void;
+  onSend?: (email: EmailData) => void | boolean | Promise<void | boolean>;
 }
 
 interface EmailData {
@@ -121,7 +121,9 @@ export function EmailComposerDialog({
     setBody(body + tag);
   };
 
-  const handleSend = () => {
+  const [isSending, setIsSending] = useState(false);
+
+  const handleSend = async () => {
     if (!to.trim()) {
       toast.error("Please enter a recipient email");
       return;
@@ -135,16 +137,23 @@ export function EmailComposerDialog({
       return;
     }
 
-    onSend?.({
-      to,
-      subject,
-      body,
-      template: template !== "none" ? template : undefined,
-      trackOpens,
-    });
-
-    toast.success(`Email sent to ${to}`);
-    onOpenChange(false);
+    // Wait for the actual send — the old version toasted success before
+    // the request even started, so failures looked like successes.
+    setIsSending(true);
+    try {
+      const result = await onSend?.({
+        to,
+        subject,
+        body,
+        template: template !== "none" ? template : undefined,
+        trackOpens,
+      });
+      if (result === false) return; // sender surfaced its own error
+      toast.success(`Email sent to ${to}`);
+      onOpenChange(false);
+    } finally {
+      setIsSending(false);
+    }
   };
 
   const previewBody = body
@@ -274,7 +283,7 @@ export function EmailComposerDialog({
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button className="bg-teal-600 hover:bg-teal-700" onClick={handleSend}>
+          <Button className="bg-teal-600 hover:bg-teal-700" onClick={handleSend} disabled={isSending}>
             <Send className="h-4 w-4 mr-2" />
             Send Email
           </Button>

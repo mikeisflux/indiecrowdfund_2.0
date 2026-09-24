@@ -23,6 +23,8 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
     const { to, subject, content, projectId, attachments } = body;
+    // Open tracking for one-off emails: pixel stamps the EmailLog row.
+    const trackOpens = body.trackOpens !== false;
     // Rich-editor guard: some compose surfaces produce editor HTML
     // ("<p style=...>Hey, Justin!</p>"), and this system is two-channel —
     // the EMAIL can carry that HTML, but the mirrored Message is rendered as
@@ -173,10 +175,18 @@ export async function POST(request: NextRequest) {
     `;
 
     // Send the actual email from the creator's email address
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://indiecrowdfund.com";
+    const trackedHtmlBody = trackOpens
+      ? htmlBody.replace(
+          "</body>",
+          `<img src="${baseUrl}/api/email/track/open?one=1&e=${Buffer.from(to.trim().toLowerCase()).toString("base64")}" width="1" height="1" style="display:none;" alt="" /></body>`
+        )
+      : htmlBody;
+
     const result = await sendEmail({
       to: to.trim(),
       subject: emailSubject,
-      html: htmlBody,
+      html: trackedHtmlBody,
       text: plainContent,
       fromEmail: creatorEmail,
       fromName: senderName,

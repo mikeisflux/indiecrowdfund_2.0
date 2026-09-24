@@ -77,6 +77,8 @@ interface BackerDialogProps {
   availableAddons?: { id: string; name: string; price: number }[];
   /** Campaign slug, for the public campaign-page link. */
   projectSlug?: string;
+  /** Campaign title, for email template placeholders. */
+  projectTitle?: string;
   onRefresh?: () => void;
 }
 
@@ -113,7 +115,7 @@ interface SurveyData {
   } | null;
 }
 
-export function BackerDialog({ open, onOpenChange, backer, availableAddons = [], projectSlug, onRefresh }: BackerDialogProps) {
+export function BackerDialog({ open, onOpenChange, backer, availableAddons = [], projectSlug, projectTitle, onRefresh }: BackerDialogProps) {
   const [activeTab, setActiveTab] = useState("order");
 
   // Real data for the Segments / Emails tabs (previously hardcoded
@@ -1362,23 +1364,38 @@ export function BackerDialog({ open, onOpenChange, backer, availableAddons = [],
         recipientEmail={backer.email}
         recipientName={backer.name}
         onSend={async (email) => {
+          // Fill the template placeholders with this backer's REAL data
+          // before sending — they used to go out literally as
+          // "Hi {{backer_name}},".
+          const surveyUrl = `${window.location.origin}/dashboard/pledges/${backer.id}/survey`;
+          const substitute = (text: string) =>
+            text
+              .replace(/{{backer_name}}/g, backer.name || "there")
+              .replace(/{{pledge_level}}/g, backer.reward || "your pledge")
+              .replace(/{{pledge_amount}}/g, `$${Number(backer.balance?.balanceDue || backer.balance?.pledgeAmount || 0).toFixed(2)}`)
+              .replace(/{{survey_link}}/g, surveyUrl)
+              .replace(/{{project_name}}/g, projectTitle || "our campaign");
           try {
             const res = await apiFetch("/api/creator/email/compose", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
                 to: email.to,
-                subject: email.subject,
-                content: email.body,
+                subject: substitute(email.subject),
+                content: substitute(email.body),
                 projectId: backer.projectId,
+                trackOpens: email.trackOpens,
               }),
             });
             if (!res.ok) {
               const err = await res.json().catch(() => ({}));
               toast.error(err.error || "Failed to send email");
+              return false;
             }
+            return true;
           } catch {
             toast.error("Failed to send email");
+            return false;
           }
         }}
       />

@@ -20,6 +20,19 @@ export async function GET(request: Request) {
     const campaignId = searchParams.get("c");
     const emailId = searchParams.get("e"); // Base64 encoded email
 
+    // One-off compose emails (?one=1) have no campaign — stamp the
+    // recipient's latest unopened EmailLog row so the backer dialog's
+    // history shows "Opened".
+    if (!campaignId && emailId && searchParams.get("one") === "1") {
+      const email = Buffer.from(emailId, "base64").toString("utf-8");
+      await db.emailLog
+        .updateMany({
+          where: { recipientEmail: email, openedAt: null },
+          data: { openedAt: new Date() },
+        })
+        .catch(() => {});
+    }
+
     if (campaignId && emailId) {
       const email = Buffer.from(emailId, "base64").toString("utf-8");
 

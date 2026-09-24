@@ -72,6 +72,15 @@ export async function POST(request: NextRequest) {
       ? body.sources.filter((s: unknown): s is string => typeof s === "string")
       : undefined;
 
+    // Who receives the campaign. "subscribers" (default) is the email
+    // list; "prelaunch" narrows it to prelaunch signups; "all_backers" /
+    // "unfulfilled" pull from the campaign's pledges instead. The email
+    // editor's Recipients select maps onto these.
+    let audience: string =
+      typeof body.audience === "string" ? body.audience : "subscribers";
+    // Open/click tracking is on unless the campaign said otherwise.
+    let trackOpens = body.trackOpens !== false;
+
     // Effective creator — defaults to the caller, but switches to the
     // project creator when a collaborator triggers a resend so the
     // subscriber list, from-address handle, and EmailCampaign row
@@ -97,6 +106,8 @@ export async function POST(request: NextRequest) {
         sources?: string[];
         senderName?: string;
         replyTo?: string;
+        recipients?: string;
+        trackOpens?: boolean;
       };
 
       // Authorize: the campaign's original creator can always resend,
@@ -141,6 +152,13 @@ export async function POST(request: NextRequest) {
       sources = Array.isArray(f.sources) ? f.sources : sources;
       senderName = f.senderName ?? senderName;
       replyTo = f.replyTo ?? replyTo;
+      if (typeof f.trackOpens === "boolean") trackOpens = f.trackOpens;
+      // The editor stores its Recipients choice on the draft's filters.
+      if (f.recipients === "all_backers" || f.recipients === "unfulfilled") {
+        audience = f.recipients;
+      } else if (f.recipients === "prelaunch") {
+        audience = "prelaunch";
+      }
     }
 
     if (!subject?.trim() || !content?.trim()) {
@@ -207,27 +225,62 @@ export async function POST(request: NextRequest) {
     const fromName = senderName || creator.name || creator.email || APP_NAME;
     const replyToEmail = replyTo || creator.email || fromEmail;
 
-    // Get all subscribed members from creator's email list
-    // Optional source filter: when provided, only send to subscribers
-    // whose `source` matches one of the listed values. Unknown sources
-    // are silently ignored — empty intersection just means zero
-    // recipients which the no-subscribers check below catches.
-    const subscribers = await db.emailListSubscriber.findMany({
-      where: {
-        // effectiveCreatorId: caller normally, project owner when a
-        // collaborator triggered the resend.
-        creatorId: effectiveCreatorId,
-        status: "subscribed",
-        ...(Array.isArray(sources) && sources.length > 0
-          ? { source: { in: sources } }
-          : {}),
-      },
-      select: { email: true, name: true },
-    });
+    // Resolve recipients for the chosen audience.
+    let subscribers: { email: string | null; name: string | null }[];
+    if (audience === "all_backers" || audience === "unfulfilled") {
+      if (!projectId) {
+        return NextResponse.json(
+          { error: "Backer audiences need a campaign (projectId)" },
+          { status: 400 }
+        );
+      }
+      const pledges = await db.pledge.findMany({
+        where: {
+          projectId,
+          deletedAt: null,
+          OR: [
+            { status: "COMPLETED" },
+            { status: "PENDING", confirmationEmailSent: true },
+          ],
+          ...(audience === "unfulfilled"
+            ? { fulfillmentStatus: { notIn: ["SHIPPED", "DELIVERED"] } }
+            : {}),
+        },
+        select: { user: { select: { email: true, name: true } } },
+      });
+      subscribers = pledges.map(
+        (p: { user: { email: string | null; name: string | null } }) => p.user
+      );
+    } else {
+      if (audience === "prelaunch" && (!sources || sources.length === 0)) {
+        sources = ["prelaunch"];
+      }
+      // Optional source filter: when provided, only send to subscribers
+      // whose `source` matches one of the listed values. Unknown sources
+      // are silently ignored — empty intersection just means zero
+      // recipients which the no-recipients check below catches.
+      subscribers = await db.emailListSubscriber.findMany({
+        where: {
+          // effectiveCreatorId: caller normally, project owner when a
+          // collaborator triggered the resend.
+          creatorId: effectiveCreatorId,
+          status: "subscribed",
+          ...(Array.isArray(sources) && sources.length > 0
+            ? { source: { in: sources } }
+            : {}),
+        },
+        select: { email: true, name: true },
+      });
+    }
 
     if (subscribers.length === 0) {
       return NextResponse.json(
-        { error: "No subscribers in your email list" },
+        {
+          error:
+            audience === "all_backers" || audience === "unfulfilled"
+              ? "No matching backers on this campaign"
+              : "No subscribers in your email list",
+        },
         { status: 400 }
       );
     }
@@ -339,9 +392,12 @@ export async function POST(request: NextRequest) {
         openCount: 0,
         clickCount: 0,
         createdBy: effectiveCreatorId,
-        filters: (projectId || (sources && sources.length > 0))
-          ? { projectId: projectId || undefined, sources: sources && sources.length > 0 ? sources : undefined }
-          : undefined,
+        filters: {
+          projectId: projectId || undefined,
+          sources: sources && sources.length > 0 ? sources : undefined,
+          recipients: audience !== "subscribers" ? audience : undefined,
+          trackOpens,
+        },
       },
     });
 
@@ -366,7 +422,9 @@ export async function POST(request: NextRequest) {
           ...campaignVars,
         });
         const recipientHtml = buildHtmlBody(personalizedBody);
-        const trackedHtml = addEmailTracking(recipientHtml, campaign.id, recipient.email);
+        const trackedHtml = trackOpens
+          ? addEmailTracking(recipientHtml, campaign.id, recipient.email)
+          : recipientHtml;
 
         const result = await queueEmail({
           to: recipient.email,
