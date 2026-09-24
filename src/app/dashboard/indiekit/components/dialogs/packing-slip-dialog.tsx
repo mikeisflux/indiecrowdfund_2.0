@@ -37,6 +37,7 @@ interface PackingSlipItem {
 interface PackingSlipDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  projectId?: string;
   orderId: string;
   backerName: string;
   backerEmail: string;
@@ -57,6 +58,7 @@ interface PackingSlipDialogProps {
 export function PackingSlipDialog({
   open,
   onOpenChange,
+  projectId,
   orderId,
   backerName,
   backerEmail,
@@ -70,17 +72,23 @@ export function PackingSlipDialog({
   const [paperSize, setPaperSize] = useState("letter");
   const printRef = useRef<HTMLDivElement>(null);
 
-  const handlePrint = () => {
-    // In a real app, this would trigger the browser print dialog
-    // with the packing slip content
+  // Server-rendered printable slip honoring the options; the browser's
+  // print dialog covers both printing and save-as-PDF. (The old buttons
+  // toasted success and printed the whole dashboard page.)
+  const openPrintableSlip = () => {
+    if (!projectId) {
+      toast.error("No project selected");
+      return;
+    }
+    const qs = new URLSearchParams({
+      projectId,
+      pledgeIds: orderId,
+      paper: paperSize,
+      includePrice: includePrice ? "1" : "0",
+      thankYou: includeThankYou ? "1" : "0",
+    });
+    window.open(`/api/creator/indiekit/packing-slips?${qs}`, "_blank");
     onPrint?.();
-    toast.success("Opening print dialog...");
-    window.print();
-  };
-
-  const handleDownload = () => {
-    toast.success("Downloading packing slip as PDF...");
-    // In a real app, this would generate and download a PDF
   };
 
   const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
@@ -148,7 +156,7 @@ export function PackingSlipDialog({
                 <p className="text-muted-foreground">Order #{orderId}</p>
               </div>
               <div className="text-right">
-                <p className="font-bold">Flying Sparks Project</p>
+                <p className="font-bold">Packing Slip Preview</p>
                 <p className="text-sm text-muted-foreground">
                   {new Date().toLocaleDateString()}
                 </p>
@@ -227,11 +235,11 @@ export function PackingSlipDialog({
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Close
           </Button>
-          <Button variant="outline" onClick={handleDownload}>
+          <Button variant="outline" onClick={openPrintableSlip}>
             <Download className="h-4 w-4 mr-2" />
-            Download PDF
+            Save as PDF
           </Button>
-          <Button className="bg-teal-600 hover:bg-teal-700" onClick={handlePrint}>
+          <Button className="bg-teal-600 hover:bg-teal-700" onClick={openPrintableSlip}>
             <Printer className="h-4 w-4 mr-2" />
             Print
           </Button>

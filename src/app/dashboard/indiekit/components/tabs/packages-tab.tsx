@@ -434,6 +434,16 @@ export function PackagesTab({
     if (!projectId) return;
     const group = groupId ? packageGroups.find((g) => g.id === groupId) : undefined;
 
+    // Packing slips render as a printable page (print dialog saves as
+    // PDF) rather than a file the server would have to typeset.
+    if (format === "packing_slips") {
+      const qs = new URLSearchParams({ projectId });
+      if (group?.custom) qs.set("groupId", group.id);
+      else if (group?.name) qs.set("groupName", group.name);
+      window.open(`/api/creator/indiekit/packing-slips?${qs}`, "_blank");
+      return;
+    }
+
     try {
       const res = await apiFetch("/api/creator/indiekit/fulfillment", {
         method: "POST",
@@ -442,7 +452,7 @@ export function PackagesTab({
           projectId,
           action: "export",
           groupId,
-          groupName: group?.name,
+          groupName: group?.custom ? undefined : group?.name,
           format,
         }),
       });

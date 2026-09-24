@@ -1245,6 +1245,7 @@ export function BackerDialog({ open, onOpenChange, backer, availableAddons = [],
       <PackingSlipDialog
         open={showPackingSlip}
         onOpenChange={setShowPackingSlip}
+        projectId={backer.projectId}
         orderId={backer.id}
         backerName={backer.name}
         backerEmail={backer.email}
