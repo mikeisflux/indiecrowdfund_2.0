@@ -75,6 +75,8 @@ interface BackerDialogProps {
   onOpenChange: (open: boolean) => void;
   backer: Backer | null;
   availableAddons?: { id: string; name: string; price: number }[];
+  /** Campaign slug, for the public campaign-page link. */
+  projectSlug?: string;
   onRefresh?: () => void;
 }
 
@@ -111,8 +113,30 @@ interface SurveyData {
   } | null;
 }
 
-export function BackerDialog({ open, onOpenChange, backer, availableAddons = [], onRefresh }: BackerDialogProps) {
+export function BackerDialog({ open, onOpenChange, backer, availableAddons = [], projectSlug, onRefresh }: BackerDialogProps) {
   const [activeTab, setActiveTab] = useState("order");
+
+  // Real data for the Segments / Emails tabs (previously hardcoded
+  // "Early Bird Backers" chips and a static placeholder). Loaded lazily
+  // when the tab is first opened.
+  interface BackerSegmentRow {
+    id: string;
+    name: string;
+    isDynamic: boolean;
+    containsPledge?: boolean;
+    backerCount: number;
+    criteria?: string;
+  }
+  const [segmentsData, setSegmentsData] = useState<BackerSegmentRow[] | null>(null);
+  const [segmentBusy, setSegmentBusy] = useState<string | null>(null);
+  interface EmailHistoryRow {
+    id: string;
+    type: string;
+    subject: string | null;
+    sentAt: string;
+    openedAt: string | null;
+  }
+  const [emailHistory, setEmailHistory] = useState<EmailHistoryRow[] | null>(null);
   const [showAddressValidation, setShowAddressValidation] = useState(false);
   const [showBalanceEditor, setShowBalanceEditor] = useState(false);
   const [showEditOrder, setShowEditOrder] = useState(false);
@@ -178,7 +202,52 @@ export function BackerDialog({ open, onOpenChange, backer, availableAddons = [],
     }
   }, [open]);
 
+  useEffect(() => {
+    if (!backer || activeTab !== "segments" || segmentsData !== null) return;
+    fetch(`/api/creator/indiekit/segments?projectId=${backer.projectId}&pledgeId=${backer.id}`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => setSegmentsData(data?.segments ?? []))
+      .catch(() => setSegmentsData([]));
+  }, [activeTab, backer, segmentsData]);
+
+  useEffect(() => {
+    if (!backer || activeTab !== "emails" || emailHistory !== null) return;
+    fetch(`/api/creator/indiekit/backers/emails?projectId=${backer.projectId}&pledgeId=${backer.id}`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => setEmailHistory(data?.emails ?? []))
+      .catch(() => setEmailHistory([]));
+  }, [activeTab, backer, emailHistory]);
+
   if (!backer) return null;
+
+  const toggleSegmentMembership = async (segment: { id: string; name: string; containsPledge?: boolean }) => {
+    if (!backer) return;
+    setSegmentBusy(segment.id);
+    try {
+      const res = await apiFetch("/api/creator/indiekit/segments", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          projectId: backer.projectId,
+          segmentId: segment.id,
+          action: segment.containsPledge ? "remove_member" : "add_member",
+          pledgeId: backer.id,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Failed to update segment");
+      toast.success(
+        segment.containsPledge
+          ? `Removed from "${segment.name}"`
+          : `Added to "${segment.name}"`
+      );
+      setSegmentsData(null); // refetch on next render
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to update segment");
+    } finally {
+      setSegmentBusy(null);
+    }
+  };
 
   const handleViewAsBacker = () => {
     // Open creator view of the backer's survey in new tab
@@ -318,12 +387,12 @@ export function BackerDialog({ open, onOpenChange, backer, availableAddons = [],
   const modifierAddons = backer?.addons?.filter(addon => addon.isModifier) || [];
   const hasModifierAddons = modifierAddons.length > 0;
 
-  // Build a list of base rewards from items (pledge level items)
-  // This is a simplified version - in production, you'd want to fetch actual tier rewards
-  const baseRewardOptions = backer?.items?.map(item => ({
-    id: item.sku || item.name,
-    name: item.name,
-  })) || [];
+  // The pledge's base reward tier — manual_assign requires the real
+  // Reward id (the old code sent the item SKU/name, so every assignment
+  // 404'd server-side).
+  const baseRewardOptions = backer?.rewardId
+    ? [{ id: backer.rewardId, name: backer.reward }]
+    : [];
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -342,7 +411,7 @@ export function BackerDialog({ open, onOpenChange, backer, availableAddons = [],
                 Resend
               </Button>
               <Button variant="outline" size="sm" onClick={() => {
-                navigator.clipboard.writeText(`${window.location.origin}/survey/${backer.id}`);
+                navigator.clipboard.writeText(`${window.location.origin}/dashboard/pledges/${backer.id}/survey`);
                 toast.success("Survey link copied to clipboard");
               }}>
                 <Link2 className="h-3 w-3" />
@@ -350,7 +419,7 @@ export function BackerDialog({ open, onOpenChange, backer, availableAddons = [],
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => window.open('/docs/backer-management', '_blank')}
+                onClick={() => window.open('/indiekit-handbook?tab=backers', '_blank')}
                 title="Open backer management help"
               >
                 <HelpCircle className="h-3 w-3" />
@@ -534,15 +603,17 @@ export function BackerDialog({ open, onOpenChange, backer, availableAddons = [],
                       <span className="text-muted-foreground">Indiecrowdfund</span>
                       <span className="text-muted-foreground"> (Collected)</span>
                     </div>
-                    <Button
-                      variant="link"
-                      size="sm"
-                      className="text-teal-600 p-0 h-auto text-xs"
-                      onClick={() => window.open(`/projects/pledge/${backer.id}`, '_blank')}
-                    >
-                      View pledge on Indiecrowdfund
-                      <ExternalLink className="h-3 w-3 ml-1" />
-                    </Button>
+                    {projectSlug && (
+                      <Button
+                        variant="link"
+                        size="sm"
+                        className="text-teal-600 p-0 h-auto text-xs"
+                        onClick={() => window.open(`/projects/${projectSlug}`, '_blank')}
+                      >
+                        View campaign page
+                        <ExternalLink className="h-3 w-3 ml-1" />
+                      </Button>
+                    )}
                     <div className="border-t pt-2 mt-2">
                       <div className="flex justify-between">
                         <span>Pledge Level</span>
@@ -671,10 +742,10 @@ export function BackerDialog({ open, onOpenChange, backer, availableAddons = [],
                         variant="outline"
                         size="sm"
                         className="mt-3"
-                        onClick={() => toast.info("SKU management coming soon")}
+                        onClick={() => setShowEditOrder(true)}
                       >
                         <Plus className="h-3 w-3 mr-1" />
-                        Add SKUs
+                        Add Items
                       </Button>
                     </div>
                   </div>
@@ -945,62 +1016,140 @@ export function BackerDialog({ open, onOpenChange, backer, availableAddons = [],
 
             {/* Packages Tab */}
             <TabsContent value="packages" className="space-y-4">
-              <div className="rounded-lg border p-4 text-center">
-                <Package className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
-                <p className="text-sm text-muted-foreground">Package information will appear here</p>
+              <div className="rounded-lg border p-4 space-y-4">
+                <div className="flex items-center justify-between">
+                  <h4 className="font-medium">Fulfillment</h4>
+                  <Badge variant="secondary">
+                    {backer.status === "shipped"
+                      ? "Shipped"
+                      : backer.status === "pushed"
+                        ? "Pushed to fulfillment"
+                        : backer.status === "push_errored"
+                          ? "Push errored"
+                          : "Not pushed"}
+                  </Badge>
+                </div>
+                <div>
+                  <p className="text-xs font-medium text-muted-foreground mb-2">PACKAGE CONTENTS</p>
+                  <div className="space-y-1 text-sm">
+                    {(backer.items || []).map((item, i) => (
+                      <div key={`i-${i}`} className="flex justify-between">
+                        <span>{item.name}</span>
+                        <span className="text-muted-foreground">×{item.quantity}</span>
+                      </div>
+                    ))}
+                    {(backer.addons || []).filter(a => !a.isModifier).map((addon, i) => (
+                      <div key={`a-${i}`} className="flex justify-between">
+                        <span>{addon.name}</span>
+                        <span className="text-muted-foreground">×{addon.quantity}</span>
+                      </div>
+                    ))}
+                    {(backer.items || []).length === 0 && (backer.addons || []).length === 0 && (
+                      <p className="text-muted-foreground">No physical items on this order</p>
+                    )}
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" onClick={() => setShowTracking(true)}>
+                    <Package className="h-3 w-3 mr-1" />
+                    Tracking
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() =>
+                      window.open(
+                        `/api/creator/indiekit/packing-slips?projectId=${backer.projectId}&pledgeIds=${backer.id}`,
+                        "_blank"
+                      )
+                    }
+                  >
+                    Packing Slip
+                  </Button>
+                </div>
               </div>
             </TabsContent>
 
             {/* Emails Tab */}
             <TabsContent value="emails" className="space-y-4">
-              <div className="rounded-lg border p-4 text-center">
-                <Mail className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
-                <p className="text-sm text-muted-foreground">Email history for this backer will appear here</p>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="mt-4"
-                  onClick={() => setShowEmailComposer(true)}
-                >
-                  <Mail className="h-3 w-3 mr-1" />
-                  Send Email
-                </Button>
+              <div className="rounded-lg border p-4">
+                <div className="flex justify-between items-center mb-4">
+                  <h4 className="font-medium">Email History</h4>
+                  <Button variant="outline" size="sm" onClick={() => setShowEmailComposer(true)}>
+                    <Mail className="h-3 w-3 mr-1" />
+                    Send Email
+                  </Button>
+                </div>
+                {emailHistory === null ? (
+                  <p className="text-sm text-muted-foreground text-center py-4">Loading…</p>
+                ) : emailHistory.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-4">
+                    No emails logged for this backer yet.
+                  </p>
+                ) : (
+                  <div className="space-y-2">
+                    {emailHistory.map((e) => (
+                      <div key={e.id} className="flex items-start justify-between gap-3 p-2 border rounded">
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium truncate">{e.subject || e.type}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {new Date(e.sentAt).toLocaleString()} · {e.type}
+                          </p>
+                        </div>
+                        <Badge variant={e.openedAt ? "default" : "secondary"} className="shrink-0 text-[10px]">
+                          {e.openedAt ? "Opened" : "Sent"}
+                        </Badge>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </TabsContent>
 
             {/* Segments Tab */}
             <TabsContent value="segments" className="space-y-4">
               <div className="rounded-lg border p-4">
-                <div className="flex justify-between items-center mb-4">
-                  <h4 className="font-medium">Backer Segments</h4>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => toast.info("Segment management coming soon")}
-                  >
-                    <Plus className="h-3 w-3 mr-1" />
-                    Add to Segment
-                  </Button>
-                </div>
+                <h4 className="font-medium mb-1">Backer Segments</h4>
                 <p className="text-sm text-muted-foreground mb-4">
-                  Segments help you organize backers for targeted communication and fulfillment.
+                  This backer&apos;s segment memberships. Criteria-based segments are computed
+                  automatically; list segments can be toggled here.
                 </p>
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                    <div className="flex items-center gap-2">
-                      <Users className="h-4 w-4 text-teal-600" />
-                      <span className="text-sm font-medium">Early Bird Backers</span>
-                    </div>
-                    <Badge variant="secondary">Auto</Badge>
+                {segmentsData === null ? (
+                  <p className="text-sm text-muted-foreground text-center py-4">Loading…</p>
+                ) : segmentsData.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-4">
+                    No segments on this campaign yet — create them under Backers → Segments.
+                  </p>
+                ) : (
+                  <div className="space-y-2">
+                    {segmentsData.map((segment) => (
+                      <div key={segment.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <Users className={`h-4 w-4 shrink-0 ${segment.containsPledge ? "text-teal-600" : "text-muted-foreground"}`} />
+                          <span className="text-sm font-medium truncate">{segment.name}</span>
+                          {segment.isDynamic && segment.criteria ? (
+                            <Badge variant="secondary" className="shrink-0">Auto</Badge>
+                          ) : null}
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          {segment.containsPledge && (
+                            <Badge className="bg-teal-100 text-teal-700">Member</Badge>
+                          )}
+                          {!(segment.isDynamic && segment.criteria) && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => toggleSegmentMembership(segment)}
+                              disabled={segmentBusy === segment.id}
+                            >
+                              {segment.containsPledge ? "Remove" : "Add"}
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                  <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                    <div className="flex items-center gap-2">
-                      <Users className="h-4 w-4 text-teal-600" />
-                      <span className="text-sm font-medium">Premium Tier</span>
-                    </div>
-                    <Badge variant="secondary">Auto</Badge>
-                  </div>
-                </div>
+                )}
               </div>
             </TabsContent>
 

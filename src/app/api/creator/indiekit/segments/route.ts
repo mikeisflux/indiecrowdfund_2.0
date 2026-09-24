@@ -5,6 +5,7 @@ import { logger } from "@/lib/logger";
 const creatorIndiekitSegmentsLogger = logger.child({ module: "creator-indiekit-segments" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { resolveSegmentPledges } from "@/lib/segments";
 import { z } from "zod";
 
 export const dynamic = "force-dynamic";
@@ -78,8 +79,31 @@ export async function GET(req: NextRequest) {
       orderBy: { createdAt: "desc" },
     });
 
+    // ?pledgeId=: also report which segments contain that pledge, for
+    // the backer dialog's Segments tab (static membership by id list,
+    // dynamic membership by resolving the segment's criteria).
+    const pledgeId = searchParams.get("pledgeId");
+    const membership = new Map<string, boolean>();
+    if (pledgeId) {
+      for (const segment of segments) {
+        if (!segment.isDynamic || (segment.staticBackerIds?.length ?? 0) > 0) {
+          membership.set(segment.id, segment.staticBackerIds.includes(pledgeId));
+        } else {
+          try {
+            const resolved = await resolveSegmentPledges(segment.id, projectId);
+            membership.set(
+              segment.id,
+              !!resolved && resolved.pledges.some((pl: { id: string }) => pl.id === pledgeId)
+            );
+          } catch {
+            membership.set(segment.id, false);
+          }
+        }
+      }
+    }
+
     // Map to frontend format
-    type SegmentType = { id: string; name: string; description: string | null; type: string; criteria: unknown; backerCount: number; createdAt: Date };
+    type SegmentType = { id: string; name: string; description: string | null; type: string; criteria: unknown; backerCount: number; createdAt: Date; isDynamic: boolean };
     const formattedSegments = segments.map((segment: SegmentType) => ({
       id: segment.id,
       name: segment.name,
@@ -90,6 +114,8 @@ export async function GET(req: NextRequest) {
       criteria: segment.criteria ? JSON.stringify(segment.criteria) : "",
       backerCount: segment.backerCount,
       createdAt: segment.createdAt.toLocaleDateString(),
+      isDynamic: segment.isDynamic,
+      ...(pledgeId ? { containsPledge: membership.get(segment.id) ?? false } : {}),
     }));
 
     return NextResponse.json({ segments: formattedSegments });
@@ -231,6 +257,51 @@ export async function PATCH(req: NextRequest) {
     }
     if (!(await verifyProjectAccess(session.user.id, projectId))) {
       return NextResponse.json({ error: "Project not found or access denied" }, { status: 403 });
+    }
+
+    // Membership edits (backer dialog's "Add to Segment"). Only static
+    // segments carry an explicit member list; dynamic ones derive theirs
+    // from criteria.
+    if (body.action === "add_member" || body.action === "remove_member") {
+      const pledgeId = String(body.pledgeId || "");
+      if (!pledgeId) {
+        return NextResponse.json({ error: "pledgeId required" }, { status: 400 });
+      }
+      const segment = await db.backerSegment.findFirst({
+        where: { id: segmentId, projectId },
+        select: { id: true, isDynamic: true, staticBackerIds: true, criteria: true },
+      });
+      if (!segment) {
+        return NextResponse.json({ error: "Segment not found" }, { status: 404 });
+      }
+      if (segment.isDynamic && segment.criteria) {
+        return NextResponse.json(
+          { error: "This segment is criteria-based — its members are computed, not hand-picked" },
+          { status: 400 }
+        );
+      }
+      const members = new Set(segment.staticBackerIds);
+      if (body.action === "add_member") {
+        const pledge = await db.pledge.findFirst({
+          where: { id: pledgeId, projectId, deletedAt: null },
+          select: { id: true },
+        });
+        if (!pledge) {
+          return NextResponse.json({ error: "Backer not found on this campaign" }, { status: 404 });
+        }
+        members.add(pledgeId);
+      } else {
+        members.delete(pledgeId);
+      }
+      await db.backerSegment.update({
+        where: { id: segment.id },
+        data: {
+          staticBackerIds: Array.from(members),
+          backerCount: members.size,
+          isDynamic: false,
+        },
+      });
+      return NextResponse.json({ success: true, backerCount: members.size });
     }
 
     const patchSchema = z

@@ -992,6 +992,7 @@ export default function IndieKitPage() {
         open={isBackerDialogOpen}
         onOpenChange={setIsBackerDialogOpen}
         backer={selectedBacker}
+        projectSlug={projects.find(p => p.id === selectedBacker?.projectId)?.slug}
         onRefresh={fetchData}
       />
 
