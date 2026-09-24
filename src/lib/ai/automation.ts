@@ -12,6 +12,7 @@
 
 import { db } from "@/lib/db";
 import { generateCampaignContent, generateCreatorNewsletter } from "@/lib/ai/anthropic";
+import { filterUserIdsByEmailPreference, type EmailPreferenceKey } from "@/lib/email/email-preferences";
 import {
   renderCampaignEmailHtml,
   renderCreatorNewsletterHtml,
@@ -927,7 +928,29 @@ async function createAndSendCampaign(plan: CampaignPlan): Promise<{
     }
   }
 
-  const recipients = Array.from(recipientMap.values());
+  let recipients = Array.from(recipientMap.values());
+
+  // Honor Settings > Subscriptions for registered users: each automated
+  // campaign type maps to one of the marketing toggles (email-only
+  // newsletter subscribers are covered by their own unsubscribe link).
+  const prefKeyByType: Record<string, EmailPreferenceKey> = {
+    weekly_discovery: "weeklyDigest",
+    daily_digest: "weeklyDigest",
+    new_projects: "newProjects",
+    ending_soon: "endingSoon",
+    high_engagement: "fundingMilestones",
+    win_back: "marketingEmails",
+    abandoned_cart: "marketingEmails",
+    high_value_outreach: "marketingEmails",
+  };
+  const prefKey = prefKeyByType[plan.type] ?? "marketingEmails";
+  const prefUserIds = recipients
+    .map((r) => r.userId)
+    .filter((id): id is string => !!id);
+  if (prefUserIds.length > 0) {
+    const allowed = await filterUserIdsByEmailPreference(prefUserIds, prefKey);
+    recipients = recipients.filter((r) => !r.userId || allowed.has(r.userId));
+  }
 
   // Batch-load each registered recipient's optimal send hour in ONE query
   // (no per-recipient DB calls in the send loop below).

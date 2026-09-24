@@ -121,10 +121,19 @@ export async function GET() {
       };
     });
 
+    // Global switches live in UserPreference.emailPreferences — shared
+    // with Settings > Subscriptions so the two screens can't disagree.
+    // "Email updates" here IS the backedProjectUpdates toggle there.
+    const prefRow = await db.userPreference.findUnique({
+      where: { userId: session.user.id },
+      select: { emailPreferences: true },
+    });
+    const prefs = (prefRow?.emailPreferences as Record<string, unknown>) || {};
+
     return NextResponse.json({
       global: {
-        emailNotifications: true,  // Default - could be stored in UserPreference
-        marketingEmails: false,    // Default - could be stored in UserPreference
+        emailUpdates: prefs.backedProjectUpdates !== false,
+        marketingEmails: prefs.marketingEmails !== false,
       },
       projects,
       totalProjects: projects.length,
@@ -211,8 +220,11 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// PATCH: Update global notification settings
-// Note: These fields don't exist in the schema yet - return defaults for now
+// PATCH: Update global notification settings. Persists into
+// UserPreference.emailPreferences (the same store Settings >
+// Subscriptions uses) — this endpoint used to be a stub that returned
+// defaults, so every toggle reverted on reload. Accepts both the tab's
+// { global: { key: value } } shape and flat top-level keys.
 export async function PATCH(request: NextRequest) {
   try {
     const session = await auth();
@@ -221,14 +233,40 @@ export async function PATCH(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { emailNotifications, marketingEmails } = body;
+    const incoming: Record<string, unknown> =
+      body && typeof body.global === "object" && body.global ? body.global : body;
 
-    // TODO: Store these in UserPreference model when fields are added
-    // For now, acknowledge the update but return defaults
+    // Map the tab's names onto the shared preference keys.
+    const keyMap: Record<string, string> = {
+      emailUpdates: "backedProjectUpdates",
+      marketingEmails: "marketingEmails",
+    };
+    const updates: Record<string, boolean> = {};
+    for (const [tabKey, prefKey] of Object.entries(keyMap)) {
+      if (typeof incoming[tabKey] === "boolean") updates[prefKey] = incoming[tabKey] as boolean;
+    }
+    if (Object.keys(updates).length === 0) {
+      return NextResponse.json({ error: "Nothing to update" }, { status: 400, headers: corsHeaders });
+    }
+
+    const existing = await db.userPreference.findUnique({
+      where: { userId: session.user.id },
+      select: { emailPreferences: true },
+    });
+    const merged = {
+      ...((existing?.emailPreferences as Record<string, unknown>) || {}),
+      ...updates,
+    };
+    await db.userPreference.upsert({
+      where: { userId: session.user.id },
+      update: { emailPreferences: merged },
+      create: { userId: session.user.id, categoryScores: {}, emailPreferences: merged },
+    });
+
     return NextResponse.json({
       global: {
-        emailNotifications: emailNotifications ?? true,
-        marketingEmails: marketingEmails ?? false,
+        emailUpdates: merged.backedProjectUpdates !== false,
+        marketingEmails: merged.marketingEmails !== false,
       },
     }, { headers: corsHeaders });
   } catch (error) {

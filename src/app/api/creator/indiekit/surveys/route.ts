@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
+import { filterUserIdsByEmailPreference } from "@/lib/email/email-preferences";
 
 const creatorIndiekitSurveysLogger = logger.child({ module: "creator-indiekit-surveys" });
 import { auth } from "@/lib/auth";
@@ -546,8 +547,20 @@ export async function PATCH(req: NextRequest) {
           },
         });
 
+        // Honor Settings > Subscriptions > "Survey reminders" and the
+        // per-project "Surveys" mute.
+        const reminderAllowed = await filterUserIdsByEmailPreference(
+          pendingBackers.map((p: { userId: string }) => p.userId),
+          "surveyReminders"
+        );
+        const surveyMuted = await db.projectNotificationPreference.findMany({
+          where: { projectId, surveys: false },
+          select: { userId: true },
+        });
+        surveyMuted.forEach((m: { userId: string }) => reminderAllowed.delete(m.userId));
+
         for (const pledge of pendingBackers) {
-          if (pledge.user?.email) {
+          if (pledge.user?.email && reminderAllowed.has(pledge.userId)) {
             try {
               await sendSurveyAvailableEmail(
                 pledge.user.email,

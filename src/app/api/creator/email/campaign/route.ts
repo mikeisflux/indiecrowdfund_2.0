@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
+import { filterEmailsByEmailPreference } from "@/lib/email/email-preferences";
 
 const creatorEmailCampaignLogger = logger.child({ module: "creator-email-campaign" });
 import { auth } from "@/lib/auth";
@@ -248,9 +249,15 @@ export async function POST(request: NextRequest) {
         },
         select: { user: { select: { email: true, name: true } } },
       });
-      subscribers = pledges.map(
-        (p: { user: { email: string | null; name: string | null } }) => p.user
-      );
+      // Backer audiences honor Settings > Subscriptions > "Creator
+      // messages" (subscriber-list audiences have their own unsubscribe).
+      const backerEmails = pledges
+        .map((p: { user: { email: string | null } }) => p.user.email)
+        .filter((e: string | null): e is string => !!e);
+      const allowedBackers = await filterEmailsByEmailPreference(backerEmails, "creatorMessages");
+      subscribers = pledges
+        .map((p: { user: { email: string | null; name: string | null } }) => p.user)
+        .filter((u: { email: string | null }) => u.email && allowedBackers.has(u.email.toLowerCase()));
     } else {
       if (audience === "prelaunch" && (!sources || sources.length === 0)) {
         sources = ["prelaunch"];

@@ -47,8 +47,6 @@ interface ProjectNotification {
 
 interface GlobalPreferences {
   emailUpdates: boolean;
-  emailDigest: string;
-  pushNotifications: boolean;
   marketingEmails: boolean;
 }
 
@@ -390,54 +388,6 @@ export function NotificationPreferencesTab() {
             <Switch
               checked={data.global.emailUpdates}
               onCheckedChange={(checked) => updateGlobalPreference("emailUpdates", checked)}
-              disabled={saving === "global"}
-            />
-          </div>
-
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-purple-500/20">
-                <Clock className="h-4 w-4 text-purple-400" />
-              </div>
-              <div>
-                <p className="font-medium text-sm">Email Digest Frequency</p>
-                <p className="text-xs text-muted-foreground">
-                  How often to receive email digests
-                </p>
-              </div>
-            </div>
-            <Select
-              value={data.global.emailDigest}
-              onValueChange={(value) => updateGlobalPreference("emailDigest", value)}
-              disabled={saving === "global"}
-            >
-              <SelectTrigger className="w-[140px]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="instant">Instant</SelectItem>
-                <SelectItem value="daily">Daily</SelectItem>
-                <SelectItem value="weekly">Weekly</SelectItem>
-                <SelectItem value="none">None</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-emerald-500/20">
-                <Zap className="h-4 w-4 text-emerald-400" />
-              </div>
-              <div>
-                <p className="font-medium text-sm">Push Notifications</p>
-                <p className="text-xs text-muted-foreground">
-                  Browser push notifications
-                </p>
-              </div>
-            </div>
-            <Switch
-              checked={data.global.pushNotifications}
-              onCheckedChange={(checked) => updateGlobalPreference("pushNotifications", checked)}
               disabled={saving === "global"}
             />
           </div>

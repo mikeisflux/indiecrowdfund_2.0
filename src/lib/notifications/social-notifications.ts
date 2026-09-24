@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { createNotification, notifyProjectTeam } from "./core";
 import { sendCommentReplyEmail } from "./email-templates";
+import { isEmailPreferenceEnabled } from "@/lib/email/email-preferences";
 
 import { logger } from "@/lib/logger";
 
@@ -69,7 +70,19 @@ export async function notifyCommentReply(
       select: { email: true, name: true },
     });
 
-    if (user?.email && replyContent) {
+    // Honor Settings > Subscriptions > "Comment replies" and the
+    // per-project "Comments" mute (in-app stays).
+    const [wantsEmail, projectPref] = await Promise.all([
+      isEmailPreferenceEnabled(userId, "commentReplies"),
+      projectId
+        ? db.projectNotificationPreference.findFirst({
+            where: { userId, projectId },
+            select: { comments: true },
+          })
+        : Promise.resolve(null),
+    ]);
+    if (projectPref && projectPref.comments === false) return;
+    if (user?.email && replyContent && wantsEmail) {
       await sendCommentReplyEmail(
         user.email,
         user.name || "there",

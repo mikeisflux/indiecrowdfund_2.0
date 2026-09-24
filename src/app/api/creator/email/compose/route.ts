@@ -8,6 +8,7 @@ import { db } from "@/lib/db";
 import { sendEmail, escapeHtmlForEmail } from "@/lib/email";
 import { htmlToPlainText, looksLikeHtml } from "@/lib/email/email-to-text";
 import { storeMessageAttachments, type IncomingAttachment } from "@/lib/messages/attachments";
+import { filterEmailsByEmailPreference } from "@/lib/email/email-preferences";
 
 export const dynamic = "force-dynamic";
 
@@ -76,6 +77,36 @@ export async function POST(request: NextRequest) {
         { error: "You cannot send an email to yourself" },
         { status: 400 }
       );
+    }
+
+    // Honor the recipient's Settings > Subscriptions > "Creator messages"
+    // opt-out (unknown addresses default to allowed).
+    const allowedRecipients = await filterEmailsByEmailPreference([to.trim()], "creatorMessages");
+    if (!allowedRecipients.has(to.trim().toLowerCase())) {
+      return NextResponse.json(
+        { error: "This backer has opted out of creator emails" },
+        { status: 400 }
+      );
+    }
+    // Per-project "Messages" mute from the backer's Notification
+    // Preferences for this specific campaign.
+    if (projectId) {
+      const recipientUser = await db.user.findFirst({
+        where: { email: { equals: to.trim(), mode: "insensitive" }, deletedAt: null },
+        select: { id: true },
+      });
+      if (recipientUser) {
+        const projectPref = await db.projectNotificationPreference.findFirst({
+          where: { userId: recipientUser.id, projectId },
+          select: { messages: true },
+        });
+        if (projectPref && projectPref.messages === false) {
+          return NextResponse.json(
+            { error: "This backer has muted messages for this campaign" },
+            { status: 400 }
+          );
+        }
+      }
     }
 
     // Require projectId - users must have an active project to send emails

@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import { filterUserIdsByEmailPreference } from "@/lib/email/email-preferences";
 import { isEmailTypeEnabled } from "@/lib/email";
 import { createNotification, notifyProjectTeam } from "./core";
 import {
@@ -58,8 +59,10 @@ export async function notifyProjectFunded(projectId: string) {
   // Get backer emails and send email notifications
   const backerIds = project.pledges.map((p: { userId: string }) => p.userId);
   if (backerIds.length > 0) {
+    // Honor Settings > Subscriptions > "Project funded".
+    const fundedAllowed = await filterUserIdsByEmailPreference(backerIds, "projectFunded");
     const backers = await db.user.findMany({
-      where: { id: { in: backerIds }, deletedAt: null },
+      where: { id: { in: backerIds.filter((id: string) => fundedAllowed.has(id)) }, deletedAt: null },
       select: { email: true },
     });
 
@@ -117,14 +120,16 @@ export async function notifyProjectLaunched(projectId: string) {
   // Collect emails to send - both from user accounts and direct email followers
   const emailsToSend: string[] = [];
 
-  // Get user emails for logged-in followers
+  // Get user emails for logged-in followers — honoring Settings >
+  // Subscriptions > "New campaign launches".
   const userIds = project.followers
     .filter((f: { userId: string | null }) => f.userId && f.userId !== project.creatorId)
     .map((f: { userId: string | null }) => f.userId as string);
 
   if (userIds.length > 0) {
+    const launchAllowed = await filterUserIdsByEmailPreference(userIds, "creatorLaunches");
     const users = await db.user.findMany({
-      where: { id: { in: userIds }, deletedAt: null },
+      where: { id: { in: userIds.filter((id: string) => launchAllowed.has(id)) }, deletedAt: null },
       select: { email: true },
     });
     users.forEach((u) => emailsToSend.push(u.email));
@@ -311,6 +316,15 @@ export async function notifyProjectUpdate(
   }
   userIds.delete(project.creatorId);
 
+  // Per-project mute: a backer who turned "Updates" off for this project
+  // in Notification Preferences gets neither the in-app row nor the
+  // email. (The table existed but no sender read it.)
+  const mutedRows = await db.projectNotificationPreference.findMany({
+    where: { projectId, updates: false },
+    select: { userId: true },
+  });
+  mutedRows.forEach((m: { userId: string }) => userIds.delete(m.userId));
+
   const notifications = Array.from(userIds).map((userId) => ({
     userId,
     type: "PROJECT_UPDATE" as NotificationType,
@@ -336,11 +350,24 @@ export async function notifyProjectUpdate(
   // Send emails to all users (backers + followers with userId) and email-only followers
   const emailsToSend: string[] = [];
 
-  // Get emails for user-based followers and backers
+  // Get emails for user-based followers and backers, honoring Settings >
+  // Subscriptions. Backers fall under "Project updates" (backed);
+  // followers under "Followed project updates" — a user in both sets
+  // gets the email if EITHER toggle is on.
   const allUserIds = Array.from(userIds);
   if (allUserIds.length > 0) {
+    const [backedAllowed, followedAllowed] = await Promise.all([
+      filterUserIdsByEmailPreference(allUserIds, "backedProjectUpdates"),
+      filterUserIdsByEmailPreference(allUserIds, "projectUpdates"),
+    ]);
+    const backerIdSet = new Set(
+      project.pledges.map((p: { userId: string }) => p.userId)
+    );
+    const allowedIds = allUserIds.filter((id: string) =>
+      backerIdSet.has(id) ? backedAllowed.has(id) || followedAllowed.has(id) : followedAllowed.has(id)
+    );
     const users = await db.user.findMany({
-      where: { id: { in: allUserIds }, deletedAt: null },
+      where: { id: { in: allowedIds }, deletedAt: null },
       select: { email: true },
     });
     users.forEach((u) => emailsToSend.push(u.email));

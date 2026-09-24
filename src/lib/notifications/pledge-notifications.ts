@@ -185,6 +185,14 @@ export async function notifyPledgeShipped(
 
   if (!pledge) return;
 
+  // Per-project mute: "Shipping" off in the backer's Notification
+  // Preferences for this project silences the shipped notice.
+  const projectPref = await db.projectNotificationPreference.findFirst({
+    where: { userId: pledge.userId, projectId: pledge.projectId },
+    select: { shipping: true },
+  });
+  if (projectPref && projectPref.shipping === false) return;
+
   // Use provided projectUrlPath or fallback to legacy slug-based URL
   const actionUrl = projectUrlPath || `/projects/${projectSlug}`;
 
