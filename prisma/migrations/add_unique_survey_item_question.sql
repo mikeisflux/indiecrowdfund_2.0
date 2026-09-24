@@ -48,7 +48,7 @@ DELETE FROM "SurveyItemQuestion"
 WHERE id IN (SELECT id FROM ranked WHERE rnk > 1);
 
 -- Now the constraint can safely be added.
-CREATE UNIQUE INDEX "SurveyItemQuestion_surveyId_rewardId_key"
+CREATE UNIQUE INDEX IF NOT EXISTS "SurveyItemQuestion_surveyId_rewardId_key"
   ON "SurveyItemQuestion" ("surveyId", "rewardId");
 
 COMMIT;

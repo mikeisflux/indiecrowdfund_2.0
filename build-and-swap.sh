@@ -252,9 +252,95 @@ BUILD_EXIT_CODE=$?
 if [ $BUILD_EXIT_CODE -eq 0 ]; then
     echo -e "${GREEN}✅ Build successful!${NC}"
 
-    # Step 6b: Atomic swap - backup old, swap in new
+    # Step 6b: Apply database migrations BEFORE the swap.
+    #
+    # The Sept 2026 sitewide outage: code selecting Project."preOrdersEnabled"
+    # was swapped in before add_preorders.sql ran, so every full-scalar
+    # project query threw P2022 and every campaign page 500'd. Schema and
+    # code must go live together — new columns exist before new code reads
+    # them. This step makes that automatic.
+    #
+    # Applied files are tracked in a "_DeployMigration" table so each file
+    # runs exactly once — a blind re-run-everything would clobber live data
+    # (add_bookid_to_discount_codes.sql resets redemption caps on re-run).
+    # On the very first run the table is seeded with every existing file
+    # WITHOUT running them, because prod is already current with the
+    # directory as of this step shipping; from then on only NEW files run.
+    # Consequence: never edit an applied migration — put changes in a new
+    # file (which is already the pattern here).
+    #
+    # Runs after the build succeeds (a failed build shouldn't touch the DB)
+    # and before the swap (old code ignores new columns, so applying early
+    # is harmless; the reverse order is the outage). Auth via ~/.pgpass —
+    # no password here, ever. A migration failure aborts the deploy with
+    # the old build still live; fix the file and re-run.
+    # Set BUILD_SWAP_SKIP_MIGRATIONS=1 to skip (e.g. rebuild-only deploys).
     echo ""
-    echo "🔄 Step 6b: Swapping build directories..."
+    echo "🗃️  Step 6b: Applying database migrations..."
+    PSQL="psql -h localhost -U indieuser -d indiecrowdfund"
+    if [ "${BUILD_SWAP_SKIP_MIGRATIONS:-}" = "1" ]; then
+        echo -e "${YELLOW}   Skipped (BUILD_SWAP_SKIP_MIGRATIONS=1)${NC}"
+    elif ! command -v psql >/dev/null 2>&1; then
+        echo -e "${YELLOW}   psql not found — skipping migrations (apply them manually!)${NC}"
+    else
+        MIGRATION_ABORT=""
+        if ! $PSQL -q -c 'CREATE TABLE IF NOT EXISTS "_DeployMigration" ("filename" TEXT PRIMARY KEY, "appliedAt" TIMESTAMPTZ NOT NULL DEFAULT now(), "baseline" BOOLEAN NOT NULL DEFAULT false);' 2>&1; then
+            echo -e "${RED}❌ ERROR: Could not reach the database to check migrations${NC}"
+            MIGRATION_ABORT=1
+        else
+            TRACKED_COUNT=$($PSQL -tA -c 'SELECT COUNT(*) FROM "_DeployMigration";' 2>/dev/null)
+            if [ "$TRACKED_COUNT" = "0" ]; then
+                # First run: baseline. The DB already has everything in this
+                # directory applied, so record the files without running them.
+                BASELINE_VALUES=""
+                for MIGRATION_FILE in prisma/migrations/*.sql; do
+                    [ -f "$MIGRATION_FILE" ] || continue
+                    BASELINE_VALUES="${BASELINE_VALUES}${BASELINE_VALUES:+,}('$(basename "$MIGRATION_FILE")', true)"
+                done
+                if [ -n "$BASELINE_VALUES" ]; then
+                    $PSQL -q -c "INSERT INTO \"_DeployMigration\" (\"filename\", \"baseline\") VALUES ${BASELINE_VALUES} ON CONFLICT DO NOTHING;"
+                    echo -e "${GREEN}   First run: baselined existing migrations as already applied${NC}"
+                fi
+            fi
+            APPLIED_LIST=$($PSQL -tA -c 'SELECT "filename" FROM "_DeployMigration";' 2>/dev/null)
+            NEW_APPLIED=0
+            for MIGRATION_FILE in prisma/migrations/*.sql; do
+                [ -f "$MIGRATION_FILE" ] || continue
+                MIGRATION_BASE=$(basename "$MIGRATION_FILE")
+                if printf '%s\n' "$APPLIED_LIST" | grep -qxF "$MIGRATION_BASE"; then
+                    continue
+                fi
+                echo "   Applying ${MIGRATION_BASE}..."
+                MIGRATION_OUTPUT=$($PSQL -v ON_ERROR_STOP=1 -q -f "$MIGRATION_FILE" 2>&1)
+                if [ $? -ne 0 ]; then
+                    echo -e "${RED}❌ ERROR: Migration failed: ${MIGRATION_BASE}${NC}"
+                    echo "$MIGRATION_OUTPUT" | tail -20
+                    MIGRATION_ABORT=1
+                    break
+                fi
+                $PSQL -q -c "INSERT INTO \"_DeployMigration\" (\"filename\") VALUES ('${MIGRATION_BASE}') ON CONFLICT DO NOTHING;"
+                NEW_APPLIED=$((NEW_APPLIED + 1))
+            done
+            if [ -z "$MIGRATION_ABORT" ]; then
+                if [ "$NEW_APPLIED" -gt 0 ]; then
+                    echo -e "${GREEN}   Applied ${NEW_APPLIED} new migration(s)${NC}"
+                else
+                    echo -e "${GREEN}   Database already up to date${NC}"
+                fi
+            fi
+        fi
+        if [ -n "$MIGRATION_ABORT" ]; then
+            echo ""
+            echo -e "${GREEN}   Site is still running with old build (nothing was swapped).${NC}"
+            echo "   Fix the migration, then re-run ./build-and-swap.sh"
+            rm -rf .next-new
+            exit 1
+        fi
+    fi
+
+    # Step 6c: Atomic swap - backup old, swap in new
+    echo ""
+    echo "🔄 Step 6c: Swapping build directories..."
     TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 
     if [ -d ".next" ]; then
