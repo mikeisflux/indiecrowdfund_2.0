@@ -16,6 +16,7 @@ import {
   formatEmailCampaigns,
   processBackers,
   buildPackageGroups,
+  buildCustomPackageGroups,
   computeStats,
   computePostCampaignSales,
 } from "./helpers";
@@ -422,6 +423,13 @@ export async function GET(req: NextRequest) {
 
     // Build package groups. Weight / customs saved via the Packages tab's
     // Edit Customs dialog live on FulfillmentProduct rows keyed by name.
+    const customGroupRows = selectedProjectId
+      ? await db.customPackageGroup.findMany({
+          where: { projectId: selectedProjectId },
+          orderBy: { createdAt: "asc" },
+          select: { id: true, name: true, type: true, pledgeIds: true },
+        })
+      : [];
     const packageGroups = buildPackageGroups(
       processedBackers,
       (products as { name: string; weight: number | null; customsDescription: string | null; countryOfOrigin: string | null; declaredValue: unknown; customsCode: string | null }[]).map(pr => ({
@@ -432,6 +440,20 @@ export async function GET(req: NextRequest) {
         declaredValue: pr.declaredValue == null ? null : Number(pr.declaredValue),
         customsCode: pr.customsCode,
       }))
+    );
+    packageGroups.push(
+      ...buildCustomPackageGroups(
+        customGroupRows,
+        processedBackers,
+        (products as { name: string; weight: number | null; customsDescription: string | null; countryOfOrigin: string | null; declaredValue: unknown; customsCode: string | null }[]).map(pr => ({
+          name: pr.name,
+          weight: pr.weight,
+          customsDescription: pr.customsDescription,
+          countryOfOrigin: pr.countryOfOrigin,
+          declaredValue: pr.declaredValue == null ? null : Number(pr.declaredValue),
+          customsCode: pr.customsCode,
+        }))
+      )
     );
 
     // Calculate workflow context data

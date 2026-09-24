@@ -522,3 +522,156 @@ export function EditCustomsDialog({
     </Dialog>
   );
 }
+
+// --- Create Custom Group Dialog ---
+
+interface CreateGroupDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  projectId?: string;
+  rewards?: { id: string; name: string }[];
+  onRefresh?: () => void;
+}
+
+/**
+ * Creator-defined package group. Members are snapshotted server-side
+ * from the chosen reward tiers (all tiers when none are picked),
+ * bucketed by the group type's address filter. The old dialog posted to
+ * a stub and showed a success toast while storing nothing.
+ */
+export function CreateGroupDialog({
+  open,
+  onOpenChange,
+  projectId,
+  rewards = [],
+  onRefresh,
+}: CreateGroupDialogProps) {
+  const [newGroupName, setNewGroupName] = useState("");
+  const [newGroupType, setNewGroupType] = useState<string>("domestic");
+  const [selectedRewardIds, setSelectedRewardIds] = useState<Set<string>>(new Set());
+  const [isCreatingGroup, setIsCreatingGroup] = useState(false);
+
+  const toggleReward = (id: string) => {
+    setSelectedRewardIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const handleCreateGroup = async () => {
+    if (!projectId || !newGroupName.trim()) {
+      toast.error("Please enter a group name");
+      return;
+    }
+
+    setIsCreatingGroup(true);
+    try {
+      const res = await apiFetch("/api/creator/indiekit/fulfillment", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", },
+        body: JSON.stringify({
+          projectId,
+          action: "create_group",
+          name: newGroupName,
+          type: newGroupType,
+          rewardIds: Array.from(selectedRewardIds),
+        }),
+      });
+
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to create group");
+      }
+
+      toast.success(
+        `Created "${newGroupName}" with ${data.memberCount ?? 0} backer(s)`
+      );
+      onOpenChange(false);
+      setNewGroupName("");
+      setNewGroupType("domestic");
+      setSelectedRewardIds(new Set());
+      onRefresh?.();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to create group");
+    } finally {
+      setIsCreatingGroup(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Create Package Group</DialogTitle>
+          <DialogDescription>
+            Group backers for fulfillment. Members are picked from the reward tiers you
+            select, filtered by the group type&apos;s address bucket.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4 py-4">
+          <div className="space-y-2">
+            <Label htmlFor="groupName">Group Name</Label>
+            <Input
+              id="groupName"
+              placeholder="e.g., US Hardcover Orders"
+              value={newGroupName}
+              onChange={(e) => setNewGroupName(e.target.value)}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="groupType">Group Type</Label>
+            <Select value={newGroupType} onValueChange={setNewGroupType}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="domestic">Domestic (US addresses)</SelectItem>
+                <SelectItem value="international">International (non-US addresses)</SelectItem>
+                <SelectItem value="incomplete">Incomplete (no address yet)</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          {rewards.length > 0 && (
+            <div className="space-y-2">
+              <Label>Reward Tiers (none selected = all tiers)</Label>
+              <div className="max-h-44 overflow-y-auto space-y-1 border rounded-lg p-2">
+                {rewards.map((r) => (
+                  <label key={r.id} className="flex items-center gap-2 text-sm p-1.5 rounded hover:bg-muted/50 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      className="accent-teal-600"
+                      checked={selectedRewardIds.has(r.id)}
+                      onChange={() => toggleReward(r.id)}
+                    />
+                    {r.name}
+                  </label>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
+          <Button
+            className="bg-teal-600 hover:bg-teal-700"
+            onClick={handleCreateGroup}
+            disabled={isCreatingGroup}
+          >
+            {isCreatingGroup ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Creating...
+              </>
+            ) : (
+              "Create Group"
+            )}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}

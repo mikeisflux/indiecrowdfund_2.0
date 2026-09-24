@@ -956,6 +956,7 @@ export default function IndieKitPage() {
                   onPackageGroupFilterChange={setPackageGroupFilter}
                   hasActiveCampaign={hasActiveCampaign}
                   projectId={selectedProjectId}
+                  rewards={rewards}
                   onRefresh={fetchData}
                 />
               )}

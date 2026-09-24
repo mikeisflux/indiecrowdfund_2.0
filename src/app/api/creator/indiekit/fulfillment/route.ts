@@ -62,6 +62,19 @@ async function findPushCandidates(opts: {
   });
 }
 
+/** Custom group's member pledge ids, or null when the id isn't one. */
+async function customGroupPledgeIds(
+  projectId: string,
+  groupId: string | undefined
+): Promise<string[] | null> {
+  if (!groupId) return null;
+  const row = await db.customPackageGroup.findFirst({
+    where: { id: groupId, projectId },
+    select: { pledgeIds: true },
+  });
+  return row ? row.pledgeIds : null;
+}
+
 function csvEscape(value: unknown): string {
   const s = value == null ? "" : String(value);
   return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
@@ -209,8 +222,17 @@ export async function POST(req: NextRequest) {
     if (action === "push_orders" || action === "push_all" || action === "retry_errored") {
       let pledgeIds: string[];
 
+      // A custom group pushes its stored member list (narrowed to pledges
+      // still awaiting a push); auto groups resolve by reward title.
+      const customMembers =
+        action === "push_orders" ? await customGroupPledgeIds(projectId, body.groupId) : null;
+
       if (action === "push_orders" && Array.isArray(backerIds) && backerIds.length > 0) {
         pledgeIds = backerIds;
+      } else if (customMembers) {
+        const candidates = await findPushCandidates({ projectId });
+        const eligible = new Set(candidates.map((c) => c.id));
+        pledgeIds = customMembers.filter((id) => eligible.has(id));
       } else {
         const candidates = await findPushCandidates({
           projectId,
@@ -304,16 +326,19 @@ export async function POST(req: NextRequest) {
       }
 
       const groupName: string | undefined = body.groupName || undefined;
+      const exportCustomMembers = await customGroupPledgeIds(projectId, body.groupId);
       const pledges = await db.pledge.findMany({
         where: {
           projectId,
           deletedAt: null,
           status: "COMPLETED",
-          ...(groupName
-            ? groupName === "No Reward"
-              ? { rewardId: null }
-              : { reward: { title: groupName } }
-            : {}),
+          ...(exportCustomMembers
+            ? { id: { in: exportCustomMembers } }
+            : groupName
+              ? groupName === "No Reward"
+                ? { rewardId: null }
+                : { reward: { title: groupName } }
+              : {}),
         },
         orderBy: { backerNumber: "asc" },
         select: {
@@ -434,14 +459,71 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: true });
     }
 
+    // Creator-defined package group: members are snapshotted from the
+    // chosen reward tiers (all tiers when none picked), bucketed by the
+    // group's type (domestic / international / incomplete address).
     if (action === "create_group") {
-      return NextResponse.json(
-        {
-          error:
-            "Package groups are generated automatically from your reward tiers — custom groups aren't supported.",
+      const name = String(body.name || "").trim();
+      const type = ["domestic", "international", "incomplete"].includes(body.type)
+        ? (body.type as string)
+        : "domestic";
+      if (!name) {
+        return NextResponse.json({ error: "Group name required" }, { status: 400 });
+      }
+      const rewardIds: string[] = Array.isArray(body.rewardIds)
+        ? body.rewardIds.filter((r: unknown) => typeof r === "string")
+        : [];
+
+      const memberCandidates = await db.pledge.findMany({
+        where: {
+          projectId,
+          deletedAt: null,
+          status: "COMPLETED",
+          ...(rewardIds.length > 0 ? { rewardId: { in: rewardIds } } : {}),
         },
-        { status: 400 }
-      );
+        select: {
+          id: true,
+          shippingAddress: true,
+          surveyResponse: { select: { shippingAddress: true } },
+        },
+      });
+
+      const pledgeIds = memberCandidates
+        .filter((p) => {
+          const address = resolvePledgeShippingAddress(
+            p.surveyResponse?.shippingAddress,
+            p.shippingAddress
+          );
+          if (type === "incomplete") return !address?.line1;
+          if (!address?.country) return type === "domestic";
+          return type === "international"
+            ? address.country !== "US"
+            : address.country === "US";
+        })
+        .map((p) => p.id);
+
+      const group = await db.customPackageGroup.create({
+        data: { projectId, name: name.slice(0, 120), type, pledgeIds },
+      });
+
+      return NextResponse.json({
+        success: true,
+        groupId: group.id,
+        memberCount: pledgeIds.length,
+      });
+    }
+
+    if (action === "delete_group") {
+      const deleted = await db.customPackageGroup.deleteMany({
+        where: { id: String(body.groupId || ""), projectId },
+      });
+      if (deleted.count === 0) {
+        return NextResponse.json(
+          { error: "Group not found (auto-generated groups can't be deleted)" },
+          { status: 404 }
+        );
+      }
+      return NextResponse.json({ success: true });
     }
 
     return NextResponse.json({ error: `Unknown action: ${action}` }, { status: 400 });

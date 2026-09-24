@@ -16,6 +16,7 @@ interface PhysicalDeliveryTabProps {
   onPackageGroupFilterChange: (filter: string) => void;
   hasActiveCampaign: boolean;
   projectId: string;
+  rewards?: { id: string; name: string }[];
   onRefresh: () => void;
 }
 
@@ -33,6 +34,7 @@ export function PhysicalDeliveryTab({
   onPackageGroupFilterChange,
   hasActiveCampaign,
   projectId,
+  rewards,
   onRefresh,
 }: PhysicalDeliveryTabProps) {
   const [subTab, setSubTab] = useState("packages");
@@ -60,6 +62,7 @@ export function PhysicalDeliveryTab({
             onPackageGroupFilterChange={onPackageGroupFilterChange}
             hasActiveCampaign={hasActiveCampaign}
             projectId={projectId}
+            rewards={rewards}
             onRefresh={onRefresh}
           />
         </TabsContent>

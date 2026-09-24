@@ -49,6 +49,7 @@ import {
   PackageGroupCard,
   SkuMappingContent,
   ConnectServiceDialog,
+  CreateGroupDialog,
   ViewGroupDialog,
   EditCustomsDialog,
 } from "./packages-sections";
@@ -60,6 +61,7 @@ interface PackagesTabProps {
   onPackageGroupFilterChange: (filter: string) => void;
   hasActiveCampaign?: boolean;
   projectId?: string;
+  rewards?: { id: string; name: string }[];
   onRefresh?: () => void;
 }
 
@@ -82,6 +84,7 @@ export function PackagesTab({
   onPackageGroupFilterChange,
   hasActiveCampaign = true,
   projectId,
+  rewards = [],
   onRefresh,
 }: PackagesTabProps) {
   const [segmentFilter, setSegmentFilter] = useState("ready_to_ship");
@@ -95,6 +98,7 @@ export function PackagesTab({
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
   const [isRetrying, setIsRetrying] = useState(false);
+  const [showCreateGroupDialog, setShowCreateGroupDialog] = useState(false);
   const [viewingGroup, setViewingGroup] = useState<PackageGroup | null>(null);
   const [editingCustomsItem, setEditingCustomsItem] = useState<EditingCustomsItem | null>(null);
 
@@ -405,6 +409,24 @@ export function PackagesTab({
       toast.error(error instanceof Error ? error.message : "Retry failed");
     } finally {
       setIsRetrying(false);
+    }
+  };
+
+  const handleDeleteGroup = async (group: PackageGroup) => {
+    if (!projectId) return;
+    if (!window.confirm(`Delete custom group "${group.name}"? Orders in it are unaffected.`)) return;
+    try {
+      const res = await apiFetch("/api/creator/indiekit/fulfillment", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", },
+        body: JSON.stringify({ projectId, action: "delete_group", groupId: group.id }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Failed to delete group");
+      toast.success(`Deleted "${group.name}"`);
+      onRefresh?.();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to delete group");
     }
   };
 
@@ -858,6 +880,10 @@ export function PackagesTab({
                 {isRefreshing ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <RefreshCw className="h-4 w-4 mr-2" />}
                 {isRefreshing ? "Refreshing..." : "Refresh Groups"}
               </Button>
+              <Button className="bg-teal-600 hover:bg-teal-700" onClick={() => setShowCreateGroupDialog(true)}>
+                <Plus className="h-4 w-4 mr-2" />
+                Create Group
+              </Button>
             </div>
           </div>
 
@@ -874,6 +900,7 @@ export function PackagesTab({
                 onPushOrders={handlePushOrders}
                 onViewGroup={setViewingGroup}
                 onExport={handleExport}
+                onDeleteGroup={handleDeleteGroup}
                 onEditCustoms={(groupId, item) =>
                   setEditingCustomsItem({
                     groupId,
@@ -901,6 +928,14 @@ export function PackagesTab({
           loadIntegrations();
           onRefresh?.();
         }}
+      />
+
+      <CreateGroupDialog
+        open={showCreateGroupDialog}
+        onOpenChange={setShowCreateGroupDialog}
+        projectId={projectId}
+        rewards={rewards}
+        onRefresh={onRefresh}
       />
 
       <ViewGroupDialog

@@ -11,6 +11,6 @@ export type { DistributionRuleType } from "./format-distribution-rules";
 export { formatEmailCampaigns } from "./format-email-campaigns";
 export type { CampaignType } from "./format-email-campaigns";
 export { processBackers } from "./process-backers";
-export { buildPackageGroups } from "./build-package-groups";
+export { buildPackageGroups, buildCustomPackageGroups } from "./build-package-groups";
 export { computeStats } from "./compute-stats";
 export { computePostCampaignSales } from "./post-campaign-sales";

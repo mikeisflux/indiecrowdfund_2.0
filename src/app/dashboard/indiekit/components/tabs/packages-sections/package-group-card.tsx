@@ -36,6 +36,7 @@ interface PackageGroupCardProps {
   onViewGroup: (group: PackageGroup) => void;
   onExport: (groupId: string, format: "csv" | "excel" | "packing_slips" | "shipping_labels") => void;
   onEditCustoms: (groupId: string, item: PackageGroup["items"][number]) => void;
+  onDeleteGroup?: (group: PackageGroup) => void;
 }
 
 export function PackageGroupCard({
@@ -46,6 +47,7 @@ export function PackageGroupCard({
   onViewGroup,
   onExport,
   onEditCustoms,
+  onDeleteGroup,
 }: PackageGroupCardProps) {
   return (
     <Card>
@@ -60,6 +62,9 @@ export function PackageGroupCard({
             <Badge className="bg-teal-100 text-teal-700">
               {group.type.charAt(0).toUpperCase() + group.type.slice(1)}
             </Badge>
+            {group.custom && (
+              <Badge variant="outline" className="text-muted-foreground">Custom</Badge>
+            )}
           </div>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -71,6 +76,11 @@ export function PackageGroupCard({
               <DropdownMenuItem onClick={() => onViewGroup(group)}>View This Group</DropdownMenuItem>
               <DropdownMenuItem onClick={() => onExport(group.id, "csv")}>Export Orders</DropdownMenuItem>
               <DropdownMenuItem onClick={() => onExport(group.id, "excel")}>Export Reports</DropdownMenuItem>
+              {group.custom && onDeleteGroup && (
+                <DropdownMenuItem className="text-red-600" onClick={() => onDeleteGroup(group)}>
+                  Delete Group
+                </DropdownMenuItem>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>

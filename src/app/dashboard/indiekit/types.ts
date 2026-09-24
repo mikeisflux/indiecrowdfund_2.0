@@ -148,6 +148,8 @@ export interface PackageGroup {
   id: string;
   name: string;
   type: "domestic" | "international" | "incomplete";
+  /** Creator-defined group (deletable) vs auto-generated per reward tier. */
+  custom?: boolean;
   itemCount: number;
   backerCount: number;
   status: "pending" | "processing" | "shipped";

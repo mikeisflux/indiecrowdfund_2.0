@@ -439,3 +439,24 @@ model FulfillmentSkippedItem {
   @@unique([projectId, sourceType, sourceId])
   @@index([projectId])
 }
+
+// Creator-defined package groups, alongside the auto-generated
+// per-reward-tier groups on the Packages tab. Membership is a static
+// pledge-id snapshot taken from the filters chosen at creation; counts
+// and weights are derived live from those pledges. Created by
+// migrations/add_custom_package_groups.sql.
+model CustomPackageGroup {
+  id        String @id @default(cuid())
+  projectId String
+
+  name String
+  // domestic | international | incomplete — same buckets as auto groups.
+  type String @default("domestic")
+
+  pledgeIds String[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([projectId])
+}

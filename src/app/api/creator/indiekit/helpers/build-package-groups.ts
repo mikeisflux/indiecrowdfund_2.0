@@ -1,4 +1,5 @@
 type ProcessedBacker = {
+  id: string;
   reward: string;
   status: "not_pushed" | "push_errored" | "pushed" | "shipped";
   shippingAddress?: {
@@ -114,9 +115,97 @@ export function buildPackageGroups(
         pushed: pushedCount,
         shipped: shippedCount,
       },
-      lastSentAt: undefined,
+      lastSentAt: undefined as string | undefined,
+      custom: false,
       items,
       totalWeight,
+    };
+  });
+}
+
+
+/**
+ * Creator-defined groups (CustomPackageGroup rows) rendered in the same
+ * shape as the auto-generated per-reward-tier groups. Membership is the
+ * stored pledge-id snapshot; status counts, items, and weights are
+ * derived live from those pledges so the card never goes stale.
+ */
+export function buildCustomPackageGroups(
+  rows: { id: string; name: string; type: string; pledgeIds: string[] }[],
+  processedBackers: ProcessedBacker[],
+  products: PackageProductInfo[] = []
+) {
+  if (rows.length === 0) return [];
+  const productByName = new Map(products.map(p => [p.name, p]));
+  const backerById = new Map(processedBackers.map(b => [b.id, b]));
+
+  return rows.map((row) => {
+    const members = row.pledgeIds
+      .map((id) => backerById.get(id))
+      .filter((b): b is ProcessedBacker => !!b);
+
+    const notPushedCount = members.filter(b => b.status === "not_pushed").length;
+    const erroredCount = members.filter(b => b.status === "push_errored").length;
+    const pushedCount = members.filter(b => b.status === "pushed").length;
+    const shippedCount = members.filter(b => b.status === "shipped").length;
+
+    let status: "pending" | "processing" | "shipped" = "pending";
+    if (members.length > 0 && shippedCount === members.length) status = "shipped";
+    else if (pushedCount > 0 || shippedCount > 0) status = "processing";
+
+    // Aggregate items across all member pledges (a custom group can mix
+    // reward tiers, unlike auto groups).
+    const itemTotals = new Map<string, number>();
+    for (const member of members) {
+      for (const item of member.items) {
+        itemTotals.set(item.name, (itemTotals.get(item.name) ?? 0) + item.quantity);
+      }
+    }
+    const items = Array.from(itemTotals.entries()).map(([name, quantity]) => {
+      const product = productByName.get(name);
+      const totalOz = product?.weight ?? 0;
+      const customsComplete = !!(product?.customsDescription && product?.countryOfOrigin);
+      return {
+        name,
+        quantity,
+        weight: { lbs: Math.floor(totalOz / 16), oz: totalOz % 16 },
+        customsValid: row.type !== "international" || customsComplete,
+        sku: undefined as string | undefined,
+        customsDescription: product?.customsDescription ?? null,
+        countryOfOrigin: product?.countryOfOrigin ?? null,
+        declaredValue: product?.declaredValue ?? null,
+        customsCode: product?.customsCode ?? null,
+        weightOz: totalOz,
+      };
+    });
+
+    const rawTotal = items.reduce(
+      (acc, item) => ({ lbs: acc.lbs + item.weight.lbs, oz: acc.oz + item.weight.oz }),
+      { lbs: 0, oz: 0 }
+    );
+
+    return {
+      id: row.id,
+      name: row.name,
+      type: (["domestic", "international", "incomplete"].includes(row.type)
+        ? row.type
+        : "domestic") as "domestic" | "international" | "incomplete",
+      custom: true,
+      itemCount: items.length,
+      backerCount: members.length,
+      status,
+      statusCounts: {
+        notPushed: notPushedCount,
+        pushErrored: erroredCount,
+        pushed: pushedCount,
+        shipped: shippedCount,
+      },
+      lastSentAt: undefined as string | undefined,
+      items,
+      totalWeight: {
+        lbs: rawTotal.lbs + Math.floor(rawTotal.oz / 16),
+        oz: rawTotal.oz % 16,
+      },
     };
   });
 }
