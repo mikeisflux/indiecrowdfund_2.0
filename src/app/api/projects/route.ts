@@ -42,6 +42,26 @@ const createProjectSchema = z.object({
   durationDays: z.number().min(1).max(60).optional(),
   endDate: z.string().datetime().optional(),
   launchDate: z.string().datetime().optional(),
+  // The builder sends the story/payment/promotion steps' fields on the
+  // very first save too; the schema used to silently drop them, so a
+  // creator who filled several steps before the first autosave lost
+  // everything but Basics.
+  description: z.string().optional(),
+  risks: z.string().optional(),
+  usesAI: z.boolean().optional(),
+  contactEmail: z.string().email().optional().or(z.literal("")),
+  projectType: z.enum(["INDIVIDUAL", "COMPANY"]).optional(),
+  hasAdultContent: z.boolean().optional(),
+  hasRiskyContent: z.boolean().optional(),
+  promoContentSfw: z.boolean().optional(),
+  allowRetailerPledges: z.boolean().optional(),
+  retailerDiscount: z.number().min(0).max(90).optional(),
+  retailerMinQuantity: z.number().int().min(1).optional(),
+  prelaunchActive: z.boolean().optional(),
+  prelaunchDescription: z.string().optional().nullable(),
+  customReferralTags: z.array(z.string()).optional(),
+  googleAnalyticsId: z.string().max(50).optional().nullable(),
+  faqs: z.array(z.object({ question: z.string().max(500), answer: z.string().max(5000) })).optional(),
 });
 
 // GET /api/projects - List projects
@@ -378,10 +398,22 @@ export async function POST(req: NextRequest) {
             durationDays: validatedData.durationDays,
             endDate: validatedData.endDate ? new Date(validatedData.endDate) : null,
             launchDate: validatedData.launchDate ? new Date(validatedData.launchDate) : null,
-            description: "",
-            risks: "",
-            contactEmail: session.user.email || "",
-            projectType: "INDIVIDUAL",
+            description: validatedData.description || "",
+            risks: validatedData.risks || "",
+            usesAI: validatedData.usesAI ?? false,
+            contactEmail: validatedData.contactEmail || session.user.email || "",
+            projectType: validatedData.projectType || "INDIVIDUAL",
+            hasAdultContent: validatedData.hasAdultContent ?? false,
+            hasRiskyContent: validatedData.hasRiskyContent ?? false,
+            promoContentSfw: validatedData.promoContentSfw ?? true,
+            allowRetailerPledges: validatedData.allowRetailerPledges ?? false,
+            ...(validatedData.retailerDiscount !== undefined ? { retailerDiscount: validatedData.retailerDiscount } : {}),
+            ...(validatedData.retailerMinQuantity !== undefined ? { retailerMinQuantity: validatedData.retailerMinQuantity } : {}),
+            prelaunchActive: validatedData.prelaunchActive ?? false,
+            prelaunchDescription: validatedData.prelaunchDescription ?? null,
+            customReferralTags: validatedData.customReferralTags ?? [],
+            googleAnalyticsId: validatedData.googleAnalyticsId ?? null,
+            ...(validatedData.faqs ? { faqs: validatedData.faqs } : {}),
             status: "DRAFT",
           },
         });
