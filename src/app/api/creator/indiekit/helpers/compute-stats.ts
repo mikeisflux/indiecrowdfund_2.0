@@ -4,9 +4,11 @@ interface ComputeStatsInput {
   pledges: any[];
   surveyResponses: any[];
   addOnSales: { _sum: { amount: unknown; quantity: unknown }; _count: number };
-  selectedProject: { currentAmount: unknown };
+  selectedProject: { currentAmount: unknown; endDate?: Date | null };
   postCampaignTotal: number;
   postCampaignPerProject: { projectId: string; projectTitle: string; amount: number }[];
+  /** Count of FAILED pledges (they're excluded from the pledges list). */
+  failedChargesCount?: number;
 }
 
 export function computeStats({
@@ -16,6 +18,7 @@ export function computeStats({
   selectedProject,
   postCampaignTotal,
   postCampaignPerProject,
+  failedChargesCount = 0,
 }: ComputeStatsInput) {
   // Calculate stats
   const totalBackers = pledges.filter((p: any) => p.status === "COMPLETED").length;
@@ -89,8 +92,31 @@ export function computeStats({
     { label: "Completed", count: totalPledges, percentage: 100, color: "bg-green-500" },
   ];
 
-  // Pre-order count
-  const preOrderBackers = pledges.filter((p: any) => p.isPreOrder).length;
+  // Pre-orders = pledges placed after the campaign's end date (there is
+  // no isPreOrder column — the old filter read a nonexistent field and
+  // always found zero). New vs returning is judged by whether the same
+  // user also backed during the campaign.
+  const endDate = selectedProject.endDate ? new Date(selectedProject.endDate) : null;
+  const preOrderPledges = endDate
+    ? pledges.filter((p: any) => new Date(p.createdAt) > endDate)
+    : [];
+  const preOrderBackers = preOrderPledges.length;
+  const preOrderRevenue = preOrderPledges.reduce(
+    (sum: number, p: any) => sum + Number(p.amount || 0),
+    0
+  );
+  const campaignBackerUserIds = new Set(
+    endDate
+      ? pledges
+          .filter((p: any) => new Date(p.createdAt) <= endDate)
+          .map((p: any) => p.userId || p.user?.id)
+          .filter(Boolean)
+      : []
+  );
+  const returningBackers = preOrderPledges.filter((p: any) =>
+    campaignBackerUserIds.has(p.userId || p.user?.id)
+  ).length;
+  const newBackers = preOrderBackers - returningBackers;
 
   // Calculate balance due per pledge for post-campaign charge tracking.
   // Balance due is stored in metadata.balanceDue when orders are edited
@@ -131,8 +157,14 @@ export function computeStats({
   // NOT for initial pledge payments - those are already collected when status is COMPLETED
   const chargeStats = {
     notCharged: backersWithBalanceDue.length, // Backers with outstanding balance from post-campaign changes
-    errored: pledges.filter((p: any) => p.chargeStatus === "FAILED").length,
-    charged: 0, // TODO: track successful additional charge collections
+    // FAILED pledges are excluded from the fetched list, so the count
+    // comes in separately from the route.
+    errored: failedChargesCount,
+    // A collected additional charge stamps balancePaymentCompletedAt on
+    // the pledge metadata (see /api/pay/balance/confirm).
+    charged: pledges.filter(
+      (p: any) => ((p.metadata as Record<string, unknown>) || {}).balancePaymentCompletedAt
+    ).length,
     paypalCollected: pledges.filter((p: any) => p.paymentProcessor === "PAYPAL" && p.status === "COMPLETED").length,
   };
 
@@ -154,6 +186,9 @@ export function computeStats({
     digitalDownloads,
     packagesShipped,
     preOrderBackers,
+    preOrderRevenue: Math.round(preOrderRevenue * 100) / 100,
+    returningBackers,
+    newBackers,
     chargeStats,
     pledgeLevelBreakdown,
     surveyStatusBreakdown,

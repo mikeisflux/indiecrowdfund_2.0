@@ -31,7 +31,7 @@ export function PaymentsTab({ stats }: PaymentsTabProps) {
             Payment Status
           </CardTitle>
           <CardDescription>
-            Process additional payments for add-ons and extras purchased through the survey.
+            Track additional charges for add-ons and extras purchased through the survey — backers pay outstanding balances from their survey's payment step.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">

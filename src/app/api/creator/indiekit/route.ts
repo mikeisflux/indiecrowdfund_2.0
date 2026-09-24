@@ -115,6 +115,7 @@ export async function GET(req: NextRequest) {
         backerCount: true,
         prelaunchActive: true,
         imageUrl: true,
+        endDate: true,
         creator: {
           select: { vanityUrl: true },
         },
@@ -141,6 +142,7 @@ export async function GET(req: NextRequest) {
             currentAmount: true,
             backerCount: true,
             imageUrl: true,
+            endDate: true,
             creator: {
               select: { vanityUrl: true },
             },
@@ -408,7 +410,14 @@ export async function GET(req: NextRequest) {
       surveyResponses.map(sr => [sr.pledgeId, sr])
     );
 
-    // Compute stats
+    // Compute stats. FAILED pledges are excluded from the fetched list
+    // (they aren't backers), so their count comes in separately for the
+    // Charge Details "errored" tile.
+    const failedChargesCount = shouldInclude("stats")
+      ? await db.pledge.count({
+          where: { projectId: selectedProjectId, deletedAt: null, status: "FAILED" },
+        })
+      : 0;
     const { stats, chargeStats: statsChargeStats, totalBackers, surveysCompleted } = computeStats({
       pledges,
       surveyResponses,
@@ -416,6 +425,7 @@ export async function GET(req: NextRequest) {
       selectedProject,
       postCampaignTotal,
       postCampaignPerProject,
+      failedChargesCount,
     });
 
     // Process backers for display

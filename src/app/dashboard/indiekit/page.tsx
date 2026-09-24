@@ -707,7 +707,7 @@ export default function IndieKitPage() {
             {fulfillmentPercent >= 95 && (
               <div className="mb-6">
                 <WhatsNextBanner
-                  upcomingProjectsCount={3}
+                  upcomingProjectsCount={projects.filter(p => p.prelaunchActive || p.status === "DRAFT" || p.status === "APPROVED").length}
                   onTellUsClick={() => window.location.href = "/projects/new"}
                   onViewProjects={() => handleSelectAlwaysTab("projects")}
                 />
