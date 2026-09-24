@@ -90,9 +90,14 @@ const COLOR_TOKEN_MAP: Array<[keyof ThemeConfig["colors"], string]> = [
 ];
 
 /**
- * CSS text to inject in <head>. Empty string when there is nothing to
- * override. `.light` covers the explicit light class the ThemeProvider
- * sets; bare `:root` covers the pre-hydration frame.
+ * CSS text injected by the root layout. Empty string when there is
+ * nothing to override.
+ *
+ * Scoped to `html.light` ONLY: globals.css is dark-first (bare :root
+ * holds the DARK palette, `.light` overrides it), so a selector that
+ * includes bare `:root` would repaint dark mode with the admin's light
+ * colors. next-themes stamps the class before first paint, and
+ * html.light (0,1,1) outranks globals' `.light` (0,1,0).
  */
 export function buildThemeCssOverrides(theme: ThemeConfig | null): string {
   if (!theme) return "";
@@ -105,7 +110,7 @@ export function buildThemeCssOverrides(theme: ThemeConfig | null): string {
   }
   const parts: string[] = [];
   if (lightVars.length > 0) {
-    parts.push(`:root, .light { ${lightVars.join(" ")} }`);
+    parts.push(`html.light { ${lightVars.join(" ")} }`);
   }
   if (typeof theme.borderRadius === "number" && theme.borderRadius >= 0 && theme.borderRadius <= 32) {
     parts.push(`:root { --radius: ${theme.borderRadius}px; }`);
