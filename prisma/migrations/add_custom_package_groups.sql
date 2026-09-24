@@ -12,3 +12,7 @@ CREATE TABLE IF NOT EXISTS "CustomPackageGroup" (
 );
 CREATE INDEX IF NOT EXISTS "CustomPackageGroup_projectId_idx"
     ON "CustomPackageGroup"("projectId");
+
+-- Export history entries for Reports > Export ("Recent Exports" was a
+-- placeholder that could never populate).
+ALTER TYPE "ActivityType" ADD VALUE IF NOT EXISTS 'DATA_EXPORTED';

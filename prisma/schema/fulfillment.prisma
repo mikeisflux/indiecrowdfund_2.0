@@ -139,6 +139,9 @@ enum ActivityType {
   REFUND_ISSUED
   NOTE_ADDED
   BALANCE_ADJUSTED
+  // A data export was generated (Reports > Export history). Added by
+  // migrations/add_custom_package_groups.sql.
+  DATA_EXPORTED
 }
 
 // Support tickets/notes for backers

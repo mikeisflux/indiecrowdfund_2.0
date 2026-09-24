@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -33,10 +33,40 @@ interface ExportTabProps {
   projectId?: string;
 }
 
-export function ExportTab({ exportHistory = [], projectId }: ExportTabProps) {
+export function ExportTab({ exportHistory: exportHistoryProp = [], projectId }: ExportTabProps) {
   const [exportOption, setExportOption] = useState("backers");
   const [exportFormat, setExportFormat] = useState("csv");
   const [isExporting, setIsExporting] = useState(false);
+  const [exportHistory, setExportHistory] = useState<ExportHistory[]>(exportHistoryProp);
+  const [selectedFields, setSelectedFields] = useState({
+    name: true,
+    email: true,
+    address: true,
+    pledgeLevel: true,
+    items: true,
+    addons: true,
+    phone: false,
+    surveyAnswers: false,
+    paymentDetails: false,
+  });
+
+  // Real export history (fulfillmentActivity DATA_EXPORTED rows).
+  const loadHistory = useCallback(async () => {
+    if (!projectId) return;
+    try {
+      const res = await fetch(`/api/creator/indiekit/export?projectId=${projectId}&history=1`);
+      if (res.ok) {
+        const data = await res.json();
+        setExportHistory(data.history || []);
+      }
+    } catch {
+      // Panel just stays empty.
+    }
+  }, [projectId]);
+
+  useEffect(() => {
+    loadHistory();
+  }, [loadHistory]);
 
   // Handle export
   const handleExport = async (type?: string) => {
@@ -46,11 +76,23 @@ export function ExportTab({ exportHistory = [], projectId }: ExportTabProps) {
     }
 
     const exportType = type || exportOption;
+
+    // "PDF (Pack Lists)" is exactly what the packing-slips page renders —
+    // open it and let the print dialog produce the PDF.
+    if (!type && exportFormat === "pdf") {
+      window.open(`/api/creator/indiekit/packing-slips?projectId=${projectId}&includePrice=1`, "_blank");
+      return;
+    }
+
     setIsExporting(true);
 
     try {
+      const fields = Object.entries(selectedFields)
+        .filter(([, on]) => on)
+        .map(([key]) => key)
+        .join(",");
       const res = await fetch(
-        `/api/creator/indiekit/export?projectId=${projectId}&type=${exportType}`,
+        `/api/creator/indiekit/export?projectId=${projectId}&type=${exportType}&fields=${encodeURIComponent(fields)}`,
         { headers: getCSRFHeaders() }
       );
 
@@ -75,24 +117,13 @@ export function ExportTab({ exportHistory = [], projectId }: ExportTabProps) {
       document.body.removeChild(a);
 
       toast.success(`${exportType.charAt(0).toUpperCase() + exportType.slice(1)} export downloaded`);
+      loadHistory();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Export failed");
     } finally {
       setIsExporting(false);
     }
   };
-  const [selectedFields, setSelectedFields] = useState({
-    name: true,
-    email: true,
-    address: true,
-    pledgeLevel: true,
-    items: true,
-    addons: true,
-    phone: false,
-    surveyAnswers: false,
-    paymentDetails: false,
-  });
-
   const toggleField = (field: keyof typeof selectedFields) => {
     setSelectedFields((prev) => ({ ...prev, [field]: !prev[field] }));
   };
@@ -248,7 +279,13 @@ export function ExportTab({ exportHistory = [], projectId }: ExportTabProps) {
                     {export_.status === "processing" && (
                       <Clock className="h-4 w-4 text-yellow-600 animate-spin" />
                     )}
-                    <Button variant="outline" size="sm" onClick={() => toast.success(`Downloading "${export_.name}"...`)}>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleExport(export_.type)}
+                      disabled={isExporting}
+                      title="Re-download (regenerates with current data)"
+                    >
                       <Download className="h-4 w-4" />
                     </Button>
                   </div>

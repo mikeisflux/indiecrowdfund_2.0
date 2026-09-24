@@ -70,16 +70,37 @@ const typeFilterMap: Record<string, string[]> = {
 
 export function TimelineTab({ entries = [], projectId }: TimelineTabProps) {
   const [activityFilter, setActivityFilter] = useState("all");
-  const [dateRange, setDateRange] = useState("all");
+  const [dateRange, setDateRange] = useState("30days");
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [allEntries, setAllEntries] = useState(entries);
+
+  // The date-range select re-queries the server (the route has always
+  // taken ?dateRange= — the select just never sent it).
+  const handleDateRangeChange = async (range: string) => {
+    setDateRange(range);
+    if (!projectId) return;
+    setIsLoadingMore(true);
+    try {
+      const res = await fetch(
+        `/api/creator/indiekit/timeline?projectId=${projectId}&dateRange=${range}`,
+        { headers: getCSRFHeaders() }
+      );
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to load activity");
+      setAllEntries(data.entries || []);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to load activity");
+    } finally {
+      setIsLoadingMore(false);
+    }
+  };
 
   const handleLoadMore = async () => {
     if (!projectId) return;
 
     setIsLoadingMore(true);
     try {
-      const res = await fetch(`/api/creator/indiekit/timeline?projectId=${projectId}&offset=${allEntries.length}`, {
+      const res = await fetch(`/api/creator/indiekit/timeline?projectId=${projectId}&offset=${allEntries.length}&dateRange=${dateRange}`, {
         headers: getCSRFHeaders(),
       });
 
@@ -150,7 +171,7 @@ export function TimelineTab({ entries = [], projectId }: TimelineTabProps) {
             <SelectItem value="support">Support Tickets</SelectItem>
           </SelectContent>
         </Select>
-        <Select value={dateRange} onValueChange={setDateRange}>
+        <Select value={dateRange} onValueChange={handleDateRangeChange}>
           <SelectTrigger className="w-full sm:w-[200px]">
             <SelectValue placeholder="Date range" />
           </SelectTrigger>
@@ -187,19 +208,7 @@ export function TimelineTab({ entries = [], projectId }: TimelineTabProps) {
                             </span>
                             <span className="font-medium">{entry.title}</span>
                           </div>
-                          <p className="text-sm text-muted-foreground">
-                            {entry.link ? (
-                              <Button
-                                variant="link"
-                                className="text-teal-600 p-0 h-auto text-sm"
-                              >
-                                {entry.detail}
-                                <ChevronRight className="h-3 w-3 ml-1" />
-                              </Button>
-                            ) : (
-                              entry.detail
-                            )}
-                          </p>
+                          <p className="text-sm text-muted-foreground">{entry.detail}</p>
                         </div>
                       </div>
                     </CardContent>

@@ -48,6 +48,40 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Project not found or access denied" }, { status: 403 });
     }
 
+    // ?history=1 — recent exports for the Reports > Export panel.
+    if (searchParams.get("history") === "1") {
+      const activities = await db.fulfillmentActivity.findMany({
+        where: { projectId, type: "DATA_EXPORTED" },
+        orderBy: { createdAt: "desc" },
+        take: 10,
+        select: { id: true, title: true, metadata: true, createdAt: true },
+      });
+      return NextResponse.json({
+        history: activities.map((a: { id: string; title: string; metadata: unknown; createdAt: Date }) => {
+          const meta = (a.metadata as Record<string, unknown>) || {};
+          return {
+            id: a.id,
+            name: a.title,
+            type: String(meta.exportType || "backers"),
+            format: String(meta.format || "CSV"),
+            recordCount: Number(meta.recordCount || 0),
+            createdAt: a.createdAt.toISOString(),
+            status: "completed" as const,
+          };
+        }),
+      });
+    }
+
+    // Column selection for the backers export ("Include Fields" on the
+    // Export tab — previously collected and never sent).
+    const fieldsParam = searchParams.get("fields");
+    const selected = new Set(
+      (fieldsParam ? fieldsParam.split(",") : [
+        "name", "email", "address", "pledgeLevel", "items", "addons",
+        "phone", "surveyAnswers", "paymentDetails",
+      ]).map((f) => f.trim()).filter(Boolean)
+    );
+
     let csvContent = "";
     let filename = "";
 
@@ -106,29 +140,35 @@ export async function GET(req: NextRequest) {
 
         const surveyMap = new Map(surveyResponses.map((sr) => [sr.pledgeId, sr]));
 
-        // Build CSV
-        const headers = [
-          "Backer Number",
-          "Name",
-          "Email",
-          "Reward",
-          "Pledge Amount",
-          "Add-ons",
-          "Add-on Total",
-          "Total",
-          "Survey Status",
-          "Shipping Name",
-          "Address Line 1",
-          "Address Line 2",
-          "City",
-          "State",
-          "Postal Code",
-          "Country",
-          "Fulfillment Status",
-          "Pledge Date",
+        // Build CSV — columns follow the tab's "Include Fields" choices.
+        // Backer Number, Fulfillment Status, and Pledge Date always ship.
+        type ColumnDef = { header: string; group: string };
+        const allColumns: ColumnDef[] = [
+          { header: "Backer Number", group: "always" },
+          { header: "Name", group: "name" },
+          { header: "Email", group: "email" },
+          { header: "Phone", group: "phone" },
+          { header: "Reward", group: "pledgeLevel" },
+          { header: "Pledge Amount", group: "pledgeLevel" },
+          { header: "Items", group: "items" },
+          { header: "Add-ons", group: "addons" },
+          { header: "Add-on Total", group: "addons" },
+          { header: "Total", group: "paymentDetails" },
+          { header: "Payment Processor", group: "paymentDetails" },
+          { header: "Survey Status", group: "surveyAnswers" },
+          { header: "Shipping Name", group: "address" },
+          { header: "Address Line 1", group: "address" },
+          { header: "Address Line 2", group: "address" },
+          { header: "City", group: "address" },
+          { header: "State", group: "address" },
+          { header: "Postal Code", group: "address" },
+          { header: "Country", group: "address" },
+          { header: "Fulfillment Status", group: "always" },
+          { header: "Pledge Date", group: "always" },
         ];
+        const columns = allColumns.filter((c) => c.group === "always" || selected.has(c.group));
 
-        csvContent = headers.join(",") + "\n";
+        csvContent = columns.map((c) => c.header).join(",") + "\n";
 
         for (const pledge of pledges) {
           const sr = surveyMap.get(pledge.id);
@@ -144,29 +184,39 @@ export async function GET(req: NextRequest) {
               sum + Number(a.addon.amount) * a.quantity,
             0
           );
+          const itemsText = [
+            ...(pledge.reward ? [pledge.reward.title] : []),
+            ...pledge.addons.map(
+              (a: { addon: { title: string }; quantity: number }) =>
+                a.quantity > 1 ? `${a.addon.title} x${a.quantity}` : a.addon.title
+            ),
+          ].join("; ");
 
-          const row = [
-            pledge.backerNumber || "",
-            escapeCSV(pledge.user.name || ""),
-            escapeCSV(pledge.user.email || ""),
-            escapeCSV(pledge.reward?.title || "No Reward"),
-            Number(pledge.amount).toFixed(2),
-            escapeCSV(addonsText),
-            addonsTotal.toFixed(2),
-            (Number(pledge.amount) + addonsTotal).toFixed(2),
-            sr?.isComplete ? "Complete" : "Pending",
-            escapeCSV(address?.name || ""),
-            escapeCSV(address?.line1 || ""),
-            escapeCSV(address?.line2 || ""),
-            escapeCSV(address?.city || ""),
-            escapeCSV(address?.state || ""),
-            escapeCSV(address?.postalCode || ""),
-            escapeCSV(address?.country || ""),
-            pledge.fulfillmentStatus || "NOT_STARTED",
-            pledge.createdAt.toISOString().split("T")[0],
-          ];
+          const values: Record<string, string | number> = {
+            "Backer Number": pledge.backerNumber || "",
+            "Name": escapeCSV(pledge.user.name || ""),
+            "Email": escapeCSV(pledge.user.email || ""),
+            "Phone": escapeCSV(address?.phone || ""),
+            "Reward": escapeCSV(pledge.reward?.title || "No Reward"),
+            "Pledge Amount": Number(pledge.amount).toFixed(2),
+            "Items": escapeCSV(itemsText),
+            "Add-ons": escapeCSV(addonsText),
+            "Add-on Total": addonsTotal.toFixed(2),
+            "Total": (Number(pledge.amount) + addonsTotal).toFixed(2),
+            "Payment Processor": pledge.paymentProcessor || "",
+            "Survey Status": sr?.isComplete ? "Complete" : "Pending",
+            "Shipping Name": escapeCSV(address?.name || ""),
+            "Address Line 1": escapeCSV(address?.line1 || ""),
+            "Address Line 2": escapeCSV(address?.line2 || ""),
+            "City": escapeCSV(address?.city || ""),
+            "State": escapeCSV(address?.state || ""),
+            "Postal Code": escapeCSV(address?.postalCode || ""),
+            "Country": escapeCSV(address?.country || ""),
+            "Fulfillment Status": pledge.fulfillmentStatus || "NOT_STARTED",
+            "Pledge Date": pledge.createdAt.toISOString().split("T")[0],
+          };
 
-          csvContent += row.join(",") + "\n";
+          csvContent += columns.map((c) => values[c.header] ?? "").join(",") + "\n";
         }
 
         filename = `backers-${project.slug}-${new Date().toISOString().split("T")[0]}.csv`;
@@ -293,6 +343,21 @@ export async function GET(req: NextRequest) {
       default:
         return NextResponse.json({ error: "Invalid export type" }, { status: 400 });
     }
+
+    // Record the export so "Recent Exports" reflects reality.
+    const recordCount = Math.max(0, csvContent.split("\n").filter(Boolean).length - 1);
+    await db.fulfillmentActivity
+      .create({
+        data: {
+          projectId,
+          type: "DATA_EXPORTED",
+          title: filename,
+          description: `${exportType} export (${recordCount} records)`,
+          metadata: { exportType, format: "CSV", recordCount },
+          userId: session.user.id,
+        },
+      })
+      .catch(() => {});
 
     // Return CSV file
     return new NextResponse(csvContent, {
