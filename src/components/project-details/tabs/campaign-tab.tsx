@@ -45,7 +45,11 @@ function CampaignTabV1({ project, tiers, projectPath, onViewCreator }: CampaignT
   const storyContentRef = useRef<HTMLDivElement>(null);
 
   // Check if project has ended
-  const projectEnded = project.endDate ? new Date(project.endDate) < new Date() : false;
+  // Pre-order store: an ended campaign that still takes orders keeps
+  // its reward buttons live.
+  const projectEnded =
+    (project.endDate ? new Date(project.endDate) < new Date() : false) &&
+    !project.acceptingPreOrders;
 
   // Process the story HTML to extract headings and add IDs
   const { processedDescription, storyNavItems } = useMemo(() => {

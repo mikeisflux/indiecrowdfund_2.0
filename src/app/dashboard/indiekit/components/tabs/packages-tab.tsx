@@ -52,6 +52,7 @@ import {
   CreateGroupDialog,
   ViewGroupDialog,
   EditCustomsDialog,
+  RateEstimateDialog,
 } from "./packages-sections";
 import type { EditingCustomsItem } from "./packages-sections";
 
@@ -100,6 +101,7 @@ export function PackagesTab({
   const [isRetrying, setIsRetrying] = useState(false);
   const [showCreateGroupDialog, setShowCreateGroupDialog] = useState(false);
   const [viewingGroup, setViewingGroup] = useState<PackageGroup | null>(null);
+  const [ratingGroup, setRatingGroup] = useState<PackageGroup | null>(null);
   const [editingCustomsItem, setEditingCustomsItem] = useState<EditingCustomsItem | null>(null);
 
   // Remember the chosen method per campaign; before this the tab silently
@@ -911,6 +913,7 @@ export function PackagesTab({
                 onViewGroup={setViewingGroup}
                 onExport={handleExport}
                 onDeleteGroup={handleDeleteGroup}
+                onEstimateShipping={setRatingGroup}
                 onEditCustoms={(groupId, item) =>
                   setEditingCustomsItem({
                     groupId,
@@ -954,6 +957,12 @@ export function PackagesTab({
         fulfillmentMethod={fulfillmentMethod}
         isPushing={isPushing}
         onPushOrders={handlePushOrders}
+      />
+
+      <RateEstimateDialog
+        group={ratingGroup}
+        onClose={() => setRatingGroup(null)}
+        projectId={projectId}
       />
 
       <EditCustomsDialog

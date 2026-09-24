@@ -25,6 +25,12 @@ model Project {
   // Added by migrations/add_indiekit_settings.sql.
   indiekitSettings Json?
 
+  // Pre-order store: keep taking orders after the campaign ends (Late
+  // Backers > Pre-Order Store). The pledge API additionally requires the
+  // campaign to be able to settle the charge — KIA, or a funded AoN.
+  // Added by migrations/add_preorders.sql.
+  preOrdersEnabled Boolean @default(false)
+
   // Duration
   durationType DurationType
   durationDays Int?

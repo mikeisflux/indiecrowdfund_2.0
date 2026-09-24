@@ -469,7 +469,13 @@ export function usePledge() {
         creator: { id: projectData.creator?.id || "", name: projectData.creator?.name || "Creator", location: projectData.location || "", image: projectData.creator?.image || "" },
       };
 
-      if (formattedProject.endDate && new Date(formattedProject.endDate) < new Date()) {
+      // Pre-order store: an ended campaign that still takes orders lets
+      // the checkout proceed (the API enforces the same rule).
+      if (
+        formattedProject.endDate &&
+        new Date(formattedProject.endDate) < new Date() &&
+        !projectData.acceptingPreOrders
+      ) {
         setError("This campaign has ended and is no longer accepting pledges.");
         setIsLoading(false);
         return;

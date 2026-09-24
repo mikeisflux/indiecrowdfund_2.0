@@ -95,7 +95,23 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: "Project not found" }, { status: 404 });
       }
 
-      if (project.status !== "LIVE") {
+      // Pre-order store: with the creator's toggle on, an ended campaign
+      // keeps accepting orders — but only when the charge can actually
+      // settle. KIA charges immediately; an AoN campaign must be funded
+      // (a pre-order on an unfunded AoN would park a saved card that the
+      // fail-campaign cron then never collects). FAILED/CANCELLED never
+      // take pre-orders.
+      const campaignEnded = !!(project.endDate && new Date(project.endDate) < new Date());
+      const canSettlePreOrder =
+        project.campaignType === "KEEP_IT_ALL" ||
+        project.status === "FUNDED" ||
+        Number(project.currentAmount) >= Number(project.goalAmount);
+      const acceptingPreOrders =
+        project.preOrdersEnabled &&
+        canSettlePreOrder &&
+        (project.status === "LIVE" || project.status === "FUNDED");
+
+      if (project.status !== "LIVE" && !(project.status === "FUNDED" && acceptingPreOrders)) {
         return NextResponse.json(
           { error: "Project is not accepting pledges" },
           { status: 400 }
@@ -103,7 +119,7 @@ export async function POST(req: NextRequest) {
       }
 
       // Check if project has ended
-      if (project.endDate && new Date(project.endDate) < new Date()) {
+      if (campaignEnded && !acceptingPreOrders) {
         return NextResponse.json(
           { error: "This campaign has ended and is no longer accepting pledges" },
           { status: 400 }

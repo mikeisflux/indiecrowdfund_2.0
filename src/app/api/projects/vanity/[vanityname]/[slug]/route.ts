@@ -265,6 +265,17 @@ export async function GET(
       metaPixelId: project.metaPixelId || "",
       // Status
       status: project.status,
+      // Pre-order store: the campaign has ended but the creator keeps
+      // taking orders. Computed with the same rule the pledge API
+      // enforces, so the page never shows a Pre-order button the
+      // checkout would reject.
+      acceptingPreOrders:
+        !!project.preOrdersEnabled &&
+        !!(project.endDate && new Date(project.endDate) < new Date()) &&
+        (project.status === "LIVE" || project.status === "FUNDED") &&
+        (project.campaignType === "KEEP_IT_ALL" ||
+          project.status === "FUNDED" ||
+          liveStats.currentAmount >= Number(project.goalAmount)),
       // Creator
       creatorId: project.creatorId,
       creator: {

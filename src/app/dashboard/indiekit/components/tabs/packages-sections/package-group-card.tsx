@@ -37,6 +37,7 @@ interface PackageGroupCardProps {
   onExport: (groupId: string, format: "csv" | "excel" | "packing_slips" | "shipping_labels") => void;
   onEditCustoms: (groupId: string, item: PackageGroup["items"][number]) => void;
   onDeleteGroup?: (group: PackageGroup) => void;
+  onEstimateShipping?: (group: PackageGroup) => void;
 }
 
 export function PackageGroupCard({
@@ -48,6 +49,7 @@ export function PackageGroupCard({
   onExport,
   onEditCustoms,
   onDeleteGroup,
+  onEstimateShipping,
 }: PackageGroupCardProps) {
   return (
     <Card>
@@ -76,6 +78,9 @@ export function PackageGroupCard({
               <DropdownMenuItem onClick={() => onViewGroup(group)}>View This Group</DropdownMenuItem>
               <DropdownMenuItem onClick={() => onExport(group.id, "csv")}>Export Orders</DropdownMenuItem>
               <DropdownMenuItem onClick={() => onExport(group.id, "excel")}>Export Reports</DropdownMenuItem>
+              {onEstimateShipping && (
+                <DropdownMenuItem onClick={() => onEstimateShipping(group)}>Estimate Shipping</DropdownMenuItem>
+              )}
               {group.custom && onDeleteGroup && (
                 <DropdownMenuItem className="text-red-600" onClick={() => onDeleteGroup(group)}>
                   Delete Group

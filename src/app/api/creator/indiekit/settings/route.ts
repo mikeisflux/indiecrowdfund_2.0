@@ -48,6 +48,8 @@ export async function GET(req: NextRequest) {
         endDate: true,
         currency: true,
         indiekitSettings: true,
+        preOrdersEnabled: true,
+        campaignType: true,
       },
     });
 
@@ -165,10 +167,14 @@ export async function POST(req: NextRequest) {
         }
         data.currency = body.currency;
       }
-      if (Object.keys(data).length === 0) {
+      const boolData: Record<string, boolean> = {};
+      if (typeof body.preOrdersEnabled === "boolean") {
+        boolData.preOrdersEnabled = body.preOrdersEnabled;
+      }
+      if (Object.keys(data).length === 0 && Object.keys(boolData).length === 0) {
         return NextResponse.json({ error: "Nothing to update" }, { status: 400 });
       }
-      await db.project.update({ where: { id: projectId }, data });
+      await db.project.update({ where: { id: projectId }, data: { ...data, ...boolData } });
       return NextResponse.json({ success: true });
     }
 

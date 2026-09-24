@@ -8,13 +8,25 @@ import type { NextRequest } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { z } from "zod";
-import { pushPledgesToShipStation } from "@/lib/fulfillment/shipstation-push";
+import {
+  pushPledgesToShipStation,
+  shipStationFetch,
+  getShipStationAuthHeader,
+} from "@/lib/fulfillment/shipstation-push";
 import { syncShipStationTracking } from "@/lib/fulfillment/shipstation-tracking";
+import { resolveShipStationCredentials } from "@/lib/fulfillment/shipstation-credentials";
 
 const actionSchema = z.object({
   projectId: z.string(),
   action: z.enum(["push_orders", "sync_tracking", "get_rates"]),
   backerIds: z.array(z.string()).optional(),
+  // get_rates only
+  weightOz: z.number().positive().max(70 * 16).optional(),
+  fromPostalCode: z.string().trim().min(2).max(12).optional(),
+  toCountry: z.string().trim().length(2).optional(),
+  toPostalCode: z.string().trim().min(2).max(12).optional(),
+  toCity: z.string().trim().max(80).optional(),
+  toState: z.string().trim().max(40).optional(),
 });
 
 /**
@@ -116,8 +128,135 @@ export async function POST(req: NextRequest) {
       }
 
       case "get_rates": {
-        // Get shipping rates - would need package details
-        return NextResponse.json({ error: "Rate calculation not yet implemented" }, { status: 501 });
+        // Rate estimate for one package: ask every carrier on the
+        // connected ShipStation account to quote the given weight and
+        // route (V1 /shipments/getrates). Package weights come from the
+        // customs/weight data saved on the Packages tab.
+        const parsedBody = actionSchema.parse(body);
+        const { weightOz, fromPostalCode, toPostalCode, toCity, toState } = parsedBody;
+        const toCountry = (parsedBody.toCountry || "US").toUpperCase();
+        if (!weightOz || !fromPostalCode || !toPostalCode) {
+          return NextResponse.json(
+            { error: "Weight, ship-from ZIP, and destination postal code are required" },
+            { status: 400 }
+          );
+        }
+
+        const credentials = await resolveShipStationCredentials(projectId, project.creatorId);
+        if (!credentials) {
+          return NextResponse.json(
+            {
+              error:
+                "ShipStation isn't connected for this campaign. Connect it in IndieKit under Settings > Integrations.",
+            },
+            { status: 400 }
+          );
+        }
+        const authHeader = getShipStationAuthHeader(credentials.apiKey, credentials.apiSecret);
+
+        const carriersRes = await shipStationFetch("https://ssapi.shipstation.com/carriers", {
+          headers: { Authorization: authHeader },
+        });
+        if (!carriersRes.ok) {
+          return NextResponse.json(
+            { error: `ShipStation rejected the carriers lookup (${carriersRes.status})` },
+            { status: 502 }
+          );
+        }
+        const carriers = ((await carriersRes.json().catch(() => [])) as {
+          code?: string;
+          name?: string;
+        }[]).filter((c) => c.code);
+
+        if (carriers.length === 0) {
+          return NextResponse.json(
+            { error: "No carriers are configured on the connected ShipStation account" },
+            { status: 400 }
+          );
+        }
+
+        const rates: {
+          carrierCode: string;
+          carrierName: string;
+          serviceName: string;
+          serviceCode: string;
+          shipmentCost: number;
+          otherCost: number;
+          total: number;
+        }[] = [];
+        const carrierErrors: string[] = [];
+
+        // Each carrier is a paced V1 call; cap so an account with many
+        // carriers can't run the request into the route timeout.
+        for (const carrier of carriers.slice(0, 4)) {
+          try {
+            const res = await shipStationFetch(
+              "https://ssapi.shipstation.com/shipments/getrates",
+              {
+                method: "POST",
+                headers: {
+                  Authorization: authHeader,
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                  carrierCode: carrier.code,
+                  fromPostalCode,
+                  toCountry,
+                  toPostalCode,
+                  ...(toCity ? { toCity } : {}),
+                  ...(toState ? { toState } : {}),
+                  weight: { value: Math.round(weightOz * 10) / 10, units: "ounces" },
+                  confirmation: "none",
+                  residential: true,
+                }),
+              }
+            );
+            const data = (await res.json().catch(() => null)) as
+              | { serviceName?: string; serviceCode?: string; shipmentCost?: number; otherCost?: number }[]
+              | { Message?: string; ExceptionMessage?: string }
+              | null;
+            if (!res.ok || !Array.isArray(data)) {
+              const message =
+                data && !Array.isArray(data)
+                  ? data.ExceptionMessage || data.Message || `HTTP ${res.status}`
+                  : `HTTP ${res.status}`;
+              // A carrier that can't serve this route (e.g. domestic-only
+              // for an international destination) is normal, not fatal.
+              carrierErrors.push(`${carrier.name || carrier.code}: ${message}`);
+              continue;
+            }
+            for (const rate of data) {
+              const shipmentCost = Number(rate.shipmentCost) || 0;
+              const otherCost = Number(rate.otherCost) || 0;
+              rates.push({
+                carrierCode: carrier.code!,
+                carrierName: carrier.name || carrier.code!,
+                serviceName: rate.serviceName || rate.serviceCode || "Service",
+                serviceCode: rate.serviceCode || "",
+                shipmentCost,
+                otherCost,
+                total: Math.round((shipmentCost + otherCost) * 100) / 100,
+              });
+            }
+          } catch (err) {
+            carrierErrors.push(
+              `${carrier.name || carrier.code}: ${err instanceof Error ? err.message : "request failed"}`
+            );
+          }
+        }
+
+        rates.sort((a, b) => a.total - b.total);
+
+        if (rates.length === 0) {
+          return NextResponse.json(
+            {
+              error: `No carrier returned rates for this route${carrierErrors.length ? ` — ${carrierErrors[0]}` : ""}`,
+            },
+            { status: 400 }
+          );
+        }
+
+        return NextResponse.json({ rates, carrierErrors });
       }
 
       default:

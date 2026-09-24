@@ -976,7 +976,7 @@ export default function IndieKitPage() {
               )}
 
               {activeSection === "phase" && activePhaseTab === "late-backers" && (
-                <PreOrdersTab stats={stats} hasActiveCampaign={hasActiveCampaign} />
+                <PreOrdersTab stats={stats} hasActiveCampaign={hasActiveCampaign} projectId={selectedProjectId} />
               )}
             </div>
           </div>

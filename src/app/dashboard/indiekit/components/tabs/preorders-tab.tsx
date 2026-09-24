@@ -1,7 +1,12 @@
 "use client";
 
+import { useState, useEffect, useCallback } from "react";
+import { apiFetch } from "@/lib/fetch-utils";
+import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
+import { Badge } from "@/components/ui/badge";
 import {
   Table,
   TableBody,
@@ -22,9 +27,79 @@ import type { FulfillmentStats } from "../../types";
 interface PreOrdersTabProps {
   stats: FulfillmentStats | null;
   hasActiveCampaign?: boolean;
+  projectId?: string;
 }
 
-export function PreOrdersTab({ stats, hasActiveCampaign = false }: PreOrdersTabProps) {
+export function PreOrdersTab({ stats, hasActiveCampaign = false, projectId }: PreOrdersTabProps) {
+  const [preOrdersEnabled, setPreOrdersEnabled] = useState(false);
+  const [projectSlug, setProjectSlug] = useState<string | null>(null);
+  const [projectStatus, setProjectStatus] = useState<string | null>(null);
+  const [projectEndDate, setProjectEndDate] = useState<string | null>(null);
+  const [campaignType, setCampaignType] = useState<string | null>(null);
+  const [storeLoading, setStoreLoading] = useState(true);
+  const [isToggling, setIsToggling] = useState(false);
+
+  const loadStoreState = useCallback(async () => {
+    if (!projectId) {
+      setStoreLoading(false);
+      return;
+    }
+    try {
+      const res = await fetch(`/api/creator/indiekit/settings?projectId=${projectId}`);
+      if (res.ok) {
+        const data = await res.json();
+        setPreOrdersEnabled(!!data.project?.preOrdersEnabled);
+        setProjectSlug(data.project?.slug || null);
+        setProjectStatus(data.project?.status || null);
+        setProjectEndDate(data.project?.endDate || null);
+        setCampaignType(data.project?.campaignType || null);
+      }
+    } catch {
+      // Card shows the toggle with defaults.
+    } finally {
+      setStoreLoading(false);
+    }
+  }, [projectId]);
+
+  useEffect(() => {
+    loadStoreState();
+  }, [loadStoreState]);
+
+  const handleTogglePreOrders = async (checked: boolean) => {
+    if (!projectId) return;
+    setIsToggling(true);
+    try {
+      const res = await apiFetch("/api/creator/indiekit/settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ projectId, action: "update_general", preOrdersEnabled: checked }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Failed to update");
+      setPreOrdersEnabled(checked);
+      toast.success(
+        checked
+          ? "Pre-orders on — your campaign page keeps taking orders after the end date"
+          : "Pre-orders off — the campaign page closes at the end date"
+      );
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to update");
+    } finally {
+      setIsToggling(false);
+    }
+  };
+
+  const hasCampaignEnded = projectEndDate ? new Date(projectEndDate) < new Date() : false;
+  // Mirror of the pledge API's settle rule, for honest status copy.
+  const storeCanRun =
+    campaignType === "KEEP_IT_ALL" ||
+    projectStatus === "FUNDED" ||
+    !hasCampaignEnded;
+  const storeLiveNow =
+    preOrdersEnabled &&
+    hasCampaignEnded &&
+    (projectStatus === "LIVE" || projectStatus === "FUNDED") &&
+    storeCanRun;
   if (!hasActiveCampaign) {
     return (
       <Card>
@@ -182,18 +257,62 @@ export function PreOrdersTab({ stats, hasActiveCampaign = false }: PreOrdersTabP
       {/* Pre-Order Store Settings */}
       <Card>
         <CardHeader>
-          <CardTitle>Pre-Order Store</CardTitle>
-          <CardDescription>Configure your post-campaign pre-order store</CardDescription>
+          <CardTitle className="flex items-center gap-2">
+            Pre-Order Store
+            {storeLiveNow && <Badge className="bg-green-100 text-green-700">Live</Badge>}
+          </CardTitle>
+          <CardDescription>
+            Keep taking orders on your campaign page after the campaign ends
+          </CardDescription>
         </CardHeader>
-        <CardContent>
-          <div className="text-center py-8 text-muted-foreground">
-            <AlertCircle className="h-12 w-12 mx-auto mb-4 opacity-50" />
-            <p>Pre-order stores aren&apos;t available yet</p>
-            <p className="text-sm">
-              Late pledges arriving through your campaign page after it ends show up
-              here automatically.
-            </p>
-          </div>
+        <CardContent className="space-y-4">
+          {storeLoading ? (
+            <p className="text-sm text-muted-foreground py-4 text-center">Loading…</p>
+          ) : (
+            <>
+              <div className="flex items-center justify-between p-4 border rounded-lg">
+                <div>
+                  <p className="font-medium">Accept pre-orders after the campaign ends</p>
+                  <p className="text-sm text-muted-foreground">
+                    Reward buttons stay live and read &quot;Pre-order&quot;; new orders appear here
+                    and ship with fulfillment
+                  </p>
+                </div>
+                <Switch
+                  checked={preOrdersEnabled}
+                  onCheckedChange={handleTogglePreOrders}
+                  disabled={isToggling || !projectId}
+                />
+              </div>
+
+              {preOrdersEnabled && hasCampaignEnded && !storeCanRun && (
+                <div className="rounded-lg border border-amber-300 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/30 p-3 text-sm text-amber-800 dark:text-amber-300 flex gap-2">
+                  <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+                  <span>
+                    Pre-orders only run on Keep-It-All campaigns or funded All-or-Nothing
+                    campaigns — an unfunded AoN can&apos;t collect the charges, so the store
+                    stays closed until this campaign funds.
+                  </span>
+                </div>
+              )}
+
+              <p className="text-xs text-muted-foreground">
+                {hasCampaignEnded
+                  ? preOrdersEnabled
+                    ? "Your campaign has ended — the store applies right now."
+                    : "Your campaign has ended — turn this on to reopen ordering."
+                  : "Your campaign is still running; this takes effect the moment it ends."}
+              </p>
+
+              {projectSlug && (
+                <Button variant="outline" size="sm" asChild>
+                  <a href={`/projects/${projectSlug}`} target="_blank" rel="noopener noreferrer">
+                    View campaign page
+                  </a>
+                </Button>
+              )}
+            </>
+          )}
         </CardContent>
       </Card>
     </div>

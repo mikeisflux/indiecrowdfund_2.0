@@ -675,3 +675,190 @@ export function CreateGroupDialog({
     </Dialog>
   );
 }
+
+// --- Rate Estimate Dialog ---
+
+interface RateEstimateDialogProps {
+  group: PackageGroup | null;
+  onClose: () => void;
+  projectId?: string;
+}
+
+interface RateRow {
+  carrierName: string;
+  serviceName: string;
+  shipmentCost: number;
+  otherCost: number;
+  total: number;
+}
+
+/**
+ * Live shipping-rate estimate for one package, quoted by every carrier
+ * on the connected ShipStation account. Weight prefills from the
+ * package group's saved item weights (Edit Customs & Weight).
+ */
+export function RateEstimateDialog({ group, onClose, projectId }: RateEstimateDialogProps) {
+  const [weightLbs, setWeightLbs] = useState("");
+  const [weightOz, setWeightOz] = useState("");
+  const [fromZip, setFromZip] = useState("");
+  const [toCountry, setToCountry] = useState("US");
+  const [toZip, setToZip] = useState("");
+  const [rates, setRates] = useState<RateRow[] | null>(null);
+  const [carrierErrors, setCarrierErrors] = useState<string[]>([]);
+  const [isFetching, setIsFetching] = useState(false);
+
+  useEffect(() => {
+    if (!group) return;
+    setRates(null);
+    setCarrierErrors([]);
+    setWeightLbs(group.totalWeight.lbs > 0 ? String(group.totalWeight.lbs) : "");
+    setWeightOz(group.totalWeight.oz > 0 ? String(Math.round(group.totalWeight.oz * 10) / 10) : "");
+    try {
+      // Ship-from rarely changes — remember the last one used.
+      setFromZip(localStorage.getItem("indiekit-ship-from-zip") || "");
+    } catch {
+      // Private mode; leave blank.
+    }
+  }, [group]);
+
+  const handleGetRates = async () => {
+    if (!projectId || !group) return;
+    const totalOz = (parseFloat(weightLbs) || 0) * 16 + (parseFloat(weightOz) || 0);
+    if (totalOz <= 0) {
+      toast.error("Enter the package weight (set item weights via Edit Customs & Weight to prefill this)");
+      return;
+    }
+    if (!fromZip.trim() || !toZip.trim()) {
+      toast.error("Ship-from ZIP and destination postal code are required");
+      return;
+    }
+
+    setIsFetching(true);
+    setRates(null);
+    try {
+      try {
+        localStorage.setItem("indiekit-ship-from-zip", fromZip.trim());
+      } catch {
+        // Best effort.
+      }
+      const res = await apiFetch("/api/creator/indiekit/shipstation", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          projectId,
+          action: "get_rates",
+          weightOz: totalOz,
+          fromPostalCode: fromZip.trim(),
+          toCountry,
+          toPostalCode: toZip.trim(),
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Rate lookup failed");
+      setRates(data.rates || []);
+      setCarrierErrors(data.carrierErrors || []);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Rate lookup failed");
+    } finally {
+      setIsFetching(false);
+    }
+  };
+
+  return (
+    <Dialog open={!!group} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="max-w-lg">
+        <DialogHeader>
+          <DialogTitle>Estimate Shipping — {group?.name}</DialogTitle>
+          <DialogDescription>
+            Live rates from the carriers on your connected ShipStation account.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4 py-2">
+          <div className="space-y-2">
+            <Label>Package Weight</Label>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="flex items-center gap-2">
+                <Input type="number" min="0" value={weightLbs} onChange={(e) => setWeightLbs(e.target.value)} placeholder="0" />
+                <span className="text-sm text-muted-foreground">lb</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Input type="number" min="0" step="0.1" value={weightOz} onChange={(e) => setWeightOz(e.target.value)} placeholder="0" />
+                <span className="text-sm text-muted-foreground">oz</span>
+              </div>
+            </div>
+          </div>
+          <div className="grid grid-cols-3 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="rate-from-zip">Ship From ZIP</Label>
+              <Input id="rate-from-zip" value={fromZip} onChange={(e) => setFromZip(e.target.value)} placeholder="90001" />
+            </div>
+            <div className="space-y-2">
+              <Label>Destination</Label>
+              <Select value={toCountry} onValueChange={setToCountry}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="US">United States</SelectItem>
+                  <SelectItem value="CA">Canada</SelectItem>
+                  <SelectItem value="GB">United Kingdom</SelectItem>
+                  <SelectItem value="AU">Australia</SelectItem>
+                  <SelectItem value="DE">Germany</SelectItem>
+                  <SelectItem value="FR">France</SelectItem>
+                  <SelectItem value="JP">Japan</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="rate-to-zip">Postal Code</Label>
+              <Input id="rate-to-zip" value={toZip} onChange={(e) => setToZip(e.target.value)} placeholder="10001" />
+            </div>
+          </div>
+
+          <Button className="w-full bg-teal-600 hover:bg-teal-700" onClick={handleGetRates} disabled={isFetching}>
+            {isFetching ? (
+              <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Getting rates from carriers...</>
+            ) : (
+              "Get Rates"
+            )}
+          </Button>
+
+          {rates && rates.length > 0 && (
+            <div className="max-h-64 overflow-y-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Service</TableHead>
+                    <TableHead className="text-right">Rate</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {rates.map((rate, i) => (
+                    <TableRow key={i}>
+                      <TableCell>
+                        <p className="text-sm font-medium">{rate.serviceName}</p>
+                        <p className="text-xs text-muted-foreground">{rate.carrierName}</p>
+                      </TableCell>
+                      <TableCell className="text-right font-medium">${rate.total.toFixed(2)}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+          {rates && rates.length === 0 && (
+            <p className="text-sm text-muted-foreground text-center">No rates returned for this route.</p>
+          )}
+          {carrierErrors.length > 0 && (
+            <p className="text-xs text-muted-foreground">
+              Some carriers couldn&apos;t quote this route: {carrierErrors.join(" · ")}
+            </p>
+          )}
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>Close</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}

@@ -44,6 +44,8 @@ export interface CampaignAmountDisplay {
 }
 
 export interface ProjectData {
+  /** Ended campaign still taking orders (pre-order store). */
+  acceptingPreOrders?: boolean;
   id: string;
   title: string;
   subtitle: string;

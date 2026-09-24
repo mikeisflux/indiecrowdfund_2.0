@@ -130,7 +130,11 @@ export function CampaignTabV2({ project, tiers, stretchGoals = [], projectPath, 
   );
   const [pledgeAmount, setPledgeAmount] = useState("1");
 
-  const projectEnded = project.endDate ? new Date(project.endDate) < new Date() : false;
+  // Pre-order store: an ended campaign that still takes orders keeps
+  // its reward buttons live.
+  const projectEnded =
+    (project.endDate ? new Date(project.endDate) < new Date() : false) &&
+    !project.acceptingPreOrders;
 
   const previewPdfUrl = project.previewPdfUrl || null;
 

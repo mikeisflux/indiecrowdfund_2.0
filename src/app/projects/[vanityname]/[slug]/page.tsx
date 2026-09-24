@@ -110,6 +110,10 @@ export default function ProjectPage() {
     ? (Number(project.currentAmount) / Number(project.goalAmount)) * 100
     : 0;
   const hasEnded = project.endDate ? new Date(project.endDate) < new Date() : false;
+  // Pre-order store: the campaign ended but the creator keeps taking
+  // orders (server-computed with the same rule the pledge API enforces).
+  const acceptingPreOrders = hasEnded && !!project.acceptingPreOrders;
+  const orderingClosed = hasEnded && !acceptingPreOrders;
 
   // Scroll to top on mount (ensures page starts at top when navigating from homepage)
   useEffect(() => {
@@ -554,7 +558,7 @@ export default function ProjectPage() {
               </span>
             </div>
             <div className="flex items-center gap-3">
-              {hasEnded ? (
+              {orderingClosed ? (
                 <Button className="bg-muted text-muted-foreground cursor-not-allowed" disabled>
                   No longer available
                 </Button>
@@ -568,7 +572,7 @@ export default function ProjectPage() {
               ) : (
                 <Link href={`${projectPath}/pledge`}>
                   <Button className="bg-gradient-to-r from-[#05ce78] to-emerald-500 hover:from-[#04b86a] hover:to-emerald-600 text-white shadow-lg shadow-[#05ce78]/20">
-                    Back this project
+                    {acceptingPreOrders ? "Pre-order now" : "Back this project"}
                   </Button>
                 </Link>
               )}
@@ -751,17 +755,22 @@ export default function ProjectPage() {
                     </Button>
                   </Link>
                 </div>
-              ) : hasEnded ? (
+              ) : orderingClosed ? (
                 <Button className="w-full bg-muted text-muted-foreground font-medium cursor-not-allowed" size="lg" disabled>
                   No longer available
                 </Button>
               ) : (
                 <Link href={`${projectPath}/pledge`} className="block">
                   <Button className="w-full bg-gradient-to-r from-[#05ce78] to-emerald-500 hover:from-[#04b86a] hover:to-emerald-600 text-white font-medium shadow-lg shadow-[#05ce78]/20 group" size="lg">
-                    Back this project
+                    {acceptingPreOrders ? "Pre-order now" : "Back this project"}
                     <span className="ml-2 group-hover:translate-x-1 transition-transform">→</span>
                   </Button>
                 </Link>
+              )}
+              {acceptingPreOrders && (
+                <p className="text-sm text-amber-600 dark:text-amber-400 text-center">
+                  The campaign has ended — pre-orders are open. New orders ship with fulfillment.
+                </p>
               )}
 
               {/* Follow + Social sharing */}
@@ -951,7 +960,7 @@ export default function ProjectPage() {
             addons={addons}
             selectedAddons={selectedAddons}
             onToggleAddon={toggleAddon}
-            projectEnded={project.endDate ? new Date(project.endDate) < new Date() : false}
+            projectEnded={orderingClosed}
             layoutVersion={project.layoutVersion}
             raisedAmount={Number(project.currentAmount) || 0}
             currency={project.currentAmountDisplay?.currency || "USD"}
