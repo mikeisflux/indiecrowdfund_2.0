@@ -4,8 +4,10 @@ import { db } from "@/lib/db";
 import { z } from "zod";
 import {
   createDcCheckoutSession,
+  getDcSetupIntent,
   getDivinityCoinConfig,
   isHostedCheckoutEnabled,
+  lookupDcPayment,
 } from "@/lib/payments/divinitycoin";
 import { isPoolSoldOut } from "@/lib/payments/rewards";
 import { getProjectStats } from "@/lib/stats";
@@ -378,26 +380,101 @@ export async function POST(req: NextRequest) {
         // $0 / 0 backers despite real pledges. The backer has
         // effectively already pledged; treat it like a completed one.
         //
-        // A payment reference (divinityCoinPaymentId / setup intent / Stripe
-        // intent) is the strongest signal of all and was missing here: on an
-        // all-or-nothing campaign the card is charged at pledge time while the
-        // pledge stays PENDING until the project funds, so a backer who came
-        // back minutes later — reasonably thinking "pending" meant it hadn't
-        // worked — fell straight through this check and was charged a second
-        // time. Two succeeded $40 charges, seven minutes apart, same card.
-        const committedPending = pendingPledges.find(
+        // Evidence comes in two strengths. A saved card on file or a sent
+        // confirmation email is local proof the backer finished checkout —
+        // block a second pledge outright, no API call needed.
+        const locallyCommitted = pendingPledges.find(
           p =>
             p.confirmationEmailSent ||
             p.divinityCoinPaymentMethodId ||
-            p.divinityCoinPaymentId ||
-            p.divinityCoinSetupIntentId ||
             p.stripePaymentIntentId
         );
-        if (committedPending) {
+        if (locallyCommitted) {
           return NextResponse.json(
             { error: "You have already backed this project" },
             { status: 400 }
           );
+        }
+
+        // An intent id alone (divinityCoinPaymentId / divinityCoinSetupIntentId)
+        // is NOT proof of payment: both are stamped on the pledge the moment
+        // checkout OPENS, before the backer has typed a card number. Treating
+        // them as "already backed" — as this branch used to — permanently
+        // locked out anyone who abandoned at the card form: every retry got
+        // 400 "You have already backed this project" off their own abandoned
+        // cart, and cleanupAbandonedCarts never removes rows with a payment
+        // id, so the block never expired.
+        //
+        // But an intent id also can't be *ignored*: on an all-or-nothing
+        // campaign the charge lands at pledge time while the pledge stays
+        // PENDING until the project funds, and a backer who returned after a
+        // lost success-callback was once charged twice (two succeeded $40
+        // charges, seven minutes apart, same card). So ask DivinityCoin what
+        // actually happened. A verified charge or saved card blocks (and the
+        // recovered pm_... is persisted so the success cron can charge it);
+        // a verified nothing means abandoned cart — clear the stale intent
+        // ids and fall through to the normal cart-reuse path. If DC can't
+        // answer, fail toward blocking: a stuck backer can retry later, a
+        // double charge can't be untaken.
+        for (const p of pendingPledges) {
+          if (!p.divinityCoinPaymentId && !p.divinityCoinSetupIntentId) continue;
+
+          if (p.divinityCoinPaymentId) {
+            const lookup = await lookupDcPayment(p.id);
+            if (!lookup.success || lookup.hasSuccessfulCharge) {
+              pledgeLogger.info(
+                { correlationId, pledgeId: p.id, verified: lookup.success },
+                lookup.success
+                  ? "Existing PENDING pledge has a real charge at DC; blocking duplicate"
+                  : "Could not verify PENDING pledge charge state at DC; blocking to be safe"
+              );
+              return NextResponse.json(
+                { error: "You have already backed this project" },
+                { status: 400 }
+              );
+            }
+          } else if (p.divinityCoinSetupIntentId) {
+            const si = await getDcSetupIntent(p.divinityCoinSetupIntentId);
+            if (!si.success) {
+              return NextResponse.json(
+                { error: "You have already backed this project" },
+                { status: 400 }
+              );
+            }
+            if (si.status === "succeeded") {
+              // Card really was saved; the browser callback that should have
+              // persisted the pm_... never landed. Repair the pledge so the
+              // charge-on-success cron can collect it, then block.
+              if (si.paymentMethodId) {
+                await db.pledge.updateMany({
+                  where: { id: p.id, deletedAt: null },
+                  data: { divinityCoinPaymentMethodId: si.paymentMethodId },
+                });
+              }
+              pledgeLogger.info(
+                { correlationId, pledgeId: p.id, recoveredPm: !!si.paymentMethodId },
+                "SetupIntent succeeded at DC for PENDING pledge; recovered saved card and blocking duplicate"
+              );
+              return NextResponse.json(
+                { error: "You have already backed this project" },
+                { status: 400 }
+              );
+            }
+          }
+
+          // Verified abandoned: no charge, no saved card. Clear the stale
+          // intent ids (in the DB and on the in-memory row, so the reuse /
+          // stale-delete logic below treats it as a plain empty cart).
+          pledgeLogger.info(
+            { correlationId, pledgeId: p.id },
+            "DC confirmed no charge/card for intent-stamped PENDING pledge; reclaiming abandoned cart"
+          );
+          await db.pledge.updateMany({
+            where: { id: p.id, deletedAt: null },
+            data: { divinityCoinPaymentId: null, divinityCoinSetupIntentId: null },
+          });
+          p.divinityCoinPaymentId = null;
+          p.divinityCoinSetupIntentId = null;
         }
 
         // The rest are genuinely abandoned carts (no card, not counted).
