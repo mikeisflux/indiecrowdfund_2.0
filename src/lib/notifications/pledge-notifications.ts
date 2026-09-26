@@ -242,7 +242,11 @@ export async function notifyPledgeDelivered(
  */
 export async function notifyBackerPledgeConfirmed(
   pledgeId: string,
-  chargedImmediately: boolean
+  chargedImmediately: boolean,
+  // Bypass the creator's "send receipts" toggle. Used by payment recovery:
+  // a backer whose checkout redirect failed got no confirmation at all, so
+  // they must receive one regardless of the campaign's receipts setting.
+  force = false
 ) {
   const pledge = await db.pledge.findFirst({
     where: { id: pledgeId , deletedAt: null },
@@ -342,7 +346,8 @@ export async function notifyBackerPledgeConfirmed(
       undefined, // shippingAmount
       undefined, // paymentMethod
       pledge.backerNumber,
-      pledge.id
+      pledge.id,
+      force
     );
 
     if (result.success) {

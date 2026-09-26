@@ -101,7 +101,12 @@ export async function POST(
     // flag here: for DC saved-card pledges it doubles as the
     // counts-toward-goal marker, and clearing it on a send that then
     // fails would drop the pledge from the project total.
-    await notifyBackerPledgeConfirmed(pledgeId, pledge.chargedImmediately);
+    //
+    // force: true — an explicit "resend confirmation" must not be silently
+    // suppressed by the campaign's "send receipts" toggle. The creator is
+    // deliberately asking us to send this backer their confirmation; the
+    // toggle governs the automatic send, not this manual one.
+    await notifyBackerPledgeConfirmed(pledgeId, pledge.chargedImmediately, true);
 
     resendLogger.info(
       { pledgeId, creatorId: session.user.id },

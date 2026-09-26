@@ -4,10 +4,29 @@ import { logger } from "@/lib/logger";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { verifyDcPayment, handlePaymentSucceeded } from "@/lib/payments/divinitycoin";
+import { notifyBackerPledgeConfirmed } from "@/lib/notifications";
 
 const log = logger.child({ module: "admin-recover-dc" });
 
 export const dynamic = "force-dynamic";
+
+/**
+ * Guarantee the backer has a confirmation email — force-sending past the
+ * creator's "send receipts" toggle if no confirmation was ever delivered.
+ * notifyBackerPledgeConfirmed dedups on EmailLog, so this is safe to call
+ * even when the commit path already sent one. Returns whether a receipt
+ * is now on record.
+ */
+async function ensureReceipt(pledgeId: string): Promise<boolean> {
+  await notifyBackerPledgeConfirmed(pledgeId, true, true).catch((err) =>
+    log.error({ pledgeId, err: String(err) }, "[recover-dc] forced receipt send failed")
+  );
+  const logRow = await db.emailLog.findFirst({
+    where: { pledgeId, type: "PLEDGE_CONFIRMATION" },
+    select: { id: true },
+  });
+  return !!logRow;
+}
 
 /**
  * POST /api/admin/pledges/recover-dc  (SUPER_ADMIN only)
@@ -87,12 +106,19 @@ export async function POST(req: NextRequest) {
       select: { id: true, status: true },
     });
     if (existing) {
+      // Pledge already recovered — but make sure the backer actually got a
+      // confirmation email (the first recovery may have run before the
+      // forced-receipt fix, or been gated by the creator's receipts toggle).
+      const receiptSent = await ensureReceipt(existing.id);
       return NextResponse.json({
         ok: true,
         alreadyRecovered: true,
         pledgeId: existing.id,
         status: existing.status,
-        message: "A pledge already exists for this payment — nothing to do.",
+        receiptSent,
+        message: receiptSent
+          ? "Pledge already recovered; confirmation email is on record."
+          : "Pledge already recovered, but the confirmation email could not be sent — check email settings/logs.",
       });
     }
 
@@ -244,6 +270,10 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Guarantee the confirmation email regardless of the campaign's
+    // receipts toggle — this backer got no confirmation at checkout.
+    const receiptSent = await ensureReceipt(pledge.id);
+
     return NextResponse.json({
       ok: true,
       recovered: true,
@@ -252,7 +282,8 @@ export async function POST(req: NextRequest) {
       project: project.title,
       amount: total,
       paymentIntentId,
-      message: `Recovered $${total.toFixed(2)} pledge for ${user.email} on ${project.title}.`,
+      receiptSent,
+      message: `Recovered $${total.toFixed(2)} pledge for ${user.email} on ${project.title}.${receiptSent ? " Confirmation email sent." : " NOTE: confirmation email could not be sent — check email settings/logs."}`,
     });
   } catch (error) {
     log.error({ err: formatError(error) }, "[recover-dc] error");
