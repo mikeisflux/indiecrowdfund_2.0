@@ -54,6 +54,15 @@ export async function GET(req: NextRequest) {
             status: "PENDING",
             NOT: { stripePaymentMethodId: null },
           },
+          // DivinityCoin AoN committed pledges: card saved, counted in
+          // totals, charge deferred to the success cron. These are the
+          // platform's primary backers and were invisible to this check —
+          // they saw "Back this project" and dead-ended on a re-pledge.
+          {
+            status: "PENDING",
+            confirmationEmailSent: true,
+            NOT: { divinityCoinPaymentMethodId: null },
+          },
         ],
       },
       include: {
@@ -129,11 +138,15 @@ export async function GET(req: NextRequest) {
         status: "PENDING",
         deletedAt: null,
         stripePaymentMethodId: null,
-        // Has an intent or PayPal order (checkout was started)
+        // Has an intent / order / session (checkout was started)
         OR: [
           { NOT: { stripeSetupIntentId: null } },
           { NOT: { stripePaymentIntentId: null } },
           { NOT: { paypalOrderId: null } },
+          { NOT: { divinityCoinSetupIntentId: null } },
+          { NOT: { divinityCoinPaymentId: null } },
+          { NOT: { divinityCoinCheckoutSessionId: null } },
+          { NOT: { whopCheckoutId: null } },
         ],
         // Created within last 30 minutes
         createdAt: {

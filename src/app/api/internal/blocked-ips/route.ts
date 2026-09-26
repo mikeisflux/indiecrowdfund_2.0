@@ -17,13 +17,14 @@ export const dynamic = "force-dynamic";
 
 // Check if request is from localhost (middleware runs on same server)
 function isLocalhost(req: NextRequest): boolean {
-  // Check for internal API secret first (most secure method)
+  // When the internal secret is configured it is THE decision — a wrong
+  // or missing header fails immediately. Falling through to the header
+  // heuristics below let an external request spoof
+  // X-Forwarded-For: 127.0.0.1 (the leftmost XFF entry is client-supplied
+  // under proxy_add_x_forwarded_for) and permanently block arbitrary IPs.
   const internalSecret = process.env.INTERNAL_API_SECRET;
   if (internalSecret) {
-    const authHeader = req.headers.get("x-internal-secret");
-    if (authHeader === internalSecret) {
-      return true;
-    }
+    return req.headers.get("x-internal-secret") === internalSecret;
   }
 
   // Same-origin / same-host detection: the middleware's persistBlockedIP()
@@ -41,7 +42,11 @@ function isLocalhost(req: NextRequest): boolean {
   // already proven it can bind to the internal interface.
   const forwarded = req.headers.get("x-forwarded-for");
   const realIp = req.headers.get("x-real-ip");
-  const clientIp = forwarded?.split(",")[0]?.trim() || realIp || "";
+  // RIGHTMOST XFF entry: the one appended by our own proxy hop, which the
+  // client cannot forge. The leftmost is client-supplied — trusting it let
+  // "X-Forwarded-For: 127.0.0.1" from the internet pass as localhost.
+  const forwardedParts = forwarded ? forwarded.split(",").map((p) => p.trim()) : [];
+  const clientIp = forwardedParts[forwardedParts.length - 1] || realIp || "";
 
   if (
     clientIp === "127.0.0.1" ||

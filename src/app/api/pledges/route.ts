@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { z } from "zod";
 import {
+  commitDcPledge,
   createDcCheckoutSession,
   getDcSetupIntent,
   getDivinityCoinConfig,
@@ -443,18 +444,29 @@ export async function POST(req: NextRequest) {
             }
             if (si.status === "succeeded") {
               // Card really was saved; the browser callback that should have
-              // persisted the pm_... never landed. Repair the pledge so the
-              // charge-on-success cron can collect it, then block.
+              // persisted the pm_... never landed. COMMIT the pledge (not
+              // just stamp the pm): commitDcPledge runs the full lost-
+              // callback bookkeeping — counters, reward slots, backer
+              // number, confirmation email — and its confirmationEmailSent
+              // CAS also shields the pledge from every cart cleanup. Then
+              // block the duplicate.
               if (si.paymentMethodId) {
-                await db.pledge.updateMany({
-                  where: { id: p.id, deletedAt: null },
-                  data: { divinityCoinPaymentMethodId: si.paymentMethodId },
+                const commit = await commitDcPledge({
+                  pledgeId: p.id,
+                  paymentMethodId: si.paymentMethodId,
+                  setupIntentId: p.divinityCoinSetupIntentId ?? undefined,
+                  source: "duplicate-check-recovery",
                 });
+                pledgeLogger.info(
+                  { correlationId, pledgeId: p.id, committed: commit.ok },
+                  "SetupIntent succeeded at DC for PENDING pledge; committed recovered pledge and blocking duplicate"
+                );
+              } else {
+                pledgeLogger.warn(
+                  { correlationId, pledgeId: p.id },
+                  "SetupIntent succeeded at DC but returned no paymentMethodId; blocking duplicate without commit"
+                );
               }
-              pledgeLogger.info(
-                { correlationId, pledgeId: p.id, recoveredPm: !!si.paymentMethodId },
-                "SetupIntent succeeded at DC for PENDING pledge; recovered saved card and blocking duplicate"
-              );
               return NextResponse.json(
                 { error: "You have already backed this project" },
                 { status: 400 }
@@ -927,6 +939,17 @@ async function cleanupAbandonedCarts(projectId: string, olderThan: Date) {
     paypalOrderId: null,
     // Exclude DivinityCoin pledges that have a payment ID (payment was initiated, webhook may be in flight)
     divinityCoinPaymentId: null,
+    // A saved card is a live AoN pledge waiting for the success cron —
+    // deleting it strands the card and loses the pledge. The 48h cleanup
+    // cron had this guard; this in-route copy was missing it, and the
+    // setup-intent recovery path (which stamps a recovered pm_... onto a
+    // PENDING pledge) made the hole reachable within the hour.
+    divinityCoinPaymentMethodId: null,
+    // An open setup intent / hosted session / Whop checkout means the
+    // backer may be mid-payment right now — the webhook may still land.
+    divinityCoinSetupIntentId: null,
+    divinityCoinCheckoutSessionId: null,
+    whopCheckoutId: null,
   };
 
   const stalePledges = await db.pledge.findMany({

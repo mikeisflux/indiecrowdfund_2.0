@@ -84,19 +84,17 @@ export async function POST(req: NextRequest) {
     ? `paypal_${event.id}`
     : `paypal_${req.headers.get("paypal-transmission-id") || Date.now()}`;
 
+  // Read-only dedup — the processed marker is written only after the
+  // handler succeeds. Writing it first meant one transient failure
+  // permanently dropped a money event: the old catch below even swallowed
+  // the error and returned 200, so PayPal never retried and the marker
+  // blocked any manual redelivery. CAS guards inside each case make a
+  // rare concurrent double-process harmless.
   const existingEvent = await db.processedWebhookEvent.findUnique({
     where: { eventId },
   });
   if (existingEvent) {
     paypalWebhookLogger.info({ eventId }, "Duplicate PayPal event ignored");
-    return NextResponse.json({ received: true, duplicate: true });
-  }
-  try {
-    await db.processedWebhookEvent.create({
-      data: { eventId, eventType: event.event_type, source: "paypal" },
-    });
-  } catch {
-    paypalWebhookLogger.info({ eventId }, "PayPal event already being processed");
     return NextResponse.json({ received: true, duplicate: true });
   }
 
@@ -342,7 +340,14 @@ export async function POST(req: NextRequest) {
     }
   } catch (err) {
     paypalWebhookLogger.error({ err: String(err), eventType: event.event_type }, "PayPal webhook handler error");
+    // No processed marker written — return 500 so PayPal redelivers and
+    // the event is not silently lost.
+    return NextResponse.json({ error: "Webhook processing error" }, { status: 500 });
   }
+
+  await db.processedWebhookEvent
+    .create({ data: { eventId, eventType: event.event_type, source: "paypal" } })
+    .catch(() => {});
 
   return NextResponse.json({ received: true });
 }

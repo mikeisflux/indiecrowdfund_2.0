@@ -612,6 +612,18 @@ export function ProjectBuilder() {
           try {
             const rewardsResult = await rewardsResponse.json();
             if (rewardsResult.results) {
+              // Per-reward failures must reach failedResults — this edit
+              // path used to swallow them (only the create path reported
+              // them), so a failed tier save still toasted "Project saved
+              // successfully" and the creator's changes evaporated.
+              const failedRewards = rewardsResult.results.filter(
+                (r: { success: boolean; error?: string }) => !r.success
+              );
+              if (failedRewards.length > 0) {
+                failedResults.push(
+                  `${failedRewards.length} reward(s) failed to save${failedRewards[0]?.error ? `: ${failedRewards[0].error}` : ""}`
+                );
+              }
               rewardsResult.results.forEach((result: { success: boolean; reward?: { id: string } }, idx: number) => {
                 if (result.success && result.reward?.id && idx < rewards.length) {
                   const existingReward = rewards[idx];
@@ -623,6 +635,14 @@ export function ProjectBuilder() {
             }
           } catch {
             // Non-critical: IDs will be synced on next page load
+          }
+        } else {
+          // A non-OK batch response means NO rewards were saved.
+          try {
+            const errBody = await rewardsResponse.json();
+            failedResults.push(errBody.error || `Rewards save failed (${rewardsResponse.status})`);
+          } catch {
+            failedResults.push(`Rewards save failed (${rewardsResponse.status})`);
           }
         }
       }

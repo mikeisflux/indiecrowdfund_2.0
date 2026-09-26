@@ -16,6 +16,25 @@ export async function GET(
   try {
     const { id: projectId } = await params;
 
+    // SECRET rewards are only visible to the project's creator and admins.
+    // This route used to return every reward with every column to anyone —
+    // including SECRET tiers and the secretToken that unlocks them, which
+    // defeated the vanity route's gating entirely.
+    const session = await auth();
+    let canSeeSecret = false;
+    if (session?.user?.id) {
+      const role = session.user.role;
+      if (role === "ADMIN" || role === "SUPER_ADMIN") {
+        canSeeSecret = true;
+      } else {
+        const owned = await db.project.findFirst({
+          where: { id: projectId, creatorId: session.user.id, deletedAt: null },
+          select: { id: true },
+        });
+        canSeeSecret = !!owned;
+      }
+    }
+
     // Fetch rewards for this project
     const rewards = await db.reward.findMany({
       // Ended rewards are excluded. Both callers of this route are pickers of
@@ -23,7 +42,11 @@ export async function GET(
       // import dialog — and offering an ended reward there just produces a
       // choice the pledge routes then refuse. The record itself is untouched:
       // it stays in the builder, on existing pledges and in admin views.
-      where: { projectId, isEnded: false },
+      where: {
+        projectId,
+        isEnded: false,
+        ...(canSeeSecret ? {} : { visibility: "PUBLIC" }),
+      },
       include: {
         items: true,
       },
@@ -32,10 +55,12 @@ export async function GET(
       orderBy: [{ displayOrder: { sort: "asc", nulls: "last" } }, { amount: "asc" }],
     });
 
-    // Convert Decimal fields to numbers for JSON serialization
+    // Convert Decimal fields to numbers for JSON serialization; the unlock
+    // token never leaves the server for non-owners.
     const serializedRewards = rewards.map(reward => ({
       ...reward,
       amount: Number(reward.amount),
+      secretToken: canSeeSecret ? reward.secretToken : undefined,
     }));
 
     return NextResponse.json({

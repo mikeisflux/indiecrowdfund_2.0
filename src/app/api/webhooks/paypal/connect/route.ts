@@ -69,15 +69,10 @@ export async function POST(req: NextRequest) {
     ? `paypal_connect_${event.id}`
     : `paypal_connect_${req.headers.get("paypal-transmission-id") || Date.now()}`;
 
+  // Read-only dedup — the processed marker is written after the handler
+  // succeeds, so a transient failure gets redelivered instead of lost.
   const existing = await db.processedWebhookEvent.findUnique({ where: { eventId } });
   if (existing) {
-    return NextResponse.json({ received: true, duplicate: true });
-  }
-  try {
-    await db.processedWebhookEvent.create({
-      data: { eventId, eventType: event.event_type, source: "paypal-connect" },
-    });
-  } catch {
     return NextResponse.json({ received: true, duplicate: true });
   }
 
@@ -213,7 +208,13 @@ export async function POST(req: NextRequest) {
     }
   } catch (err) {
     log.error({ err: String(err), eventType: event.event_type }, "PayPal Connect webhook handler error");
+    // No processed marker written — 500 makes PayPal redeliver.
+    return NextResponse.json({ error: "Webhook processing error" }, { status: 500 });
   }
+
+  await db.processedWebhookEvent
+    .create({ data: { eventId, eventType: event.event_type, source: "paypal-connect" } })
+    .catch(() => {});
 
   return NextResponse.json({ received: true });
 }

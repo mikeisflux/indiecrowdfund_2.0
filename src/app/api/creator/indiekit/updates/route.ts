@@ -261,12 +261,22 @@ export async function PATCH(req: NextRequest) {
 
     const validatedData = updateSchema.partial().parse(updateData);
 
-    // Get current update status to check if we're newly publishing
-    const existingUpdate = await db.update.findUnique({
-      where: { id: updateId },
+    // Get current update status to check if we're newly publishing.
+    // MUST be scoped to the authorized project: the access check above
+    // only validates the projectId from the request BODY, so without
+    // this, any creator could edit another campaign's update by passing
+    // their own projectId plus the victim's updateId.
+    const existingUpdate = await db.update.findFirst({
+      where: { id: updateId, projectId },
       select: { status: true },
     });
-    const wasPublished = existingUpdate?.status === "PUBLISHED";
+    if (!existingUpdate) {
+      return NextResponse.json(
+        { error: "Update not found on this project" },
+        { status: 404 }
+      );
+    }
+    const wasPublished = existingUpdate.status === "PUBLISHED";
 
     const update = await db.update.update({
       where: { id: updateId },

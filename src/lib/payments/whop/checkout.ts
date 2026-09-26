@@ -88,13 +88,27 @@ export async function createWhopPayment({
     throw new Error("You have already backed this project. Visit your backer dashboard to manage your pledge.");
   }
 
-  // Cancel any stale pending Whop pledges for this user+project
+  // Clear stale pending Whop carts for this user+project — but ONLY
+  // genuinely stale ones. This used to delete EVERY PENDING Whop pledge
+  // with no age or payment-evidence guard, so a backer double-opening
+  // checkout (second tab, back-button retry) deleted a pledge whose
+  // payment_succeeded webhook was still in flight; the webhook then found
+  // no pledge for metadata.pledgeId and the money was silently dropped.
+  // Keep anything recent enough that a payment could be mid-flight, and
+  // anything already holding a checkout/payment reference or committed.
   const stalePending = await db.pledge.findMany({
     where: {
       userId,
       projectId,
       paymentProcessor: "WHOP",
       status: "PENDING",
+      deletedAt: null,
+      confirmationEmailSent: false,
+      whopPaymentId: null,
+      // A live checkout config means the Whop embed may be open right
+      // now. Only reap it once it's stale by age (well past Whop's
+      // session lifetime) — the createdAt bound below.
+      createdAt: { lt: new Date(Date.now() - 2 * 60 * 60 * 1000) },
     },
     select: { id: true },
   });

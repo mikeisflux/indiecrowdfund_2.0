@@ -246,11 +246,19 @@ export async function POST(
           : {};
         delete currentMetadata.pendingModification;
 
+        // pending.newAmount is server-computed at modify time (never the
+        // request body). Belt-and-braces for rows stored before that fix:
+        // a missing/invalid value falls back to oldAmount + amountDiff,
+        // which the upcharge actually collected against.
+        const safeNewAmount =
+          typeof pending.newAmount === "number" && isFinite(pending.newAmount) && pending.newAmount > 0
+            ? pending.newAmount
+            : Number(pending.oldAmount || 0) + Number(pending.amountDiff || 0);
         await tx.pledge.update({
           where: { id: pledgeId },
           data: {
             rewardId: rewardId === "no-reward" ? null : rewardId || null,
-            amount: pending.newAmount,
+            amount: safeNewAmount,
             rewardAmount: newRewardAmount,
             addonsAmount: newAddonsAmount,
             metadata: {

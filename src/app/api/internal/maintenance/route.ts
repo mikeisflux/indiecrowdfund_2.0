@@ -21,8 +21,12 @@ const internalMaintenanceLogger = logger.child({ module: "internal-maintenance" 
 export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest) {
+  // Fail CLOSED when the secret is unconfigured — the old `secret &&`
+  // guard skipped auth entirely without it, turning this into a public
+  // endpoint (session-role became an "is this stolen token an admin?"
+  // oracle). An unset secret is a deployment error, not an open door.
   const internalSecret = process.env.INTERNAL_API_SECRET;
-  if (internalSecret && req.headers.get("x-internal-secret") !== internalSecret) {
+  if (!internalSecret || req.headers.get("x-internal-secret") !== internalSecret) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

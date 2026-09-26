@@ -856,7 +856,12 @@ export async function PATCH(
                     paymentIntentId: dcResult.paymentIntentId,
                     rewardId: rewardId || null,
                     addons: addonsWithQuantity,
-                    newAmount,
+                    // Server-computed total, NEVER the request body's
+                    // newAmount — confirm-modify writes this straight
+                    // into pledge.amount, which later drives refunds and
+                    // settlement sums. A crafted request paying a $1
+                    // upcharge must not be able to set pledge.amount.
+                    newAmount: effectiveNewAmount,
                     oldAmount,
                     amountDiff,
                     createdAt: new Date().toISOString(),
@@ -911,7 +916,12 @@ export async function PATCH(
                     paymentIntentId: sessionId,
                     rewardId: rewardId || null,
                     addons: addonsWithQuantity,
-                    newAmount,
+                    // Server-computed total, NEVER the request body's
+                    // newAmount — confirm-modify writes this straight
+                    // into pledge.amount, which later drives refunds and
+                    // settlement sums. A crafted request paying a $1
+                    // upcharge must not be able to set pledge.amount.
+                    newAmount: effectiveNewAmount,
                     oldAmount,
                     amountDiff,
                     createdAt: new Date().toISOString(),

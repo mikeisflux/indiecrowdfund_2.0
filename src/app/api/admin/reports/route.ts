@@ -107,8 +107,17 @@ export async function GET(req: NextRequest) {
 // POST - Create a new report
 export async function POST(req: NextRequest) {
   try {
+    // Reports require a signed-in account. Anonymous submission let
+    // anyone flood the moderation queue with spoofed reporter emails —
+    // and no public UI ever used this endpoint anonymously anyway.
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Sign in to submit a report" }, { status: 401 });
+    }
+    const reporterId = session.user.id;
+
     const body = await req.json();
-    const { targetType, targetId, reason, description, reporterEmail, projectId, userId, evidence } = body;
+    const { targetType, targetId, reason, description, projectId, userId, evidence } = body;
 
     if (!targetType || !targetId || !reason || !description) {
       return NextResponse.json(
@@ -117,9 +126,14 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Get reporter ID if authenticated
-    const session = await auth();
-    const reporterId = session?.user?.id || null;
+    // Evidence renders as clickable links in the admin moderation UI, so
+    // only https URLs are stored — never javascript:/data: payloads an
+    // admin could be phished into clicking.
+    const safeEvidence = Array.isArray(evidence)
+      ? evidence
+          .filter((e: unknown): e is string => typeof e === "string" && /^https:\/\//i.test(e))
+          .slice(0, 10)
+      : [];
 
     const report = await db.report.create({
       data: {
@@ -128,10 +142,10 @@ export async function POST(req: NextRequest) {
         reason,
         description,
         reporterId,
-        reporterEmail: reporterId ? null : reporterEmail,
+        reporterEmail: null,
         projectId,
         userId,
-        evidence: evidence || []
+        evidence: safeEvidence
       }
     });
 

@@ -75,6 +75,15 @@ export function ProjectDetailDialog({
   const [revealedForProject, setRevealedForProject] = useState<string | null>(null);
   const [isRevealing, setIsRevealing] = useState(false);
 
+  // Closing the dialog drops the decrypted card from state. Without this,
+  // reopening the same project showed the PAN again with no fresh reveal —
+  // and no new CHARGEBACK_CARD_VIEW audit event.
+  const handleClose = () => {
+    setRevealedCard(null);
+    setRevealedForProject(null);
+    onClose();
+  };
+
   const handleRevealCard = async (projectId: string) => {
     if (revealedForProject === projectId && revealedCard) {
       // Toggle off
@@ -129,7 +138,7 @@ export function ProjectDetailDialog({
   };
 
   return (
-    <Dialog open={!!selectedProject} onOpenChange={onClose}>
+    <Dialog open={!!selectedProject} onOpenChange={handleClose}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         {selectedProject && (
           <>
@@ -139,7 +148,7 @@ export function ProjectDetailDialog({
                   variant="ghost"
                   size="sm"
                   className="h-6 px-2"
-                  onClick={onClose}
+                  onClick={handleClose}
                 >
                   <ArrowLeft className="w-3 h-3 mr-1" />
                   Back

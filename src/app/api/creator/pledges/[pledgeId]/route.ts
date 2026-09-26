@@ -5,6 +5,7 @@ import { logger } from "@/lib/logger";
 const creatorPledgesLogger = logger.child({ module: "creator-pledges" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { unwindCountedPledge } from "@/lib/payments/unwind-counted-pledge";
 import { callDivinityCoinAPI } from "@/lib/payments/divinitycoin";
 import {
   isCampaignClosedForRefunds,
@@ -198,9 +199,6 @@ export async function PATCH(
       // CAS ensures we only cancel pledges that are still PENDING,
       // and returns a helpful message if we lose the race.
       //
-      // Note: We do NOT decrement project totals here because PENDING
-      // pledges haven't been counted yet — they only get added when
-      // they become COMPLETED.
       const cancelCas = await db.pledge.updateMany({
         where: { id: pledgeId, status: "PENDING", deletedAt: null },
         data: {
@@ -216,6 +214,20 @@ export async function PATCH(
           },
           { status: 409 }
         );
+      }
+
+      // Committed AoN saved-card pledges ARE counted while PENDING
+      // (confirmationEmailSent is the counting invariant platform-wide).
+      // The old comment here claimed PENDING pledges are never counted
+      // and skipped this — leaving currentAmount/backerCount permanently
+      // inflated whenever a creator cancelled a committed pledge.
+      if (typedPledge.confirmationEmailSent) {
+        await unwindCountedPledge({
+          projectId: typedPledge.projectId,
+          amount: typedPledge.amount,
+          rewardId: typedPledge.rewardId,
+          confirmationEmailSent: true,
+        });
       }
 
       return NextResponse.json({
@@ -472,6 +484,43 @@ export async function DELETE(
     if (typedPledge.status !== "CANCELLED" && typedPledge.status !== "PENDING") {
       return NextResponse.json(
         { error: "Can only delete cancelled or pending pledges" },
+        { status: 400 }
+      );
+    }
+
+    // Never hard-delete a pledge that money has touched. A PENDING pledge
+    // with a saved card is a live AoN pledge the success cron will charge;
+    // one with a payment reference may have a real charge behind it; a
+    // committed one is in the campaign totals; and its
+    // DivinityCoinTransaction rows are the audit trail for all of it.
+    // Deleting any of these strands money with no record on our side.
+    const evidence = await db.pledge.findFirst({
+      where: { id: pledgeId, deletedAt: null },
+      select: {
+        confirmationEmailSent: true,
+        divinityCoinPaymentMethodId: true,
+        divinityCoinPaymentId: true,
+        stripePaymentMethodId: true,
+        whopPaymentId: true,
+        paypalOrderId: true,
+        _count: { select: { divinityCoinTransactions: true } },
+      },
+    });
+    if (
+      evidence &&
+      (evidence.confirmationEmailSent ||
+        evidence.divinityCoinPaymentMethodId ||
+        evidence.divinityCoinPaymentId ||
+        evidence.stripePaymentMethodId ||
+        evidence.whopPaymentId ||
+        evidence.paypalOrderId ||
+        evidence._count.divinityCoinTransactions > 0)
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "This pledge has payment activity on record and can't be deleted. Cancel or refund it instead — that keeps the money records intact.",
+        },
         { status: 400 }
       );
     }

@@ -578,7 +578,23 @@ export function ProductsTab({ products = [], projectId, onRefresh }: ProductsTab
                   <div className="space-y-2">
                     <Label>Country of Origin *</Label>
                     <Select
-                      value={editingProduct.countryOfOrigin || ""}
+                      // ISO alpha-2 values — the API validates max(2), so
+                      // full-name values made every save with a country
+                      // fail. Legacy rows that stored a full name are
+                      // mapped back to their code so the select isn't
+                      // blank on re-edit.
+                      value={
+                        ({
+                          "United States": "US",
+                          Canada: "CA",
+                          "United Kingdom": "GB",
+                          China: "CN",
+                          Japan: "JP",
+                          Germany: "DE",
+                        }[editingProduct.countryOfOrigin || ""] ??
+                          editingProduct.countryOfOrigin) ||
+                        ""
+                      }
                       onValueChange={(value) =>
                         setEditingProduct({ ...editingProduct, countryOfOrigin: value })
                       }
@@ -587,12 +603,12 @@ export function ProductsTab({ products = [], projectId, onRefresh }: ProductsTab
                         <SelectValue placeholder="Select country" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="United States">United States</SelectItem>
-                        <SelectItem value="Canada">Canada</SelectItem>
-                        <SelectItem value="United Kingdom">United Kingdom</SelectItem>
-                        <SelectItem value="China">China</SelectItem>
-                        <SelectItem value="Japan">Japan</SelectItem>
-                        <SelectItem value="Germany">Germany</SelectItem>
+                        <SelectItem value="US">United States</SelectItem>
+                        <SelectItem value="CA">Canada</SelectItem>
+                        <SelectItem value="GB">United Kingdom</SelectItem>
+                        <SelectItem value="CN">China</SelectItem>
+                        <SelectItem value="JP">Japan</SelectItem>
+                        <SelectItem value="DE">Germany</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>

@@ -45,7 +45,12 @@ export async function POST(req: NextRequest) {
 
   whopWebhookLogger.info({ eventType, eventId }, "Whop webhook received");
 
-  // Idempotency check
+  // Idempotency check. Read-only here — the processed marker is written
+  // AFTER the handler succeeds (see the end of the try). Writing it first
+  // meant one transient failure permanently dropped a money event: the
+  // 500 made Whop retry, the retry hit the marker and no-oped, and the
+  // pledge stayed PENDING while the money sat at Whop. The CAS guards
+  // inside each case keep genuine double-processing harmless.
   if (eventId) {
     const existing = await db.processedWebhookEvent.findFirst({
       where: { eventId, source: "whop" },
@@ -54,10 +59,6 @@ export async function POST(req: NextRequest) {
       whopWebhookLogger.info({ eventId }, "Whop webhook already processed, skipping");
       return NextResponse.json({ received: true });
     }
-
-    await db.processedWebhookEvent.create({
-      data: { eventId, eventType, source: "whop" },
-    });
   }
 
   try {
@@ -414,9 +415,20 @@ export async function POST(req: NextRequest) {
         whopWebhookLogger.info({ eventType }, "Unhandled Whop webhook event type");
     }
 
+    // Handler succeeded — NOW record the event as processed. A concurrent
+    // duplicate delivery that raced past the read-check above lands here
+    // too; the unique work inside is CAS-guarded, and a second marker
+    // insert is deduped by the catch below.
+    if (eventId) {
+      await db.processedWebhookEvent
+        .create({ data: { eventId, eventType, source: "whop" } })
+        .catch(() => {});
+    }
+
     return NextResponse.json({ received: true });
   } catch (err) {
     whopWebhookLogger.error({ err: String(err), eventType }, "Error processing Whop webhook");
+    // No processed marker was written, so Whop's retry re-runs the handler.
     return NextResponse.json({ error: "Webhook processing error" }, { status: 500 });
   }
 }

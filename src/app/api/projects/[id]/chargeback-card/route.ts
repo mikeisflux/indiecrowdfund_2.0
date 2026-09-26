@@ -195,7 +195,11 @@ export async function POST(
     const encryptedCardNumber = encrypt(cleanCardNumber);
     const encryptedExpMonth = encrypt(String(expMonthNum));
     const encryptedExpYear = encrypt(String(expYearNum));
-    const encryptedCvc = encrypt(cvc);
+    // CVC is validated above (proves the creator has the card in hand)
+    // but NEVER stored: keeping a verification code after authorization is
+    // prohibited by PCI DSS in any form, encrypted or not. Manual recoup
+    // charges are MOTO transactions — PAN + expiry is what they need.
+    void cvc;
     const encryptedBillingName = encrypt(billingName);
     const encryptedBillingLine1 = encrypt(billingLine1);
     const encryptedBillingLine2 = billingLine2 ? encrypt(billingLine2) : null;
@@ -217,7 +221,7 @@ export async function POST(
         cardNumberEncrypted: encryptedCardNumber,
         expMonthEncrypted: encryptedExpMonth,
         expYearEncrypted: encryptedExpYear,
-        cvcEncrypted: encryptedCvc,
+        cvcEncrypted: null,
         billingNameEncrypted: encryptedBillingName,
         billingLine1Encrypted: encryptedBillingLine1,
         billingLine2Encrypted: encryptedBillingLine2,
@@ -235,7 +239,7 @@ export async function POST(
         cardNumberEncrypted: encryptedCardNumber,
         expMonthEncrypted: encryptedExpMonth,
         expYearEncrypted: encryptedExpYear,
-        cvcEncrypted: encryptedCvc,
+        cvcEncrypted: null,
         billingNameEncrypted: encryptedBillingName,
         billingLine1Encrypted: encryptedBillingLine1,
         billingLine2Encrypted: encryptedBillingLine2,
@@ -333,7 +337,9 @@ export async function PUT(
       cardNumber: decrypt(card.cardNumberEncrypted),
       expMonth: card.expMonthEncrypted ? decrypt(card.expMonthEncrypted) : String(card.expMonth),
       expYear: card.expYearEncrypted ? decrypt(card.expYearEncrypted) : String(card.expYear),
-      cvc: card.cvcEncrypted ? decrypt(card.cvcEncrypted) : null,
+      // Legacy rows may still hold an encrypted CVC; it is deliberately
+      // never returned — storing or displaying it is a PCI violation.
+      cvc: null,
       billingName: card.billingNameEncrypted ? decrypt(card.billingNameEncrypted) : null,
       billingLine1: card.billingLine1Encrypted ? decrypt(card.billingLine1Encrypted) : null,
       billingLine2: card.billingLine2Encrypted ? decrypt(card.billingLine2Encrypted) : null,

@@ -14,6 +14,7 @@ import {
 import { claimRewardSlot, claimAddonSlots, assignBackerNumber } from "@/lib/payments/rewards";
 import { captureAuthorizedPaypalPledgesAsync } from "@/lib/payments/paypal/capture-authorized";
 import { getPayPalConfig, getPayPalAccessToken } from "@/lib/payments/paypal/config";
+import { verifyDcPayment } from "@/lib/payments/divinitycoin";
 
 /**
  * POST /api/pledges/[pledgeId]/confirm
@@ -103,6 +104,16 @@ export async function POST(
       });
     }
 
+    // Terminal pledges can never be confirmed. Without this guard a
+    // pledge already marked FAILED by the payment.failed webhook could
+    // still be "confirmed" and counted — permanently inflating the total.
+    if (pledge.status !== "PENDING" && pledge.status !== "COMPLETED") {
+      return NextResponse.json(
+        { success: false, error: `This pledge is ${pledge.status.toLowerCase()} and can't be confirmed.` },
+        { status: 400 }
+      );
+    }
+
     // ── VERIFY ACTUAL PAYMENT SUCCESS before counting anything ──
     // For chargedImmediately pledges (DC/PayPal/Whop), we MUST verify
     // with the processor that the payment actually succeeded. Without this,
@@ -156,10 +167,24 @@ export async function POST(
         paymentVerified = true;
         pledgesConfirmLogger.info(`[Confirm] DC payment verified for pledge ${pledgeId}`);
       } else if (pledge.divinityCoinPaymentId) {
-        // Has a DC payment ID but no transaction yet — DC webhook may still be in-flight
-        // Give it the benefit of the doubt for now; the webhook will handle stats
-        paymentVerified = true;
-        pledgesConfirmLogger.info(`[Confirm] DC payment ID present for pledge ${pledgeId}, assuming in-flight`);
+        // A payment id alone is NOT payment evidence — it's stamped when
+        // checkout OPENS, before a card is entered. Ask DC whether the
+        // intent actually succeeded instead of assuming in-flight (the old
+        // benefit-of-the-doubt counted abandoned checkouts into totals).
+        const dcVerify = await verifyDcPayment(pledge.divinityCoinPaymentId);
+        if (dcVerify.success && dcVerify.status === "succeeded") {
+          paymentVerified = true;
+          pledgesConfirmLogger.info(`[Confirm] DC payment verified succeeded at DC for pledge ${pledgeId}`);
+        } else {
+          pledgesConfirmLogger.warn(
+            { pledgeId, verified: dcVerify.success, status: dcVerify.success ? dcVerify.status : undefined },
+            "[Confirm] DC payment not verifiably succeeded — not counting"
+          );
+          return NextResponse.json({
+            success: false,
+            error: "Payment not completed yet. If you finished paying, it will be recorded automatically shortly.",
+          }, { status: 400 });
+        }
       } else {
         return NextResponse.json({
           success: false,

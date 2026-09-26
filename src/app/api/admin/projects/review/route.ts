@@ -325,6 +325,13 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    // Same role gate as POST. Without it, ANY logged-in account could read
+    // the whole review queue — every draft/submitted campaign plus creator
+    // emails and financials.
+    if (session.user.role !== "ADMIN" && session.user.role !== "SUPER_ADMIN") {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
     const { searchParams } = new URL(req.url);
     const status = searchParams.get("status") || "SUBMITTED";
     const category = searchParams.get("category");

@@ -819,6 +819,19 @@ export function RewardForm({
                 </SelectContent>
               </Select>
 
+              {/* Digital items mismarked as physical get hidden from
+                  digital-tier backers by the pledge wizard's pairing rule —
+                  the exact misconfiguration that made Dead Sexy 3 show
+                  "No add-ons available". Catch it at creation time. */}
+              {currentReward.shippingType !== "NO_SHIPPING" &&
+                /pdf|digital|gallery|wallpaper|e-?book/i.test(currentReward.title || "") && (
+                  <p className="rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm text-amber-700 dark:text-amber-400">
+                    This looks like a digital item but is set to ship physically.
+                    Backers on a digital reward tier won&apos;t see it as an add-on.
+                    If nothing physical ships, choose &quot;Digital / No shipping required&quot;.
+                  </p>
+                )}
+
               {currentReward.shippingType === "SELECTED_COUNTRIES" && (
                 <div className="space-y-2">
                   <Label>Select Countries</Label>
