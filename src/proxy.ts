@@ -41,6 +41,7 @@ const csrfExemptRoutes = [
   // unaffected, which is why this stayed hidden.
   "/api/cron",
   "/api/admin/ai-marketing/campaigns/fix-images", // One-time fix script
+  "/api/admin/pledges/recover-dc", // Payment recovery; authed by CRON_SECRET bearer or SUPER_ADMIN session in-route
   "/api/retailers/login", // Protected by CAPTCHA and rate limiting instead
   "/api/retailers/forgot-password", // Protected by CAPTCHA and rate limiting instead
   "/api/retailers/apply", // Protected by CAPTCHA instead
@@ -947,7 +948,14 @@ export async function proxy(req: NextRequest) {
   const isProtectedRoute = protectedRoutes.some((route) =>
     pathname.startsWith(route)
   );
-  const isAdminRoute = adminRoutes.some((route) => pathname.startsWith(route));
+  // This admin route authenticates by CRON_SECRET bearer inside the route
+  // (so it can be run from the server terminal for payment recovery), so it
+  // must skip the ambient session-cookie gate below. The route still refuses
+  // anything without the bearer or a SUPER_ADMIN session.
+  const bearerAuthedAdminOps = ["/api/admin/pledges/recover-dc"];
+  const isAdminRoute =
+    adminRoutes.some((route) => pathname.startsWith(route)) &&
+    !bearerAuthedAdminOps.includes(pathname);
   // Shopify routes handle their own auth flow (redirect to login from client-side)
   const isShopifyRoute = pathname.startsWith("/dashboard/indiekit/shopify/");
 

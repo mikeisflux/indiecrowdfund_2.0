@@ -38,9 +38,19 @@ export const dynamic = "force-dynamic";
  */
 export async function POST(req: NextRequest) {
   try {
-    const session = await auth();
-    if (session?.user?.role !== "SUPER_ADMIN") {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    // Two ways in: a logged-in SUPER_ADMIN (for a future admin-UI button)
+    // or the CRON_SECRET bearer, so this can be run from the server
+    // terminal like the crons are (a plain curl to /api/admin has no
+    // session cookie and the proxy 401s it). The proxy opens this one
+    // path for the bearer case; the check here is the real gate.
+    const authHeader = req.headers.get("authorization");
+    const cronSecret = process.env.CRON_SECRET;
+    const hasBearer = !!cronSecret && authHeader === `Bearer ${cronSecret}`;
+    if (!hasBearer) {
+      const session = await auth();
+      if (session?.user?.role !== "SUPER_ADMIN") {
+        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      }
     }
 
     const body = await req.json();
