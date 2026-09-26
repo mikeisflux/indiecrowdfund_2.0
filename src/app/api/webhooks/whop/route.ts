@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { unwindCountedPledge } from "@/lib/payments/unwind-counted-pledge";
 import { applyChargeback, findPledgeForDispute } from "@/lib/payments/chargebacks";
 import { getWhopConfig, verifyWhopWebhookSignature } from "@/lib/payments/whop";
 import { claimRewardSlot, claimAddonSlots, assignBackerNumber } from "@/lib/payments/rewards";
@@ -201,10 +202,19 @@ export async function POST(req: NextRequest) {
 
         if (!pledgeId) break;
 
-        await db.pledge.updateMany({
+        const failedPledge = await db.pledge.findFirst({
+          where: { id: pledgeId, deletedAt: null },
+          select: { projectId: true, amount: true, rewardId: true, confirmationEmailSent: true },
+        });
+        const failCas = await db.pledge.updateMany({
           where: { id: pledgeId, status: "PENDING" },
           data: { status: "FAILED", lastFailureReason: "Whop payment failed" },
         });
+        // A counted pledge going terminal comes back out of the totals,
+        // same as every cancel path.
+        if (failCas.count > 0 && failedPledge) {
+          await unwindCountedPledge(failedPledge);
+        }
 
         whopWebhookLogger.info({ pledgeId }, "Whop payment failed — pledge marked failed");
         break;

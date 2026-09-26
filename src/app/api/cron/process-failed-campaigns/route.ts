@@ -262,7 +262,12 @@ async function refundDivinityCoinPledges(projectId: string, projectTitle: string
 
       if (!dcResult.success) {
         cronProcessFailedCampaignsLogger.error({ err: dcResult.error }, `[Cron Failed Campaigns] DC API release failed for pledge ${pledge.id}:`);
-        // Continue processing other pledges even if one fails
+        // Do NOT mark this pledge REFUNDED — the money is still captured
+        // at DC. Falling through here used to write REFUNDED anyway, and
+        // because this query only selects COMPLETED pledges, the refund
+        // was never retried: the backer's money stayed silently stranded.
+        // Leaving it COMPLETED means the next hourly run retries it.
+        continue;
       }
 
       // Step 2: Update local records

@@ -135,6 +135,7 @@ export default function PledgePage() {
             {pledge.step === "addons" && (pledge.project.layoutVersion ?? 1) >= 2 && (
               <AddonGrid
                 addons={pledge.addons}
+                hiddenPhysicalCount={pledge.hiddenPhysicalAddonCount}
                 selectedAddons={pledge.selectedAddons}
                 isAddItemsMode={pledge.isAddItemsMode}
                 shippingCountry={pledge.shippingCountry}
@@ -148,6 +149,7 @@ export default function PledgePage() {
             {pledge.step === "addons" && (pledge.project.layoutVersion ?? 1) < 2 && (
               <AddonSelector
                 addons={pledge.addons}
+                hiddenPhysicalCount={pledge.hiddenPhysicalAddonCount}
                 selectedAddons={pledge.selectedAddons}
                 isAddItemsMode={pledge.isAddItemsMode}
                 shippingCountry={pledge.shippingCountry}

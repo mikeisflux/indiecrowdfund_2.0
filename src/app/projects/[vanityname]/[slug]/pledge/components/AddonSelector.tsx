@@ -12,6 +12,8 @@ interface AddonSelectorProps {
   selectedAddons: Record<string, number>;
   isAddItemsMode: boolean;
   shippingCountry: string;
+  /** Add-ons hidden because a digital tier can't take physical add-ons. */
+  hiddenPhysicalCount?: number;
   handleAddonToggle: (addonId: string) => void;
   handleAddonQuantityChange: (addonId: string, delta: number) => void;
   getShippingCost: (
@@ -26,6 +28,7 @@ export function AddonSelector({
   selectedAddons,
   isAddItemsMode,
   shippingCountry,
+  hiddenPhysicalCount = 0,
   handleAddonToggle,
   handleAddonQuantityChange,
   getShippingCost,
@@ -180,7 +183,11 @@ export function AddonSelector({
       ) : (
         <Card className="border-dashed">
           <CardContent className="p-6 text-center">
-            <p className="text-muted-foreground">No add-ons available for this project.</p>
+            <p className="text-muted-foreground">
+              {hiddenPhysicalCount > 0
+                ? `This project's ${hiddenPhysicalCount} add-on${hiddenPhysicalCount === 1 ? "" : "s"} ship physically and can't be combined with a digital reward. Choose a physical reward tier to add them.`
+                : "No add-ons available for this project."}
+            </p>
           </CardContent>
         </Card>
       )}

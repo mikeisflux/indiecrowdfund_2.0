@@ -3,6 +3,7 @@ import { formatError } from "@/lib/errors";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { claimRewardSlot, claimAddonSlots, assignBackerNumber } from "@/lib/payments/rewards";
+import { verifyWhopUpchargePayment } from "@/lib/payments/whop";
 import { notifyPledgeReceived, notifyProjectFunded } from "@/lib/notifications";
 import { sendPledgeConfirmationEmail, isEmailTypeEnabled } from "@/lib/email";
 import { logger } from "@/lib/logger";
@@ -74,10 +75,45 @@ export async function POST(
       return NextResponse.json({ error: "Not a Whop pledge" }, { status: 400 });
     }
 
+    // Verify with Whop that a real payment exists before completing.
+    // This route used to flip any PENDING Whop pledge to COMPLETED on the
+    // caller's say-so — no payment id, no Whop lookup — which let any
+    // authenticated backer fabricate a "paid" pledge (inflating a campaign
+    // toward funded and consuming limited reward slots) just by opening
+    // checkout and then POSTing here. The webhook path is signature-
+    // verified; the browser return path has to prove payment too.
+    if (!pledge.whopCheckoutId) {
+      return NextResponse.json(
+        { error: "No Whop checkout found for this pledge" },
+        { status: 400 }
+      );
+    }
+    const verification = await verifyWhopUpchargePayment(pledge.whopCheckoutId);
+    if (!verification.paid) {
+      // Unpaid — or Whop was unreachable, which must fail closed the same
+      // way. A real payment still lands via the signature-verified webhook,
+      // so refusing here never loses money, only fabrication.
+      return NextResponse.json(
+        {
+          error:
+            "Payment not confirmed by Whop yet. If you completed payment, it will be recorded automatically within a few minutes.",
+        },
+        { status: 409 }
+      );
+    }
+
     // Atomically mark as completed (webhook may also do this — idempotent)
     const result = await db.pledge.updateMany({
       where: { id: pledgeId, confirmationEmailSent: false },
-      data: { status: "COMPLETED", confirmationEmailSent: true },
+      data: {
+        status: "COMPLETED",
+        confirmationEmailSent: true,
+        // Record the verified payment id so refunds work even if the
+        // payment.succeeded webhook never lands.
+        ...(verification.paymentId && !pledge.whopPaymentId
+          ? { whopPaymentId: verification.paymentId }
+          : {}),
+      },
     });
 
     if (result.count === 0) {

@@ -126,7 +126,10 @@ export function PackagesTab({
       const res = await fetch(`/api/creator/indiekit/integrations?projectId=${projectId}`);
       if (!res.ok) return;
       const data = await res.json();
-      const fulfillment = (data.fulfillmentIntegrations || {}) as Record<string, IntegrationState>;
+      // The integrations API returns this object under `fulfillment`
+      // (reading the wrong key here left this tab convinced nothing was
+      // ever connected, which dead-ended every order push).
+      const fulfillment = (data.fulfillment || {}) as Record<string, IntegrationState>;
       setIntegrations(fulfillment);
       // Initial method: the saved choice, else whichever service is
       // actually connected, else keep the default.

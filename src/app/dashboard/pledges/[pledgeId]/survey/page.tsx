@@ -351,6 +351,20 @@ export default function BackerSurveyPage() {
         throw new Error(result.error || "Failed to create payment");
       }
 
+      // Saved card (DivinityCoin off-session): the API already charged the
+      // card AND applied the add-ons before returning — there is no payment
+      // form to render. Falling through to the Elements branch treated this
+      // success as "configuration is missing", showing the backer an error
+      // after their card was charged; "Try Again" then re-fired the POST and
+      // charged the card a second time. Same handling as TopUpDialog.
+      if (result.type === "off_session_charge" || result.ok === true) {
+        toast.success("Add-ons purchased and added to your pledge!");
+        setIsProcessingPayment(false);
+        creatingPaymentRef.current = false;
+        router.push("/dashboard/backer?tab=backed");
+        return;
+      }
+
       // Branch by payment method. Whop doesn't go through
       // Stripe Elements -- they render their own embedded checkout
       // components driven by the upchargePayment state.

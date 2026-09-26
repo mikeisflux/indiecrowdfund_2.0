@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { unwindCountedPledge } from "@/lib/payments/unwind-counted-pledge";
 import { getPayPalConfig, getPayPalAccessToken } from "@/lib/payments/paypal";
 import { claimRewardSlot, claimAddonSlots, assignBackerNumber } from "@/lib/payments/rewards";
 import { notifyPledgeReceived, notifyProjectFunded } from "@/lib/notifications";
@@ -193,10 +194,19 @@ export async function POST(req: NextRequest) {
         const customId = resource.custom_id as string | undefined;
         if (!customId) break;
 
-        await db.pledge.updateMany({
+        const deniedPledge = await db.pledge.findFirst({
+          where: { id: customId, deletedAt: null },
+          select: { projectId: true, amount: true, rewardId: true, confirmationEmailSent: true },
+        });
+        const deniedCas = await db.pledge.updateMany({
           where: { id: customId, status: "PENDING" },
           data: { status: "FAILED", lastFailureReason: `PayPal ${event.event_type}` },
         });
+        // Counted authorized pledges (confirmationEmailSent) that get
+        // denied must come back out of the campaign totals.
+        if (deniedCas.count > 0 && deniedPledge) {
+          await unwindCountedPledge(deniedPledge);
+        }
 
         paypalWebhookLogger.info({ pledgeId: customId, eventType: event.event_type }, "PayPal capture failed/reversed");
         break;

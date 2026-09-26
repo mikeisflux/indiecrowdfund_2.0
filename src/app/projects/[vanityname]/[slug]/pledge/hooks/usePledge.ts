@@ -562,6 +562,12 @@ export function usePledge() {
     () => (rewardIsDigital ? addons.filter((a) => a.shippingType === "NO_SHIPPING") : addons),
     [addons, rewardIsDigital]
   );
+  // How many add-ons the digital-pairing rule is hiding right now. The
+  // empty state must distinguish "this project has no add-ons" from
+  // "your digital tier can't take these physical add-ons" — a campaign
+  // whose digital add-ons were misconfigured with a shipping type
+  // otherwise shows backers a flat (and false) "no add-ons available".
+  const hiddenPhysicalAddonCount = addons.length - availableAddons.length;
 
   // If the selection tightens to digital-only (e.g. the backer switches from
   // a physical tier to a digital one), drop any physical add-ons already
@@ -664,7 +670,7 @@ export function usePledge() {
     // Navigation
     projectPath,
     // Data
-    project, allRewards, selectedReward, addons: availableAddons, isLoading, error,
+    project, allRewards, selectedReward, addons: availableAddons, hiddenPhysicalAddonCount, isLoading, error,
     pledgeWithoutReward, customPledgeAmount, setCustomPledgeAmount,
     // UI
     step, setStep, selectedAddons, bonusSupport, setBonusSupport,

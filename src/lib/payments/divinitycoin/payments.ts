@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import { unwindCountedPledge } from "@/lib/payments/unwind-counted-pledge";
 import {
   notifyPledgeReceived,
   notifyBackerPledgeConfirmed,
@@ -785,6 +786,10 @@ export async function handlePaymentFailed(
         status: true,
         retryCount: true,
         divinityCoinPaymentMethodId: true,
+        projectId: true,
+        amount: true,
+        rewardId: true,
+        confirmationEmailSent: true,
       },
     });
 
@@ -846,13 +851,18 @@ export async function handlePaymentFailed(
     }
 
     // CAS for idempotent webhook retries
-    await db.pledge.updateMany({
+    const failCas = await db.pledge.updateMany({
       where: { id: pledgeId, status: "PENDING", deletedAt: null },
       data: {
         status: "FAILED",
         lastFailureReason: reason || "Payment failed via DivinityCoin",
       },
     });
+    // A counted pledge (confirmationEmailSent) going terminal must come
+    // back out of the campaign totals, same as every cancel path.
+    if (failCas.count > 0) {
+      await unwindCountedPledge(pledge);
+    }
 
     paymentsDivinitycoinLogger.info(`[DivinityCoin] Pledge ${pledgeId} marked as FAILED`);
     return { success: true, message: "Pledge marked as failed" };
@@ -1121,7 +1131,14 @@ export async function handleCheckoutFailed(
 
   const pledge = await db.pledge.findFirst({
     where: { divinityCoinCheckoutSessionId: sessionId, deletedAt: null },
-    select: { id: true, status: true },
+    select: {
+      id: true,
+      status: true,
+      projectId: true,
+      amount: true,
+      rewardId: true,
+      confirmationEmailSent: true,
+    },
   });
 
   if (!pledge) {
@@ -1133,13 +1150,19 @@ export async function handleCheckoutFailed(
   }
 
   // CAS for idempotent webhook retries
-  await db.pledge.updateMany({
+  const checkoutFailCas = await db.pledge.updateMany({
     where: { id: pledge.id, status: "PENDING", deletedAt: null },
     data: {
       status: "FAILED",
       lastFailureReason: reason,
     },
   });
+  // If this pledge was already counted (rare for hosted checkout, but a
+  // commit racing a late failure event can leave it so), take it back out
+  // of the campaign totals.
+  if (checkoutFailCas.count > 0) {
+    await unwindCountedPledge(pledge);
+  }
 
   metrics.dcHostedCheckoutSessions.inc({ state: "failed" });
 

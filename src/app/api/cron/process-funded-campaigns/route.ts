@@ -4,6 +4,7 @@ import { logger } from "@/lib/logger";
 
 const cronProcessFundedCampaignsLogger = logger.child({ module: "cron-process-funded-campaigns" });
 import { db } from "@/lib/db";
+import { unwindCountedPledge } from "@/lib/payments/unwind-counted-pledge";
 import { getIndiekitSettings } from "@/lib/indiekit-settings";
 import { captureAuthorizedPaypalPledges } from "@/lib/payments/paypal";
 import {
@@ -59,6 +60,10 @@ async function captureDcPendingPledges(projectId: string): Promise<{
       retryCount: true,
       metadata: true,
       divinityCoinPaymentMethodId: true,
+      // For unwinding the campaign counters when a charge goes terminal.
+      projectId: true,
+      rewardId: true,
+      confirmationEmailSent: true,
       project: { select: { title: true } },
     },
   });
@@ -187,8 +192,9 @@ async function captureDcPendingPledges(projectId: string): Promise<{
           fallbackError: charge.error,
         });
         if (newRetryCount >= MAX_DC_RETRIES || !autoRetry) {
-          await db.pledge.update({
-            where: { id: p.id },
+          // CAS so a concurrent run can't double-unwind the counters.
+          const failCas = await db.pledge.updateMany({
+            where: { id: p.id, status: "PENDING" },
             data: {
               status: "FAILED",
               chargedImmediately: false,
@@ -201,6 +207,12 @@ async function captureDcPendingPledges(projectId: string): Promise<{
               metadata: withDcChargeState(p.metadata, null),
             },
           });
+          // This pledge was counted at card-save time; a terminal failure
+          // has to take it back out of the total like every cancel path
+          // does, or the campaign displays money that was never collected.
+          if (failCas.count > 0) {
+            await unwindCountedPledge(p);
+          }
         } else {
           const backoffHours = BACKOFF_HOURS[Math.min(newRetryCount - 1, BACKOFF_HOURS.length - 1)];
           const nextRetryAt = new Date(Date.now() + backoffHours * 60 * 60 * 1000);

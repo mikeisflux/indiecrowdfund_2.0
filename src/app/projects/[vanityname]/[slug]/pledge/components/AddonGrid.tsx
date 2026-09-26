@@ -46,6 +46,8 @@ interface AddonGridProps {
   ) => number;
   /** Campaign total raised, for goal-locked add-ons. */
   raisedAmount?: number;
+  /** Add-ons hidden because a digital tier can't take physical add-ons. */
+  hiddenPhysicalCount?: number;
 }
 
 export function AddonGrid({
@@ -57,6 +59,7 @@ export function AddonGrid({
   handleAddonQuantityChange,
   getShippingCost,
   raisedAmount = 0,
+  hiddenPhysicalCount = 0,
 }: AddonGridProps) {
   const [activeFilter, setActiveFilter] = useState<string>(ALL_CATEGORIES);
   const currentCountry = SHIPPING_COUNTRIES.find((c) => c.code === shippingCountry);
@@ -70,7 +73,11 @@ export function AddonGrid({
     return (
       <Card className="border-dashed">
         <CardContent className="p-6 text-center">
-          <p className="text-muted-foreground">No add-ons available for this project.</p>
+          <p className="text-muted-foreground">
+            {hiddenPhysicalCount > 0
+              ? `This project's ${hiddenPhysicalCount} add-on${hiddenPhysicalCount === 1 ? "" : "s"} ship physically and can't be combined with a digital reward. Choose a physical reward tier to add them.`
+              : "No add-ons available for this project."}
+          </p>
         </CardContent>
       </Card>
     );
