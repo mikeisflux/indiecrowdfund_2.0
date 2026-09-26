@@ -87,6 +87,9 @@ export function HeroSlider({ initialSlides = [], autoPlayInterval = 6000 }: Hero
   const [isVideoMuted, setIsVideoMuted] = useState(true);
   const [isVideoPaused, setIsVideoPaused] = useState(false);
   const youtubeIframeRef = useRef<HTMLIFrameElement>(null);
+  // Swipe navigation — the standard slide gesture on phones. Threshold
+  // filters out taps and vertical scrolls (we only read the X delta).
+  const touchStartX = useRef<number | null>(null);
 
   // YouTube IFrame API control functions
   const sendYouTubeCommand = useCallback((command: string) => {
@@ -207,7 +210,21 @@ export function HeroSlider({ initialSlides = [], autoPlayInterval = 6000 }: Hero
   };
 
   return (
-    <section className="group relative overflow-hidden hero-gradient py-12 md:py-16 lg:py-20 min-h-[400px] md:min-h-[450px]">
+    <section
+      className="group relative overflow-hidden hero-gradient py-12 md:py-16 lg:py-20 min-h-[400px] md:min-h-[450px]"
+      onTouchStart={(e) => {
+        touchStartX.current = e.touches[0].clientX;
+      }}
+      onTouchEnd={(e) => {
+        if (touchStartX.current === null || slides.length < 2) return;
+        const dx = e.changedTouches[0].clientX - touchStartX.current;
+        touchStartX.current = null;
+        if (Math.abs(dx) > 50) {
+          if (dx < 0) goToNext();
+          else goToPrev();
+        }
+      }}
+    >
       {/* Animated grid background */}
       <div className="absolute inset-0 bg-[linear-gradient(rgba(16,185,129,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(16,185,129,0.03)_1px,transparent_1px)] bg-[size:60px_60px] [mask-image:radial-gradient(ellipse_50%_50%_at_50%_50%,black_40%,transparent_100%)]" />
 
@@ -424,14 +441,14 @@ export function HeroSlider({ initialSlides = [], autoPlayInterval = 6000 }: Hero
           {/* Navigation Arrows */}
           <button
             onClick={goToPrev}
-            className="absolute left-4 top-1/2 -translate-y-1/2 p-2 rounded-full bg-background/50 backdrop-blur-sm border border-border/50 text-foreground hover:bg-background/80 transition-all opacity-0 group-hover:opacity-100 hover:opacity-100 focus:opacity-100 z-10"
+            className="absolute left-4 top-1/2 -translate-y-1/2 p-2 rounded-full bg-background/50 backdrop-blur-sm border border-border/50 text-foreground hover:bg-background/80 transition-all md:opacity-0 md:group-hover:opacity-100 hover:opacity-100 focus:opacity-100 z-10"
             aria-label="Previous slide"
           >
             <ChevronLeft className="h-5 w-5" />
           </button>
           <button
             onClick={goToNext}
-            className="absolute right-4 top-1/2 -translate-y-1/2 p-2 rounded-full bg-background/50 backdrop-blur-sm border border-border/50 text-foreground hover:bg-background/80 transition-all opacity-0 group-hover:opacity-100 hover:opacity-100 focus:opacity-100 z-10"
+            className="absolute right-4 top-1/2 -translate-y-1/2 p-2 rounded-full bg-background/50 backdrop-blur-sm border border-border/50 text-foreground hover:bg-background/80 transition-all md:opacity-0 md:group-hover:opacity-100 hover:opacity-100 focus:opacity-100 z-10"
             aria-label="Next slide"
           >
             <ChevronRight className="h-5 w-5" />
@@ -454,14 +471,20 @@ export function HeroSlider({ initialSlides = [], autoPlayInterval = 6000 }: Hero
                 <button
                   key={index}
                   onClick={() => goToSlide(index)}
-                  className={cn(
-                    "w-2 h-2 rounded-full transition-all",
-                    index === currentIndex
-                      ? "bg-primary w-6"
-                      : "bg-foreground/30 hover:bg-foreground/50"
-                  )}
+                  // Padding grows the tap target to ~28px without changing
+                  // the dot's look — bare 8px dots are unhittable on phones.
+                  className="p-2.5 -m-1.5"
                   aria-label={`Go to slide ${index + 1}`}
-                />
+                >
+                  <span
+                    className={cn(
+                      "block h-2 rounded-full transition-all",
+                      index === currentIndex
+                        ? "bg-primary w-6"
+                        : "w-2 bg-foreground/30 hover:bg-foreground/50"
+                    )}
+                  />
+                </button>
               ))}
             </div>
           </div>

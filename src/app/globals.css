@@ -1257,6 +1257,18 @@ body::after {
   animation-play-state: paused;
 }
 
+/* Reduced motion: stop the scroll and let the strip be panned by hand —
+   the covers are content, so they must stay reachable. !important because
+   the component's overflow-hidden utility class otherwise wins. */
+@media (prefers-reduced-motion: reduce) {
+  .marquee-track {
+    animation: none;
+  }
+  .marquee {
+    overflow-x: auto !important;
+  }
+}
+
 .marquee-item {
   transition: transform 0.3s ease, box-shadow 0.3s ease;
 }

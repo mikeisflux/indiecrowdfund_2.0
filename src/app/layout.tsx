@@ -322,6 +322,23 @@ export default async function RootLayout({
             // palette (plus --radius globally); dark stays designed.
             <style id="admin-theme-overrides">{themeCss}</style>
           )}
+          {/* One-time phone/tablet theme reset. next-themes writes the
+              DEFAULT into localStorage on first visit, so every device that
+              visited during the dark-default era carries theme="dark"
+              forever, even though light became the default. On touch/small
+              screens, a stored "dark" that was never an explicit pick (no
+              icf-theme-explicit marker — the ThemeToggle sets it) is reset
+              to light, once. Runs before next-themes' own inline script so
+              there is no dark flash. Skipped entirely if the admin set the
+              platform default to dark/system on purpose. */}
+          {(themeConfig?.defaultMode || "light") === "light" && (
+            <script
+              dangerouslySetInnerHTML={{
+                __html:
+                  'try{if((window.matchMedia("(pointer: coarse)").matches||window.innerWidth<1024)&&localStorage.getItem("theme")==="dark"&&!localStorage.getItem("icf-theme-explicit")){localStorage.setItem("theme","light")}}catch(e){}',
+              }}
+            />
+          )}
           <ThemeProvider
             attribute="class"
             defaultTheme={themeConfig?.defaultMode || "light"}

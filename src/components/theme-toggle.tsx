@@ -13,6 +13,19 @@ import {
 
 export function ThemeToggle() {
   const { setTheme, theme } = useTheme();
+
+  // Records that THIS choice was made by a person. The pre-hydration
+  // script in layout.tsx resets a stored "dark" on touch devices exactly
+  // once — but only when this marker is absent, so a deliberate Dark
+  // pick here sticks forever. (next-themes writes the *default* into
+  // localStorage on first visit, which left every phone that visited
+  // during the dark-default era permanently dark.)
+  const choose = (t: string) => {
+    try {
+      localStorage.setItem("icf-theme-explicit", "1");
+    } catch {}
+    setTheme(t);
+  };
   const [mounted, setMounted] = React.useState(false);
 
   // Avoid hydration mismatch by only rendering after mount
@@ -39,17 +52,17 @@ export function ThemeToggle() {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
-        <DropdownMenuItem onClick={() => setTheme("light")}>
+        <DropdownMenuItem onClick={() => choose("light")}>
           <Sun className="mr-2 h-4 w-4" />
           Light
           {theme === "light" && <span className="ml-auto text-primary">✓</span>}
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => setTheme("dark")}>
+        <DropdownMenuItem onClick={() => choose("dark")}>
           <Moon className="mr-2 h-4 w-4" />
           Dark
           {theme === "dark" && <span className="ml-auto text-primary">✓</span>}
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => setTheme("system")}>
+        <DropdownMenuItem onClick={() => choose("system")}>
           <span className="mr-2 h-4 w-4 flex items-center justify-center">💻</span>
           System
           {theme === "system" && <span className="ml-auto text-primary">✓</span>}
