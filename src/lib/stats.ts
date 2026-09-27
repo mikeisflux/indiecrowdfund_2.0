@@ -114,7 +114,13 @@ export async function getProjectStats(
   let currentAmount = Number(completed._sum.amount ?? 0);
   let backerCount = completed._count.id ?? 0;
 
-  if (meta.status === "LIVE") {
+  // Committed-PENDING pledges count while LIVE and while FUNDED: a funded
+  // AoN campaign's saved-card pledges stay PENDING for up to 11 days of
+  // capture retries, and dropping them the moment the status flipped let
+  // an admin "Sync All Project Stats" slash the public total — possibly
+  // below goal — mid-settlement. Terminal failures are unwound explicitly
+  // now (unwindCountedPledge), so they never linger as counted PENDING.
+  if (meta.status === "LIVE" || meta.status === "FUNDED") {
     const pending = await db.pledge.aggregate({
       where: {
         projectId,
@@ -167,7 +173,7 @@ export async function getBatchProjectStats(
   // 300% of goal still have unconverted PENDING vault pledges that
   // are real committed backers and must show in the public total.
   const liveIds = projects
-    .filter((p) => p.status === "LIVE")
+    .filter((p) => p.status === "LIVE" || p.status === "FUNDED")
     .map((p) => p.id);
 
   const pendingMap = new Map<string, { _sum: { amount: unknown }; _count: { id: number } }>();
@@ -410,7 +416,7 @@ async function buildFundingSeries(
   opts: { status: string; launchedAt?: Date | null },
   granularity: "day" | "hour"
 ): Promise<FundingPoint[]> {
-  const includePending = opts.status === "LIVE";
+  const includePending = opts.status === "LIVE" || opts.status === "FUNDED";
   const byHour = granularity === "hour";
 
   try {

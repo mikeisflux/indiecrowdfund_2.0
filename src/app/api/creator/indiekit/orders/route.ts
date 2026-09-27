@@ -51,7 +51,7 @@ export async function GET(req: NextRequest) {
 
     // Get reward IDs that are used as pledge-level tiers (main reward on pledges)
     // These should NOT appear in the add-ons checklist even if typed as ADDON.
-    // Prisma 7 rejects `{ field: { not: null } }` on nullable string fields
+    // House convention: `NOT: { field: null }` rather than `{ field: { not: null } }` on nullable fields
     // at runtime — use `NOT: { field: null }` wrapper syntax instead.
     const pledgeTierIds = await db.pledge.findMany({
       where: { projectId, NOT: { rewardId: null }, deletedAt: null },

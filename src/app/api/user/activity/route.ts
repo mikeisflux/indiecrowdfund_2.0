@@ -66,8 +66,7 @@ export async function GET() {
       where: {
         userId,
         deletedAt: null,
-        // Prisma 7 rejects `{ field: { not: null } }` on nullable string
-        // fields at runtime — use `NOT: { field: null }` wrapper syntax.
+        // House convention: `NOT: { field: null }` rather than `{ field: { not: null } }` on nullable // fields (both work on the installed Prisma 7.7; this form is what the codebase uses).
         OR: [
           { status: "COMPLETED" },
           {

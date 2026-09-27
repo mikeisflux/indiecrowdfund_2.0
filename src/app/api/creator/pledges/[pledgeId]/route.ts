@@ -223,6 +223,7 @@ export async function PATCH(
       // inflated whenever a creator cancelled a committed pledge.
       if (typedPledge.confirmationEmailSent) {
         await unwindCountedPledge({
+          id: pledgeId,
           projectId: typedPledge.projectId,
           amount: typedPledge.amount,
           rewardId: typedPledge.rewardId,

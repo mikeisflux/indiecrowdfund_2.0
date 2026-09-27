@@ -71,7 +71,7 @@ export async function syncShipStationTracking(
     "Basic " +
     Buffer.from(`${credentials.apiKey}:${credentials.apiSecret}`).toString("base64");
 
-  // Prisma 7 rejects `{ field: { not: null } }` on nullable string fields at
+  // House convention: `NOT: { field: null }` rather than `{ field: { not: null } }` on nullable fields at
   // runtime — the `NOT: { field: null }` wrapper is the working form.
   const pledges = await db.pledge.findMany({
     where: {

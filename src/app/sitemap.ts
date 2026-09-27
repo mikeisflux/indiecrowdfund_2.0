@@ -241,7 +241,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   }
 
   // Creator profile pages (users with a vanity URL).
-  // Prisma 7 rejects `{ field: { not: null } }` on nullable string fields at
+  // House convention: `NOT: { field: null }` rather than `{ field: { not: null } }` on nullable fields at
   // runtime — use `NOT: { field: null }` wrapper syntax instead.
   let creatorPages: MetadataRoute.Sitemap = [];
   try {

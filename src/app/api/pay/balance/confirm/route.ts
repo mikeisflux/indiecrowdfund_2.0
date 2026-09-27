@@ -50,7 +50,14 @@ export async function POST(req: NextRequest) {
     const storedDcPaymentId = meta.balanceDivinityCoinPaymentId as string | undefined;
     const paymentProcessor = (pledge as { project?: { paymentProcessor?: string } }).project?.paymentProcessor;
 
-    const dcIntentId = paymentIntentId || storedDcPaymentId;
+    // The intent we verify must be the one this pledge's balance flow
+    // created. The client-supplied id used to win, so any succeeded $1
+    // intent from anywhere on the platform could clear an arbitrary balance.
+    if (storedDcPaymentId && paymentIntentId && storedDcPaymentId !== paymentIntentId) {
+      payBalanceConfirmLogger.warn({ pledgeId: pledge.id, storedDcPaymentId, paymentIntentId }, "[Balance Confirm] client intent id does not match the stored one");
+      return NextResponse.json({ error: "Payment reference does not match this balance" }, { status: 400 });
+    }
+    const dcIntentId = storedDcPaymentId || paymentIntentId;
 
     if (paymentProcessor !== "DIVINITYCOIN") {
       return NextResponse.json(
@@ -63,12 +70,15 @@ export async function POST(req: NextRequest) {
       payBalanceConfirmLogger.warn({ pledgeId: pledge.id }, "[Balance Confirm] No DC payment ID to verify");
       return NextResponse.json({ error: "Payment not verified — missing payment reference" }, { status: 400 });
     }
+    let verifiedAmount: number | undefined;
     try {
       const verifyResult = await callDivinityCoinAPI("verify-payment", { paymentIntentId: dcIntentId });
       if (!verifyResult.success || verifyResult.data?.status !== "succeeded") {
         payBalanceConfirmLogger.warn({ pledgeId: pledge.id, dcIntentId }, "[Balance Confirm] DC payment not succeeded");
         return NextResponse.json({ error: "Payment not completed. Please try again." }, { status: 400 });
       }
+      const a = (verifyResult.data as { amount?: unknown } | undefined)?.amount;
+      if (typeof a === "number") verifiedAmount = a;
     } catch (dcErr) {
       payBalanceConfirmLogger.error({ err: String(dcErr) }, "[Balance Confirm] DC verify error:");
       return NextResponse.json({ error: "Could not verify payment. Please try again." }, { status: 500 });
@@ -82,6 +92,17 @@ export async function POST(req: NextRequest) {
     const balanceDue = storedBalanceDue !== null
       ? Math.max(0, Math.round(storedBalanceDue * 100) / 100)
       : Math.max(0, Math.round((expectedTotal - pledgeTotal) * 100) / 100);
+
+    // The verified charge has to be FOR this balance. DC reports the amount
+    // in cents or dollars depending on the action version; accept either.
+    if (typeof verifiedAmount === "number") {
+      const matchesDollars = Math.abs(verifiedAmount - balanceDue) <= 0.01;
+      const matchesCents = Math.abs(verifiedAmount - Math.round(balanceDue * 100)) <= 0.5;
+      if (!matchesDollars && !matchesCents) {
+        payBalanceConfirmLogger.warn({ pledgeId: pledge.id, verifiedAmount, balanceDue }, "[Balance Confirm] verified amount does not match balance due");
+        return NextResponse.json({ error: "Payment amount does not match the balance due" }, { status: 400 });
+      }
+    }
 
     // Use a transaction + SELECT FOR UPDATE row lock to atomically mark
     // as confirmed. Without the row lock, two concurrent confirm calls

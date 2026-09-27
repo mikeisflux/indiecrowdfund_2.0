@@ -180,7 +180,7 @@ export async function GET(
       location: project.location || "",
       imageUrl: project.imageUrl || "",
       videoUrl: project.videoUrl || "",
-      isProjectWeLove: false,
+      isProjectWeLove: !!project.isStaffPick,
       // Story
       description: project.description,
       risks: project.risks,

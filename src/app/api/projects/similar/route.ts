@@ -30,6 +30,7 @@ export async function GET(req: NextRequest) {
         id: true,
         title: true,
         slug: true,
+        isStaffPick: true,
         imageUrl: true,
         goalAmount: true,
         status: true,
@@ -73,7 +74,7 @@ export async function GET(req: NextRequest) {
         endDate,
         daysLeft,
         fundedPercent,
-        isProjectWeLove: false,
+        isProjectWeLove: !!p.isStaffPick,
       };
     });
 

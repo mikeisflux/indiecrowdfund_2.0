@@ -34,31 +34,11 @@ export async function GET(request: NextRequest) {
       where: {
         userId: session.user.id,
         deletedAt: null,
-        // Prisma 7 rejects `{ field: { not: null } }` on nullable string
-        // fields at runtime — use `NOT: { field: null }` wrapper syntax.
-        OR: [
-          { status: "COMPLETED" },
-          {
-            status: "PENDING",
-            confirmationEmailSent: true,
-          },
-          {
-            status: "PENDING",
-            NOT: { stripePaymentMethodId: null },
-          },
-          {
-            status: "PENDING",
-            NOT: { stripeSetupIntentId: null },
-          },
-          {
-            status: "PENDING",
-            NOT: { stripePaymentIntentId: null },
-          },
-          {
-            status: "PENDING",
-            NOT: { divinityCoinPaymentId: null },
-          },
-        ],
+        // House convention: `NOT: { field: null }` rather than `{ field: { not: null } }` on nullable // fields (both work on the installed Prisma 7.7; this form is what the codebase uses).
+        // Only COMPLETED: the survey endpoint itself (respond GET/POST)
+        // refuses anything else. Listing committed-PENDING pledges here
+        // sent AoN backers from a survey card straight into a 403.
+        status: "COMPLETED",
       },
       include: {
         project: {

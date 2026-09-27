@@ -75,6 +75,7 @@ export async function GET(req: NextRequest) {
     const search = searchParams.get("q");
     const sort = searchParams.get("sort") || "trending";
     const staffPicks = searchParams.get("staffPicks") === "true";
+    const hideFunded = searchParams.get("hideFunded") === "true";
     const scope = searchParams.get("scope"); // "all" to search across all public statuses
     // Validate pagination parameters
     const limit = Math.min(100, Math.max(1, parseInt(searchParams.get("limit") || "12") || 12));
@@ -135,6 +136,19 @@ export async function GET(req: NextRequest) {
     // Staff picks filter
     if (staffPicks) {
       where.isStaffPick = true;
+    }
+
+    // Hide fully-funded campaigns in the query. Prisma's where can't compare
+    // two columns through this client's typing, so the unfunded ids come
+    // from one cheap raw query and feed an `in` filter. The client used to
+    // filter AFTER fetching a page, so counts and load-more paging reflected
+    // the unfiltered set and pages could render nearly empty.
+    if (hideFunded) {
+      const unfunded = await db.$queryRaw<Array<{ id: string }>>`
+        SELECT id FROM "Project"
+        WHERE "deletedAt" IS NULL AND "currentAmount" < "goalAmount"
+      `;
+      andConditions.push({ id: { in: unfunded.map((r) => r.id) } });
     }
 
     // Search filter

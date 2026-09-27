@@ -29,19 +29,35 @@ export async function POST(
     }
 
     const projectId = id;
-    const permissionCheck = await checkProjectEditPermission(projectId, session.user.id);
 
-    if (!permissionCheck.allowed) {
-      return NextResponse.json(
-        { error: permissionCheck.error },
-        { status: permissionCheck.status }
-      );
+    // Platform admins may act on any project (the admin review UI's
+    // "Deactivate pre-launch page" posts here and used to 403 for every
+    // project the admin didn't personally own). Everyone else goes
+    // through the creator/collaborator permission check.
+    const isPlatformAdmin = session.user.role === "ADMIN" || session.user.role === "SUPER_ADMIN";
+    let isLaunched: boolean;
+    if (isPlatformAdmin) {
+      const adminView = await db.project.findFirst({
+        where: { id: projectId, deletedAt: null },
+        select: { status: true },
+      });
+      if (!adminView) {
+        return NextResponse.json({ error: "Project not found" }, { status: 404 });
+      }
+      isLaunched = ["LIVE", "FUNDED", "FAILED", "CANCELLED"].includes(adminView.status);
+    } else {
+      const permissionCheck = await checkProjectEditPermission(projectId, session.user.id);
+      if (!permissionCheck.allowed) {
+        return NextResponse.json(
+          { error: permissionCheck.error },
+          { status: permissionCheck.status }
+        );
+      }
+      isLaunched = permissionCheck.permission.isLaunched;
     }
 
-    const { permission } = permissionCheck;
-
     // For launched projects, prelaunch settings are no longer relevant - return success silently
-    if (permission.isLaunched) {
+    if (isLaunched) {
       return NextResponse.json({
         success: true,
         message: "Prelaunch settings not applicable for launched campaigns",

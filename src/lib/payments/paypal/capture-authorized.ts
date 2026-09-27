@@ -17,7 +17,7 @@ export async function captureAuthorizedPaypalPledges(projectId: string): Promise
   successful: number;
   failed: number;
 }> {
-  // Prisma 7 rejects `{ field: { not: null } }` on nullable string fields at
+  // House convention: `NOT: { field: null }` rather than `{ field: { not: null } }` on nullable fields at
   // runtime — use `NOT: { field: null }` wrapper syntax instead.
   const pledges = await db.pledge.findMany({
     where: {
@@ -70,10 +70,20 @@ export async function captureAuthorizedPaypalPledges(projectId: string): Promise
 
       if (!captureRes.ok) {
         const errBody = await captureRes.text();
-        captureLogger.error({ pledgeId: pledge.id, err: errBody }, "Failed to capture PayPal authorization");
-        // CAS from PENDING → FAILED. Prevents double-decrement of
-        // project stats under concurrent captureAuthorizedPaypalPledges
-        // invocations (cron + funded-campaign trigger can race).
+        captureLogger.error({ pledgeId: pledge.id, status: captureRes.status, err: errBody }, "Failed to capture PayPal authorization");
+        // A PayPal 5xx (or rate limit) is a blip, not a verdict: the
+        // authorization stays capturable for 29 days and the
+        // PayPal-Request-Id makes the retry safe. Marking it FAILED here
+        // permanently abandoned collectable money over an outage, because
+        // retries only select PENDING. Leave it PENDING for the next run.
+        if (captureRes.status >= 500 || captureRes.status === 429) {
+          failed++;
+          continue;
+        }
+        // Definitive rejection (4xx): CAS from PENDING → FAILED. Prevents
+        // double-decrement of project stats under concurrent
+        // captureAuthorizedPaypalPledges invocations (cron + funded-campaign
+        // trigger can race).
         const failCas = await db.pledge.updateMany({
           where: { id: pledge.id, status: "PENDING", deletedAt: null },
           data: { status: "FAILED", lastFailureReason: `PayPal capture failed: ${errBody.slice(0, 200)}` },

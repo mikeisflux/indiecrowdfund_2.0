@@ -21,6 +21,7 @@ import {
   handleCheckoutExpired,
   handleCheckoutCanceled,
 } from "./payments";
+import { db } from "@/lib/db";
 import { applyChargeback, findPledgeForDispute } from "@/lib/payments/chargebacks";
 
 /**
@@ -229,11 +230,42 @@ export async function handleDivinityCoinWebhook(
         paymentId: request.data.paymentId,
       });
       if (!pledgeId) {
-        // Not an error on our side — DC also processes marketplace and
-        // non-pledge charges. Reported so a real miss is visible in the log.
+        // Not a pledge — try a marketplace purchase. A disputed sale must
+        // stop counting toward the creator's balance payout, or the
+        // platform pays out money that was clawed back.
+        const refs = [
+          request.data.stripePaymentIntentId,
+          request.data.paymentIntentId,
+          request.data.paymentId,
+        ].filter((r): r is string => typeof r === "string" && r.length > 0);
+        if (refs.length > 0) {
+          const purchase = await db.marketplacePurchase.findFirst({
+            where: { divinityCoinPaymentId: { in: refs } },
+            select: { id: true, bookId: true, status: true },
+          });
+          if (purchase) {
+            const cas = await db.marketplacePurchase.updateMany({
+              where: { id: purchase.id, status: "COMPLETED" },
+              data: { status: "DISPUTED" },
+            });
+            if (cas.count > 0) {
+              await db.marketplaceBook.update({
+                where: { id: purchase.bookId },
+                data: { purchaseCount: { decrement: 1 } },
+              });
+            }
+            return {
+              success: true,
+              message: cas.count > 0
+                ? `Marketplace purchase ${purchase.id} marked DISPUTED`
+                : `Marketplace purchase ${purchase.id} already ${purchase.status}`,
+            };
+          }
+        }
+        // Reported so a real miss is visible in the log.
         return {
           success: true,
-          message: "No pledge matched this dispute; nothing to stop",
+          message: "No pledge or purchase matched this dispute; nothing to stop",
         };
       }
       const result = await applyChargeback({

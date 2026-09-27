@@ -132,7 +132,7 @@ async function findMismatchedPledges(
   // Skip no-reward pledges - they don't have a meaningful amount breakdown.
   // Skip PENDING pledges - those are likely abandoned carts.
   //
-  // Prisma 7 rejects `{ field: { not: null } }` on nullable string fields at
+  // House convention: `NOT: { field: null }` rather than `{ field: { not: null } }` on nullable fields at
   // runtime — use the `NOT: { field: null }` wrapper syntax instead.
   const pledges = await db.pledge.findMany({
     where: {

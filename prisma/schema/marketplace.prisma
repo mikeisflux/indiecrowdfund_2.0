@@ -270,6 +270,7 @@ enum MarketplacePurchaseStatus {
   COMPLETED
   FAILED
   REFUNDED
+  DISPUTED // Chargeback opened against the charge; excluded from creator payouts. Added by migrations/add_marketplace_purchase_disputed.sql.
 }
 
 model MarketplaceBookReview {

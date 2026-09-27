@@ -105,10 +105,15 @@ export async function POST(req: NextRequest) {
       // fail-campaign cron then never collects). FAILED/CANCELLED never
       // take pre-orders.
       const campaignEnded = !!(project.endDate && new Date(project.endDate) < new Date());
+      // Live total, not the denormalized Project.currentAmount (which this
+      // file itself notes "lags"): the campaign page computes
+      // acceptingPreOrders from live stats, so gating on the stale column
+      // let the page say "Pre-order now" while checkout refused.
+      const liveRaised = (await getProjectStats(project.id)).currentAmount;
       const canSettlePreOrder =
         project.campaignType === "KEEP_IT_ALL" ||
         project.status === "FUNDED" ||
-        Number(project.currentAmount) >= Number(project.goalAmount);
+        liveRaised >= Number(project.goalAmount);
       const acceptingPreOrders =
         project.preOrdersEnabled &&
         canSettlePreOrder &&
@@ -554,7 +559,7 @@ export async function POST(req: NextRequest) {
         // process-funded-campaigns cron. KIA campaigns and AoN campaigns
         // already at goal still charge immediately via /create-payment-intent.
         const isKeepItAll = project.campaignType === "KEEP_IT_ALL";
-        const isAlreadyFunded = Number(project.currentAmount) >= Number(project.goalAmount);
+        const isAlreadyFunded = liveRaised >= Number(project.goalAmount);
         const useSavedCardFlow = !isKeepItAll && !isAlreadyFunded;
 
         // Shared field set for create (fresh cart) and update (reused

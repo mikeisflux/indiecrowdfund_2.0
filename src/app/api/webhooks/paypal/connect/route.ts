@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { applyChargeback } from "@/lib/payments/chargebacks";
+import { unwindCountedPledge } from "@/lib/payments/unwind-counted-pledge";
 import {
   getPayPalConnectConfig,
   getPayPalConnectAccessToken,
@@ -162,11 +164,77 @@ export async function POST(req: NextRequest) {
       case "PAYMENT.CAPTURE.REVERSED": {
         const customId = event.resource.custom_id as string | undefined;
         if (!customId) break;
-        await db.pledge.updateMany({
+
+        const affected = await db.pledge.findFirst({
+          where: { id: customId, deletedAt: null, paymentProcessor: "PAYPAL_CONNECT" },
+          select: { id: true, status: true, projectId: true, amount: true, rewardId: true, confirmationEmailSent: true },
+        });
+        if (!affected) break;
+
+        // Reversal of settled money = chargeback (see main PayPal webhook).
+        if (affected.status === "COMPLETED" && event.event_type === "PAYMENT.CAPTURE.REVERSED") {
+          const cb = await applyChargeback({
+            pledgeId: affected.id,
+            processor: "PayPal Connect",
+            reason: "PAYMENT.CAPTURE.REVERSED",
+          });
+          log.warn({ pledgeId: affected.id, result: cb.message }, "PayPal Connect capture reversed on completed pledge — chargeback applied");
+          break;
+        }
+
+        const deniedCas = await db.pledge.updateMany({
           where: { id: customId, status: "PENDING", paymentProcessor: "PAYPAL_CONNECT" },
           data: { status: "FAILED", lastFailureReason: `PayPal Connect ${event.event_type}` },
         });
+        // A counted authorized pledge that is denied comes back out of the
+        // campaign totals (this handler never unwound before).
+        if (deniedCas.count > 0) {
+          await unwindCountedPledge(affected);
+        }
         log.info({ pledgeId: customId, eventType: event.event_type }, "PayPal Connect capture failed/reversed");
+        break;
+      }
+
+      // PayPal chargebacks. A CUSTOMER.DISPUTE.* event names the disputed
+      // capture (seller_transaction_id) and, when we set one, the pledge id
+      // (custom). Until now no dispute event was handled at all, so PayPal
+      // chargebacks never stopped an order the way DC/Whop disputes do.
+      case "CUSTOMER.DISPUTE.CREATED":
+      case "CUSTOMER.DISPUTE.UPDATED": {
+        const d = event.resource as {
+          dispute_id?: string;
+          reason?: string;
+          status?: string;
+          seller_response_due_date?: string;
+          disputed_transactions?: Array<{ seller_transaction_id?: string; custom?: string; custom_id?: string }>;
+        };
+        const tx0 = d.disputed_transactions?.[0];
+        const customRef = tx0?.custom || tx0?.custom_id;
+        const captureId = tx0?.seller_transaction_id;
+        const or: Array<Record<string, string>> = [];
+        if (customRef) or.push({ id: customRef });
+        if (captureId) or.push({ paypalConnectCaptureId: captureId });
+        if (or.length === 0) {
+          log.warn({ disputeId: d.dispute_id }, "PayPal dispute event carried no transaction reference");
+          break;
+        }
+        const disputed = await db.pledge.findFirst({
+          where: { deletedAt: null, paymentProcessor: "PAYPAL_CONNECT", OR: or },
+          select: { id: true },
+        });
+        if (!disputed) {
+          log.warn({ disputeId: d.dispute_id, customRef, captureId }, "PayPal dispute did not match a pledge");
+          break;
+        }
+        const cb = await applyChargeback({
+          pledgeId: disputed.id,
+          processor: "PayPal Connect",
+          disputeId: d.dispute_id,
+          reason: d.reason,
+          disputeStatus: d.status,
+          evidenceDueBy: d.seller_response_due_date,
+        });
+        log.warn({ pledgeId: disputed.id, result: cb.message }, "PayPal dispute applied as chargeback");
         break;
       }
 

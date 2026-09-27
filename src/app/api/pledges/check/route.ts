@@ -41,8 +41,7 @@ export async function GET(req: NextRequest) {
     // just means checkout was initiated, not that the user approved
     // payment. Only COMPLETED counts for PayPal.
     //
-    // Prisma 7 rejects `{ field: { not: null } }` on nullable string
-    // fields at runtime — use `NOT: { field: null }` wrapper syntax.
+    // House convention: `NOT: { field: null }` rather than `{ field: { not: null } }` on nullable // fields (both work on the installed Prisma 7.7; this form is what the codebase uses).
     const activePledge = await db.pledge.findFirst({
       where: {
         userId: session.user.id,

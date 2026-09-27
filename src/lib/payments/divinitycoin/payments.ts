@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { unwindCountedPledge } from "@/lib/payments/unwind-counted-pledge";
+import { releaseAddonSlots } from "@/lib/payments/rewards";
 import {
   notifyPledgeReceived,
   notifyBackerPledgeConfirmed,
@@ -1314,6 +1315,54 @@ export async function handleRefundCompleted(
       return { success: true, message: "Pledge already refunded" };
     }
 
+    // A PARTIAL refund (creator refunded shipping, an add-on, etc.) must not
+    // flip the whole pledge REFUNDED and unwind the full amount — that
+    // double-unwound money that was only partially returned. Record just the
+    // returned portion and keep the pledge COMPLETED.
+    const pledgeTotal = Number(pledge.amount);
+    const refundAmount = typeof amount === "number" && amount > 0 ? amount : pledgeTotal;
+    if (refundAmount < pledgeTotal - 0.005) {
+      if (refundId) {
+        const dup = await db.divinityCoinTransaction.findFirst({
+          where: { pledgeId: pledge.id, type: "REFUND", metadata: { contains: refundId } },
+          select: { id: true },
+        });
+        if (dup) {
+          return { success: true, message: "Partial refund already recorded" };
+        }
+      }
+      await db.$transaction(async (tx) => {
+        await tx.divinityCoinTransaction.create({
+          data: {
+            userId: pledge.userId,
+            pledgeId: pledge.id,
+            amount: -refundAmount,
+            type: "REFUND",
+            description: `Partial refund completed via DivinityCoin`,
+            metadata: JSON.stringify({
+              paymentId,
+              refundId,
+              partial: true,
+              processedAt: new Date().toISOString(),
+              source: "divinitycoin_webhook",
+            }),
+          },
+        });
+        await tx.pledge.update({
+          where: { id: pledge.id },
+          data: { amount: { decrement: refundAmount } },
+        });
+        if (pledge.confirmationEmailSent) {
+          await tx.project.update({
+            where: { id: pledge.projectId },
+            data: { currentAmount: { decrement: refundAmount } },
+          });
+        }
+      });
+      paymentsDivinitycoinLogger.info(`[DivinityCoin] Partial refund of $${refundAmount} recorded for pledge ${pledgeId}`);
+      return { success: true, message: "Partial refund recorded" };
+    }
+
     // CAS on status → REFUNDED so webhook retries don't double-
     // decrement project stats and double-decrement reward slots.
     const pledgeRefundCas = await db.pledge.updateMany({
@@ -1356,6 +1405,9 @@ export async function handleRefundCompleted(
         });
       }
     });
+
+    // Add-on units come back too (no refund/cancel path released them before).
+    await releaseAddonSlots(pledge.id);
 
     // Restore reward slot outside transaction (raw SQL not supported in array transactions)
     if (pledge.rewardId) {

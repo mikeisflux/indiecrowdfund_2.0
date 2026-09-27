@@ -65,6 +65,7 @@ interface RewardOption {
   title: string;
   description: string;
   amount: number;
+  shippingAmount?: number;
   type: "TIER" | "ADDON";
   quantityAvailable: number | null;
   quantityClaimed: number;
@@ -73,6 +74,7 @@ interface RewardOption {
 interface PledgeDetails {
   id: string;
   amount: number;
+  shippingAmount?: number;
   status: string;
   createdAt: string;
   backerNumber: number | null;
@@ -271,7 +273,10 @@ export default function ManagePledgePage() {
       const price = availableAddons.find(x => x.id === a.id)?.amount ?? 0;
       return sum + price * a.quantity;
     }, 0);
-    const newAmount = rewardAmount + addonsTotal;
+    // pledge.amount includes shipping and the server preserves it on
+    // modify, so the client-side total has to include it too or the
+    // panel promises refunds/charges that don't exist.
+    const newAmount = rewardAmount + addonsTotal + (pledge?.shippingAmount ?? 0);
 
     if (newAmount <= 0) {
       toast.error("Total must be greater than $0");
@@ -452,7 +457,7 @@ export default function ManagePledgePage() {
     const price = availableAddons.find(x => x.id === id)?.amount ?? 0;
     return sum + price * qty;
   }, 0);
-  const modifyNewTotal = modifyRewardAmount + modifyAddonsTotal;
+  const modifyNewTotal = modifyRewardAmount + modifyAddonsTotal + (pledge.shippingAmount ?? 0);
   const modifyDiff = modifyNewTotal - pledge.amount;
   const isAonUnfunded = isPending && !hasReachedGoal;
 

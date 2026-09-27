@@ -281,10 +281,9 @@ export async function POST(req: NextRequest) {
     }
 
     if (action === "duplicate" && campaignId) {
-      // Get the original campaign
-      const original = await db.emailCampaign.findUnique({
-        where: { id: campaignId },
-      });
+      // Same access gate as update/delete. Without it any creator could
+      // copy another creator's campaign — full HTML included — by id.
+      const original = await loadCampaignForUser(campaignId, session.user.id);
 
       if (!original) {
         return NextResponse.json({ error: "Campaign not found" }, { status: 404 });

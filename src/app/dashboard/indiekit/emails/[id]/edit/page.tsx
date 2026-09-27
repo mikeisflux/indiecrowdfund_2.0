@@ -134,10 +134,10 @@ export default function EmailCampaignEditPage() {
     }
   }, [name, subject, htmlContent, campaign]);
 
-  const handleSave = async () => {
+  const handleSave = async (): Promise<boolean> => {
     if (!name.trim()) {
       toast.error("Please enter a campaign name");
-      return;
+      return false;
     }
 
     setIsSaving(true);
@@ -164,8 +164,10 @@ export default function EmailCampaignEditPage() {
       setCampaign(data.campaign);
       setHasUnsavedChanges(false);
       toast.success("Campaign saved");
+      return true;
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to save campaign");
+      return false;
     } finally {
       setIsSaving(false);
     }
@@ -183,9 +185,15 @@ export default function EmailCampaignEditPage() {
 
     setIsSending(true);
     try {
-      // First save any unsaved changes
+      // First save any unsaved changes. If that fails, do NOT send — the
+      // batch endpoint reads the last persisted draft, which would be
+      // stale content the creator never saw go out.
       if (hasUnsavedChanges) {
-        await handleSave();
+        const saved = await handleSave();
+        if (!saved) {
+          setIsSending(false);
+          return;
+        }
       }
 
       // Send through the real batch-send endpoint (the old campaigns

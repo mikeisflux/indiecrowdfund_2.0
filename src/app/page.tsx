@@ -45,7 +45,7 @@ export async function generateMetadata(): Promise<Metadata> {
 
   try {
     // Get the most recently launched LIVE project's image.
-    // Prisma 7 rejects `{ field: { not: null } }` on nullable string fields
+    // House convention: `NOT: { field: null }` rather than `{ field: { not: null } }` on nullable fields
     // at runtime — use `NOT: { field: null }` wrapper syntax instead.
     const latestLiveProject = await db.project.findFirst({
       where: {
@@ -484,8 +484,7 @@ const getMarqueeCovers = cache(async () => {
     const now = new Date();
     const rewards = await db.reward.findMany({
       where: {
-        // Prisma 7 rejects `{ field: { not: null } }` on nullable string
-        // columns at runtime — the wrapper form is required. The first
+        // House convention: `NOT: { field: null }` rather than `{ field: { not: null } }` on nullable // columns at runtime — the wrapper form is required. The first
         // version of this query used the rejected form, threw on every
         // request, and the catch silently served the campaign-banner
         // fallback, making it look like the reward switch never shipped.

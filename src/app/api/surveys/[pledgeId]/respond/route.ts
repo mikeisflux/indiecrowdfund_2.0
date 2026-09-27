@@ -797,6 +797,7 @@ export async function PATCH(
         userId: true,
         projectId: true,
         fulfillmentStatus: true,
+        orderLockStatus: true,
         surveyResponse: {
           select: { id: true, isComplete: true, addressLocked: true },
         },
@@ -831,6 +832,14 @@ export async function PATCH(
       return NextResponse.json(
         { error: "This order has already shipped — the address can no longer change" },
         { status: 400 }
+      );
+    }
+    // Same freeze the survey POST enforces: once the creator locked orders
+    // for print/label generation, the address is final.
+    if (pledge.orderLockStatus === "LOCKED") {
+      return NextResponse.json(
+        { error: "Your order is locked and can no longer be changed." },
+        { status: 403 }
       );
     }
 

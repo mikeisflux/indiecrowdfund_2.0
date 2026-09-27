@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { unwindCountedPledge } from "@/lib/payments/unwind-counted-pledge";
+import { applyChargeback } from "@/lib/payments/chargebacks";
 import { getPayPalConfig, getPayPalAccessToken } from "@/lib/payments/paypal";
 import { claimRewardSlot, claimAddonSlots, assignBackerNumber } from "@/lib/payments/rewards";
 import { notifyPledgeReceived, notifyProjectFunded } from "@/lib/notifications";
@@ -192,21 +193,82 @@ export async function POST(req: NextRequest) {
         const customId = resource.custom_id as string | undefined;
         if (!customId) break;
 
-        const deniedPledge = await db.pledge.findFirst({
+        const affected = await db.pledge.findFirst({
           where: { id: customId, deletedAt: null },
-          select: { projectId: true, amount: true, rewardId: true, confirmationEmailSent: true },
+          select: { id: true, status: true, projectId: true, amount: true, rewardId: true, confirmationEmailSent: true },
         });
+        if (!affected) break;
+
+        // A REVERSED capture on settled money is PayPal clawing back a
+        // completed payment — a chargeback, not a failed capture. The old
+        // PENDING-only filter made it a silent no-op on exactly the
+        // pledges it happens to: money gone, pledge still COMPLETED, still
+        // counted, still in fulfillment.
+        if (affected.status === "COMPLETED" && event.event_type === "PAYMENT.CAPTURE.REVERSED") {
+          const cb = await applyChargeback({
+            pledgeId: affected.id,
+            processor: "PayPal",
+            reason: "PAYMENT.CAPTURE.REVERSED",
+            disputeStatus: (resource.status as string | undefined) ?? undefined,
+          });
+          paypalWebhookLogger.warn({ pledgeId: affected.id, result: cb.message }, "PayPal capture reversed on completed pledge — chargeback applied");
+          break;
+        }
+
         const deniedCas = await db.pledge.updateMany({
           where: { id: customId, status: "PENDING" },
           data: { status: "FAILED", lastFailureReason: `PayPal ${event.event_type}` },
         });
         // Counted authorized pledges (confirmationEmailSent) that get
         // denied must come back out of the campaign totals.
-        if (deniedCas.count > 0 && deniedPledge) {
-          await unwindCountedPledge(deniedPledge);
+        if (deniedCas.count > 0) {
+          await unwindCountedPledge(affected);
         }
 
         paypalWebhookLogger.info({ pledgeId: customId, eventType: event.event_type }, "PayPal capture failed/reversed");
+        break;
+      }
+
+      // PayPal chargebacks. A CUSTOMER.DISPUTE.* event names the disputed
+      // capture (seller_transaction_id) and, when we set one, the pledge id
+      // (custom). Until now no dispute event was handled at all, so PayPal
+      // chargebacks never stopped an order the way DC/Whop disputes do.
+      case "CUSTOMER.DISPUTE.CREATED":
+      case "CUSTOMER.DISPUTE.UPDATED": {
+        const d = event.resource as {
+          dispute_id?: string;
+          reason?: string;
+          status?: string;
+          seller_response_due_date?: string;
+          disputed_transactions?: Array<{ seller_transaction_id?: string; custom?: string; custom_id?: string }>;
+        };
+        const tx0 = d.disputed_transactions?.[0];
+        const customRef = tx0?.custom || tx0?.custom_id;
+        const captureId = tx0?.seller_transaction_id;
+        const or: Array<Record<string, string>> = [];
+        if (customRef) or.push({ id: customRef });
+        if (captureId) or.push({ paypalConnectCaptureId: captureId });
+        if (or.length === 0) {
+          paypalWebhookLogger.warn({ disputeId: d.dispute_id }, "PayPal dispute event carried no transaction reference");
+          break;
+        }
+        const disputed = await db.pledge.findFirst({
+          where: { deletedAt: null, OR: or },
+          select: { id: true },
+        });
+        if (!disputed) {
+          paypalWebhookLogger.warn({ disputeId: d.dispute_id, customRef, captureId }, "PayPal dispute did not match a pledge");
+          break;
+        }
+        const cb = await applyChargeback({
+          pledgeId: disputed.id,
+          processor: "PayPal",
+          disputeId: d.dispute_id,
+          reason: d.reason,
+          disputeStatus: d.status,
+          evidenceDueBy: d.seller_response_due_date,
+        });
+        paypalWebhookLogger.warn({ pledgeId: disputed.id, result: cb.message }, "PayPal dispute applied as chargeback");
         break;
       }
 

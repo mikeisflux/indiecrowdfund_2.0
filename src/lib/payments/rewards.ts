@@ -237,6 +237,22 @@ export async function claimAddonSlots(addons: Array<{ id: string; quantity: numb
 }
 
 /**
+ * Give back the add-on units a pledge held. Mirror of claimAddonSlots for
+ * cancel / refund / chargeback / terminal-failure paths — which until now
+ * released only the main reward slot, so every limited add-on leaked
+ * inventory permanently on each unwind.
+ */
+export async function releaseAddonSlots(pledgeId: string): Promise<void> {
+  const addons = await db.pledgeAddon.findMany({
+    where: { pledgeId },
+    select: { addonId: true, quantity: true },
+  });
+  for (const a of addons) {
+    await db.$executeRaw`UPDATE "Reward" SET "quantityClaimed" = GREATEST(0, "quantityClaimed" - ${a.quantity}) WHERE id = ${a.addonId}`;
+  }
+}
+
+/**
  * Atomically assign the next backer number for a project.
  * Uses a transaction with row-level locking to prevent race conditions.
  * Returns the assigned backer number.

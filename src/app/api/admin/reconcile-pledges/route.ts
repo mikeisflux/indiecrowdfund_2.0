@@ -120,6 +120,7 @@ async function reconcilePledges(
     select: {
       id: true,
       title: true,
+      status: true,
       currentAmount: true,
       backerCount: true,
       paymentProcessor: true,
@@ -195,6 +196,7 @@ async function reconcilePledges(
 interface ProjectData {
   id: string;
   title: string;
+  status: string;
   currentAmount: unknown;
   backerCount: number;
   paymentProcessor: string;
@@ -376,6 +378,16 @@ async function reconcilePayPalProject(
     const pledgeAmount = Number(pledge.amount);
 
     if (pledge.status === "COMPLETED") {
+      verifiedTotal += pledgeAmount;
+      verifiedCount++;
+    } else if (
+      pledge.status === "PENDING" &&
+      pledge.confirmationEmailSent &&
+      (project.status === "LIVE" || project.status === "FUNDED")
+    ) {
+      // A confirmed PayPal authorization on a live/funded campaign is a
+      // counted pledge awaiting capture — applyFixes used to wipe these
+      // out of the total.
       verifiedTotal += pledgeAmount;
       verifiedCount++;
     }

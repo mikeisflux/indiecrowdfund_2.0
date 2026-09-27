@@ -2,6 +2,7 @@ import { db } from "@/lib/db";
 import { logger } from "@/lib/logger";
 import { reconcileStretchGoalsForPledge } from "@/lib/rewards/stretch-goals";
 import { withDisputeState } from "@/lib/payments/dispute-state";
+import { releaseAddonSlots } from "@/lib/payments/rewards";
 
 const chargebackLogger = logger.child({ module: "chargebacks" });
 
@@ -112,7 +113,10 @@ export async function applyChargeback(params: {
     };
   }
 
-  const wasCounted = pledge.confirmationEmailSent && pledge.status === "COMPLETED";
+  // confirmationEmailSent is the counting invariant platform-wide. A counted
+  // pledge that is still PENDING (immediate charge, webhook not yet landed)
+  // and gets disputed must still come out of the totals.
+  const wasCounted = pledge.confirmationEmailSent;
   const alreadyShipped = !(UNSHIPPED as readonly string[]).includes(
     pledge.fulfillmentStatus
   );
@@ -173,6 +177,9 @@ export async function applyChargeback(params: {
     // exists and turn one loss into two.
     if (pledge.rewardId && !alreadyShipped) {
       await db.$executeRaw`UPDATE "Reward" SET "quantityClaimed" = GREATEST(0, "quantityClaimed" - 1) WHERE id = ${pledge.rewardId}`;
+    }
+    if (!alreadyShipped) {
+      await releaseAddonSlots(pledgeId);
     }
   }
 

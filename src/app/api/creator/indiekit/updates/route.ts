@@ -78,7 +78,7 @@ export async function GET(req: NextRequest) {
       createdAt: update.createdAt.toISOString(),
       updatedAt: update.updatedAt.toISOString(),
       commentsCount: update._count.comments,
-      viewsCount: update.likes, // Using likes as view count placeholder
+      likesCount: update.likes,
     }));
 
     return NextResponse.json({ updates: formattedUpdates });

@@ -18,8 +18,8 @@ export async function isAdmin(userId?: string): Promise<boolean> {
     id = session.user.id;
   }
 
-  const user = await db.user.findUnique({
-    where: { id },
+  const user = await db.user.findFirst({
+    where: { id, deletedAt: null },
     select: { role: true },
   });
 

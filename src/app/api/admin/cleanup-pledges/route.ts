@@ -253,7 +253,10 @@ export async function POST(req: NextRequest) {
         const cancelCas = await tx.pledge.updateMany({
           where: {
             id: pledgeId,
-            status: { notIn: ["CANCELLED", "REFUNDED"] },
+            // PENDING only. A COMPLETED (paid) pledge must go through refund —
+            // cancelling it here decremented stats while the money stayed
+            // captured.
+            status: "PENDING",
             deletedAt: null,
           },
           data: {

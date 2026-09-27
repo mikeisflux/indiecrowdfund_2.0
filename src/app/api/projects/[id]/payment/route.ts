@@ -125,7 +125,7 @@ export async function POST(
     // Get current project to check content flags
     const currentProject = await db.project.findFirst({
       where: { id: projectId, deletedAt: null },
-      select: { paymentProcessor: true, hasAdultContent: true, hasRiskyContent: true },
+      select: { paymentProcessor: true, campaignType: true, hasAdultContent: true, hasRiskyContent: true },
     });
 
     const updateData: Record<string, unknown> = {};
@@ -158,6 +158,19 @@ export async function POST(
           },
           { status: 400 }
         );
+      }
+      // Whop charges immediately and the failed-campaign cron only cancels
+      // its PENDING pledges — COMPLETED Whop money on a failed All-or-Nothing
+      // campaign would never be refunded. The builder greys the option out;
+      // this is the server-side guarantee.
+      if (data.paymentProcessor === "WHOP") {
+        const effectiveType = data.campaignType ?? currentProject?.campaignType;
+        if (effectiveType === "ALL_OR_NOTHING") {
+          return NextResponse.json(
+            { error: "Whop can only be used on Keep-It-All campaigns. Switch the campaign type or use Divinity Payments." },
+            { status: 400 }
+          );
+        }
       }
       updateData.paymentProcessor = data.paymentProcessor;
     }

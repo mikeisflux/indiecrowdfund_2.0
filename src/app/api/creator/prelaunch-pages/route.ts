@@ -24,7 +24,7 @@ export async function GET() {
 
     // Get all projects that have prelaunch content or are in prelaunch status
     // This includes projects that haven't launched yet but have prelaunch data.
-    // Prisma 7 rejects `{ field: { not: null } }` on nullable string fields
+    // House convention: `NOT: { field: null }` rather than `{ field: { not: null } }` on nullable fields
     // at runtime — use `NOT: { field: null }` wrapper syntax instead.
     const projects = await db.project.findMany({
       where: {

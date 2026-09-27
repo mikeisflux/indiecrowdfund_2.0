@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import { releaseAddonSlots } from "@/lib/payments/rewards";
 
 /**
  * Reverse the campaign counters for a counted pledge that just went
@@ -22,6 +23,8 @@ export async function unwindCountedPledge(pledge: {
   amount: unknown;
   rewardId: string | null;
   confirmationEmailSent: boolean;
+  /** When given, the pledge's add-on units are released too. */
+  id?: string;
 }): Promise<void> {
   if (!pledge.confirmationEmailSent) return;
   await db.project.update({
@@ -33,5 +36,8 @@ export async function unwindCountedPledge(pledge: {
   });
   if (pledge.rewardId) {
     await db.$executeRaw`UPDATE "Reward" SET "quantityClaimed" = GREATEST(0, "quantityClaimed" - 1) WHERE id = ${pledge.rewardId}`;
+  }
+  if (pledge.id) {
+    await releaseAddonSlots(pledge.id);
   }
 }

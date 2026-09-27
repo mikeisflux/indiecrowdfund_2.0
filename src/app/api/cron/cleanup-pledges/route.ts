@@ -63,8 +63,7 @@ export async function POST(req: NextRequest) {
     // 4. For DivinityCoin: No payment ID (never completed payment)
     // 5. For PayPal: No order ID captured (never completed payment; PayPal orders auto-expire ~3h)
     //
-    // NOTE: Prisma 7 rejects `{ field: { not: null } }` on nullable string
-    // fields at runtime — use `NOT: { field: null }` wrapper syntax instead.
+    // NOTE: House convention: `NOT: { field: null }` rather than `{ field: { not: null } }` on nullable // fields at runtime — use `NOT: { field: null }` wrapper syntax instead.
     const staleWhere = {
       status: "PENDING" as const,
       deletedAt: null,

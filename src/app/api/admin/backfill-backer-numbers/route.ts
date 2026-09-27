@@ -22,7 +22,7 @@ export async function POST() {
     }
 
     // Get all projects that have pledges without backer numbers.
-    // Prisma 7 rejects `{ field: { not: null } }` on nullable string fields
+    // House convention: `NOT: { field: null }` rather than `{ field: { not: null } }` on nullable fields
     // at runtime — use `NOT: { field: null }` wrapper syntax instead.
     const projectsNeedingBackfill = await db.project.findMany({
       where: {

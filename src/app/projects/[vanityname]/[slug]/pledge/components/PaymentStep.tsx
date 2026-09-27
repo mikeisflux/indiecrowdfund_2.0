@@ -330,13 +330,22 @@ export function PaymentStep({
                  DCHostedCheckoutFrame. User stays on icf.com; DC
                  owns the card capture surface inside the frame. */
             dcCheckoutUrl && dcSessionId && currentPledgeId ? (
-              <DCHostedCheckoutFrame
-                checkoutUrl={dcCheckoutUrl}
-                pledgeId={currentPledgeId}
-                sessionId={dcSessionId}
-                onSuccess={handlePaymentSuccess}
-                onFailure={handlePaymentError}
-              />
+              agreedToTerms ? (
+                <DCHostedCheckoutFrame
+                  checkoutUrl={dcCheckoutUrl}
+                  pledgeId={currentPledgeId}
+                  sessionId={dcSessionId}
+                  onSuccess={handlePaymentSuccess}
+                  onFailure={handlePaymentError}
+                />
+              ) : (
+                // Same gate as the Stripe/Whop forms: the Grant Program
+                // acknowledgment has to be ticked before a payment surface
+                // that can complete a charge is shown.
+                <div className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
+                  Please agree to the terms above to continue to secure payment.
+                </div>
+              )
             ) : clientSecret && dcStripePromise ? (
               <DCPaymentWrapper
                 clientSecret={clientSecret}
@@ -446,7 +455,18 @@ export function PaymentStep({
                 </div>
               </div>
             ) */
-            paymentError ? null : (
+            paymentError ? (
+              // The API's actionable message ("this campaign can't take
+              // pledges through its current payment method…") used to render
+              // as nothing here, leaving legacy-processor campaigns a blank
+              // dead end.
+              <div className="rounded-lg border border-red-200 bg-red-50 p-4 dark:border-red-900 dark:bg-red-950/40">
+                <p className="text-sm text-red-600 dark:text-red-400">{paymentError}</p>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  Go back to choose a different reward, or contact the creator if this keeps happening.
+                </p>
+              </div>
+            ) : (
               <div className="space-y-4">
                 <div className="flex flex-col items-center justify-center py-8">
                   <Loader2 className="h-8 w-8 animate-spin text-muted-foreground mb-3" />

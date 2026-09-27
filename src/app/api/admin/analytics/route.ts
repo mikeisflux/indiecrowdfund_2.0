@@ -289,7 +289,7 @@ export async function GET(req: NextRequest) {
           take: 20
         }),
         // Top referrers.
-        // Prisma 7 rejects `{ field: { not: null } }` on nullable string fields
+        // House convention: `NOT: { field: null }` rather than `{ field: { not: null } }` on nullable fields
         // at runtime — use `NOT: { field: null }` wrapper syntax instead.
         db.userBehavior.groupBy({
           by: ["referrer"],

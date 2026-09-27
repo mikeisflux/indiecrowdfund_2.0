@@ -904,7 +904,7 @@ export default function ProjectPage() {
               { value: "rewards" as TabValue, label: "Rewards" },
               { value: "creator" as TabValue, label: "Creator" },
               { value: "faq" as TabValue, label: "FAQ", count: project.faqs.length },
-              { value: "updates" as TabValue, label: "Updates", count: project.updates.length },
+              { value: "updates" as TabValue, label: "Updates", count: (project as { updatesCount?: number }).updatesCount ?? project.updates.length },
               { value: "comments" as TabValue, label: "Comments", count: project.comments },
               { value: "community" as TabValue, label: "Community" },
             ].map((tab) => (

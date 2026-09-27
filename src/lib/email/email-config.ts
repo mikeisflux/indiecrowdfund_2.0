@@ -1022,7 +1022,7 @@ export async function reconcileMissedPledgeConfirmationEmails(): Promise<{
     //   - No EmailLog of type PLEDGE_CONFIRMATION already exists
     //
     // We DON'T filter by `user.email != null` at the Prisma level
-    // because Prisma 7 rejects `{ not: null }` on nullable string
+    // because House convention (both forms work on Prisma 7.7): `{ not: null }` on nullable string
     // filters at runtime with "Argument `not` must not be null."
     // notifyBackerPledgeConfirmed() already short-circuits on pledges
     // whose user has no email, so including those rows here is a no-op.

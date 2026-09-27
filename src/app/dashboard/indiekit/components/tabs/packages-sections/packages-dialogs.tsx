@@ -134,8 +134,10 @@ export function ConnectServiceDialog({
               <SelectContent>
                 <SelectItem value="shopify">Shopify</SelectItem>
                 <SelectItem value="shipstation">ShipStation</SelectItem>
-                <SelectItem value="easyship">Easyship</SelectItem>
-                <SelectItem value="shippo">Shippo</SelectItem>
+                {/* Shippo connects from Settings → Integrations (its own
+                    credentials route); this dialog's endpoint only accepts
+                    ShipStation/Shopify. Easyship has no backend at all. */}
+                <SelectItem value="shippo" disabled>Shippo — connect under Settings → Integrations</SelectItem>
               </SelectContent>
             </Select>
           </div>

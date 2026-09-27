@@ -108,10 +108,11 @@ export async function GET(
         updates: {
           where: { status: "PUBLISHED" },
           orderBy: { publishedAt: "desc" },
-          take: 10,
+          take: 50,
         },
         _count: {
           select: {
+            updates: { where: { status: "PUBLISHED" } },
             pledges: true,
             followers: true,
             comments: true,
@@ -218,7 +219,8 @@ export async function GET(
       location: project.location || "",
       imageUrl: project.imageUrl || "",
       videoUrl: project.videoUrl || "",
-      isProjectWeLove: false,
+      isProjectWeLove: !!project.isStaffPick,
+      updatesCount: project._count?.updates ?? 0,
       // Story
       description: project.description,
       risks: project.risks,

@@ -40,6 +40,12 @@ export function usePledge() {
   // checkout flow (Phase 2+) — its presence routes handleSuccessRedirect
   // through /confirm-dc-checkout instead of /confirm or /confirm-dc-setup.
   const dcSessionIdParam = searchParams?.get("session_id") ?? null;
+  // Whop's embed returnUrl comes back as ?status=success&pledgeId=…
+  // (+receiptId). After a full-page redirect (3DS, mobile) the wizard
+  // remounts on the reward picker, so the WhopPaymentForm effect that
+  // handles this never mounts — the return has to be handled here.
+  const whopStatusParam = searchParams?.get("status") ?? null;
+  const whopReceiptParam = searchParams?.get("receiptId") ?? null;
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -166,6 +172,23 @@ export function usePledge() {
   // Handle success redirect
   useEffect(() => {
     async function handleSuccessRedirect() {
+      if (whopStatusParam === "success" && pledgeIdParam) {
+        try {
+          const res = await apiFetch(`/api/whop/confirm/${pledgeIdParam}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ receiptId: whopReceiptParam }),
+          });
+          // 409 = Whop hasn't reported the payment yet; the signature-
+          // verified webhook completes it within moments. Still a success
+          // from the backer's point of view.
+          if (!res.ok && res.status !== 409) console.error("Failed to confirm Whop pledge after redirect");
+        } catch (error) {
+          console.error("Error confirming Whop pledge after redirect:", error);
+        }
+        setStep("success");
+        return;
+      }
       if (successParam === "true") {
         if (pledgeIdParam) {
           try {
@@ -210,7 +233,7 @@ export function usePledge() {
       }
     }
     handleSuccessRedirect();
-  }, [successParam, pledgeIdParam, setupIntentParam, dcSessionIdParam]);
+  }, [successParam, pledgeIdParam, setupIntentParam, dcSessionIdParam, whopStatusParam, whopReceiptParam]);
 
   // Initialize Stripe - DISABLED: Replaced by PayPal
   // useEffect(() => {
@@ -283,6 +306,19 @@ export function usePledge() {
     try {
       const result = await createAdditionalItemsAPI(existingPledgeId, selectedAddons, addItemsTotal);
       setCurrentPledgeId(result.pledgeId);
+      if (result.ok) {
+        // Charged on the saved card and applied — nothing left to collect.
+        setIsProcessing(false);
+        setStep("success");
+        return;
+      }
+      if (result.paymentMethod === "WHOP" && result.sessionId) {
+        setWhopSessionId(result.sessionId);
+        if (result.planId) setWhopPlanId(result.planId);
+        if (result.environment) setWhopEnvironment(result.environment === "sandbox" ? "sandbox" : "production");
+        setIsProcessing(false);
+        return;
+      }
       if (result.publishableKey && !dcStripePromise) setDcStripePromise(loadStripe(result.publishableKey));
       if (!result.clientSecret) throw new Error("Invalid payment response - missing client secret");
       setClientSecret(result.clientSecret);

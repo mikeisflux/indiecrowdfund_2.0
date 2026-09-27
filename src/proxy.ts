@@ -40,7 +40,6 @@ const csrfExemptRoutes = [
   // sweep had a full log of nothing but 403s. Jobs invoked with GET were
   // unaffected, which is why this stayed hidden.
   "/api/cron",
-  "/api/admin/ai-marketing/campaigns/fix-images", // One-time fix script
   "/api/admin/pledges/recover-dc", // Payment recovery; authed by CRON_SECRET bearer or SUPER_ADMIN session in-route
   "/api/retailers/login", // Protected by CAPTCHA and rate limiting instead
   "/api/retailers/forgot-password", // Protected by CAPTCHA and rate limiting instead
@@ -500,8 +499,16 @@ function persistBlockedIP(
  * Get client IP from request
  */
 function getClientIP(req: NextRequest): string {
+  // RIGHTMOST X-Forwarded-For entry: the one our own proxy hop appended,
+  // which the client cannot forge. The leftmost is client-supplied under
+  // proxy_add_x_forwarded_for, so rate limits and bans keyed on it were
+  // trivially evadable and innocent IPs could be planted in ban records.
+  const xff = req.headers.get("x-forwarded-for");
+  if (xff) {
+    const parts = xff.split(",").map((p) => p.trim()).filter(Boolean);
+    if (parts.length > 0) return parts[parts.length - 1];
+  }
   return (
-    req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
     req.headers.get("x-real-ip") ||
     req.headers.get("cf-connecting-ip") ||
     "unknown"

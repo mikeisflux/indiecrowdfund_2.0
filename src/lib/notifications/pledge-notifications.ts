@@ -568,7 +568,7 @@ export async function processUnsentConfirmationEmails() {
   });
 
   // Also find SetupIntent pledges (pending but payment method saved) that need emails.
-  // Prisma 7 rejects `{ field: { not: null } }` on nullable string fields at
+  // House convention: `NOT: { field: null }` rather than `{ field: { not: null } }` on nullable fields at
   // runtime — use `NOT: { field: null }` wrapper syntax instead.
   const unsentSetupPledges = await db.pledge.findMany({
     where: {

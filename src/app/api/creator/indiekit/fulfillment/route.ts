@@ -203,18 +203,22 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: "Backer IDs required" }, { status: 400 });
       }
 
-      await db.pledge.updateMany({
+      // Forward-only, like update_status: bulk "mark shipped" selects every
+      // backer, and blindly setting SHIPPED regressed already-DELIVERED
+      // pledges (re-opening them for export and back-dating disputes).
+      const shipped = await db.pledge.updateMany({
         where: {
           id: { in: backerIds },
           projectId,
           deletedAt: null,
+          fulfillmentStatus: { notIn: ["SHIPPED", "DELIVERED"] },
         },
         data: {
           fulfillmentStatus: "SHIPPED",
         },
       });
 
-      return NextResponse.json({ success: true, shipped: backerIds.length });
+      return NextResponse.json({ success: true, shipped: shipped.count, skipped: backerIds.length - shipped.count });
     }
 
     // Push one package group's not-pushed orders (or an explicit pledge-id

@@ -188,7 +188,12 @@ export async function POST(req: NextRequest) {
 
     // Amount guard. Compare our computed total against whatever authoritative
     // figure we have (the caller's expectedAmount and/or DC's verified amount).
-    const target = typeof expectedAmount === "number" ? expectedAmount : verifiedAmount;
+    // DC may report the verified amount in cents; normalize before comparing.
+    const normalizedVerified =
+      typeof verifiedAmount === "number" && Math.abs(verifiedAmount - total * 100) <= 0.5
+        ? verifiedAmount / 100
+        : verifiedAmount;
+    const target = typeof expectedAmount === "number" ? expectedAmount : normalizedVerified;
     if (typeof target === "number" && Math.abs(target - total) > 0.01) {
       return NextResponse.json(
         {

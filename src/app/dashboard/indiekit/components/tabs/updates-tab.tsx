@@ -25,7 +25,7 @@ import {
 import {
   FileText,
   Plus,
-  Eye,
+  Heart,
   EyeOff,
   Edit,
   Trash2,
@@ -52,7 +52,7 @@ interface ProjectUpdate {
   createdAt: string;
   updatedAt: string;
   commentsCount: number;
-  viewsCount: number;
+  likesCount: number;
 }
 
 interface UpdatesTabProps {
@@ -447,8 +447,8 @@ export function UpdatesTab({ projectId, projectName, hasActiveCampaign = false }
                           : "Just now"}
                       </span>
                       <span className="flex items-center gap-1">
-                        <Eye className="h-3 w-3" />
-                        {update.viewsCount} views
+                        <Heart className="h-3 w-3" />
+                        {update.likesCount} likes
                       </span>
                       <span className="flex items-center gap-1">
                         <MessageSquare className="h-3 w-3" />

@@ -34,8 +34,7 @@ export async function POST(req: NextRequest) {
     // 2. Were created before the cutoff time
     // 3. Checkout never completed (no payment method/confirmation for each processor)
     //
-    // NOTE: Prisma 7 rejects `{ field: { not: null } }` on nullable string
-    // fields at runtime — use the `NOT: { field: null }` wrapper syntax.
+    // NOTE: House convention: `NOT: { field: null }` rather than `{ field: { not: null } }` on nullable // fields at runtime — use the `NOT: { field: null }` wrapper syntax.
     const staleWhere = {
       status: "PENDING" as const,
       createdAt: { lt: cutoffTime },

@@ -296,8 +296,10 @@ export async function getUsdRateTo(currency: string): Promise<number | null> {
  * "{symbol}{amount}" if Intl rejects the currency.
  */
 export function formatInCurrency(amount: number, currency: string): string {
-  const minFraction = currency === "JPY" || currency === "KRW" ? 0 : 0;
-  const maxFraction = currency === "JPY" || currency === "KRW" ? 0 : 0;
+  // Both branches were 0, so every converted amount rounded to whole
+  // units — a $9,999.60 campaign displayed as "$10,000 of $10,000".
+  const minFraction = currency === "JPY" || currency === "KRW" ? 0 : 2;
+  const maxFraction = currency === "JPY" || currency === "KRW" ? 0 : 2;
   try {
     return new Intl.NumberFormat("en-US", {
       style: "currency",

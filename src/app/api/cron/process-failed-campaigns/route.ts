@@ -5,6 +5,7 @@ import { logger } from "@/lib/logger";
 const cronProcessFailedCampaignsLogger = logger.child({ module: "cron-process-failed-campaigns" });
 import { db } from "@/lib/db";
 import { callDivinityCoinAPI } from "@/lib/payments/divinitycoin";
+import { unwindCountedPledge } from "@/lib/payments/unwind-counted-pledge";
 import { getPayPalConfig, getPayPalAccessToken } from "@/lib/payments/paypal";
 import { distributeReadyFilesForProject } from "@/lib/fulfillment/auto-distribute";
 
@@ -162,6 +163,7 @@ export async function GET(req: NextRequest) {
           projectTitle: project.title,
           divinityCoinRefunds: 0,
           divinityCoinAmount: 0,
+          divinityCoinPendingCancelled: 0,
           stripePledgesCancelled: 0,
           paypalAuthsCancelled: 0,
           whopPledgesCancelled: 0,
@@ -172,6 +174,14 @@ export async function GET(req: NextRequest) {
           const refundResult = await refundDivinityCoinPledges(project.id, project.title);
           projectResult.divinityCoinRefunds = refundResult.count;
           projectResult.divinityCoinAmount = refundResult.totalAmount;
+
+          // Release the committed saved-card pledges — the whole AoN
+          // backer base. They were counted and slot-holding but never
+          // charged; leaving them PENDING kept them in the totals
+          // forever and showed every backer a live "you'll be charged
+          // when the campaign succeeds" pledge for a campaign that failed.
+          const pendingResult = await cancelDivinityCoinPendingPledges(project.id);
+          projectResult.divinityCoinPendingCancelled = pendingResult.count;
         }
 
         // Cancel Stripe pledges (they weren't charged since campaign wasn't funded)
@@ -323,6 +333,43 @@ async function refundDivinityCoinPledges(projectId: string, projectTitle: string
  * Since these pledges were never charged (campaign wasn't funded),
  * we just need to mark them as cancelled
  */
+/**
+ * Cancel a failed campaign's uncharged DivinityCoin saved-card pledges
+ * (PENDING with a card on file). No money moved, so nothing to refund —
+ * but the counted ones come out of the totals and give back their slots.
+ */
+async function cancelDivinityCoinPendingPledges(projectId: string) {
+  const pending = await db.pledge.findMany({
+    where: {
+      projectId,
+      paymentProcessor: "DIVINITYCOIN",
+      status: "PENDING",
+      deletedAt: null,
+    },
+    select: { id: true, projectId: true, amount: true, rewardId: true, confirmationEmailSent: true },
+  });
+
+  let count = 0;
+  for (const pledge of pending) {
+    try {
+      const cas = await db.pledge.updateMany({
+        where: { id: pledge.id, status: "PENDING", deletedAt: null },
+        data: {
+          status: "CANCELLED",
+          lastFailureReason: "Campaign did not reach funding goal",
+        },
+      });
+      if (cas.count > 0) {
+        await unwindCountedPledge(pledge);
+        count++;
+      }
+    } catch (error) {
+      cronProcessFailedCampaignsLogger.error({ err: error }, `[Cron Failed Campaigns] Error cancelling DC pending pledge ${pledge.id}:`);
+    }
+  }
+  return { count };
+}
+
 async function cancelStripePledges(projectId: string) {
   // Find all pending Stripe pledges
   const pledgesToCancel = await db.pledge.findMany({
@@ -368,7 +415,7 @@ async function cancelStripePledges(projectId: string) {
 
 async function cancelPaypalAuthorizedPledges(projectId: string) {
   // Find PayPal pledges with an authorization hold (backer authorized, campaign didn't fund).
-  // Prisma 7 rejects `{ field: { not: null } }` on nullable string fields at
+  // House convention: `NOT: { field: null }` rather than `{ field: { not: null } }` on nullable fields at
   // runtime — use `NOT: { field: null }` wrapper syntax instead.
   const pledges = await db.pledge.findMany({
     where: {

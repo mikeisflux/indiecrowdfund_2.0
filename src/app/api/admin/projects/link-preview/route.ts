@@ -49,8 +49,10 @@ export async function GET(request: NextRequest) {
   // If one segment: segment1 = slug
   const slug = segment2 || segment1;
 
+  // Public campaigns only — DRAFT/SUBMITTED titles and covers aren't
+  // public, and this route is reachable by any logged-in account.
   const project = await db.project.findFirst({
-    where: { slug, deletedAt: null },
+    where: { slug, deletedAt: null, status: { in: ["LIVE", "FUNDED", "FAILED"] } },
     select: { id: true, title: true, imageUrl: true, slug: true },
   });
 

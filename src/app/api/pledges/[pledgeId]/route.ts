@@ -5,6 +5,7 @@ import { logger } from "@/lib/logger";
 const pledgesLogger = logger.child({ module: "pledges" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { releaseAddonSlots } from "@/lib/payments/rewards";
 import { reconcileStretchGoalsForPledge } from "@/lib/rewards/stretch-goals";
 import { callDivinityCoinAPI, getDivinityCoinConfig } from "@/lib/payments/divinitycoin";
 import { notifyPledgeModified, notifyPledgeCancelled } from "@/lib/notifications/pledge-notifications";
@@ -16,19 +17,26 @@ export const dynamic = "force-dynamic";
 // Helper to apply modification changes (reward swap, addon swap, amount update)
 async function applyModificationChanges(
   pledgeId: string,
-  pledge: { rewardId: string | null; projectId: string; amount: number | { toNumber?: () => number } },
+  pledge: { rewardId: string | null; projectId: string; amount: number | { toNumber?: () => number }; confirmationEmailSent?: boolean },
   rewardId: string | undefined,
   addonsWithQuantity: { id: string; quantity: number }[],
   addonIdList: string[],
   newAmount: number,
   amountDiff: number
 ) {
+  // Slot and counter adjustments only apply to a COUNTED pledge
+  // (confirmationEmailSent). An uncounted PENDING cart never claimed a
+  // slot or contributed to currentAmount, so moving them here freed
+  // phantom inventory and shifted the public total by money that was
+  // never counted. Same guard the increase action already uses.
+  const counted = !!pledge.confirmationEmailSent;
+
   // If changing reward, update claimed counts
-  if (pledge.rewardId && pledge.rewardId !== rewardId) {
+  if (counted && pledge.rewardId && pledge.rewardId !== rewardId) {
     await db.$executeRaw`UPDATE "Reward" SET "quantityClaimed" = GREATEST(0, "quantityClaimed" - 1) WHERE id = ${pledge.rewardId}`;
   }
 
-  if (rewardId && rewardId !== "no-reward" && pledge.rewardId !== rewardId) {
+  if (counted && rewardId && rewardId !== "no-reward" && pledge.rewardId !== rewardId) {
     await db.reward.update({
       where: { id: rewardId },
       data: { quantityClaimed: { increment: 1 } },
@@ -69,8 +77,8 @@ async function applyModificationChanges(
     },
   });
 
-  // Update project current amount
-  if (amountDiff !== 0) {
+  // Update project current amount (counted pledges only — see above)
+  if (counted && amountDiff !== 0) {
     await db.project.update({
       where: { id: pledge.projectId },
       data: {
@@ -196,6 +204,7 @@ export async function GET(
       pledge: {
         id: pledge.id,
         amount: Number(pledge.amount),
+        shippingAmount: Number(pledge.shippingAmount ?? 0),
         status: pledge.status,
         createdAt: pledge.createdAt,
         backerNumber: pledge.backerNumber,
@@ -613,6 +622,10 @@ export async function PATCH(
       if (pledge.confirmationEmailSent && pledge.rewardId) {
         db.$executeRaw`UPDATE "Reward" SET "quantityClaimed" = GREATEST(0, "quantityClaimed" - 1) WHERE id = ${pledge.rewardId}`
           .catch(err => pledgesLogger.error({ err: String(err) }, "[Cancel] Failed to decrement reward quantity"));
+      }
+      if (pledge.confirmationEmailSent) {
+        releaseAddonSlots(pledgeId)
+          .catch(err => pledgesLogger.error({ err: String(err) }, "[Cancel] Failed to release add-on slots"));
       }
 
       // Send cancellation notification (async, don't block response)
@@ -1207,6 +1220,13 @@ export async function DELETE(
           currentAmount: { decrement: Number(pledge.amount) },
         },
       });
+      // Release the reward + add-on slots — the PATCH cancel did this, the
+      // DELETE twin didn't, so cancellations through DELETE left limited
+      // rewards "sold out".
+      if (pledge.rewardId) {
+        await db.$executeRaw`UPDATE "Reward" SET "quantityClaimed" = GREATEST(0, "quantityClaimed" - 1) WHERE id = ${pledge.rewardId}`;
+      }
+      await releaseAddonSlots(pledgeId);
     }
 
     return NextResponse.json({

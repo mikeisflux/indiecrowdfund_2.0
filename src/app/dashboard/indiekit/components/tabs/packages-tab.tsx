@@ -168,8 +168,12 @@ export function PackagesTab({
       accountId: v?.storeName || "Connected",
     }));
 
-  const reportPushResult = (data: { pushed?: number; count?: number; failed?: number; errors?: string[]; remaining?: number; message?: string }, serviceName: string) => {
+  const reportPushResult = (data: { success?: boolean; pushed?: number; count?: number; failed?: number; errors?: string[]; remaining?: number; message?: string }, serviceName: string) => {
     const pushed = data.pushed ?? data.count ?? 0;
+    if (data.success === false) {
+      toast.error(data.message || `Couldn't push to ${serviceName}`);
+      return;
+    }
     if (data.failed) {
       toast.error(
         `${data.failed} order(s) failed to push${data.errors?.[0] ? ` — ${data.errors[0]}` : ""}`
@@ -778,21 +782,9 @@ export function PackagesTab({
 
         {/* Process by Group Tab */}
         <TabsContent value="by-group" className="space-y-4">
-          {/* Filter by Segment */}
-          <div className="w-full">
-            <Select value={segmentFilter} onValueChange={setSegmentFilter}>
-              <SelectTrigger className="w-full h-12">
-                <SelectValue placeholder="Filter by Segment" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Backers</SelectItem>
-                <SelectItem value="ready_to_ship">All Backers with Ready To Ship Orders</SelectItem>
-                <SelectItem value="survey_complete">Survey Complete</SelectItem>
-                <SelectItem value="address_complete">Address Complete</SelectItem>
-                <SelectItem value="payment_complete">Payment Complete</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+          {/* The segment filter lives on the Process All tab only: per-group
+              pushes send the group's member list and never applied it, so
+              showing it here promised a filter that did nothing. */}
 
           {/* Service Box, Add New Orders Box, Search Box Row */}
           <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3">

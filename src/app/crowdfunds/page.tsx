@@ -168,6 +168,7 @@ function DiscoverContent() {
       else if (projectType === "past") params.set("status", "past");
       else if (projectType === "upcoming") params.set("prelaunch", "true");
       if (showStaffPicks) params.set("staffPicks", "true");
+      if (!showFunded) params.set("hideFunded", "true");
       params.set("limit", "12");
       params.set("offset", reset ? "0" : String(offset));
 
@@ -175,14 +176,9 @@ function DiscoverContent() {
       const data = await response.json();
 
       if (response.ok) {
-        // Filter out fully funded if showFunded is false
-        let filteredData = data.projects;
-        if (!showFunded) {
-          filteredData = data.projects.filter((p: Project) => {
-            const percent = (Number(p.currentAmount) / Number(p.goalAmount)) * 100;
-            return percent < 100;
-          });
-        }
+        // "Hide funded" is applied server-side (hideFunded param) so the
+        // totals and paging match what's shown.
+        const filteredData = data.projects;
 
         if (reset) {
           setProjects(filteredData);

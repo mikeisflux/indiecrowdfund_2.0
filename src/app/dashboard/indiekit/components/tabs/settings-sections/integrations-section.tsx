@@ -84,9 +84,7 @@ export function IntegrationsSection({
   const [shopifyDomain, setShopifyDomain] = useState("");
   const [shipStationKey, setShipStationKey] = useState("");
   const [shipStationSecret, setShipStationSecret] = useState("");
-  const [easyshipToken, setEasyshipToken] = useState("");
   const [isConnectingShipStation, setIsConnectingShipStation] = useState(false);
-  const [isConnectingEasyship, setIsConnectingEasyship] = useState(false);
   const [isConnectingShopify, setIsConnectingShopify] = useState(false);
 
   // ShipStation's tile used to be static markup: it read no status at all, so
@@ -335,43 +333,6 @@ export function IntegrationsSection({
       toast.error(error instanceof Error ? error.message : "Failed to disconnect ShipStation");
     } finally {
       setIsDisconnectingShipStation(false);
-    }
-  };
-
-  const handleConnectEasyship = async () => {
-    if (!projectId) {
-      toast.error("Select a campaign at the top of the page first");
-      return;
-    }
-    if (!easyshipToken.trim()) {
-      toast.error("Please enter your API token");
-      return;
-    }
-
-    setIsConnectingEasyship(true);
-    try {
-      const res = await apiFetch("/api/creator/indiekit/integrations", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", },
-        body: JSON.stringify({
-          projectId,
-          service: "easyship",
-          apiKey: easyshipToken,
-        }),
-      });
-
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || "Failed to connect Easyship");
-      }
-
-      toast.success("Connected to Easyship");
-      setEasyshipToken("");
-      onRefresh?.();
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to connect Easyship");
-    } finally {
-      setIsConnectingEasyship(false);
     }
   };
 
@@ -736,58 +697,6 @@ export function IntegrationsSection({
           </Button>
         </div>
 
-        {/* Easyship */}
-        <div className="flex items-center justify-between p-4 border rounded-lg">
-          <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded bg-purple-100 flex items-center justify-center">
-              <Truck className="h-5 w-5 text-purple-600" />
-            </div>
-            <div>
-              <p className="font-medium">Easyship</p>
-              <p className="text-sm text-muted-foreground">Global shipping rates & labels</p>
-            </div>
-          </div>
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button variant="outline">Connect</Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Connect Easyship</AlertDialogTitle>
-                <AlertDialogDescription>
-                  Connect your Easyship account for international shipping rates and labels.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <div className="space-y-4 py-4">
-                <div className="space-y-2">
-                  <Label htmlFor="easyship-token">API Token</Label>
-                  <Input
-                    id="easyship-token"
-                    placeholder="Enter your Easyship API token"
-                    value={easyshipToken}
-                    onChange={(e) => setEasyshipToken(e.target.value)}
-                  />
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  Find your API token in Easyship under Settings → API
-                </p>
-              </div>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={handleConnectEasyship} disabled={isConnectingEasyship}>
-                  {isConnectingEasyship ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Connecting...
-                    </>
-                  ) : (
-                    "Connect"
-                  )}
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
-        </div>
       </CardContent>
     </Card>
   );

@@ -250,15 +250,22 @@ export async function POST(
               ? Infinity
               : addonInfo.quantityAvailable - addonInfo.quantityClaimed;
 
-            if (availableSlots >= quantity) {
-              await tx.reward.update({
-                where: { id: addon.id },
-                data: { quantityClaimed: { increment: quantity } },
-              });
-            } else {
-              pledgesConfirmAddItemsLogger.warn(`[ConfirmAddItems] Addon ${addon.id} has only ${availableSlots} available but ${quantity} requested`);
-              throw new Error(`Not enough ${addon.title || 'addon'} available`);
+            if (availableSlots < quantity) {
+              // The payment was verified BEFORE this point — the money has
+              // moved. Throwing here rolled back the grant while the charge
+              // stood, and because pendingAdditionalItems survived, every
+              // retry re-verified, re-threw and 500'd forever: charged for
+              // nothing, permanently. Do what the saved-card path does —
+              // grant anyway and flag the oversell for the creator/admin.
+              pledgesConfirmAddItemsLogger.error(
+                { pledgeId: pledge.id, addonId: addon.id, requested: quantity, availableSlots },
+                "[ConfirmAddItems] OVERSELL: verified payment granted more addon units than remained available"
+              );
             }
+            await tx.reward.update({
+              where: { id: addon.id },
+              data: { quantityClaimed: { increment: quantity } },
+            });
           }
         }
 

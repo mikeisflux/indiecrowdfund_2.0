@@ -768,11 +768,12 @@ export function NotificationPreferencesTab() {
                   // Enable all
                   setSaving("all");
                   try {
-                    await apiFetch("/api/backer/notifications/preferences/bulk", {
+                    const res = await apiFetch("/api/backer/notifications/preferences/bulk", {
                       method: "POST",
                       headers: { "Content-Type": "application/json", },
                       body: JSON.stringify({ action: "enable_all" }),
                     });
+                    if (!res.ok) throw new Error("Bulk update failed");
                     toast.success("All notifications enabled");
                     fetchPreferences();
                   } catch {
@@ -793,11 +794,12 @@ export function NotificationPreferencesTab() {
                   // Disable all
                   setSaving("all");
                   try {
-                    await apiFetch("/api/backer/notifications/preferences/bulk", {
+                    const res = await apiFetch("/api/backer/notifications/preferences/bulk", {
                       method: "POST",
                       headers: { "Content-Type": "application/json", },
                       body: JSON.stringify({ action: "disable_all" }),
                     });
+                    if (!res.ok) throw new Error("Bulk update failed");
                     toast.success("All notifications disabled");
                     fetchPreferences();
                   } catch {

@@ -61,7 +61,7 @@ export async function GET(req: NextRequest) {
     const skip = (page - 1) * limit;
 
     // Build where clause.
-    // Prisma 7 rejects `{ field: { not: null } }` on nullable string fields at
+    // House convention: `NOT: { field: null }` rather than `{ field: { not: null } }` on nullable fields at
     // runtime — use `NOT: { field: null }` wrapper syntax instead.
     const where: Record<string, unknown> = {
       deletedAt: null,

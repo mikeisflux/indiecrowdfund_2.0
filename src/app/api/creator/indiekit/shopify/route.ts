@@ -358,7 +358,9 @@ export async function POST(req: NextRequest) {
         projectId,
         Array.isArray(backerIds) && backerIds.length > 0 ? backerIds : undefined
       );
-      return NextResponse.json(result);
+      // A push that couldn't run at all ("Shopify not connected") is an
+      // error, not a 200 — the client used to green-toast the message.
+      return NextResponse.json(result, { status: result.success === false ? 400 : 200 });
     }
 
     // SYNC_STATUS - Sync fulfillment status from Shopify

@@ -205,7 +205,7 @@ export async function POST(req: NextRequest) {
 
         const failedPledge = await db.pledge.findFirst({
           where: { id: pledgeId, deletedAt: null },
-          select: { projectId: true, amount: true, rewardId: true, confirmationEmailSent: true },
+          select: { id: true, projectId: true, amount: true, rewardId: true, confirmationEmailSent: true },
         });
         const failCas = await db.pledge.updateMany({
           where: { id: pledgeId, status: "PENDING" },

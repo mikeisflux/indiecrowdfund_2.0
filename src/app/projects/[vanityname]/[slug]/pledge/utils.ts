@@ -32,6 +32,11 @@ export async function createAdditionalItemsPurchase(
   type?: string;
   pledgeId: string;
   paymentMethod?: string;
+  /** Saved-card (off-session) charge: already charged AND applied server-side. */
+  ok?: boolean;
+  sessionId?: string;
+  planId?: string;
+  environment?: string;
 }> {
   const addonsWithQuantity = Object.entries(selectedAddons).map(([id, quantity]) => ({
     id,
@@ -51,6 +56,24 @@ export async function createAdditionalItemsPurchase(
 
   if (!response.ok) {
     throw new Error(data.error || "Failed to create additional items purchase");
+  }
+
+  // Saved DC card: the API charged and applied the items before returning.
+  // Treating this as "missing client secret" re-opened the charge-then-error
+  // hole (a retry would charge again).
+  if (data.type === "off_session_charge" || data.ok === true) {
+    return { ok: true, pledgeId: existingPledgeId, paymentMethod: "DIVINITYCOIN" };
+  }
+
+  // Whop: embedded checkout, no client secret.
+  if (data.paymentMethod === "WHOP" && data.sessionId) {
+    return {
+      pledgeId: existingPledgeId,
+      paymentMethod: "WHOP",
+      sessionId: data.sessionId,
+      planId: data.planId,
+      environment: data.environment,
+    };
   }
 
   if (!data.clientSecret) {
