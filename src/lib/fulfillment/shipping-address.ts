@@ -10,6 +10,8 @@
 // these shapes, so an address written by a different flow read as blank/missing.
 // normalizeShippingAddress() coalesces all three into one canonical shape.
 
+import { normalizeCountryCode, normalizeStateCode } from "./shipstation-order";
+
 export interface NormalizedShippingAddress {
   name: string;
   line1: string;
@@ -38,12 +40,20 @@ export function normalizeShippingAddress(raw: unknown): NormalizedShippingAddres
   const line1 = str(a.line1) || str(a.address1);
   const line2 = str(a.line2) || str(a.address2);
   const city = str(a.city);
-  const state = str(a.state) || str(a.region) || str(a.province);
+  const rawState = str(a.state) || str(a.region) || str(a.province);
   const postalCode = str(a.postalCode) || str(a.zip);
-  const country = str(a.country);
+  const rawCountry = str(a.country);
   const phone = str(a.phone);
 
   if (!line1 && !city && !postalCode) return null;
+
+  // Carriers and exports need ISO-2 country and 2-letter US/CA state codes.
+  // Two of the three writing flows are free text, so "United States" /
+  // "usa" / "Texas" are common; normalise when recognisable, otherwise keep
+  // the raw value so the consumer can report exactly what's wrong.
+  const iso = normalizeCountryCode(rawCountry);
+  const country = iso ?? rawCountry;
+  const state = normalizeStateCode(iso, rawState);
 
   return { name, line1, line2, city, state, postalCode, country, phone };
 }

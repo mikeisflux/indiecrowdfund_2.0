@@ -80,6 +80,9 @@ function csvEscape(value: unknown): string {
   return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
 }
 
+// Pushes and syncs pace themselves for the carriers' rate limits.
+export const maxDuration = 60;
+
 export async function POST(req: NextRequest) {
   try {
     const session = await auth();
@@ -306,8 +309,14 @@ export async function POST(req: NextRequest) {
       }
       return NextResponse.json({
         success: true,
-        updated: result.synced,
         remaining: result.remaining,
+        message:
+          result.synced > 0
+            ? `Synced tracking for ${result.synced} order(s)${result.remaining > 0 ? ` — ${result.remaining} still awaiting shipment in ShipStation` : ""}`
+            : result.remaining > 0
+              ? `No new shipments yet — ${result.remaining} order(s) still awaiting shipment in ShipStation`
+              : "Nothing to sync — no pushed orders are awaiting shipment",
+        updated: result.synced,
       });
     }
 

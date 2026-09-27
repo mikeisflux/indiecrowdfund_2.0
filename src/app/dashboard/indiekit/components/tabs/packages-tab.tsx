@@ -287,7 +287,7 @@ export function PackagesTab({
       }
 
       const data = await res.json();
-      toast.success(data.message || `Synced ${data.updated || 0} order(s) from ${methodLabel}`);
+      toast.success(data.message || `Synced ${data.updated || data.synced || 0} order(s) from ${methodLabel}`);
       setLastRefreshed(new Date().toLocaleString());
       onRefresh?.();
     } catch (error) {
@@ -412,7 +412,9 @@ export function PackagesTab({
       }
 
       const data = await res.json();
-      toast.success(`Re-pushed ${data.count || 0} errored orders`);
+      // Same reporting as every other push — an all-fail retry used to toast
+      // "Re-pushed 0 errored orders" as a success.
+      reportPushResult(data, methodLabel);
       onRefresh?.();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Retry failed");

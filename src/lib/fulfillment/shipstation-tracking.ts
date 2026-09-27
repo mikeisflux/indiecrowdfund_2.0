@@ -1,8 +1,9 @@
 import { db } from "@/lib/db";
 import { logger } from "@/lib/logger";
 import { formatError } from "@/lib/errors";
-import { circuitBreaker } from "@/lib/circuit-breaker";
 import { resolveShipStationCredentials } from "@/lib/fulfillment/shipstation-credentials";
+import { shipStationFetch, getShipStationAuthHeader, CircuitOpenError } from "@/lib/fulfillment/shipstation-client";
+import { parseShipStationError } from "@/lib/fulfillment/shipstation-order";
 import { normalizeCarrier } from "@/lib/fulfillment/tracking-url";
 
 const log = logger.child({ module: "shipstation-tracking" });
@@ -10,51 +11,32 @@ const log = logger.child({ module: "shipstation-tracking" });
 /**
  * Pull tracking numbers back from ShipStation onto pledges.
  *
- * Lives here rather than inside the route because two callers need it and
- * only one of them has a session: the creator pressing Sync tracking, and the
- * unattended cron. The route used to own this logic outright, which is part of
- * why nothing ever ran it on a schedule.
+ * Two callers: the creator pressing Sync, and the half-hourly cron. Tracking
+ * lives on ShipStation's shipments, not its orders, so this pages through
+ * GET /shipments for the account (a couple of requests) and matches on
+ * orderId — the previous one-request-per-order loop covered ~28 orders per
+ * click and hid everything it hadn't reached.
  */
 
-// V1 allows 40 requests per minute per key pair. Pacing keeps a long sync from
-// walking into a wall of 429s halfway down the list and reporting them as
-// failures.
-const V1_MIN_GAP_MS = 1_600;
-const DEFAULT_BUDGET_MS = 45_000;
-
-let lastCallAt = 0;
-const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
-
-async function shipStationFetch(url: string, init: RequestInit, attempt = 0): Promise<Response> {
-  const since = Date.now() - lastCallAt;
-  if (since < V1_MIN_GAP_MS) await sleep(V1_MIN_GAP_MS - since);
-  lastCallAt = Date.now();
-
-  const response = await circuitBreaker.execute("shipstation", () => fetch(url, init));
-
-  if (response.status === 429 && attempt < 2) {
-    // V1 sends X-Rate-Limit-Reset rather than Retry-After, so generic retry
-    // logic misses it. Capped so a malformed header cannot park the request.
-    const reset = Number(response.headers.get("X-Rate-Limit-Reset") || "0");
-    await sleep(Math.min(Math.max(reset, 1) * 1000, 20_000));
-    return shipStationFetch(url, init, attempt + 1);
-  }
-  return response;
-}
+const MAX_PAGES = 10;
+const PAGE_SIZE = 500;
 
 export interface ShipStationTrackingResult {
   success: boolean;
   synced: number;
-  /** Not looked at this run because the time budget ran out. */
+  /** Open orders that ShipStation hasn't shipped yet (informational). */
   remaining: number;
   pledgeIds: string[];
   error?: string;
 }
 
+function ymd(d: Date): string {
+  return d.toISOString().slice(0, 10);
+}
+
 export async function syncShipStationTracking(
   projectId: string,
-  creatorId: string,
-  budgetMs: number = DEFAULT_BUDGET_MS
+  creatorId: string
 ): Promise<ShipStationTrackingResult> {
   const credentials = await resolveShipStationCredentials(projectId, creatorId);
   if (!credentials) {
@@ -67,75 +49,107 @@ export async function syncShipStationTracking(
     };
   }
 
-  const authHeader =
-    "Basic " +
-    Buffer.from(`${credentials.apiKey}:${credentials.apiSecret}`).toString("base64");
+  const authHeader = getShipStationAuthHeader(credentials.apiKey, credentials.apiSecret);
 
-  // House convention: `NOT: { field: null }` rather than `{ field: { not: null } }` on nullable fields at
-  // runtime — the `NOT: { field: null }` wrapper is the working form.
-  const pledges = await db.pledge.findMany({
+  // IN_PROGRESS = pushed, awaiting a shipment. (An earlier version also
+  // listed a "PROCESSING" status that doesn't exist in the enum — Prisma
+  // rejected the whole query, so this sync never ran successfully.)
+  const open = await db.pledge.findMany({
     where: {
       projectId,
+      deletedAt: null,
       NOT: { externalOrderId: null },
-      fulfillmentStatus: { in: ["IN_PROGRESS", "PROCESSING"] },
+      fulfillmentStatus: "IN_PROGRESS",
     },
     select: { id: true, externalOrderId: true },
   });
+  if (open.length === 0) {
+    return { success: true, synced: 0, remaining: 0, pledgeIds: [] };
+  }
+  const pledgeByOrderId = new Map(open.map((p) => [String(p.externalOrderId), p.id]));
 
+  // Look back far enough to cover a slow warehouse; ShipStation filters by
+  // ship date, so a 120-day window is cheap.
+  const since = new Date(Date.now() - 120 * 24 * 60 * 60 * 1000);
   const updated: string[] = [];
-  let remaining = 0;
-  const startedAt = Date.now();
 
-  for (const [index, pledge] of pledges.entries()) {
-    if (Date.now() - startedAt > budgetMs) {
-      remaining = pledges.length - index;
-      break;
-    }
-    try {
-      // Tracking comes from the shipments endpoint. A V1 order object carries
-      // no shipments array, so reading it off the order — as this once did —
-      // never found anything and nothing was ever marked shipped.
-      const response = await shipStationFetch(
-        `https://ssapi.shipstation.com/shipments?orderId=${encodeURIComponent(
-          String(pledge.externalOrderId)
-        )}`,
-        { headers: { Authorization: authHeader } }
-      );
-      if (!response.ok) continue;
-
-      const body = await response.json();
-      // Voided shipments come back by default. Treating one as shipped would
-      // tell a backer their parcel is moving when the label was cancelled.
-      const shipment = (body.shipments || []).find(
-        (s: { voided?: boolean; trackingNumber?: string | null }) => !s.voided && s.trackingNumber
-      );
-      if (!shipment) continue;
-
-      // carrierCode is what ShipStation calls the carrier ("ups", "fedex",
-      // "stamps_com"). Storing it lets the backer dashboard build a real
-      // tracking link instead of guessing from the number's shape.
-      const carrierCode: string | null = shipment.carrierCode ?? null;
-      const carrier = normalizeCarrier(carrierCode);
-
-      await db.pledge.update({
-        where: { id: pledge.id },
-        data: {
-          trackingNumber: shipment.trackingNumber,
-          trackingCarrier: carrierCode,
-          trackingUrl: carrier
-            ? carrier.url(encodeURIComponent(String(shipment.trackingNumber)))
-            : null,
-          fulfillmentStatus: "SHIPPED",
-        },
+  try {
+    for (let page = 1; page <= MAX_PAGES; page++) {
+      const qs = new URLSearchParams({
+        shipDateStart: ymd(since),
+        includeShipmentItems: "false",
+        pageSize: String(PAGE_SIZE),
+        page: String(page),
+        ...(credentials.storeId ? { storeId: String(credentials.storeId) } : {}),
       });
-      updated.push(pledge.id);
-    } catch (error) {
-      // One bad order must not end the run for the rest.
-      log.warn({ err: formatError(error), pledgeId: pledge.id }, "Tracking lookup failed");
+      const response = await shipStationFetch(`/shipments?${qs.toString()}`, {
+        headers: { Authorization: authHeader },
+      });
+
+      if (response.status === 401 || response.status === 403) {
+        // Rotated or revoked keys. Say so and flag the integration so the
+        // tile shows Reconnect — "Synced 0" hid this completely.
+        const message = "ShipStation rejected the API credentials — reconnect under Settings → Integrations";
+        await db.fulfillmentIntegration
+          .updateMany({ where: { projectId, provider: "SHIPSTATION" }, data: { status: "ERROR", lastSyncError: message } })
+          .catch(() => {});
+        return { success: false, synced: updated.length, remaining: open.length - updated.length, pledgeIds: updated, error: message };
+      }
+      if (!response.ok) {
+        const message = parseShipStationError(await response.json().catch(() => null), response.status);
+        return { success: false, synced: updated.length, remaining: open.length - updated.length, pledgeIds: updated, error: message };
+      }
+
+      const body = (await response.json()) as {
+        shipments?: Array<{
+          orderId?: number | string;
+          trackingNumber?: string | null;
+          carrierCode?: string | null;
+          voided?: boolean;
+        }>;
+        pages?: number;
+      };
+
+      for (const s of body.shipments || []) {
+        // Voided shipments come back too; a cancelled label is not a shipment.
+        if (s.voided || !s.trackingNumber) continue;
+        const pledgeId = pledgeByOrderId.get(String(s.orderId));
+        if (!pledgeId || updated.includes(pledgeId)) continue;
+
+        const carrierCode = s.carrierCode ?? null;
+        const carrier = normalizeCarrier(carrierCode);
+        await db.pledge.update({
+          where: { id: pledgeId },
+          data: {
+            trackingNumber: s.trackingNumber,
+            trackingCarrier: carrierCode,
+            trackingUrl: carrier ? carrier.url(encodeURIComponent(String(s.trackingNumber))) : null,
+            fulfillmentStatus: "SHIPPED",
+          },
+        });
+        updated.push(pledgeId);
+      }
+
+      if (!body.pages || page >= body.pages) break;
+      if (updated.length >= open.length) break;
     }
+  } catch (error) {
+    if (error instanceof CircuitOpenError) {
+      return { success: false, synced: updated.length, remaining: open.length - updated.length, pledgeIds: updated, error: "ShipStation is unreachable at the moment — try again shortly" };
+    }
+    log.warn({ err: formatError(error), projectId }, "Tracking sync failed");
+    return { success: false, synced: updated.length, remaining: open.length - updated.length, pledgeIds: updated, error: "Tracking sync failed — see server logs" };
   }
 
-  log.info({ projectId, synced: updated.length, remaining }, "ShipStation tracking sync complete");
+  if (updated.length > 0) {
+    await db.fulfillmentIntegration
+      .updateMany({
+        where: { projectId, provider: "SHIPSTATION" },
+        data: { ordersShipped: { increment: updated.length }, lastSyncAt: new Date(), lastSyncError: null },
+      })
+      .catch(() => {});
+  }
 
-  return { success: true, synced: updated.length, remaining, pledgeIds: updated };
+  log.info({ projectId, synced: updated.length, stillOpen: open.length - updated.length }, "ShipStation tracking sync complete");
+  return { success: true, synced: updated.length, remaining: open.length - updated.length, pledgeIds: updated };
 }

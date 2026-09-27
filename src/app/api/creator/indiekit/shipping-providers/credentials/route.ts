@@ -6,6 +6,7 @@ import { auth } from "@/lib/auth";
 
 const creatorIndiekitShippingProvidersCredentialsLogger = logger.child({ module: "creator-indiekit-shipping-providers-credentials" });
 import { db } from "@/lib/db";
+import { shipStationFetch, getShipStationAuthHeader } from "@/lib/fulfillment/shipstation-client";
 import { encryptCredential, decryptCredential } from "@/lib/encryption";
 
 /** Decrypt a stored credential, falling back to plaintext for legacy values */
@@ -107,16 +108,35 @@ export async function POST(req: NextRequest) {
     const updateData: Record<string, any> = {};
 
     switch (provider) {
-      case "shipstation":
+      case "shipstation": {
         if (!credentials.apiKey || !credentials.apiSecret) {
           return NextResponse.json(
             { error: "ShipStation requires API Key and API Secret" },
             { status: 400 }
           );
         }
-        updateData.shipstationApiKey = encryptCredential(credentials.apiKey);
-        updateData.shipstationApiSecret = encryptCredential(credentials.apiSecret);
+        // Prove the keys work before saving. Unverified keys are how
+        // "API credentials saved — integration is ready" ended up meaning
+        // nothing until a push failed in the middle of a fulfilment run.
+        const check = await shipStationFetch("/carriers", {
+          headers: { Authorization: getShipStationAuthHeader(String(credentials.apiKey).trim(), String(credentials.apiSecret).trim()) },
+        }).catch(() => null);
+        if (!check) {
+          return NextResponse.json({ error: "Couldn't reach ShipStation just now. Try again in a minute." }, { status: 502 });
+        }
+        if (check.status === 401 || check.status === 403) {
+          return NextResponse.json(
+            { error: "ShipStation rejected those credentials. Check the API Key and API Secret under Settings > Account > API Settings." },
+            { status: 400 }
+          );
+        }
+        if (!check.ok) {
+          return NextResponse.json({ error: `ShipStation returned ${check.status} while verifying the keys` }, { status: 502 });
+        }
+        updateData.shipstationApiKey = encryptCredential(String(credentials.apiKey).trim());
+        updateData.shipstationApiSecret = encryptCredential(String(credentials.apiSecret).trim());
         break;
+      }
 
       case "shippo":
         if (!credentials.apiToken) {

@@ -5,7 +5,7 @@ import { logger } from "@/lib/logger";
 const creatorIndiekitIntegrationsLogger = logger.child({ module: "creator-indiekit-integrations" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { circuitBreaker } from "@/lib/circuit-breaker";
+import { shipStationFetch, getShipStationAuthHeader } from "@/lib/fulfillment/shipstation-client";
 import {
   canManageShipStation,
   encryptShipStationCredentials,
@@ -116,6 +116,31 @@ export async function GET(req: NextRequest) {
               lastSyncError: integration.lastSyncError ?? null,
               storeId: typeof stored.storeId === "number" ? stored.storeId : null,
               storeName: typeof stored.storeName === "string" ? stored.storeName : null,
+            };
+          }
+        }
+      }
+
+      // Account-level ShipStation keys (Settings → Shipping providers) are a
+      // valid fallback for pushes, so they count as connected here too —
+      // unless the campaign explicitly disconnected or its keys errored.
+      // Without this, Settings said "ready" while Packages said "not
+      // connected" for the same creator.
+      if (project && !fulfillmentIntegrations.shipstation?.connected) {
+        const rowStatus = fulfillmentIntegrations.shipstation?.status;
+        if (rowStatus !== "DISCONNECTED" && rowStatus !== "ERROR") {
+          const creatorKeys = await db.project.findFirst({
+            where: { id: project.id },
+            select: { creator: { select: { shipstationApiKey: true, shipstationApiSecret: true } } },
+          });
+          if (creatorKeys?.creator?.shipstationApiKey && creatorKeys.creator.shipstationApiSecret) {
+            fulfillmentIntegrations.shipstation = {
+              ...(fulfillmentIntegrations.shipstation ?? {}),
+              connected: true,
+              status: "CONNECTED",
+              lastSyncError: null,
+              storeId: fulfillmentIntegrations.shipstation?.storeId ?? null,
+              storeName: fulfillmentIntegrations.shipstation?.storeName ?? null,
             };
           }
         }
@@ -287,13 +312,9 @@ export async function POST(req: NextRequest) {
       // surfaces later, in the middle of a fulfilment run.
       let check: Response;
       try {
-        check = await circuitBreaker.execute("shipstation", () =>
-          fetch("https://ssapi.shipstation.com/carriers", {
-            headers: {
-              Authorization: `Basic ${Buffer.from(`${key}:${secret}`).toString("base64")}`,
-            },
-          })
-        );
+        check = await shipStationFetch("/carriers", {
+          headers: { Authorization: getShipStationAuthHeader(key, secret) },
+        });
       } catch (error) {
         creatorIndiekitIntegrationsLogger.error(
           { err: formatError(error), projectId },

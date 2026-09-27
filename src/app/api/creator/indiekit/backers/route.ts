@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { pushPledgesToShipStation } from "@/lib/fulfillment/shipstation-push";
+import { syncShipStationTracking } from "@/lib/fulfillment/shipstation-tracking";
 import { z } from "zod";
 import crypto from "crypto";
 import { pushOrdersToShopify } from "@/lib/shopify-push";
@@ -36,10 +38,9 @@ const bulkActionSchema = z.object({
 // is absent on purpose — it is not a carrier and its tracking comes from a
 // completed order rather than a shipments endpoint, so it has its own path.
 const PROVIDER_SYNC_ENDPOINTS: Record<string, string> = {
-  SHIPSTATION: "/api/creator/indiekit/shipstation",
   SHIPPO: "/api/creator/indiekit/shippo",
   EASYPOST: "/api/creator/indiekit/easypost",
-  STAMPS: "/api/creator/indiekit/stamps",
+  STAMPS_COM: "/api/creator/indiekit/stamps",
 };
 
 export async function POST(req: NextRequest) {
@@ -384,31 +385,30 @@ export async function POST(req: NextRequest) {
               allErrors.push(`Shopify: ${shopifyResult.message || "Push failed"}`);
             }
           } else if (integration.provider === "SHIPSTATION") {
-            // Push to ShipStation
-            const shipstationResponse = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || ""}/api/creator/indiekit/shipstation`, {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                "Cookie": req.headers.get("cookie") || "",
-              },
-              body: JSON.stringify({
-                projectId,
-                action: "push_orders",
-                backerIds: pledgeIds,
-              }),
+            // Direct library call. This used to be an internal HTTP request
+            // forwarding only the Cookie header — the proxy's CSRF check
+            // rejected it with 403 on EVERY push, and the fallthrough below
+            // then reported the whole batch as pushed.
+            const projectMeta = await db.project.findFirst({
+              where: { id: projectId, deletedAt: null },
+              select: { title: true, creatorId: true },
             });
-
-            if (shipstationResponse.ok) {
-              const shipstationResult = await shipstationResponse.json();
-              totalPushed += shipstationResult.pushed || 0;
-              totalFailed += shipstationResult.failed || 0;
-              if (shipstationResult.errors) {
-                allErrors.push(...shipstationResult.errors.map((e: string) => `ShipStation: ${e}`));
+            const shipstationResult = await pushPledgesToShipStation({
+              projectId,
+              creatorId: projectMeta?.creatorId || "",
+              projectTitle: projectMeta?.title || "Campaign",
+              pledgeIds,
+            });
+            if (shipstationResult.success) {
+              totalPushed += shipstationResult.pushed;
+              totalFailed += shipstationResult.failed;
+              allErrors.push(...shipstationResult.errors.map((e: string) => `ShipStation: ${e}`));
+              if (shipstationResult.remaining > 0) {
+                allErrors.push(`ShipStation: ${shipstationResult.remaining} order(s) not attempted yet — push again to continue`);
               }
               pushedProviders.push("ShipStation");
             } else {
-              const errorResult = await shipstationResponse.json().catch(() => ({}));
-              allErrors.push(`ShipStation: ${errorResult.error || "Push failed"}`);
+              allErrors.push(`ShipStation: ${shipstationResult.error || "Push failed"}`);
             }
           } else if (integration.provider === "SHIPPO") {
             // Push to Shippo
@@ -501,22 +501,21 @@ export async function POST(req: NextRequest) {
           }
         }
 
-        // If no integrations connected, just update local status
+        // No fulfillment service connected: say so. This used to flip the
+        // pledges to IN_PROGRESS locally and report success — nothing reached
+        // any service, and the pledges then vanished from every later push
+        // (findPushCandidates only takes NOT_STARTED/FAILED).
         if (connectedIntegrations.length === 0) {
-          await db.pledge.updateMany({
-            where: {
-              id: { in: pledgeIds },
-              projectId,
-            },
-            data: { fulfillmentStatus: "IN_PROGRESS" },
-          });
-          results.success = pledgeIds.length;
-        } else {
-          results.success = totalPushed > 0 ? totalPushed : pledgeIds.length;
-          results.failed = totalFailed;
-          if (allErrors.length > 0) {
-            results.errors = allErrors.slice(0, 10); // Limit to 10 errors
-          }
+          return NextResponse.json(
+            { error: "No fulfillment service is connected for this campaign. Connect ShipStation or Shopify under Settings → Integrations first." },
+            { status: 400 }
+          );
+        }
+        // Honest count: only what a service actually accepted.
+        results.success = totalPushed;
+        results.failed = totalFailed;
+        if (allErrors.length > 0) {
+          results.errors = allErrors.slice(0, 10); // Limit to 10 errors
         }
 
         // Log activity with partial-success details
@@ -579,6 +578,23 @@ export async function POST(req: NextRequest) {
               totalAwaiting += result.awaitingCompletion;
               if (result.errors) syncErrors.push(...result.errors.map((e) => `Shopify: ${e}`));
               if (result.success) syncedProviders.push("Shopify");
+              continue;
+            }
+
+            if (integration.provider === "SHIPSTATION") {
+              // Direct call (the internal HTTP hop 403'd on CSRF — see push).
+              const projectMeta = await db.project.findFirst({
+                where: { id: projectId, deletedAt: null },
+                select: { creatorId: true },
+              });
+              const r = await syncShipStationTracking(projectId, projectMeta?.creatorId || "");
+              if (r.success) {
+                totalSynced += r.synced;
+                totalRemaining += r.remaining;
+                syncedProviders.push("ShipStation");
+              } else {
+                syncErrors.push(`ShipStation: ${r.error || "Sync failed"}`);
+              }
               continue;
             }
 

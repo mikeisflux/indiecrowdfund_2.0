@@ -56,7 +56,7 @@ async function handle(req: NextRequest) {
       by: ["projectId"],
       where: {
         deletedAt: null,
-        fulfillmentStatus: { in: ["IN_PROGRESS", "PROCESSING"] },
+        fulfillmentStatus: "IN_PROGRESS",
       },
     });
     const candidateIds = projectsWithOpenOrders.map(

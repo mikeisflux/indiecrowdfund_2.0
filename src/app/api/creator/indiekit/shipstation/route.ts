@@ -50,6 +50,10 @@ const actionSchema = z.object({
  * (which go through /api/creator/indiekit/fulfillment) run the same code.
  */
 
+// Bulk pushes and rate lookups pace themselves for ShipStation's 40/min
+// limit, so a single request can legitimately run for most of a minute.
+export const maxDuration = 60;
+
 // POST - Perform ShipStation actions
 export async function POST(req: NextRequest) {
   try {
@@ -141,6 +145,14 @@ export async function POST(req: NextRequest) {
             { status: 400 }
           );
         }
+        // ShipStation requires toState for US and CA destinations; without it
+        // every quote failed as "No carrier returned rates for this route".
+        if ((toCountry === "US" || toCountry === "CA") && !toState) {
+          return NextResponse.json(
+            { error: "Destination state/province is required for US and Canada rate quotes" },
+            { status: 400 }
+          );
+        }
 
         const credentials = await resolveShipStationCredentials(projectId, project.creatorId);
         if (!credentials) {
@@ -154,7 +166,7 @@ export async function POST(req: NextRequest) {
         }
         const authHeader = getShipStationAuthHeader(credentials.apiKey, credentials.apiSecret);
 
-        const carriersRes = await shipStationFetch("https://ssapi.shipstation.com/carriers", {
+        const carriersRes = await shipStationFetch("/carriers", {
           headers: { Authorization: authHeader },
         });
         if (!carriersRes.ok) {
@@ -188,10 +200,10 @@ export async function POST(req: NextRequest) {
 
         // Each carrier is a paced V1 call; cap so an account with many
         // carriers can't run the request into the route timeout.
-        for (const carrier of carriers.slice(0, 4)) {
+        for (const carrier of carriers.slice(0, 6)) {
           try {
             const res = await shipStationFetch(
-              "https://ssapi.shipstation.com/shipments/getrates",
+              "/shipments/getrates",
               {
                 method: "POST",
                 headers: {

@@ -157,7 +157,7 @@ export async function POST(req: NextRequest) {
           where: {
             projectId,
             externalOrderId: { startsWith: "STAMPS-" },
-            fulfillmentStatus: { in: ["IN_PROGRESS", "PROCESSING"] },
+            fulfillmentStatus: "IN_PROGRESS",
           },
         });
 

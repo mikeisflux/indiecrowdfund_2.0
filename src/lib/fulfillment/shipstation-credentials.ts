@@ -1,6 +1,6 @@
 import { db } from "@/lib/db";
 import { encryptCredential, decryptCredential } from "@/lib/encryption";
-import { circuitBreaker } from "@/lib/circuit-breaker";
+import { shipStationFetch, getShipStationAuthHeader } from "@/lib/fulfillment/shipstation-client";
 
 // Where a project's ShipStation credentials come from.
 //
@@ -43,12 +43,20 @@ export interface ShipStationStore {
   active?: boolean;
 }
 
-/** Decrypt, tolerating legacy values that were stored in the clear. */
-function safeDecrypt(value: string): string {
+/**
+ * Decrypt, tolerating legacy values that were stored in the clear.
+ *
+ * Returns null when the value LOOKS like our ciphertext but can't be decrypted
+ * (rotated/missing ENCRYPTION_KEY). Returning the ciphertext as if it were a
+ * key — as this used to — sent garbage to ShipStation, so every call 401'd
+ * while the tile said Connected.
+ */
+function safeDecrypt(value: string): string | null {
   try {
     return decryptCredential(value);
   } catch {
-    return value;
+    const looksEncrypted = value.length >= 60 && /^[A-Za-z0-9+/=]+$/.test(value);
+    return looksEncrypted ? null : value;
   }
 }
 
@@ -101,13 +109,9 @@ export async function fetchShipStationStores(
   apiSecret: string
 ): Promise<ShipStationStore[] | null> {
   try {
-    const response = await circuitBreaker.execute("shipstation", () =>
-      fetch("https://ssapi.shipstation.com/stores?showInactive=false", {
-        headers: {
-          Authorization: `Basic ${Buffer.from(`${apiKey}:${apiSecret}`).toString("base64")}`,
-        },
-      })
-    );
+    const response = await shipStationFetch("/stores?showInactive=false", {
+      headers: { Authorization: getShipStationAuthHeader(apiKey, apiSecret) },
+    });
 
     if (!response.ok) return null;
 
@@ -178,21 +182,37 @@ export async function resolveShipStationCredentials(
 ): Promise<ShipStationCredentials | null> {
   const integration = await db.fulfillmentIntegration.findFirst({
     where: { projectId, provider: "SHIPSTATION" },
-    select: { credentials: true },
+    select: { credentials: true, status: true },
   });
+
+  // An explicit Disconnect, or keys ShipStation rejected, must win over the
+  // creator's account-level fallback — otherwise "Disconnect" on the tile
+  // changed nothing and pushes kept going out on the old keys.
+  if (integration && (integration.status === "DISCONNECTED" || integration.status === "ERROR")) {
+    return null;
+  }
 
   const stored = (integration?.credentials ?? {}) as StoredCredentials;
   const storeId = typeof stored.storeId === "number" ? stored.storeId : null;
   const storeName = typeof stored.storeName === "string" ? stored.storeName : null;
 
+  const markUnreadable = async () => {
+    await db.fulfillmentIntegration
+      .updateMany({
+        where: { projectId, provider: "SHIPSTATION" },
+        data: { status: "ERROR", lastSyncError: "Stored ShipStation credentials can't be read — reconnect under Settings → Integrations" },
+      })
+      .catch(() => {});
+  };
+
   if (stored.apiKeyEncrypted && stored.apiSecretEncrypted) {
-    return {
-      apiKey: safeDecrypt(stored.apiKeyEncrypted),
-      apiSecret: safeDecrypt(stored.apiSecretEncrypted),
-      source: "project",
-      storeId,
-      storeName,
-    };
+    const apiKey = safeDecrypt(stored.apiKeyEncrypted);
+    const apiSecret = safeDecrypt(stored.apiSecretEncrypted);
+    if (apiKey === null || apiSecret === null) {
+      await markUnreadable();
+      return null;
+    }
+    return { apiKey, apiSecret, source: "project", storeId, storeName };
   }
 
   const creator = await db.user.findFirst({
@@ -201,9 +221,12 @@ export async function resolveShipStationCredentials(
   });
 
   if (creator?.shipstationApiKey && creator?.shipstationApiSecret) {
+    const apiKey = safeDecrypt(creator.shipstationApiKey);
+    const apiSecret = safeDecrypt(creator.shipstationApiSecret);
+    if (apiKey === null || apiSecret === null) return null;
     return {
-      apiKey: safeDecrypt(creator.shipstationApiKey),
-      apiSecret: safeDecrypt(creator.shipstationApiSecret),
+      apiKey,
+      apiSecret,
       source: "creator",
       // A store chosen on the campaign still applies when the keys come from
       // the creator's account-level fallback — the choice is about where this

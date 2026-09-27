@@ -37,7 +37,8 @@ export type FulfillmentStatus =
   | "NOT_STARTED"
   | "IN_PROGRESS"
   | "SHIPPED"
-  | "DELIVERED";
+  | "DELIVERED"
+  | "FAILED";
 
 // Project categories
 // Shipping countries list

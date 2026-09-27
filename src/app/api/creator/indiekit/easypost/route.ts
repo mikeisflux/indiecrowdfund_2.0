@@ -184,7 +184,7 @@ export async function POST(req: NextRequest) {
           where: {
             projectId,
             NOT: { trackingNumber: null },
-            fulfillmentStatus: { in: ["IN_PROGRESS", "PROCESSING", "SHIPPED"] },
+            fulfillmentStatus: { in: ["IN_PROGRESS", "SHIPPED"] },
           },
         });
 

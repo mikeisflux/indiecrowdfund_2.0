@@ -56,6 +56,45 @@ export function ConnectServiceDialog({
   const [apiSecret, setApiSecret] = useState("");
   const [shopDomain, setShopDomain] = useState("");
   const [isConnecting, setIsConnecting] = useState(false);
+  // ShipStation accounts with several stores: the connect response lists
+  // them and this second step asks which one this campaign's orders go to.
+  // Previously the list was returned and ignored, so multi-store accounts
+  // silently imported into whatever ShipStation treated as default.
+  const [storeChoices, setStoreChoices] = useState<Array<{ storeId: number; storeName: string }>>([]);
+  const [chosenStore, setChosenStore] = useState<string>("");
+
+  const finish = (service: string) => {
+    onOpenChange(false);
+    setApiKey("");
+    setApiSecret("");
+    setShopDomain("");
+    setStoreChoices([]);
+    setChosenStore("");
+    onConnected(service);
+  };
+
+  const handleChooseStore = async () => {
+    if (!chosenStore) {
+      toast.error("Pick the store this campaign's orders should import into");
+      return;
+    }
+    setIsConnecting(true);
+    try {
+      const res = await apiFetch("/api/creator/indiekit/integrations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ projectId, action: "set_store", storeId: Number(chosenStore) }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Failed to save store");
+      toast.success(`Orders will import into "${data.storeName || "the selected store"}"`);
+      finish("shipstation");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to save store");
+    } finally {
+      setIsConnecting(false);
+    }
+  };
 
   const handleConnect = async () => {
     if (selectedService === "shopify") {
@@ -103,11 +142,13 @@ export function ConnectServiceDialog({
 
       const data = await res.json();
       toast.success(data.message || `Connected to ${selectedService.charAt(0).toUpperCase() + selectedService.slice(1)}`);
-      onOpenChange(false);
-      setApiKey("");
-      setApiSecret("");
-      setShopDomain("");
-      onConnected(selectedService);
+      const stores: Array<{ storeId: number; storeName: string }> = Array.isArray(data.stores) ? data.stores : [];
+      if (selectedService === "shipstation" && stores.length > 1 && !data.storeId) {
+        // Keys are saved; stay open for the store choice.
+        setStoreChoices(stores);
+        return;
+      }
+      finish(selectedService);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Connection failed");
     } finally {
@@ -124,6 +165,46 @@ export function ConnectServiceDialog({
             Connect to a shipping service to push orders directly for fulfillment
           </DialogDescription>
         </DialogHeader>
+        {storeChoices.length > 0 ? (
+          <>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="shipstation-store">Which ShipStation store should this campaign&apos;s orders import into?</Label>
+                <Select value={chosenStore} onValueChange={setChosenStore}>
+                  <SelectTrigger id="shipstation-store">
+                    <SelectValue placeholder="Select a store" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {storeChoices.map((store) => (
+                      <SelectItem key={store.storeId} value={String(store.storeId)}>
+                        {store.storeName}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Your account has several stores. Each has its own packing slips and automation rules, so pick the one set up for this campaign. You can change it later from the ShipStation tile under Settings.
+                </p>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => finish("shipstation")} disabled={isConnecting}>
+                Use account default
+              </Button>
+              <Button className="bg-teal-600 hover:bg-teal-700" onClick={handleChooseStore} disabled={isConnecting}>
+                {isConnecting ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  "Use this store"
+                )}
+              </Button>
+            </DialogFooter>
+          </>
+        ) : (
+        <>
         <div className="space-y-4 py-4">
           <div className="space-y-2">
             <Label htmlFor="service">Select Service</Label>
@@ -222,6 +303,8 @@ export function ConnectServiceDialog({
             )}
           </Button>
         </DialogFooter>
+        </>
+        )}
       </DialogContent>
     </Dialog>
   );
@@ -705,6 +788,7 @@ export function RateEstimateDialog({ group, onClose, projectId }: RateEstimateDi
   const [fromZip, setFromZip] = useState("");
   const [toCountry, setToCountry] = useState("US");
   const [toZip, setToZip] = useState("");
+  const [toState, setToState] = useState("");
   const [rates, setRates] = useState<RateRow[] | null>(null);
   const [carrierErrors, setCarrierErrors] = useState<string[]>([]);
   const [isFetching, setIsFetching] = useState(false);
@@ -734,6 +818,10 @@ export function RateEstimateDialog({ group, onClose, projectId }: RateEstimateDi
       toast.error("Ship-from ZIP and destination postal code are required");
       return;
     }
+    if ((toCountry === "US" || toCountry === "CA") && !toState.trim()) {
+      toast.error("Destination state/province is required for US and Canada quotes");
+      return;
+    }
 
     setIsFetching(true);
     setRates(null);
@@ -753,6 +841,7 @@ export function RateEstimateDialog({ group, onClose, projectId }: RateEstimateDi
           fromPostalCode: fromZip.trim(),
           toCountry,
           toPostalCode: toZip.trim(),
+          ...(toState.trim() ? { toState: toState.trim().toUpperCase() } : {}),
         }),
       });
       const data = await res.json().catch(() => ({}));
@@ -814,6 +903,10 @@ export function RateEstimateDialog({ group, onClose, projectId }: RateEstimateDi
             <div className="space-y-2">
               <Label htmlFor="rate-to-zip">Postal Code</Label>
               <Input id="rate-to-zip" value={toZip} onChange={(e) => setToZip(e.target.value)} placeholder="10001" />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="rate-to-state">Dest. State</Label>
+              <Input id="rate-to-state" value={toState} onChange={(e) => setToState(e.target.value)} placeholder={toCountry === "CA" ? "ON" : "CA"} maxLength={2} />
             </div>
           </div>
 
