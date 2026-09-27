@@ -46,7 +46,14 @@ async function findPushCandidates(opts: {
       projectId,
       deletedAt: null,
       status: "COMPLETED",
-      fulfillmentStatus: { in: statuses },
+      OR: [
+        { fulfillmentStatus: { in: statuses } },
+        // Phantom pushes: the old Backers-tab code flipped pledges to
+        // IN_PROGRESS without anything reaching ShipStation (no
+        // externalOrderId). Those must be pushable again or they sit
+        // "in progress" forever with no order behind them.
+        { fulfillmentStatus: "IN_PROGRESS", externalOrderId: null },
+      ],
       ...(groupName
         ? groupName === "No Reward"
           ? { rewardId: null }
