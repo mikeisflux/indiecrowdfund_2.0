@@ -41,6 +41,7 @@ const csrfExemptRoutes = [
   // unaffected, which is why this stayed hidden.
   "/api/cron",
   "/api/admin/pledges/recover-dc", // Payment recovery; authed by CRON_SECRET bearer or SUPER_ADMIN session in-route
+  "/api/admin/grant-agreement-request", // Same: bearer or admin session in-route
   "/api/retailers/login", // Protected by CAPTCHA and rate limiting instead
   "/api/retailers/forgot-password", // Protected by CAPTCHA and rate limiting instead
   "/api/retailers/apply", // Protected by CAPTCHA instead
@@ -959,7 +960,10 @@ export async function proxy(req: NextRequest) {
   // (so it can be run from the server terminal for payment recovery), so it
   // must skip the ambient session-cookie gate below. The route still refuses
   // anything without the bearer or a SUPER_ADMIN session.
-  const bearerAuthedAdminOps = ["/api/admin/pledges/recover-dc"];
+  const bearerAuthedAdminOps = [
+    "/api/admin/pledges/recover-dc",
+    "/api/admin/grant-agreement-request",
+  ];
   const isAdminRoute =
     adminRoutes.some((route) => pathname.startsWith(route)) &&
     !bearerAuthedAdminOps.includes(pathname);
