@@ -356,16 +356,38 @@ export default function IndieKitPage() {
     }
   }, [selectedProjectId, backersPage]);
 
+  // Priority: prop from parent (when embedded) > URL param > localStorage.
+  // Applied only when the parent's project or the URL's project actually
+  // changes — never in response to the creator's own dropdown choice, which
+  // must not be overridden by a stale ?project= in the address bar.
+  const appliedSourceRef = useRef<string | null>(null);
   useEffect(() => {
-    // Priority: prop from parent (when embedded) > URL param > localStorage
-    const urlProject = searchParams?.get("project");
-    const savedProjectId = initialProjectId || urlProject || localStorage.getItem(SELECTED_PROJECT_KEY);
-    if (savedProjectId) {
-      setSelectedProjectId(savedProjectId);
-      localStorage.setItem(SELECTED_PROJECT_KEY, savedProjectId);
+    const urlProject = searchParams?.get("project") || null;
+    const source = initialProjectId || urlProject || null;
+    if (source !== appliedSourceRef.current) {
+      appliedSourceRef.current = source;
+      const savedProjectId = source || localStorage.getItem(SELECTED_PROJECT_KEY);
+      if (savedProjectId) {
+        setSelectedProjectId(savedProjectId);
+        localStorage.setItem(SELECTED_PROJECT_KEY, savedProjectId);
+      }
+    } else if (!isInitialized) {
+      const savedProjectId = localStorage.getItem(SELECTED_PROJECT_KEY);
+      if (savedProjectId) setSelectedProjectId(savedProjectId);
     }
     setIsInitialized(true);
-  }, [searchParams, initialProjectId]);
+  }, [searchParams, initialProjectId, isInitialized]);
+
+  const selectProject = useCallback((projectId: string) => {
+    setSelectedProjectId(projectId);
+    localStorage.setItem(SELECTED_PROJECT_KEY, projectId);
+    if (!initialProjectId && typeof window !== "undefined") {
+      const url = new URL(window.location.href);
+      url.searchParams.set("project", projectId);
+      appliedSourceRef.current = projectId;
+      window.history.replaceState(window.history.state, "", url.toString());
+    }
+  }, [initialProjectId]);
 
   useEffect(() => {
     if (isInitialized) {
@@ -623,10 +645,7 @@ export default function IndieKitPage() {
             </div>
           </div>
           <div className="flex items-center gap-2 sm:gap-4">
-            <Select value={selectedProjectId} onValueChange={(value) => {
-              setSelectedProjectId(value);
-              localStorage.setItem(SELECTED_PROJECT_KEY, value);
-            }}>
+            <Select value={selectedProjectId} onValueChange={selectProject}>
               <SelectTrigger className="w-[140px] sm:w-[180px]">
                 <SelectValue placeholder="Select project" />
               </SelectTrigger>
@@ -877,10 +896,7 @@ export default function IndieKitPage() {
                   projects={projects}
                   hasActiveCampaign={hasActiveCampaign}
                   selectedProjectId={selectedProjectId}
-                  onSelectProject={(projectId) => {
-                    setSelectedProjectId(projectId);
-                    localStorage.setItem(SELECTED_PROJECT_KEY, projectId);
-                  }}
+                  onSelectProject={selectProject}
                 />
               )}
 

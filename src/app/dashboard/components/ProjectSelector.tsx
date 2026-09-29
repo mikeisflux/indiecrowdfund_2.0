@@ -75,7 +75,9 @@ export function ProjectSelector({
                 {sortedProjects.map((p) => (
                   <CommandItem
                     key={p.id}
-                    value={p.title}
+                    // cmdk keys items by value; two campaigns with the same
+                    // title would otherwise pick whichever came first.
+                    value={`${p.title} ${p.id}`}
                     onSelect={() => {
                       onProjectChange(p.id);
                       setOpen(false);

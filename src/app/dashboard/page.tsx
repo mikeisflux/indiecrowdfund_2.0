@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useSession } from "@/components/providers/auth-provider";
@@ -128,14 +128,23 @@ export default function CreatorDashboard() {
     }
   }, [selectedProjectId, timeRange]);
 
-  // Handle URL param changes (e.g. navigating to /dashboard?project=xyz)
+  // Handle URL param changes (e.g. navigating to /dashboard?project=xyz).
+  //
+  // Only when the URL itself changes. This used to re-run on every
+  // selection change too, so on any page opened with ?project= (the
+  // IndieKit back link always adds it) picking another project in the
+  // dropdown was immediately overwritten by the URL's project — the
+  // switcher looked broken because it was.
+  const appliedUrlProjectRef = useRef<string | null>(null);
   useEffect(() => {
-    const urlProject = searchParams?.get("project");
-    if (urlProject && urlProject !== selectedProjectId) {
+    const urlProject = searchParams?.get("project") || null;
+    if (urlProject === appliedUrlProjectRef.current) return;
+    appliedUrlProjectRef.current = urlProject;
+    if (urlProject) {
       setSelectedProjectId(urlProject);
       localStorage.setItem(SELECTED_PROJECT_KEY, urlProject);
     }
-  }, [searchParams, selectedProjectId]);
+  }, [searchParams]);
 
   useEffect(() => {
     fetchDashboardData();
@@ -198,6 +207,14 @@ export default function CreatorDashboard() {
   const handleProjectChange = (projectId: string) => {
     setSelectedProjectId(projectId);
     localStorage.setItem(SELECTED_PROJECT_KEY, projectId);
+    // Keep the address bar in step so a refresh, a shared link, or the
+    // back button lands on the project the creator actually picked.
+    if (typeof window !== "undefined") {
+      const url = new URL(window.location.href);
+      url.searchParams.set("project", projectId);
+      appliedUrlProjectRef.current = projectId;
+      window.history.replaceState(window.history.state, "", url.toString());
+    }
   };
 
   if (loading && !data) {
