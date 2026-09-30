@@ -120,13 +120,24 @@ model CreatorChargebackCard {
   id        String @id @default(cuid())
   projectId String @unique
 
-  // PaymentCloud (NMI) Customer Vault id — preferred storage for new
-  // chargeback cards. Nullable for legacy rows that still use the
-  // encrypted PAN columns below.
+  // DivinityCoin vault — the current storage. The creator enters the card
+  // into Stripe Elements against DC's publishable key; DC verifies the CVC
+  // and billing address with a $0 authorization and returns a pm_ token.
+  // We never see the card number or CVC. Disputes are recouped by charging
+  // this token off-session (src/lib/payments/chargeback-recoup.ts).
+  divinityCoinPaymentMethodId String?   @unique
+  divinityCoinCustomerId      String?
+  divinityCoinSetupIntentId   String?
+  vaultVerifiedAt             DateTime?
+
+  // PaymentCloud (NMI) Customer Vault id. DEPRECATED — PaymentCloud was
+  // decommissioned, so these tokens cannot be charged. Rows with only this
+  // set need the creator to re-enter the card through the DC form.
   nmiCustomerVaultId String? @unique
 
-  // Encrypted card details (AES-256). DEPRECATED — only present for
-  // legacy rows. New saves leave these null and use nmiCustomerVaultId.
+  // Encrypted card details (AES-256). DEPRECATED — legacy rows only, and
+  // purged the moment the creator re-enters through the DC form. cvcEncrypted
+  // is always null: storing a security code is prohibited (PCI DSS 3.3.1).
   cardNumberEncrypted String? @db.Text
   expMonthEncrypted   String? @db.Text
   expYearEncrypted    String? @db.Text
@@ -597,4 +608,57 @@ model DivinityCoinTransaction {
   @@index([userId])
   @@index([pledgeId])
   @@index([createdAt])
+}
+
+// ============================================
+// Chargeback recoup
+// ============================================
+// One row per dispute we are collecting from the creator's protection card:
+// the disputed amount plus the pass-through dispute fee. Opened by
+// applyChargeback, charged off-session against the DC vault token, retried
+// on a backoff by the retry-chargeback-recoups cron, and withheld from the
+// creator's payout when the card can't be charged.
+model ChargebackRecoup {
+  id        String @id @default(cuid())
+  projectId String
+  pledgeId  String
+  creatorId String
+
+  disputeId String?
+  processor String?
+  reason    String?
+
+  disputedAmount Decimal @db.Decimal(10, 2)
+  feeAmount      Decimal @default(0) @db.Decimal(10, 2)
+  amount         Decimal @db.Decimal(10, 2) // disputedAmount + feeAmount
+
+  status        ChargebackRecoupStatus @default(PENDING)
+  attempts      Int                    @default(0)
+  nextAttemptAt DateTime?
+  lastError     String?
+
+  // Reused on every retry so a network-uncertain attempt never double-charges.
+  idempotencyKey        String  @unique
+  divinityCoinPaymentId String? @unique
+
+  chargedAt    DateTime?
+  heldBackAt   DateTime?
+  waivedAt     DateTime?
+  waivedById   String?
+  waivedReason String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+
+  @@index([projectId, status])
+  @@index([pledgeId])
+  @@index([status, nextAttemptAt])
+}
+
+enum ChargebackRecoupStatus {
+  PENDING
+  CHARGED
+  FAILED
+  HELD_BACK
+  WAIVED
 }

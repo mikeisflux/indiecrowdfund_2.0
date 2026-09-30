@@ -1,6 +1,7 @@
 "use client";
 
 import { apiFetch } from "@/lib/fetch-utils";
+import type { ChargebackCardStatus } from "./payment-sections/types";
 import { validateBankFields, parseBankCountry, type BankCountry } from "@/lib/bank-countries";
 import { useState, useEffect } from "react";
 import { useProjectStore } from "@/lib/stores/project-store";
@@ -58,29 +59,12 @@ export function PaymentStep() {
   const [isSavingBank, setIsSavingBank] = useState(false);
   // const [showResetConfirm, setShowResetConfirm] = useState(false); // Stripe Connect removed
 
-  // Chargeback card state
-  const [chargebackCard, setChargebackCard] = useState({
-    cardNumber: "",
-    expMonth: "",
-    expYear: "",
-    cvc: "",
-    billingName: "",
-    billingLine1: "",
-    billingLine2: "",
-    billingCity: "",
-    billingState: "",
-    billingZip: "",
-    billingCountry: "US",
-  });
-  const [chargebackCardStatus, setChargebackCardStatus] = useState<{
-    saved: boolean;
-    loading: boolean;
-    lastFour: string | null;
-    brand: string | null;
-    expMonth: number | null;
-    expYear: number | null;
-  }>({ saved: false, loading: true, lastFour: null, brand: null, expMonth: null, expYear: null });
-  const [isSavingCard, setIsSavingCard] = useState(false);
+  // Chargeback card state. Card data itself never lives in React state:
+  // the section hands it to Divinity Payments' Elements form directly.
+  const [chargebackCardStatus, setChargebackCardStatus] = useState<ChargebackCardStatus>({
+    saved: false,
+    loading: true,
+    vaulted: false, lastFour: null, brand: null, expMonth: null, expYear: null });
 
   // Save DivinityCoin bank account
   const handleSaveBankAccount = async () => {
@@ -184,76 +168,21 @@ export function PaymentStep() {
           setChargebackCardStatus({
             saved: data.exists,
             loading: false,
+            vaulted: !!data.vaulted,
             lastFour: data.lastFour || null,
             brand: data.brand || null,
             expMonth: data.expMonth || null,
             expYear: data.expYear || null,
           });
         } else {
-          setChargebackCardStatus({ saved: false, loading: false, lastFour: null, brand: null, expMonth: null, expYear: null });
+          setChargebackCardStatus({ saved: false, loading: false, vaulted: false, lastFour: null, brand: null, expMonth: null, expYear: null });
         }
       } catch {
-        setChargebackCardStatus({ saved: false, loading: false, lastFour: null, brand: null, expMonth: null, expYear: null });
+        setChargebackCardStatus({ saved: false, loading: false, vaulted: false, lastFour: null, brand: null, expMonth: null, expYear: null });
       }
     };
     checkChargebackCard();
   }, [projectId]);
-
-  // Save chargeback card
-  const handleSaveChargebackCard = async () => {
-    if (!projectId) {
-      toast.error("Please save your project first");
-      return;
-    }
-
-    const { cardNumber, expMonth, expYear, cvc, billingName, billingLine1, billingCity, billingState, billingZip, billingCountry } = chargebackCard;
-
-    if (!cardNumber || !expMonth || !expYear || !cvc) {
-      toast.error("Please fill in all card fields");
-      return;
-    }
-
-    if (!billingName || !billingLine1 || !billingCity || !billingState || !billingZip || !billingCountry) {
-      toast.error("Please fill in all billing address fields");
-      return;
-    }
-
-    setIsSavingCard(true);
-    try {
-      const response = await apiFetch(`/api/projects/${projectId}/chargeback-card`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", },
-        body: JSON.stringify(chargebackCard),
-      });
-
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || "Failed to save card");
-      }
-
-      const data = await response.json();
-      setChargebackCardStatus({
-        saved: true,
-        loading: false,
-        lastFour: data.lastFour,
-        brand: data.brand,
-        expMonth: data.expMonth,
-        expYear: data.expYear,
-      });
-      // Clear sensitive fields from local state
-      setChargebackCard(prev => ({
-        ...prev,
-        cardNumber: "",
-        cvc: "",
-      }));
-      toast.success("Chargeback protection card saved securely!");
-    } catch (error) {
-      console.error("Failed to save chargeback card:", error);
-      toast.error(error instanceof Error ? error.message : "Failed to save card");
-    } finally {
-      setIsSavingCard(false);
-    }
-  };
 
   // Stripe Connect was removed: the /api/stripe/connect endpoints it
   // called never existed on this app, and payouts run through
@@ -365,12 +294,8 @@ export function PaymentStep() {
           section so creators set up their recoup card first. */}
       <Separator />
       <ChargebackCardSection
-        chargebackCard={chargebackCard}
-        setChargebackCard={setChargebackCard}
         chargebackCardStatus={chargebackCardStatus}
         setChargebackCardStatus={setChargebackCardStatus}
-        isSavingCard={isSavingCard}
-        handleSaveChargebackCard={handleSaveChargebackCard}
         projectId={projectId}
       />
 

@@ -101,50 +101,19 @@ export interface RetailerAccessSectionProps {
   updatePayment: (data: Partial<ProjectPaymentData>) => void;
 }
 
+export interface ChargebackCardStatus {
+  saved: boolean;
+  loading: boolean;
+  /** Held as a DivinityCoin vault token (chargeable). False = legacy row needing re-entry. */
+  vaulted: boolean;
+  lastFour: string | null;
+  brand: string | null;
+  expMonth: number | null;
+  expYear: number | null;
+}
+
 export interface ChargebackCardSectionProps {
-  chargebackCard: {
-    cardNumber: string;
-    expMonth: string;
-    expYear: string;
-    cvc: string;
-    billingName: string;
-    billingLine1: string;
-    billingLine2: string;
-    billingCity: string;
-    billingState: string;
-    billingZip: string;
-    billingCountry: string;
-  };
-  setChargebackCard: React.Dispatch<React.SetStateAction<{
-    cardNumber: string;
-    expMonth: string;
-    expYear: string;
-    cvc: string;
-    billingName: string;
-    billingLine1: string;
-    billingLine2: string;
-    billingCity: string;
-    billingState: string;
-    billingZip: string;
-    billingCountry: string;
-  }>>;
-  chargebackCardStatus: {
-    saved: boolean;
-    loading: boolean;
-    lastFour: string | null;
-    brand: string | null;
-    expMonth: number | null;
-    expYear: number | null;
-  };
-  setChargebackCardStatus: React.Dispatch<React.SetStateAction<{
-    saved: boolean;
-    loading: boolean;
-    lastFour: string | null;
-    brand: string | null;
-    expMonth: number | null;
-    expYear: number | null;
-  }>>;
-  isSavingCard: boolean;
-  handleSaveChargebackCard: () => Promise<void>;
+  chargebackCardStatus: ChargebackCardStatus;
+  setChargebackCardStatus: React.Dispatch<React.SetStateAction<ChargebackCardStatus>>;
   projectId: string | null;
 }

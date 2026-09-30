@@ -97,6 +97,12 @@ the audit trail for past transactions.
 project's — so migrating a legacy campaign to another processor does not
 orphan its authorized pledges.
 
+### Card data never touches our servers — NO PAN, NO CVC, EVER
+- Creator chargeback protection cards are saved through the DivinityCoin vault: the browser confirms a SetupIntent with Stripe Elements against DC's publishable key (`src/components/project/builder/payment-sections/chargeback-card-section.tsx`), and we store only the `pm_` token on `CreatorChargebackCard.divinityCoinPaymentMethodId`
+- **Never** add a form field, API body, log line, or column that carries a full card number or a CVC/CVV. Storing a security code after authorization is prohibited by PCI DSS 3.3.1 in any form, encrypted or not, and would cost the platform its merchant account. `cvcEncrypted` exists only as a legacy column and is always null.
+- Disputes are recouped automatically by `src/lib/payments/chargeback-recoup.ts` (charge the vault token off-session, retry on backoff via `/api/cron/retry-chargeback-recoups`, withhold from payouts when exhausted). Do not build manual card-entry "recoup" paths.
+- The legacy admin "View card details" reveal exists only for pre-vault rows and goes away as creators re-enter their cards.
+
 ### Supported Creator Countries — KEEP THE GRANT AGREEMENT IN SYNC
 - The single source of truth for creator payout countries is `BANK_COUNTRY_OPTIONS` / `SUPPORTED_BANK_COUNTRIES` in `src/lib/bank-countries.ts`
 - It feeds the **Bank Country** dropdown in the campaign-creation payout step for **every** processor: DivinityCoin and Whop, plus the legacy PayPal payout section still shown to campaigns that ran on PayPal (`src/components/project/builder/payment-sections/*`)

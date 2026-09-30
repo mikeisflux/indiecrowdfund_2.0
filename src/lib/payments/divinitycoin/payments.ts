@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import { markRecoupChargedByPayment } from "@/lib/payments/chargeback-recoup";
 import { unwindCountedPledge } from "@/lib/payments/unwind-counted-pledge";
 import { releaseAddonSlots } from "@/lib/payments/rewards";
 import {
@@ -585,6 +586,18 @@ export async function handlePaymentSucceeded(
 
       paymentsDivinitycoinLogger.info(`[DivinityCoin] Upcharge payment recorded for pledge ${pledgeId}`);
       return { success: true, message: "Upcharge payment recorded" };
+    }
+
+    // A successful payment against a CHARGEBACK pledge is the creator's
+    // recoup charge (chargeDcSavedPaymentMethod keys charges by pledgeId).
+    // Confirm the recoup row in case the synchronous response was lost.
+    if (pledge.status === "CHARGEBACK") {
+      const matched = await markRecoupChargedByPayment(
+        pledge.id,
+        stripePI || paymentId,
+        data.amount != null ? Number(data.amount) : null
+      ).catch(() => false);
+      return { success: true, message: matched ? "Chargeback recoup confirmed" : "Pledge already CHARGEBACK" };
     }
 
     // Only process initial payments if the pledge is still PENDING

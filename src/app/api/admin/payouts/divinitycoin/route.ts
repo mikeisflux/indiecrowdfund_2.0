@@ -8,6 +8,7 @@ import { db } from "@/lib/db";
 import { sendPayoutCreatedEmail } from "@/lib/notifications/email-templates";
 import { calculateInternationalFees } from "@/lib/payouts/international-fees";
 import { loadChargebackCards } from "@/lib/payouts/chargeback-card-summary";
+import { outstandingRecoupTotal } from "@/lib/payments/chargeback-recoup";
 import {
   calculateDivinityCoinOwed,
   remainingToSettle,
@@ -141,6 +142,13 @@ export async function GET(request: NextRequest) {
       projectIds,
       [...new Set(projects.map((p) => p.creator.id))]
     );
+
+    // Dispute amounts we couldn't collect from the creator's card are
+    // withheld from the payout instead.
+    const recoupHoldbackByProject = new Map<string, number>();
+    for (const pid of projectIds) {
+      recoupHoldbackByProject.set(pid, await outstandingRecoupTotal(pid));
+    }
 
     // Get fully refunded pledges per project
     const refundedPledges = await db.pledge.findMany({
@@ -331,7 +339,8 @@ export async function GET(request: NextRequest) {
       const hasPendingSettlement = pendingSettlements.length > 0;
 
       // Remaining can be negative if creator was already paid and then refunds occurred
-      const remainingAmount = Math.round((amountOwed - amountSettled) * 100) / 100;
+      const recoupHoldback = recoupHoldbackByProject.get(project.id) || 0;
+      const remainingAmount = Math.round((amountOwed - amountSettled - recoupHoldback) * 100) / 100;
 
       const bankAccount = project.creator.divinityCoinBankAccount;
 
@@ -366,6 +375,7 @@ export async function GET(request: NextRequest) {
         totalFees,
         amountOwed,
         amountSettled,
+        recoupHoldback,
         remainingAmount,
         backerCount,
         hasBank: !!bankAccount,

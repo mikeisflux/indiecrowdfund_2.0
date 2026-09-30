@@ -80,8 +80,11 @@ export interface CreatorProject {
     expYear: number;
     source: "project" | "account";
     vaultTokenized: boolean;
+    processor?: "divinitycoin" | "paymentcloud" | "legacy";
     expired: boolean;
   } | null;
+  /** Dispute amounts not yet collected from the creator's card; withheld from remaining. */
+  recoupHoldback?: number;
   settlements: {
     id: string;
     amount: number;

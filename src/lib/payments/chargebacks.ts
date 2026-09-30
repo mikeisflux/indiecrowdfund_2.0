@@ -3,6 +3,8 @@ import { logger } from "@/lib/logger";
 import { reconcileStretchGoalsForPledge } from "@/lib/rewards/stretch-goals";
 import { withDisputeState } from "@/lib/payments/dispute-state";
 import { releaseAddonSlots } from "@/lib/payments/rewards";
+import { openChargebackRecoup } from "@/lib/payments/chargeback-recoup";
+import { banUserForChargeback } from "@/lib/bans";
 
 const chargebackLogger = logger.child({ module: "chargebacks" });
 
@@ -191,6 +193,33 @@ export async function applyChargeback(params: {
     chargebackLogger.error(
       { err: String(err), pledgeId },
       "Failed to revoke stretch goals after chargeback"
+    );
+  }
+
+  // Filing a chargeback is an immediate permanent ban (Chargeback Handling
+  // Policy). Source ban lives here; enforce-chargeback-bans propagates it.
+  try {
+    await banUserForChargeback({ userId: pledge.userId, pledgeId, disputeId, processor });
+  } catch (err) {
+    chargebackLogger.error({ err: String(err), pledgeId, userId: pledge.userId }, "Chargeback ban failed");
+  }
+
+  // Collect it from the creator's protection card. Runs after the
+  // bookkeeping so a card problem can never leave the pledge un-flagged;
+  // failures are recorded on the recoup row and retried by cron.
+  try {
+    await openChargebackRecoup({
+      pledgeId,
+      projectId: pledge.projectId,
+      disputedAmount: Number(pledge.amount),
+      processor,
+      disputeId,
+      reason,
+    });
+  } catch (err) {
+    chargebackLogger.error(
+      { err: String(err), pledgeId },
+      "Failed to open chargeback recoup"
     );
   }
 

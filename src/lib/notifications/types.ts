@@ -28,6 +28,8 @@ export type NotificationType =
   | "MARKETPLACE_SALE"
   | "MARKETPLACE_BOOK_APPROVED"
   | "MARKETPLACE_BOOK_REJECTED"
+  | "CHARGEBACK_RECEIVED"
+  | "CHARGEBACK_RECOUPED"
   | "SYSTEM";
 
 export interface CreateNotificationParams {

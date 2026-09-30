@@ -22,9 +22,11 @@ export interface ChargebackCardSummary {
   expYear: number;
   /** Which table the card came from. */
   source: "project" | "account";
-  /** True when stored as a PaymentCloud vault id (rechargeable). Legacy
-   *  encrypted-PAN rows are false — recouping those is a manual job. */
+  /** True when held as a DivinityCoin vault token (auto-chargeable).
+   *  Legacy encrypted-PAN rows and dead PaymentCloud vault ids are false —
+   *  the creator must re-enter the card before a dispute can be recouped. */
   vaultTokenized: boolean;
+  processor: "divinitycoin" | "paymentcloud" | "legacy";
   /** Expiry is in the past — the recoup charge would decline. */
   expired: boolean;
 }
@@ -55,6 +57,7 @@ export async function loadChargebackCards(
         expMonth: true,
         expYear: true,
         nmiCustomerVaultId: true,
+        divinityCoinPaymentMethodId: true,
       },
     }),
     db.creatorMarketplaceChargebackCard.findMany({
@@ -85,7 +88,12 @@ export async function loadChargebackCards(
           expMonth: projectCard.expMonth,
           expYear: projectCard.expYear,
           source: "project",
-          vaultTokenized: !!projectCard.nmiCustomerVaultId,
+          vaultTokenized: !!projectCard.divinityCoinPaymentMethodId,
+          processor: projectCard.divinityCoinPaymentMethodId
+            ? "divinitycoin"
+            : projectCard.nmiCustomerVaultId
+              ? "paymentcloud"
+              : "legacy",
           expired: isExpired(projectCard.expMonth, projectCard.expYear),
         };
       }
@@ -97,7 +105,9 @@ export async function loadChargebackCards(
           expMonth: userCard.expMonth,
           expYear: userCard.expYear,
           source: "account",
-          vaultTokenized: true, // vault id is NOT NULL on this table
+          // PaymentCloud is decommissioned; this token can't be charged.
+          vaultTokenized: false,
+          processor: "paymentcloud",
           expired: isExpired(userCard.expMonth, userCard.expYear),
         };
       }

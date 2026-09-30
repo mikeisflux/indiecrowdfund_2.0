@@ -61,10 +61,10 @@ interface BanMatch {
 //
 // What this does on each run:
 //   1. Load every banned User (bannedAt set), whatever the reason.
-//      These are the source bans we propagate from. (Bans are
-//      applied by the payment-processor dispute webhook handler or
-//      by SUPER_ADMIN action -- this cron does NOT create new
-//      source bans, only fan them out.)
+//      These are the source bans we propagate from. (Source bans are
+//      applied by applyChargeback via src/lib/bans.ts the moment a
+//      dispute lands, or by SUPER_ADMIN action -- this cron does NOT
+//      create new source bans, only fans them out.)
 //   2. Build two signal sets:
 //        - canonical lowercased emails
 //        - lastKnownIP values (skip nulls and obvious shared

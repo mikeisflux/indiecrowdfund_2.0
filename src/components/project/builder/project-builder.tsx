@@ -2,7 +2,7 @@
 
 import { apiFetch } from "@/lib/fetch-utils";
 import { useState, useRef, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useProjectStore, BUILDER_STEPS } from "@/lib/stores/project-store";
 import { BasicsStep } from "./basics-step";
 import { RewardsStep } from "./rewards-step";
@@ -32,6 +32,7 @@ import { toast } from "sonner";
 
 export function ProjectBuilder() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const {
     currentStep,
     setCurrentStep,
@@ -128,6 +129,18 @@ export function ProjectBuilder() {
   const isApproved = projectStatus === "APPROVED";
   const isLive = !!projectStatus && ["LIVE", "FUNDED", "PAUSED"].includes(projectStatus);
   const isSubmitted = projectStatus === "SUBMITTED";
+
+  // ?step=<id> opens a step directly (the chargeback-card banner links to
+  // the Payment step). Applied once per distinct value.
+  const handledStepRef = useRef<string | null>(null);
+  useEffect(() => {
+    const target = searchParams?.get("step");
+    if (!target || handledStepRef.current === target) return;
+    const index = BUILDER_STEPS.findIndex((st) => st.id === target);
+    if (index === -1) return;
+    handledStepRef.current = target;
+    setCurrentStep(index);
+  }, [searchParams, setCurrentStep]);
 
   const progress = ((currentStep + 1) / BUILDER_STEPS.length) * 100;
 

@@ -1,37 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { encrypt, decrypt, getLastDigits } from "@/lib/encryption";
+import { decrypt } from "@/lib/encryption";
 import { auditLog } from "@/lib/audit";
 
 export const dynamic = "force-dynamic";
-
-// Helper to detect card brand from number
-function detectCardBrand(cardNumber: string): string {
-  const num = cardNumber.replace(/\s/g, "");
-  if (/^4/.test(num)) return "Visa";
-  if (/^5[1-5]/.test(num) || /^2[2-7]/.test(num)) return "Mastercard";
-  if (/^3[47]/.test(num)) return "Amex";
-  if (/^6(?:011|5)/.test(num)) return "Discover";
-  return "Unknown";
-}
-
-// Luhn algorithm to validate card number
-function isValidLuhn(cardNumber: string): boolean {
-  const digits = cardNumber.replace(/\D/g, "");
-  let sum = 0;
-  let alternate = false;
-  for (let i = digits.length - 1; i >= 0; i--) {
-    let n = parseInt(digits[i], 10);
-    if (alternate) {
-      n *= 2;
-      if (n > 9) n -= 9;
-    }
-    sum += n;
-    alternate = !alternate;
-  }
-  return sum % 10 === 0;
-}
 
 // GET - Check if project has a chargeback card on file
 export async function GET(
@@ -76,15 +49,23 @@ export async function GET(
         expYear: true,
         createdAt: true,
         updatedAt: true,
+        divinityCoinPaymentMethodId: true,
+        vaultVerifiedAt: true,
       },
     });
 
     if (!card) {
-      return NextResponse.json({ exists: false });
+      return NextResponse.json({ exists: false, vaulted: false, needsReentry: false });
     }
 
+    const vaulted = !!card.divinityCoinPaymentMethodId;
     return NextResponse.json({
       exists: true,
+      // Only a DC-vaulted card can be charged for a dispute. Legacy rows
+      // (encrypted PAN / dead PaymentCloud vault) must be re-entered.
+      vaulted,
+      needsReentry: !vaulted,
+      verifiedAt: card.vaultVerifiedAt,
       lastFour: card.cardLastFour,
       brand: card.cardBrand,
       expMonth: card.expMonth,
@@ -100,180 +81,19 @@ export async function GET(
   }
 }
 
-// POST - Save or update chargeback card for project
-export async function POST(
-  req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const { id: projectId } = await params;
-
-    // Verify the user is the project creator
-    const project = await db.project.findUnique({
-      where: { id: projectId },
-      select: { creatorId: true },
-    });
-
-    if (!project) {
-      return NextResponse.json({ error: "Project not found" }, { status: 404 });
-    }
-
-    if (project.creatorId !== session.user.id) {
-      return NextResponse.json(
-        { error: "Only the project creator can set the chargeback card" },
-        { status: 403 }
-      );
-    }
-
-    const body = await req.json();
-    const {
-      cardNumber, expMonth, expYear, cvc,
-      billingName, billingLine1, billingLine2,
-      billingCity, billingState, billingZip, billingCountry,
-    } = body;
-
-    // Validation
-    const cleanCardNumber = (cardNumber || "").replace(/\s|-/g, "");
-    if (!cleanCardNumber || cleanCardNumber.length < 13 || cleanCardNumber.length > 19) {
-      return NextResponse.json(
-        { error: "Please enter a valid card number" },
-        { status: 400 }
-      );
-    }
-
-    if (!/^\d+$/.test(cleanCardNumber)) {
-      return NextResponse.json(
-        { error: "Card number must contain only digits" },
-        { status: 400 }
-      );
-    }
-
-    // Luhn check to validate card number format
-    if (!isValidLuhn(cleanCardNumber)) {
-      return NextResponse.json(
-        { error: "Invalid card number" },
-        { status: 400 }
-      );
-    }
-
-    const expMonthNum = parseInt(expMonth);
-    const expYearNum = parseInt(expYear);
-    if (!expMonthNum || expMonthNum < 1 || expMonthNum > 12) {
-      return NextResponse.json(
-        { error: "Invalid expiration month" },
-        { status: 400 }
-      );
-    }
-
-    if (!expYearNum || expYearNum < new Date().getFullYear()) {
-      return NextResponse.json(
-        { error: "Card is expired" },
-        { status: 400 }
-      );
-    }
-
-    if (!cvc || cvc.length < 3 || cvc.length > 4) {
-      return NextResponse.json(
-        { error: "Invalid CVC code" },
-        { status: 400 }
-      );
-    }
-
-    if (!billingName || !billingLine1 || !billingCity || !billingState || !billingZip || !billingCountry) {
-      return NextResponse.json(
-        { error: "All billing address fields are required" },
-        { status: 400 }
-      );
-    }
-
-    // Encrypt all sensitive data
-    const encryptedCardNumber = encrypt(cleanCardNumber);
-    const encryptedExpMonth = encrypt(String(expMonthNum));
-    const encryptedExpYear = encrypt(String(expYearNum));
-    // CVC is validated above (proves the creator has the card in hand)
-    // but NEVER stored: keeping a verification code after authorization is
-    // prohibited by PCI DSS in any form, encrypted or not. Manual recoup
-    // charges are MOTO transactions — PAN + expiry is what they need.
-    void cvc;
-    const encryptedBillingName = encrypt(billingName);
-    const encryptedBillingLine1 = encrypt(billingLine1);
-    const encryptedBillingLine2 = billingLine2 ? encrypt(billingLine2) : null;
-    const encryptedBillingCity = encrypt(billingCity);
-    const encryptedBillingState = encrypt(billingState);
-    const encryptedBillingZip = encrypt(billingZip);
-    const encryptedBillingCountry = encrypt(billingCountry);
-
-    // Display data
-    const lastFour = getLastDigits(cleanCardNumber, 4);
-    const brand = detectCardBrand(cleanCardNumber);
-
-    console.log(`[Chargeback Card] Card saved for project ${projectId}: ${brand} ****${lastFour}`);
-
-    // Upsert card for this project
-    await db.creatorChargebackCard.upsert({
-      where: { projectId },
-      update: {
-        cardNumberEncrypted: encryptedCardNumber,
-        expMonthEncrypted: encryptedExpMonth,
-        expYearEncrypted: encryptedExpYear,
-        cvcEncrypted: null,
-        billingNameEncrypted: encryptedBillingName,
-        billingLine1Encrypted: encryptedBillingLine1,
-        billingLine2Encrypted: encryptedBillingLine2,
-        billingCityEncrypted: encryptedBillingCity,
-        billingStateEncrypted: encryptedBillingState,
-        billingZipEncrypted: encryptedBillingZip,
-        billingCountryEncrypted: encryptedBillingCountry,
-        cardLastFour: lastFour,
-        cardBrand: brand,
-        expMonth: expMonthNum,
-        expYear: expYearNum,
-      },
-      create: {
-        projectId,
-        cardNumberEncrypted: encryptedCardNumber,
-        expMonthEncrypted: encryptedExpMonth,
-        expYearEncrypted: encryptedExpYear,
-        cvcEncrypted: null,
-        billingNameEncrypted: encryptedBillingName,
-        billingLine1Encrypted: encryptedBillingLine1,
-        billingLine2Encrypted: encryptedBillingLine2,
-        billingCityEncrypted: encryptedBillingCity,
-        billingStateEncrypted: encryptedBillingState,
-        billingZipEncrypted: encryptedBillingZip,
-        billingCountryEncrypted: encryptedBillingCountry,
-        cardLastFour: lastFour,
-        cardBrand: brand,
-        expMonth: expMonthNum,
-        expYear: expYearNum,
-      },
-    });
-
-    return NextResponse.json({
-      success: true,
-      lastFour,
-      brand,
-      expMonth: expMonthNum,
-      expYear: expYearNum,
-    });
-  } catch (error) {
-    console.error("Error saving chargeback card:", error);
-    if (error instanceof Error && error.message.includes("BANK_ACCOUNT_ENCRYPTION_KEY")) {
-      return NextResponse.json(
-        { error: "Server configuration error: encryption key not set" },
-        { status: 500 }
-      );
-    }
-    return NextResponse.json(
-      { error: "Failed to save chargeback card" },
-      { status: 500 }
-    );
-  }
+// POST - Retired. Card numbers no longer pass through this server at all:
+// the builder saves the card through the DivinityCoin vault
+// (./setup-intent then ./confirm). Kept as an explicit 410 so any stale
+// client build gets a clear message instead of a silent 404.
+export async function POST() {
+  return NextResponse.json(
+    {
+      error:
+        "Chargeback cards are now saved through the Divinity Payments secure form. Please reload the page and use the Add Card button.",
+      code: "USE_VAULT_FORM",
+    },
+    { status: 410 }
+  );
 }
 
 // GET admin endpoint to retrieve full (decrypted) card details
@@ -318,13 +138,14 @@ export async function PUT(
       details: { lastFour: card.cardLastFour, vaultTokenized: !!card.nmiCustomerVaultId },
     });
 
-    // Vault-tokenized cards never store the PAN on our side — the number
-    // lives in the PaymentCloud Customer Vault and is charged there.
-    // (Decrypting the null columns used to crash this endpoint.)
+    // Vault-tokenized cards never store the PAN on our side. DC-vaulted
+    // cards are charged from the admin payouts dialog (Charge now) or
+    // automatically by the dispute webhook; there is nothing to reveal.
     if (!card.cardNumberEncrypted) {
       return NextResponse.json({
         vaultOnly: true,
-        vaultId: card.nmiCustomerVaultId,
+        processor: card.divinityCoinPaymentMethodId ? "divinitycoin" : "paymentcloud",
+        vaultId: card.divinityCoinPaymentMethodId || card.nmiCustomerVaultId,
         lastFour: card.cardLastFour,
         brand: card.cardBrand,
         expMonth: card.expMonth,

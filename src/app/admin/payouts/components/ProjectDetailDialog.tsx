@@ -35,6 +35,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { format } from "date-fns";
 import { CreatorProject } from "./types";
 import { getSettlementBadge } from "./SettlementBadge";
+import { RecoupPanel } from "./RecoupPanel";
 
 interface ProjectDetailDialogProps {
   selectedProject: CreatorProject | null;
@@ -507,11 +508,13 @@ export function ProjectDetailDialog({
                         )}
                         {selectedProject.chargebackCard.vaultTokenized ? (
                           <Badge variant="outline" className="text-emerald-700 border-emerald-300">
-                            Vault — auto-chargeable
+                            Divinity vault — auto-chargeable
                           </Badge>
                         ) : (
-                          <Badge variant="outline" className="text-amber-700 border-amber-300">
-                            Card on file — charge manually
+                          <Badge variant="outline" className="text-red-700 border-red-300">
+                            {selectedProject.chargebackCard.processor === "paymentcloud"
+                              ? "PaymentCloud vault (dead) — re-entry required"
+                              : "Legacy card — re-entry required"}
                           </Badge>
                         )}
                       </div>
@@ -523,7 +526,15 @@ export function ProjectDetailDialog({
                       </p>
                     )}
 
-                    {selectedProject.chargebackCard.source === "project" ? (
+                    {!selectedProject.chargebackCard.vaultTokenized && (
+                      <p className="mt-3 text-xs text-red-600">
+                        This card can&apos;t be charged automatically. The creator sees a red banner on their
+                        dashboard asking them to re-enter it through the Divinity Payments secure form; any open
+                        recoup below is collected the moment they do.
+                      </p>
+                    )}
+
+                    {selectedProject.chargebackCard.source === "project" && !selectedProject.chargebackCard.vaultTokenized ? (
                       <div className="mt-3">
                         <Button
                           variant="outline"
@@ -602,6 +613,23 @@ export function ProjectDetailDialog({
                     </AlertDescription>
                   </Alert>
                 )}
+              </div>
+
+              {/* Chargeback recoups — every dispute on this campaign and what
+                  happened when we charged the creator's card for it. */}
+              <div>
+                <h4 className="font-medium mb-3">Chargeback Recoups</h4>
+                {selectedProject.recoupHoldback ? (
+                  <p className="text-xs text-red-600 mb-2">
+                    {formatCurrency(selectedProject.recoupHoldback)} in uncollected disputes is being withheld from
+                    the remaining payout.
+                  </p>
+                ) : null}
+                <RecoupPanel
+                  projectId={selectedProject.id}
+                  formatCurrency={formatCurrency}
+                  canCharge={!!selectedProject.chargebackCard?.vaultTokenized}
+                />
               </div>
 
               {/* Settlement History */}
