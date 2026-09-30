@@ -312,6 +312,10 @@ model ProjectReview {
   flagsRaised       String[]
   aiConfidenceScore Float?
 
+  // When the creator read this feedback on the login gate. Null = they
+  // haven't seen it yet, so the dashboard shows it before anything else.
+  acknowledgedAt DateTime?
+
   createdAt DateTime @default(now())
 
   @@index([projectId, createdAt])

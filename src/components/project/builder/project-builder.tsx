@@ -12,6 +12,7 @@ import { PaymentStep } from "./payment-step";
 import { PromotionStep } from "./promotion-step";
 import { VanityUrlSetupDialog } from "./vanity-url-setup-dialog";
 import { GrantAgreementDialog } from "@/components/grant/grant-agreement-dialog";
+import { ReviewFeedbackBanner } from "@/components/reviews/review-feedback-banner";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
@@ -973,6 +974,8 @@ export function ProjectBuilder() {
           </nav>
         </div>
       </div>
+
+      <ReviewFeedbackBanner projectId={projectId || null} />
 
       {/* Step Content */}
       <div className="container py-8">

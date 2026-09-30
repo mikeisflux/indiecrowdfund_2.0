@@ -13,6 +13,8 @@ import {
 } from "@/lib/email";
 import { auditLog } from "@/lib/audit";
 import { notifyProjectPublished, notifyPrelaunchPublished } from "@/lib/seo/indexing";
+import { createNotification } from "@/lib/notifications/core";
+import { REJECTION_REASON_LABELS } from "@/lib/reviews/pending-feedback";
 
 // Force dynamic - this route uses auth/headers
 export const dynamic = "force-dynamic";
@@ -207,6 +209,22 @@ export async function POST(req: NextRequest) {
         ? [db.user.update({ where: { id: project.creator.id }, data: { role: "CREATOR" } })]
         : []),
     ]);
+
+    // In-app notification, independent of the email checkbox. The login
+    // gate shows the full feedback; this is the bell entry pointing at it.
+    if (reviewAction === "REJECTED" || reviewAction === "REQUESTED_CHANGES") {
+      const reasonLabel = rejectionReason ? REJECTION_REASON_LABELS[rejectionReason] || rejectionReason : null;
+      await createNotification({
+        userId: project.creator.id,
+        type: "PROJECT_REVIEW",
+        title: reviewAction === "REJECTED" ? `"${project.title}" was not approved` : `Changes requested on "${project.title}"`,
+        message: `${reasonLabel ? `${reasonLabel}. ` : ""}${(notes || "").slice(0, 280)}${(notes || "").length > 280 ? "…" : ""}`,
+        actionUrl: "/dashboard",
+        projectId,
+      }).catch((notifyErr: unknown) =>
+        adminProjectsReviewLogger.warn({ err: String(notifyErr) }, "Review notification failed")
+      );
+    }
 
     // Send email notification if enabled
     if (sendEmail) {

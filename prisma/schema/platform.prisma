@@ -488,6 +488,8 @@ enum NotificationType {
   CHARGEBACK_RECEIVED
   CHARGEBACK_RECOUPED
   ORDER_LOCK_REQUESTED
+  // Creator-facing: a campaign was rejected or sent back for changes.
+  PROJECT_REVIEW
   SYSTEM
 }
 

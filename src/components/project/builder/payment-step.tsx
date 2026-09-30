@@ -8,7 +8,8 @@ import { useProjectStore } from "@/lib/stores/project-store";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { AlertTriangle, Loader2 } from "lucide-react";
+import { AlertTriangle, Loader2, FileSignature, ExternalLink } from "lucide-react";
+import Link from "next/link";
 import {
   CampaignTypeSection,
   ContactEmailSection,
@@ -275,6 +276,32 @@ export function PaymentStep() {
         whopTotalFees={whopTotalFees}
         whopNetAmount={whopNetAmount}
       />
+
+      <Separator />
+
+      {/* Grant Agreement — how funds are actually paid out. Creators sign it
+          when the campaign ends; they should be able to read it before they
+          commit to launching, not discover it at payout time. */}
+      <div className="rounded-lg border bg-muted/30 p-4 flex gap-3">
+        <FileSignature className="h-5 w-5 shrink-0 text-primary mt-0.5" aria-hidden="true" />
+        <div className="text-sm">
+          <p className="font-medium">How you get paid: the Grant Agreement</p>
+          <p className="text-muted-foreground mt-1">
+            Funds on IndieCrowdfund are disbursed to creators as grants through the Divinity Comics Grant
+            Program. When your campaign ends you&apos;ll sign the Grant Agreement and confirm your tax
+            information before your payout is created. Read it now so there are no surprises later.
+          </p>
+          <Link
+            href="/terms?tab=grant"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1 mt-2 font-medium text-primary underline underline-offset-4"
+          >
+            Read the Grant Agreement
+            <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
+          </Link>
+        </div>
+      </div>
 
       <Separator />
 
