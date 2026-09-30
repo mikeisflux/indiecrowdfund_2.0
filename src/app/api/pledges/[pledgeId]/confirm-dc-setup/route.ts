@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { getCustomerOrigin, withStoredOrigin } from "@/lib/payments/customer-origin";
 import { logger } from "@/lib/logger";
 import { commitDcPledge, getDcSetupIntent } from "@/lib/payments/divinitycoin";
 
@@ -151,6 +152,18 @@ export async function POST(
 
     if (!result.ok) {
       return NextResponse.json({ error: result.error }, { status: 500 });
+    }
+
+    // The card was entered on THIS request; this origin supersedes the one
+    // captured at checkout open. Best-effort: bookkeeping is already done.
+    try {
+      const fresh = await db.pledge.findFirst({ where: { id: pledge.id }, select: { metadata: true } });
+      await db.pledge.update({
+        where: { id: pledge.id },
+        data: { metadata: withStoredOrigin(fresh?.metadata, getCustomerOrigin(req), "card-saved") },
+      });
+    } catch (originErr) {
+      log.warn({ err: String(originErr), pledgeId: pledge.id }, "Could not record customer origin");
     }
 
     return NextResponse.json({

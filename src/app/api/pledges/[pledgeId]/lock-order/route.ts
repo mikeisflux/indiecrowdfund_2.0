@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { getCustomerOrigin } from "@/lib/payments/customer-origin";
 import { logger } from "@/lib/logger";
 import { formatError } from "@/lib/errors";
 import { z } from "zod";
@@ -162,6 +163,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ ple
             idempotencyKey: chargeState.attemptKey,
             projectId: pledge.projectId,
             description: `Order lock — ${pledge.project.title}`,
+            ...getCustomerOrigin(req),
           });
           if (charge.success && charge.status === "succeeded" && charge.paymentIntentId) {
             // Full completion: transaction row, stats, backer number, email.

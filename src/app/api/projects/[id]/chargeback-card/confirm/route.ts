@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { logger } from "@/lib/logger";
 import { formatError } from "@/lib/errors";
 import { auditLog } from "@/lib/audit";
+import { getCustomerOrigin } from "@/lib/payments/customer-origin";
 import {
   getDcSetupIntent,
   listDcPaymentMethods,
@@ -109,6 +110,9 @@ export async function POST(
     const brand = titleCaseBrand(pm?.brand);
     const expMonth = pm?.expMonth || 0;
     const expYear = pm?.expYear || 0;
+    // Recoup charges run off-session; DC gets the origin of THIS request
+    // (where the card was entered) as the customer origin for them.
+    const origin = getCustomerOrigin(req);
 
     await db.creatorChargebackCard.upsert({
       where: { projectId },
@@ -116,6 +120,8 @@ export async function POST(
         divinityCoinPaymentMethodId: paymentMethodId,
         divinityCoinSetupIntentId: setupIntentId,
         vaultVerifiedAt: new Date(),
+        savedFromIp: origin.customerIpAddress ?? null,
+        savedFromUserAgent: origin.customerUserAgent ?? null,
         cardLastFour: lastFour,
         cardBrand: brand,
         expMonth,
@@ -141,6 +147,8 @@ export async function POST(
         divinityCoinPaymentMethodId: paymentMethodId,
         divinityCoinSetupIntentId: setupIntentId,
         vaultVerifiedAt: new Date(),
+        savedFromIp: origin.customerIpAddress ?? null,
+        savedFromUserAgent: origin.customerUserAgent ?? null,
         cardLastFour: lastFour,
         cardBrand: brand,
         expMonth,

@@ -1,4 +1,5 @@
 import { callDivinityCoinAPI } from "./client";
+import { isValidCustomerIp } from "@/lib/payments/customer-origin";
 import { paymentsDivinitycoinLogger as log } from "./config";
 import type {
   PaymentMethodSummary,
@@ -156,6 +157,13 @@ export async function chargeDcSavedPaymentMethod(
   if (input.projectId) payload.projectId = input.projectId;
   if (input.description) payload.description = input.description;
   if (input.statement_descriptor) payload.statement_descriptor = input.statement_descriptor;
+  // Customer origin for dispute evidence and DC's ban prefilter. Only sent
+  // when we have a real end-user value; DC nulls anything malformed rather
+  // than failing the charge, but we validate before sending anyway.
+  if (input.customerIpAddress && isValidCustomerIp(input.customerIpAddress)) {
+    payload.customerIpAddress = input.customerIpAddress;
+  }
+  if (input.customerUserAgent) payload.customerUserAgent = input.customerUserAgent.slice(0, 512);
 
   const result = await callDivinityCoinAPI("charge-saved-payment-method", payload);
   if (!result.success || !result.data) {

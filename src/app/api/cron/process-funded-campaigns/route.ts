@@ -4,6 +4,7 @@ import { logger } from "@/lib/logger";
 
 const cronProcessFundedCampaignsLogger = logger.child({ module: "cron-process-funded-campaigns" });
 import { db } from "@/lib/db";
+import { readStoredOrigin } from "@/lib/payments/customer-origin";
 import { unwindCountedPledge } from "@/lib/payments/unwind-counted-pledge";
 import { getIndiekitSettings } from "@/lib/indiekit-settings";
 import { captureAuthorizedPaypalPledges } from "@/lib/payments/paypal";
@@ -171,6 +172,8 @@ async function captureDcPendingPledges(projectId: string): Promise<{
         idempotencyKey: chargeState.attemptKey,
         projectId,
         description: `Pledge to ${p.project.title}`,
+        // No browser here; send where the card was entered, or nothing.
+        ...readStoredOrigin(p.metadata),
       });
       if (charge.success && charge.status === "succeeded" && charge.paymentIntentId) {
         await db.pledge.update({

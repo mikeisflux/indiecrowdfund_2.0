@@ -4,6 +4,7 @@ import { logger } from "@/lib/logger";
 const pledgesAddItemsLogger = logger.child({ module: "pledges-add-items" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { getCustomerOrigin } from "@/lib/payments/customer-origin";
 import { getProjectStats } from "@/lib/stats";
 import {
   formatUnlockAmount,
@@ -297,6 +298,7 @@ export async function POST(
           idempotencyKey: upchargeIdempotencyKey,
           projectId: pledge.projectId,
           description: "Add-on items for existing pledge",
+          ...getCustomerOrigin(req),
         });
 
         if (!charge.success || charge.status !== "succeeded" || !charge.paymentIntentId) {

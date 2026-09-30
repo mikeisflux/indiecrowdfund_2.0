@@ -129,6 +129,10 @@ model CreatorChargebackCard {
   divinityCoinCustomerId      String?
   divinityCoinSetupIntentId   String?
   vaultVerifiedAt             DateTime?
+  // Where the card was entered; sent to DC as the customer origin on
+  // off-session recoup charges (no browser present at charge time).
+  savedFromIp        String?
+  savedFromUserAgent String?
 
   // PaymentCloud (NMI) Customer Vault id. DEPRECATED — PaymentCloud was
   // decommissioned, so these tokens cannot be charged. Rows with only this

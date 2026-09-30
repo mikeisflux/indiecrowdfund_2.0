@@ -185,6 +185,11 @@ export interface ChargeSavedPaymentMethodInput {
   projectId?: string;          // links the charge to the campaign on DC's reporting
   description?: string;        // shows up on DC's dashboard
   statement_descriptor?: string; // ≤22 chars; shows on the cardholder's statement
+  // Customer origin (PARTNER-CUSTOMER-ORIGIN spec). The end user's IP and
+  // browser, captured where the card was entered. Omitted when unknown —
+  // never our own server's address.
+  customerIpAddress?: string;    // 3–45 chars, IPv4/IPv6
+  customerUserAgent?: string;    // ≤512 chars
 }
 
 // One prior charge attempt against a pledge, from /lookup-payment. DC returns

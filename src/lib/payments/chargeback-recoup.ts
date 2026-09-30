@@ -6,6 +6,7 @@ import {
   lookupDcPayment,
 } from "@/lib/payments/divinitycoin/saved-cards";
 import { createNotification } from "@/lib/notifications/core";
+import { isValidCustomerIp, type CustomerOrigin } from "@/lib/payments/customer-origin";
 import {
   sendChargebackRecoupChargedEmail,
   sendChargebackRecoupFailedEmail,
@@ -29,10 +30,13 @@ const log = logger.child({ module: "chargeback-recoup" });
 //   HELD_BACK → retries exhausted; the amount is withheld from payouts instead
 //   WAIVED    → an admin decided not to collect (terminal)
 
-/** Dispute fee passed through to the creator, on top of the disputed amount. */
+/**
+ * Dispute fee passed through to the creator, on top of the disputed amount.
+ * $20 per dispute (platform policy). CHARGEBACK_RECOUP_FEE in .env overrides.
+ */
 export const CHARGEBACK_RECOUP_FEE_USD = Math.max(
   0,
-  Number(process.env.CHARGEBACK_RECOUP_FEE ?? "15") || 0
+  Number(process.env.CHARGEBACK_RECOUP_FEE ?? "20") || 20
 );
 
 const MAX_ATTEMPTS = 5;
@@ -47,6 +51,8 @@ export interface VaultedChargebackCard {
   paymentMethodId: string;
   cardBrand: string | null;
   cardLastFour: string;
+  /** Where the card was entered — sent to DC as the customer origin. */
+  origin: CustomerOrigin;
 }
 
 /**
@@ -64,6 +70,8 @@ export async function resolveVaultedChargebackCard(
       divinityCoinPaymentMethodId: true,
       cardBrand: true,
       cardLastFour: true,
+      savedFromIp: true,
+      savedFromUserAgent: true,
       project: { select: { creatorId: true } },
     },
   });
@@ -74,6 +82,10 @@ export async function resolveVaultedChargebackCard(
     paymentMethodId: card.divinityCoinPaymentMethodId,
     cardBrand: card.cardBrand,
     cardLastFour: card.cardLastFour,
+    origin: {
+      ...(isValidCustomerIp(card.savedFromIp) ? { customerIpAddress: card.savedFromIp } : {}),
+      ...(card.savedFromUserAgent ? { customerUserAgent: card.savedFromUserAgent } : {}),
+    },
   };
 }
 
@@ -220,6 +232,7 @@ export async function attemptRecoupCharge(
     projectId: recoup.projectId,
     description: `Chargeback recoup — ${ctx.projectTitle} (${ctx.backerLabel}${recoup.disputeId ? `, ${recoup.disputeId}` : ""})`,
     statement_descriptor: "ICF CHARGEBACK",
+    ...card.origin,
   });
 
   if (result.success && result.status !== "failed") {

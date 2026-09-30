@@ -100,7 +100,8 @@ orphan its authorized pledges.
 ### Card data never touches our servers — NO PAN, NO CVC, EVER
 - Creator chargeback protection cards are saved through the DivinityCoin vault: the browser confirms a SetupIntent with Stripe Elements against DC's publishable key (`src/components/project/builder/payment-sections/chargeback-card-section.tsx`), and we store only the `pm_` token on `CreatorChargebackCard.divinityCoinPaymentMethodId`
 - **Never** add a form field, API body, log line, or column that carries a full card number or a CVC/CVV. Storing a security code after authorization is prohibited by PCI DSS 3.3.1 in any form, encrypted or not, and would cost the platform its merchant account. `cvcEncrypted` exists only as a legacy column and is always null.
-- Disputes are recouped automatically by `src/lib/payments/chargeback-recoup.ts` (charge the vault token off-session, retry on backoff via `/api/cron/retry-chargeback-recoups`, withhold from payouts when exhausted). Do not build manual card-entry "recoup" paths.
+- Disputes are recouped automatically by `src/lib/payments/chargeback-recoup.ts` the moment the dispute webhook lands: disputed amount + the $20 dispute fee charged to the vault token off-session, retried on backoff via `/api/cron/retry-chargeback-recoups`, withheld from payouts when exhausted. Do not build manual card-entry "recoup" paths.
+- Every DivinityCoin charge carries the backer's real IP and User-Agent (`src/lib/payments/customer-origin.ts`): captured in the handler serving the browser, or read back from `Pledge.metadata.origin` / `CreatorChargebackCard.savedFromIp` for off-session charges. Never send the server's own address.
 - The legacy admin "View card details" reveal exists only for pre-vault rows and goes away as creators re-enter their cards.
 
 ### Supported Creator Countries — KEEP THE GRANT AGREEMENT IN SYNC

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { getCustomerOrigin, withStoredOrigin } from "@/lib/payments/customer-origin";
 import { z } from "zod";
 import {
   commitDcPledge,
@@ -579,6 +580,10 @@ export async function POST(req: NextRequest) {
             ? (resolvedShippingAddress as unknown as Record<string, unknown>)
             : undefined,
           ...(sourceCampaignId ? { sourceCampaignId } : {}),
+          // Remember where the backer checked out. Off-session charges
+          // (funded-campaign cron) have no browser, so this is what gets
+          // sent to DC as the customer origin for dispute evidence.
+          metadata: withStoredOrigin(undefined, getCustomerOrigin(req), "checkout"),
         };
 
         const pledge = reusablePledgeId
