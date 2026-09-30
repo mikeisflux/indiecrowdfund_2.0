@@ -384,10 +384,10 @@ const tabContent: Record<string, TabContent> = {
     title: 'Finalize Tab (Pre-Fulfillment)',
     description: 'The gate between Pre-Fulfillment and Fulfillment. This tab walks you through the irreversible steps that make Phase 2 safe: lock orders, charge final amounts owed (add-ons + shipping), and lock shipping addresses. Don\'t open it until 90%+ of backers have completed their survey.',
     howTo: [
-      { step: 'Step 1 — Lock Orders', detail: 'Click "Lock Orders". This freezes everyone\'s reward + add-on + variant selections. Backers cannot change tier or add-ons after this. Run only after surveys hit 90%+ completion.' },
+      { step: 'Step 1 — Lock Orders', detail: 'Click "Lock Orders". This freezes every submitted survey — those backers cannot change tier, add-ons, or variants after this. Backers who have NOT answered yet are never locked out: they can still submit, their survey locks itself the moment it comes in, and you get a notification plus a "Complete (late)" badge in the Backers tab so you know to include them in your next export or push.' },
       { step: 'Step 2 — Preview Charges', detail: 'Click "Preview Charges". IndieKit shows you a list of every backer who owes more (add-ons + shipping above what was pledged) along with the amount. Review the totals carefully.' },
       { step: 'Step 3 — Charge Cards', detail: 'Click "Charge Cards" to run the charges. Cards on file (saved during the original pledge for AoN, or a new payment method captured in survey) get charged in batch. Errored charges (expired cards, declined) move to "Charge Errored" status — handle from the Backers tab.' },
-      { step: 'Step 4 — Lock Addresses', detail: 'Click "Lock Addresses" to freeze shipping addresses. Backers can no longer change their shipping address from the survey link. Recommended: send a "last chance to update" email via Email Marketing 24–48 hours before locking.' },
+      { step: 'Step 4 — Lock Addresses', detail: 'Click "Lock Addresses" to freeze shipping addresses already on file. Those backers can no longer change their address from the survey link. A backer who still hasn\'t given an address can always add one — their first address is accepted and locked immediately. Recommended: send a "last chance to update" email via Email Marketing 24–48 hours before locking.' },
     ],
     tips: [
       'Send a heads-up email before each lock step. Backers understand "last chance" but resent surprise locks.',

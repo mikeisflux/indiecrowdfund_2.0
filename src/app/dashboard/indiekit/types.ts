@@ -84,6 +84,8 @@ export interface Backer {
   // back to false the moment DC's payment.succeeded webhook fires.
   needsMigrationPayment?: boolean;
   surveyCompleted: boolean;
+  /** Submitted after the creator locked orders (auto-locked on submit). */
+  surveyLate?: boolean;
   addressComplete: boolean;
   pledgeDate?: string;
   shippingAddress?: {

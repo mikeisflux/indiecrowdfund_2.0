@@ -5,7 +5,7 @@ import { toast } from "sonner";
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { RefreshCw } from "lucide-react";
+import { RefreshCw, Lock } from "lucide-react";
 import { loadStripe, Stripe } from "@stripe/stripe-js";
 
 import { SurveyData, SavedAddress, Step, ShippingAddressForm } from "./components/types";
@@ -225,7 +225,7 @@ export default function BackerSurveyPage() {
     if (data.survey.status === "DRAFT") {
       return "This survey hasn't been sent yet. Please wait for the creator to send it.";
     }
-    if (data.survey.status === "LOCKED") {
+    if (data.survey.status === "LOCKED" && data.response.isComplete) {
       return "This survey has been locked by the creator and can no longer be edited.";
     }
 
@@ -530,11 +530,20 @@ export default function BackerSurveyPage() {
 
   if (!data) return null;
 
-  const isAddressLocked = data.response.addressLocked || data.survey.addressesLocked;
+  // A creator lock freezes submitted answers. A backer who hasn't
+  // submitted yet still gets the full form — their answers lock
+  // themselves on submit — so nobody is ever shut out of giving an address.
   const isSurveyLocked = data.survey.status === "LOCKED";
+  const isLateSubmission =
+    data.lateSubmission ??
+    (!data.response.isComplete &&
+      (isSurveyLocked || data.survey.addressesLocked || data.response.addressLocked));
+  // The address step is only ever reached by an unsubmitted response, and
+  // a first-time address is never locked (nothing is on file to freeze).
+  const isAddressLocked = false;
 
-  // If survey is locked, show read-only notice
-  if (isSurveyLocked) {
+  // Locked and already submitted: read-only notice
+  if (isSurveyLocked && data.response.isComplete) {
     return <SurveyLockedState data={data} />;
   }
 
@@ -553,6 +562,17 @@ export default function BackerSurveyPage() {
     // clear of the floating support-chat button, which is fixed to the
     // bottom-right corner and was landing on top of "Skip Add-ons" on phones.
     <div className="max-w-2xl mx-auto space-y-6 pb-24 sm:pb-0">
+      {isLateSubmission && (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800 flex gap-3">
+          <Lock className="h-5 w-5 shrink-0 text-amber-600 mt-0.5" aria-hidden="true" />
+          <div>
+            <p className="font-medium">The creator has started finalizing orders — you can still respond.</p>
+            <p className="mt-1 text-amber-700">
+              Submit your survey now and it will lock automatically, so double-check your shipping address and selections before you finish. Once submitted, changes go through the creator.
+            </p>
+          </div>
+        </div>
+      )}
       <SurveyHeader
         data={data}
         steps={steps}

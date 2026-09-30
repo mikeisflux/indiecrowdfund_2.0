@@ -279,6 +279,13 @@ export async function GET(
       pledge.fulfillmentStatus !== "SHIPPED" &&
       pledge.fulfillmentStatus !== "DELIVERED";
 
+    // A creator lock (orders or addresses) freezes what is already on file.
+    // It never shuts out a backer who hasn't answered yet — their survey
+    // still goes through, and locks itself the moment it's submitted.
+    const lateSubmission =
+      !response.isComplete &&
+      (survey.status === "LOCKED" || survey.addressesLocked || response.addressLocked);
+
     return NextResponse.json({
       survey: {
         id: survey.id,
@@ -290,6 +297,7 @@ export async function GET(
         requiresShipping,
       },
       allowAddressChanges,
+      lateSubmission,
       pledge: {
         id: pledge.id,
         projectId: pledge.projectId,
@@ -439,13 +447,6 @@ export async function POST(
       );
     }
 
-    if (survey.status === "LOCKED") {
-      return NextResponse.json(
-        { error: "This survey has been locked by the creator and can no longer be edited." },
-        { status: 400 }
-      );
-    }
-
     // Get existing response with a select-for-update pattern to prevent concurrent submissions
     const existingResponse = await db.surveyResponse.findUnique({
       where: { pledgeId },
@@ -458,27 +459,30 @@ export async function POST(
       );
     }
 
-    // Prevent resubmission of already completed surveys
+    // Prevent resubmission of already completed surveys. A creator lock
+    // makes this final rather than "contact the creator".
     if (existingResponse.isComplete) {
       return NextResponse.json(
-        { error: "Survey has already been submitted. Contact the creator if you need to make changes." },
+        {
+          error:
+            survey.status === "LOCKED"
+              ? "This survey has been locked by the creator and can no longer be edited."
+              : "Survey has already been submitted. Contact the creator if you need to make changes.",
+        },
         { status: 400 }
       );
     }
 
+    // Creator locks (Lock Orders / Lock Addresses) only freeze answers
+    // already on file. A backer who hasn't submitted is never shut out:
+    // this response goes through and locks itself on submit (below), and
+    // the creator is told it arrived late. Locking used to 400 here, which
+    // stranded every straggler with no way to ever give an address.
+    const lateSubmission =
+      survey.status === "LOCKED" || survey.addressesLocked || existingResponse.addressLocked;
+
     const body = await req.json();
     const data = responseSchema.parse(body);
-
-    // Check if address is locked
-    if (existingResponse.addressLocked || survey.addressesLocked) {
-      // Can still update non-address fields, but not address
-      if (data.shippingAddress && JSON.stringify(data.shippingAddress) !== JSON.stringify(existingResponse.shippingAddress)) {
-        return NextResponse.json(
-          { error: "Address has been locked and cannot be changed" },
-          { status: 400 }
-        );
-      }
-    }
 
     // Validate required fields if submitting
     if (data.submit) {
@@ -616,6 +620,9 @@ export async function POST(
             : existingResponse.shippingAddress,
           isComplete: true,
           completedAt: new Date(),
+          // Auto-lock: submitted after the creator locked, so it is final
+          // immediately, same as everyone who answered on time.
+          ...(lateSubmission ? { addressLocked: true } : {}),
         },
       });
       if (result.count === 0) {
@@ -659,20 +666,38 @@ export async function POST(
       // separately, notify the creator when they asked to hear about
       // completions (Settings > Notifications > "Survey Completions").
       const completionSettings = await getIndiekitSettings(pledge.projectId);
-      if (completionSettings.notifications.surveyCompletions) {
+      // A late submission is always surfaced, whatever the notification
+      // toggle says: the creator may already have exported or pushed
+      // orders and needs to know one more just arrived.
+      if (completionSettings.notifications.surveyCompletions || lateSubmission) {
         const projectRow = await db.project.findFirst({
           where: { id: pledge.projectId },
           select: { creatorId: true, title: true },
         });
         if (projectRow) {
+          const who = pledge.backerNumber ? `Backer #${pledge.backerNumber}` : "A backer";
           await createNotification({
             userId: projectRow.creatorId,
             type: "SURVEY_RESPONSE",
-            title: "Survey completed",
-            message: `A backer completed their survey for "${projectRow.title}".`,
+            title: lateSubmission ? "Late survey submitted (auto-locked)" : "Survey completed",
+            message: lateSubmission
+              ? `${who} submitted their survey for "${projectRow.title}" after you locked orders. It has been locked automatically — add them to your next export or push.`
+              : `${who} completed their survey for "${projectRow.title}".`,
             actionUrl: `/dashboard/indiekit?project=${pledge.projectId}&tab=backers`,
             projectId: pledge.projectId,
           }).catch(() => {});
+          if (lateSubmission) {
+            await db.fulfillmentActivity
+              .create({
+                data: {
+                  projectId: pledge.projectId,
+                  pledgeId,
+                  type: "SURVEY_LATE_SUBMISSION",
+                  title: `${who} submitted their survey after orders were locked (auto-locked)`,
+                },
+              })
+              .catch(() => {});
+          }
         }
       }
       try {

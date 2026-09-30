@@ -13,6 +13,7 @@ const activityTypeMap: Record<string, string> = {
   SURVEY_SENT: "survey_reminder",
   SURVEY_REMINDER: "survey_reminder",
   SURVEY_COMPLETED: "survey_completed",
+  SURVEY_LATE_SUBMISSION: "survey_completed",
   ORDERS_LOCKED: "orders_pushed",
   ADDRESSES_LOCKED: "address_updated",
   CARDS_CHARGED: "cards_charged",

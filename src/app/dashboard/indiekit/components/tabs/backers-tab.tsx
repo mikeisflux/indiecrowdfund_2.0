@@ -976,9 +976,13 @@ export function BackersTab({
                   </TableCell>
                   <TableCell onClick={() => onOpenBackerDetail(backer)}>
                     {backer.surveyCompleted ? (
-                      <Badge variant="outline" className="text-green-600 border-green-200">
+                      <Badge
+                        variant="outline"
+                        className={backer.surveyLate ? "text-orange-600 border-orange-200" : "text-green-600 border-green-200"}
+                        title={backer.surveyLate ? "Submitted after you locked orders — locked automatically. Include this backer in your next export or push." : undefined}
+                      >
                         <Check className="h-3 w-3 mr-1" />
-                        Complete
+                        {backer.surveyLate ? "Complete (late)" : "Complete"}
                       </Badge>
                     ) : (
                       <Badge variant="outline" className="text-amber-600 border-amber-200">

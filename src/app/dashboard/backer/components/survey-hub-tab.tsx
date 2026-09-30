@@ -360,7 +360,7 @@ function SurveyCard({ survey, index, isPending }: SurveyCardProps) {
           {survey.surveyStatus === "locked" && (
             <Badge variant="outline" className="shrink-0">
               <Lock className="h-3 w-3 mr-1" />
-              Locked
+              {isPending ? "Finalizing — respond now" : "Locked"}
             </Badge>
           )}
         </div>

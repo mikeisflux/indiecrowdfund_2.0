@@ -429,7 +429,7 @@ export async function GET(req: NextRequest) {
     });
 
     // Process backers for display
-    const processedBackers = processBackers(pledges, surveyResponseMap);
+    const processedBackers = processBackers(pledges, surveyResponseMap, survey?.lockedAt ?? null);
 
     // Build package groups. Weight / customs saved via the Packages tab's
     // Edit Customs dialog live on FulfillmentProduct rows keyed by name.

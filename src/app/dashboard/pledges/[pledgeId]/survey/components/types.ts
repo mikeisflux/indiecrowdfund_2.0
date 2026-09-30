@@ -25,6 +25,11 @@ export interface SavedAddress {
 export interface SurveyData {
   /** Backer may still edit the shipping address on a submitted survey. */
   allowAddressChanges?: boolean;
+  /**
+   * The creator has locked orders/addresses but this backer hasn't
+   * submitted yet. The form stays open; the submission locks itself.
+   */
+  lateSubmission?: boolean;
   survey: {
     id: string;
     introTitle?: string;

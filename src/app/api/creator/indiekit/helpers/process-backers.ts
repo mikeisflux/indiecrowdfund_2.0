@@ -68,6 +68,8 @@ interface SurveyResponseForProcessing {
 export function processBackers(
   pledges: PledgeForProcessing[],
   surveyResponseMap: Map<string, SurveyResponseForProcessing>,
+  /** When the creator locked orders; responses completed after it are "late". */
+  surveyLockedAt?: Date | null,
 ) {
   // Deduplicate pledges by ID (in case of data issues)
   const seenPledgeIds = new Set<string>();
@@ -92,6 +94,12 @@ export function processBackers(
     // Locked orders are survey-complete too (the lock flow sets
     // pledge.surveyCompleted), even without a SurveyResponse row.
     const surveyIsComplete = surveyResponse?.isComplete || pledge.surveyCompleted === true;
+    // Submitted after Lock Orders: the creator may already have exported
+    // or pushed, so this one needs calling out in the table.
+    const surveyLate =
+      !!surveyLockedAt &&
+      !!surveyResponse?.completedAt &&
+      surveyResponse.completedAt > surveyLockedAt;
 
     // Map fulfillment status to our display status
     let status: "not_pushed" | "push_errored" | "pushed" | "shipped" = "not_pushed";
@@ -212,6 +220,7 @@ export function processBackers(
       paymentProcessor: pledge.paymentProcessor,
       needsMigrationPayment,
       surveyCompleted: surveyIsComplete,
+      surveyLate,
       addressComplete,
       pledgeDate: pledge.createdAt.toISOString(),
       shippingAddress: shippingAddress ? {
