@@ -34,3 +34,52 @@ export async function projectHasChargebackCard(
   ]);
   return !!(userLevel || perProject);
 }
+
+/** Campaign statuses for which a creator must hold a vaulted chargeback card. */
+export const CHARGEBACK_CARD_REQUIRED_STATUSES = [
+  "SUBMITTED",
+  "APPROVED",
+  "LIVE",
+  "PAUSED",
+  "FUNDED",
+] as const;
+
+export interface PendingChargebackCard {
+  id: string;
+  title: string;
+  status: string;
+  /** A pre-vault card exists (encrypted PAN or dead PaymentCloud token). */
+  hasLegacyCard: boolean;
+}
+
+/**
+ * The creator's campaigns whose chargeback card is not in the DivinityCoin
+ * vault. Drives the dashboard gate: a launched or launch-ready campaign with
+ * a missing or legacy card blocks the dashboard until the card is re-entered
+ * through the secure form. Legacy cards can't be charged for a dispute, so
+ * they count as missing.
+ */
+export async function pendingChargebackCards(userId: string): Promise<PendingChargebackCard[]> {
+  const projects = await db.project.findMany({
+    where: {
+      creatorId: userId,
+      deletedAt: null,
+      status: { in: [...CHARGEBACK_CARD_REQUIRED_STATUSES] },
+    },
+    select: {
+      id: true,
+      title: true,
+      status: true,
+      chargebackCard: { select: { divinityCoinPaymentMethodId: true } },
+    },
+    orderBy: { createdAt: "desc" },
+  });
+  return projects
+    .filter((p) => !p.chargebackCard?.divinityCoinPaymentMethodId)
+    .map((p) => ({
+      id: p.id,
+      title: p.title,
+      status: p.status,
+      hasLegacyCard: !!p.chargebackCard,
+    }));
+}

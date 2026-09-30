@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { pendingChargebackCards } from "@/lib/chargeback-card";
 
 export const dynamic = "force-dynamic";
 
@@ -14,34 +15,24 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const projects = await db.project.findMany({
-    where: {
-      creatorId: session.user.id,
-      deletedAt: null,
-      status: { in: ["SUBMITTED", "APPROVED", "LIVE", "PAUSED", "FUNDED"] },
-    },
-    select: {
-      id: true,
-      title: true,
-      slug: true,
-      status: true,
-      creator: { select: { vanityUrl: true } },
-      chargebackCard: { select: { divinityCoinPaymentMethodId: true } },
-    },
-    orderBy: { createdAt: "desc" },
+  const creator = await db.user.findFirst({
+    where: { id: session.user.id },
+    select: { vanityUrl: true },
   });
-
-  const pending = projects
-    .filter((p) => !p.chargebackCard?.divinityCoinPaymentMethodId)
-    .map((p) => ({
-      id: p.id,
-      title: p.title,
-      status: p.status,
-      hasLegacyCard: !!p.chargebackCard,
-      editUrl: p.creator.vanityUrl
-        ? `/projects/${p.creator.vanityUrl}/${p.slug}/edit`
-        : `/projects/${p.slug}/edit`,
-    }));
+  const rows = await pendingChargebackCards(session.user.id);
+  const slugs = rows.length
+    ? await db.project.findMany({
+        where: { id: { in: rows.map((r) => r.id) } },
+        select: { id: true, slug: true },
+      })
+    : [];
+  const slugById = new Map(slugs.map((s) => [s.id, s.slug]));
+  const pending = rows.map((p) => ({
+    ...p,
+    editUrl: creator?.vanityUrl
+      ? `/projects/${creator.vanityUrl}/${slugById.get(p.id)}/edit`
+      : `/projects/${slugById.get(p.id)}/edit`,
+  }));
 
   return NextResponse.json({ pending });
 }
