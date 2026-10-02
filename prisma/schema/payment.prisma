@@ -625,8 +625,10 @@ model DivinityCoinTransaction {
 model ChargebackRecoup {
   id        String @id @default(cuid())
   projectId String
-  pledgeId  String
+  // Null for OVERPAYMENT recoups (a project balance, not one pledge).
+  pledgeId  String?
   creatorId String
+  kind      RecoupKind @default(CHARGEBACK)
 
   disputeId String?
   processor String?
@@ -665,4 +667,12 @@ enum ChargebackRecoupStatus {
   FAILED
   HELD_BACK
   WAIVED
+  // Admin-owned campaign: never charged, logged as an internal loss and
+  // credited so the balance reads zero.
+  WRITTEN_OFF
+}
+
+enum RecoupKind {
+  CHARGEBACK // one disputed pledge + the dispute fee
+  OVERPAYMENT // creator paid out, then refunds/chargebacks left them owing
 }

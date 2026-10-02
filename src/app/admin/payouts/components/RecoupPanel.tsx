@@ -11,13 +11,14 @@ import { format } from "date-fns";
 
 interface Recoup {
   id: string;
-  pledgeId: string;
+  pledgeId: string | null;
+  kind: "CHARGEBACK" | "OVERPAYMENT";
   disputeId: string | null;
   reason: string | null;
   disputedAmount: number;
   feeAmount: number;
   amount: number;
-  status: "PENDING" | "CHARGED" | "FAILED" | "HELD_BACK" | "WAIVED";
+  status: "PENDING" | "CHARGED" | "FAILED" | "HELD_BACK" | "WAIVED" | "WRITTEN_OFF";
   attempts: number;
   nextAttemptAt: string | null;
   lastError: string | null;
@@ -35,6 +36,7 @@ const STATUS_BADGE: Record<Recoup["status"], { label: string; className: string;
   FAILED: { label: "Card failed — retrying", className: "bg-amber-100 text-amber-700", icon: AlertTriangle },
   HELD_BACK: { label: "Withheld from payout", className: "bg-red-100 text-red-700", icon: Ban },
   WAIVED: { label: "Waived", className: "bg-muted text-muted-foreground", icon: Ban },
+  WRITTEN_OFF: { label: "Internal loss (written off)", className: "bg-red-100 text-red-700", icon: Ban },
 };
 
 // Chargeback recoups for one project, with the two admin overrides:
@@ -137,11 +139,15 @@ export function RecoupPanel({
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <p className="font-medium">
-                  {r.backerNumber ? `Backer #${r.backerNumber}` : "Backer"}
-                  {r.backerName ? ` · ${r.backerName}` : ""} · {formatCurrency(r.amount)}
+                  {r.kind === "OVERPAYMENT"
+                    ? "Overpaid balance"
+                    : `${r.backerNumber ? `Backer #${r.backerNumber}` : "Backer"}${r.backerName ? ` · ${r.backerName}` : ""}`}
+                  {" · "}{formatCurrency(r.amount)}
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  {formatCurrency(r.disputedAmount)} disputed + {formatCurrency(r.feeAmount)} fee
+                  {r.kind === "OVERPAYMENT"
+                    ? "Paid out, then refunds/chargebacks left this owed back"
+                    : `${formatCurrency(r.disputedAmount)} disputed + ${formatCurrency(r.feeAmount)} fee`}
                   {r.reason ? ` · ${r.reason}` : ""}
                   {r.disputeId ? ` · ${r.disputeId}` : ""}
                   {" · "}opened {format(new Date(r.createdAt), "MMM d, yyyy")}
@@ -159,8 +165,8 @@ export function RecoupPanel({
                     {r.nextAttemptAt ? ` · next retry ${format(new Date(r.nextAttemptAt), "MMM d")}` : ""}
                   </p>
                 )}
-                {r.status === "WAIVED" && r.waivedReason && (
-                  <p className="text-xs text-muted-foreground">Waived: {r.waivedReason}</p>
+                {(r.status === "WAIVED" || r.status === "WRITTEN_OFF") && r.waivedReason && (
+                  <p className="text-xs text-muted-foreground">{r.status === "WRITTEN_OFF" ? "Written off" : "Waived"}: {r.waivedReason}</p>
                 )}
               </div>
               <Badge className={badge.className}>
@@ -208,7 +214,7 @@ export function RecoupPanel({
         );
       })}
       <p className="text-[11px] text-muted-foreground">
-        Dispute fee passed through to creators: {formatCurrency(fee)}. Amounts not collected are withheld from the payout above.
+        Dispute fee passed through to creators: {formatCurrency(fee)}. Collected amounts are credited back into the balance above.
       </p>
     </div>
   );

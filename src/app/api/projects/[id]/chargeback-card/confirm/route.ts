@@ -9,7 +9,7 @@ import {
   getDcSetupIntent,
   listDcPaymentMethods,
 } from "@/lib/payments/divinitycoin/saved-cards";
-import { retryOpenRecoupsForProject } from "@/lib/payments/chargeback-recoup";
+import { recoverProject } from "@/lib/payments/chargeback-recoup";
 
 const log = logger.child({ module: "chargeback-card-confirm" });
 
@@ -165,10 +165,11 @@ export async function POST(
     });
 
     // Anything we couldn't collect on the old card gets collected now.
-    const recouped = await retryOpenRecoupsForProject(projectId).catch((err) => {
-      log.warn({ err: formatError(err), projectId }, "retryOpenRecoupsForProject failed");
-      return 0;
+    const recovery = await recoverProject(projectId).catch((err) => {
+      log.warn({ err: formatError(err), projectId }, "recoverProject failed");
+      return null;
     });
+    const recouped = recovery?.charged ?? 0;
 
     return NextResponse.json({
       success: true,

@@ -83,8 +83,14 @@ export interface CreatorProject {
     processor?: "divinitycoin" | "paymentcloud" | "legacy";
     expired: boolean;
   } | null;
-  /** Dispute amounts not yet collected from the creator's card; withheld from remaining. */
+  /** Dispute amounts not yet collected from the creator's card (open recoups). */
   recoupHoldback?: number;
+  /** Already collected from the creator's card or written off; credited into remaining. */
+  recoveredCredit?: number;
+  /** Admin-owned campaign losses written off internally (shown in red, balance zeroed). */
+  writtenOff?: number;
+  /** Creator is ADMIN/SUPER_ADMIN: never charged; balances are written off instead. */
+  creatorIsAdmin?: boolean;
   settlements: {
     id: string;
     amount: number;

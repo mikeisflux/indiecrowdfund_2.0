@@ -6,9 +6,8 @@ const adminPayoutsDivinitycoinLogger = logger.child({ module: "admin-payouts-div
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { sendPayoutCreatedEmail } from "@/lib/notifications/email-templates";
-import { calculateInternationalFees } from "@/lib/payouts/international-fees";
 import { loadChargebackCards } from "@/lib/payouts/chargeback-card-summary";
-import { outstandingRecoupTotal } from "@/lib/payments/chargeback-recoup";
+import { computeDcPayoutMath, loadRecoveredCredits } from "@/lib/payouts/project-balance";
 import {
   calculateDivinityCoinOwed,
   remainingToSettle,
@@ -97,6 +96,7 @@ export async function GET(request: NextRequest) {
             name: true,
             email: true,
             image: true,
+            role: true,
             divinityCoinBankAccount: {
               select: {
                 id: true,
@@ -143,11 +143,27 @@ export async function GET(request: NextRequest) {
       [...new Set(projects.map((p) => p.creator.id))]
     );
 
-    // Dispute amounts we couldn't collect from the creator's card are
-    // withheld from the payout instead.
-    const recoupHoldbackByProject = new Map<string, number>();
-    for (const pid of projectIds) {
-      recoupHoldbackByProject.set(pid, await outstandingRecoupTotal(pid));
+    // Money already collected from the creator's card (or written off as an
+    // internal loss on admin-owned campaigns) is credited back into the
+    // balance so a recouped chargeback doesn't still read "owes back".
+    const [recoveredCredits, writeOffRows, openRecoupRows] = await Promise.all([
+      loadRecoveredCredits(projectIds),
+      db.chargebackRecoup.findMany({
+        where: { projectId: { in: projectIds }, status: "WRITTEN_OFF" },
+        select: { projectId: true, amount: true },
+      }),
+      db.chargebackRecoup.findMany({
+        where: { projectId: { in: projectIds }, status: { in: ["PENDING", "FAILED", "HELD_BACK"] } },
+        select: { projectId: true, amount: true },
+      }),
+    ]);
+    const writtenOffByProject = new Map<string, number>();
+    for (const w of writeOffRows) {
+      writtenOffByProject.set(w.projectId, Math.round(((writtenOffByProject.get(w.projectId) || 0) + Number(w.amount)) * 100) / 100);
+    }
+    const openRecoupByProject = new Map<string, number>();
+    for (const o of openRecoupRows) {
+      openRecoupByProject.set(o.projectId, Math.round(((openRecoupByProject.get(o.projectId) || 0) + Number(o.amount)) * 100) / 100);
     }
 
     // Get fully refunded pledges per project
@@ -293,54 +309,42 @@ export async function GET(request: NextRequest) {
         refunds: [],
       };
 
-      // Partial refunds need to be deducted from effective revenue
-      // (Full refunds are already excluded since pledge status is REFUNDED)
-      const effectiveRevenue = Math.round((totalRaised - projectRefunds.partialRefundTotal) * 100) / 100;
-
-      // Processor-specific fees:
-      //   DivinityCoin: 3% partner + $0.30/txn
-      // IndieCrowdfund Platform Fee: from platformSettings (default 3%)
-      const partnerFeeRate = 0.03;
-      const perTransactionRate = 0.30;
-      const platformFeeRate = configuredPlatformFeeRate;
-      const backerCount = project.pledges.length;
-      const processorFee = Math.round(effectiveRevenue * partnerFeeRate * 100) / 100;
-      const perTransactionFee = Math.round(perTransactionRate * backerCount * 100) / 100;
-      const partnerFee = Math.round((processorFee + perTransactionFee) * 100) / 100;
-      const platformFee = Math.round(effectiveRevenue * platformFeeRate * 100) / 100;
-      const platformAndProcessorFees = Math.round((partnerFee + platformFee) * 100) / 100;
-
-      // International wire surcharges only apply when the destination
-      // bank is non-US. CC fee is taken from the post-platform-fees
-      // subtotal so we don't pyramid the FX margin on top of our cut.
-      const subtotalAfterPlatformFees = Math.round((effectiveRevenue - platformAndProcessorFees) * 100) / 100;
-      const intlFees = calculateInternationalFees(
-        project.creator.divinityCoinBankAccount?.bankCountry,
-        subtotalAfterPlatformFees,
-      );
-      const totalFees = Math.round((platformAndProcessorFees + intlFees.totalInternationalFees) * 100) / 100;
-      const amountOwed = Math.round((effectiveRevenue - totalFees) * 100) / 100;
-
       const settlements = project.divinityCoinSettlements || [];
-
-      // Calculate amount already settled
       const completedSettlements = settlements.filter(
-        (s: { status: string }) => s.status === "COMPLETED"
+        (x: { status: string }) => x.status === "COMPLETED"
       );
       const amountSettled = completedSettlements.reduce(
-        (sum: number, s: { amount: unknown }) => sum + Number(s.amount),
+        (sum: number, x: { amount: unknown }) => sum + Number(x.amount),
         0
       );
-
-      // Check for pending/processing settlements
       const pendingSettlements = settlements.filter(
-        (s: { status: string }) => s.status === "PENDING" || s.status === "PROCESSING" || s.status === "INITIATED"
+        (x: { status: string }) => x.status === "PENDING" || x.status === "PROCESSING" || x.status === "INITIATED"
       );
       const hasPendingSettlement = pendingSettlements.length > 0;
 
-      // Remaining can be negative if creator was already paid and then refunds occurred
-      const recoupHoldback = recoupHoldbackByProject.get(project.id) || 0;
-      const remainingAmount = Math.round((amountOwed - amountSettled - recoupHoldback) * 100) / 100;
+      // Same math the recovery scan uses, so the red figure here is the
+      // figure that gets charged to the creator's card.
+      const backerCount = project.pledges.length;
+      const math = computeDcPayoutMath({
+        totalRaised,
+        partialRefundTotal: projectRefunds.partialRefundTotal,
+        backerCount,
+        bankCountry: project.creator.divinityCoinBankAccount?.bankCountry,
+        platformFeeRate: configuredPlatformFeeRate,
+        amountSettled,
+        recoveredCredit: recoveredCredits.get(project.id) || 0,
+      });
+      const { effectiveRevenue, partnerFee, platformFee, totalFees, amountOwed, remainingAmount } = math;
+      const processorFee = Math.round(effectiveRevenue * 0.03 * 100) / 100;
+      const perTransactionFee = Math.round(0.3 * backerCount * 100) / 100;
+      const intlFees = {
+        bankCountry: math.bankCountry,
+        isInternational: math.isInternational,
+        wireFee: math.wireFee,
+        currencyConversionFee: math.currencyConversionFee,
+      };
+      const recoupHoldback = openRecoupByProject.get(project.id) || 0;
+      const writtenOff = writtenOffByProject.get(project.id) || 0;
 
       const bankAccount = project.creator.divinityCoinBankAccount;
 
@@ -375,9 +379,12 @@ export async function GET(request: NextRequest) {
         totalFees,
         amountOwed,
         amountSettled,
+        recoveredCredit: math.recoveredCredit,
         recoupHoldback,
+        writtenOff,
         remainingAmount,
         backerCount,
+        creatorIsAdmin: project.creator.role === "ADMIN" || project.creator.role === "SUPER_ADMIN",
         hasBank: !!bankAccount,
         bankVerified: bankAccount?.isVerified || false,
         hasPendingSettlement,

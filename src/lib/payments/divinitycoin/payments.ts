@@ -530,6 +530,16 @@ export async function handlePaymentSucceeded(
     return { success: false, error: "pledgeId or purchaseId is required" };
   }
 
+  // Overpayment recoups carry a `recoup:<id>` key instead of a pledge id.
+  if (pledgeId.startsWith("recoup:")) {
+    const matched = await markRecoupChargedByPayment(
+      pledgeId,
+      stripePI || paymentId,
+      data.amount != null ? Number(data.amount) : null
+    ).catch(() => false);
+    return { success: true, message: matched ? "Overpayment recoup confirmed" : "Recoup already settled" };
+  }
+
   // Use best available payment reference
   const paymentRef = paymentId || stripePI || "none";
   paymentsDivinitycoinLogger.info(`[DivinityCoin] Payment succeeded: pledge=${pledgeId}, payment=${paymentRef}${holdId ? `, hold=${holdId}` : ""}${paymentMethodStr ? `, method=${paymentMethodStr}` : ""}`);

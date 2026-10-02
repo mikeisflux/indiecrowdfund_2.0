@@ -7,6 +7,9 @@ import {
   attemptRecoupCharge,
   waiveRecoup,
   openChargebackRecoup,
+  recoverProject,
+  recoverAllProjects,
+  writeOffProjectBalance,
   CHARGEBACK_RECOUP_FEE_USD,
 } from "@/lib/payments/chargeback-recoup";
 
@@ -28,7 +31,8 @@ async function requireAdmin() {
 function serialize(r: {
   id: string;
   projectId: string;
-  pledgeId: string;
+  pledgeId: string | null;
+  kind: string;
   disputeId: string | null;
   processor: string | null;
   reason: string | null;
@@ -49,6 +53,7 @@ function serialize(r: {
     id: r.id,
     projectId: r.projectId,
     pledgeId: r.pledgeId,
+    kind: r.kind,
     disputeId: r.disputeId,
     processor: r.processor,
     reason: r.reason,
@@ -82,7 +87,7 @@ export async function GET(req: NextRequest) {
     take: 200,
   });
 
-  const pledgeIds = [...new Set(rows.map((r: { pledgeId: string }) => r.pledgeId))];
+  const pledgeIds = [...new Set(rows.map((r: { pledgeId: string | null }) => r.pledgeId).filter((x: string | null): x is string => !!x))];
   const pledges = pledgeIds.length
     ? await db.pledge.findMany({
         where: { id: { in: pledgeIds } },
@@ -94,7 +99,7 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({
     fee: CHARGEBACK_RECOUP_FEE_USD,
     recoups: rows.map((r: Parameters<typeof serialize>[0]) => {
-      const p = byPledge.get(r.pledgeId);
+      const p = r.pledgeId ? byPledge.get(r.pledgeId) : undefined;
       return {
         ...serialize(r),
         backerNumber: p?.backerNumber ?? null,
@@ -160,6 +165,42 @@ export async function POST(req: NextRequest) {
       });
       const row = await db.chargebackRecoup.findUnique({ where: { id: res.recoupId } });
       return NextResponse.json({ ok: true, created: res.created, recoup: row ? serialize(row) : null });
+    }
+
+    // recover: { projectId } — open anything owed on one campaign and charge it
+    if (action === "recover") {
+      const projectId = typeof body.projectId === "string" ? body.projectId : "";
+      if (!projectId) return NextResponse.json({ error: "projectId is required" }, { status: 400 });
+      const r = await recoverProject(projectId);
+      return NextResponse.json({ ok: true, ...r });
+    }
+
+    // scan: every ended DivinityCoin campaign
+    if (action === "scan") {
+      const results = await recoverAllProjects();
+      const touched = results.filter((r) => r.chargebackRecoupsOpened || r.overpaymentOpened || r.charged || r.stillOpen);
+      return NextResponse.json({
+        ok: true,
+        scanned: results.length,
+        charged: results.reduce((s, r) => s + r.charged, 0),
+        stillOpen: results.reduce((s, r) => s + r.stillOpen, 0),
+        skippedAdmin: results.filter((r) => r.skipped === "admin").length,
+        results: touched,
+      });
+    }
+
+    // write-off: { projectId, reason } — admin-owned campaign, internal loss
+    if (action === "write-off") {
+      if (admin.role !== "SUPER_ADMIN") {
+        return NextResponse.json({ error: "Only a super admin can write off a balance" }, { status: 403 });
+      }
+      const projectId = typeof body.projectId === "string" ? body.projectId : "";
+      const reason = typeof body.reason === "string" ? body.reason.trim() : "";
+      if (!projectId || !reason) {
+        return NextResponse.json({ error: "projectId and reason are required" }, { status: 400 });
+      }
+      const r = await writeOffProjectBalance(projectId, admin.id, reason);
+      return NextResponse.json(r.ok ? { ok: true, amount: r.amount } : { error: r.error }, { status: r.ok ? 200 : 400 });
     }
 
     return NextResponse.json({ error: "Unknown action" }, { status: 400 });

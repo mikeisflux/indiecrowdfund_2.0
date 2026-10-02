@@ -6,6 +6,7 @@ import {
   lookupDcPayment,
 } from "@/lib/payments/divinitycoin/saved-cards";
 import { createNotification } from "@/lib/notifications/core";
+import { loadDcProjectBalance } from "@/lib/payouts/project-balance";
 import { isValidCustomerIp, type CustomerOrigin } from "@/lib/payments/customer-origin";
 import {
   sendChargebackRecoupChargedEmail,
@@ -38,6 +39,17 @@ export const CHARGEBACK_RECOUP_FEE_USD = Math.max(
   0,
   Number(process.env.CHARGEBACK_RECOUP_FEE ?? "20") || 20
 );
+
+const isAdminRole = (role: string) => role === "ADMIN" || role === "SUPER_ADMIN";
+
+/**
+ * The reconciliation key sent to DC as `pledgeId`. A chargeback recoup
+ * uses the disputed pledge; an overpayment recoup has no pledge, so it
+ * uses a `recoup:<id>` key that handlePaymentSucceeded recognises.
+ */
+export function dcPledgeKeyForRecoup(recoup: { id: string; pledgeId: string | null }): string {
+  return recoup.pledgeId ?? `recoup:${recoup.id}`;
+}
 
 const MAX_ATTEMPTS = 5;
 // 1 day, 3 days, 7 days, 14 days between retries.
@@ -120,14 +132,21 @@ export async function openChargebackRecoup(params: {
 
   const project = await db.project.findFirst({
     where: { id: params.projectId },
-    select: { creatorId: true },
+    select: { creatorId: true, creator: { select: { role: true } } },
   });
   if (!project) throw new Error(`Project ${params.projectId} not found`);
+
+  // Admin / super-admin owned campaigns are never charged. Their losses
+  // are written off from the payouts dialog instead (writeOffProjectBalance).
+  if (isAdminRole(project.creator.role)) {
+    return { recoupId: "", created: false };
+  }
 
   const disputed = Math.round(params.disputedAmount * 100) / 100;
   const fee = CHARGEBACK_RECOUP_FEE_USD;
   const row = await db.chargebackRecoup.create({
     data: {
+      kind: "CHARGEBACK",
       projectId: params.projectId,
       pledgeId: params.pledgeId,
       creatorId: project.creatorId,
@@ -161,19 +180,23 @@ interface RecoupContext {
   backerLabel: string;
 }
 
-async function loadContext(projectId: string, pledgeId: string): Promise<RecoupContext> {
+async function loadContext(projectId: string, pledgeId: string | null): Promise<RecoupContext> {
   const [project, pledge] = await Promise.all([
     db.project.findFirst({
       where: { id: projectId },
       select: { title: true, creator: { select: { email: true, name: true } } },
     }),
-    db.pledge.findFirst({ where: { id: pledgeId }, select: { backerNumber: true } }),
+    pledgeId ? db.pledge.findFirst({ where: { id: pledgeId }, select: { backerNumber: true } }) : null,
   ]);
   return {
     projectTitle: project?.title || "your campaign",
     creatorEmail: project?.creator.email ?? null,
     creatorName: project?.creator.name ?? null,
-    backerLabel: pledge?.backerNumber ? `Backer #${pledge.backerNumber}` : "a backer",
+    backerLabel: pledge?.backerNumber
+      ? `Backer #${pledge.backerNumber}`
+      : pledgeId
+        ? "a backer"
+        : "overpaid balance after refunds",
   };
 }
 
@@ -189,7 +212,7 @@ export async function attemptRecoupCharge(
 ): Promise<{ status: string; error?: string }> {
   const recoup = await db.chargebackRecoup.findUnique({ where: { id: recoupId } });
   if (!recoup) return { status: "missing", error: "Recoup not found" };
-  if (recoup.status === "CHARGED" || recoup.status === "WAIVED") {
+  if (recoup.status === "CHARGED" || recoup.status === "WAIVED" || recoup.status === "WRITTEN_OFF") {
     return { status: recoup.status };
   }
   if (recoup.status === "HELD_BACK" && !opts.force) {
@@ -202,8 +225,9 @@ export async function attemptRecoupCharge(
   // A retry after a network-uncertain attempt must not double-charge. DC
   // keeps idempotency keys for 24h; past that, check DC's record for a
   // succeeded charge matching this recoup before charging again.
+  const dcKey = dcPledgeKeyForRecoup(recoup);
   if (recoup.attempts > 0) {
-    const lookup = await lookupDcPayment(recoup.pledgeId);
+    const lookup = await lookupDcPayment(dcKey);
     if (lookup.success) {
       const prior = lookup.attempts.find(
         (a) =>
@@ -227,11 +251,14 @@ export async function attemptRecoupCharge(
     platformUserId: card.creatorId,
     paymentMethodId: card.paymentMethodId,
     amount: amountCents,
-    pledgeId: recoup.pledgeId,
+    pledgeId: dcKey,
     idempotencyKey: recoup.idempotencyKey,
     projectId: recoup.projectId,
-    description: `Chargeback recoup — ${ctx.projectTitle} (${ctx.backerLabel}${recoup.disputeId ? `, ${recoup.disputeId}` : ""})`,
-    statement_descriptor: "ICF CHARGEBACK",
+    description:
+      recoup.kind === "OVERPAYMENT"
+        ? `Overpayment recoup — ${ctx.projectTitle} (paid out, then refunds/chargebacks)`
+        : `Chargeback recoup — ${ctx.projectTitle} (${ctx.backerLabel}${recoup.disputeId ? `, ${recoup.disputeId}` : ""})`,
+    statement_descriptor: recoup.kind === "OVERPAYMENT" ? "ICF BALANCE DUE" : "ICF CHARGEBACK",
     ...card.origin,
   });
 
@@ -272,8 +299,14 @@ async function markRecoupCharged(
   await createNotification({
     userId: recoup.creatorId,
     type: "CHARGEBACK_RECOUPED",
-    title: "Chargeback recouped from your protection card",
-    message: `$${Number(recoup.amount).toFixed(2)} was charged to your chargeback protection card for a dispute on "${ctx.projectTitle}" (${ctx.backerLabel}).`,
+    title:
+      recoup.kind === "OVERPAYMENT"
+        ? "Overpaid balance collected from your protection card"
+        : "Chargeback recouped from your protection card",
+    message:
+      recoup.kind === "OVERPAYMENT"
+        ? `$${Number(recoup.amount).toFixed(2)} was charged to your chargeback protection card: "${ctx.projectTitle}" was paid out and later refunds/chargebacks left that amount owed back.`
+        : `$${Number(recoup.amount).toFixed(2)} was charged to your chargeback protection card for a dispute on "${ctx.projectTitle}" (${ctx.backerLabel}).`,
     actionUrl: "/dashboard",
     projectId: recoup.projectId,
   }).catch(() => {});
@@ -352,14 +385,18 @@ async function recordFailure(
  * (or one whose synchronous response we lost). Match it to the open row.
  */
 export async function markRecoupChargedByPayment(
-  pledgeId: string,
+  pledgeKey: string,
   paymentIntentId: string | null | undefined,
   amountCents: number | null | undefined
 ): Promise<boolean> {
-  const open = await db.chargebackRecoup.findFirst({
-    where: { pledgeId, status: { in: ["PENDING", "FAILED", "HELD_BACK"] } },
-    orderBy: { createdAt: "desc" },
-  });
+  const open = pledgeKey.startsWith("recoup:")
+    ? await db.chargebackRecoup.findFirst({
+        where: { id: pledgeKey.slice("recoup:".length), status: { in: ["PENDING", "FAILED", "HELD_BACK"] } },
+      })
+    : await db.chargebackRecoup.findFirst({
+        where: { pledgeId: pledgeKey, status: { in: ["PENDING", "FAILED", "HELD_BACK"] } },
+        orderBy: { createdAt: "desc" },
+      });
   if (!open) return false;
   if (amountCents != null && Math.round(Number(open.amount) * 100) !== amountCents) return false;
   const ctx = await loadContext(open.projectId, open.pledgeId);
@@ -387,4 +424,192 @@ export async function waiveRecoup(recoupId: string, adminId: string, reason: str
     data: { status: "WAIVED", waivedAt: new Date(), waivedById: adminId, waivedReason: reason.slice(0, 500) },
   });
   return res.count > 0;
+}
+
+// ── Recovery scan ────────────────────────────────────────────────────────
+//
+// Walks past history and collects whatever is owed:
+//   1. Every CHARGEBACK pledge with no recoup row (disputes from before
+//      automatic recoups) gets one, with the fee.
+//   2. A project whose payout balance is negative — paid out, then refunds
+//      or chargebacks took money back — gets an OVERPAYMENT recoup for the
+//      shortfall, so the creator's card is charged for the balance too.
+//   3. Everything open is charged if the creator's card is vaulted.
+// Admin / super-admin owned campaigns are skipped; they are written off.
+
+export interface ProjectRecoveryResult {
+  projectId: string;
+  title: string;
+  skipped?: "admin" | "not-dc";
+  chargebackRecoupsOpened: number;
+  overpaymentOpened: number | null; // amount, or null when balance isn't negative
+  charged: number;
+  stillOpen: number;
+}
+
+export async function recoverProject(projectId: string): Promise<ProjectRecoveryResult> {
+  const balance = await loadDcProjectBalance(projectId);
+  if (!balance) {
+    return { projectId, title: "", skipped: "not-dc", chargebackRecoupsOpened: 0, overpaymentOpened: null, charged: 0, stillOpen: 0 };
+  }
+  const result: ProjectRecoveryResult = {
+    projectId,
+    title: balance.title,
+    chargebackRecoupsOpened: 0,
+    overpaymentOpened: null,
+    charged: 0,
+    stillOpen: 0,
+  };
+  if (isAdminRole(balance.creatorRole)) {
+    result.skipped = "admin";
+    return result;
+  }
+
+  // 1. Disputes with no recoup yet.
+  const disputed = await db.pledge.findMany({
+    where: { projectId, status: "CHARGEBACK", deletedAt: null },
+    select: { id: true, amount: true, metadata: true },
+  });
+  if (disputed.length > 0) {
+    const covered = await db.chargebackRecoup.findMany({
+      where: { projectId, kind: "CHARGEBACK", pledgeId: { in: disputed.map((d) => d.id) } },
+      select: { pledgeId: true },
+    });
+    const coveredIds = new Set(covered.map((c: { pledgeId: string | null }) => c.pledgeId));
+    for (const p of disputed) {
+      if (coveredIds.has(p.id)) continue;
+      const meta = (p.metadata && typeof p.metadata === "object" ? p.metadata : {}) as {
+        dispute?: { disputeId?: string; reason?: string; processor?: string };
+      };
+      // Open without charging yet; the batch charge below handles it.
+      const idempotencyKey = `recoup:${p.id}:${meta.dispute?.disputeId || "manual"}`;
+      await db.chargebackRecoup.create({
+        data: {
+          kind: "CHARGEBACK",
+          projectId,
+          pledgeId: p.id,
+          creatorId: balance.creatorId,
+          disputeId: meta.dispute?.disputeId || null,
+          processor: meta.dispute?.processor || "backfill",
+          reason: meta.dispute?.reason || null,
+          disputedAmount: Number(p.amount),
+          feeAmount: CHARGEBACK_RECOUP_FEE_USD,
+          amount: Math.round((Number(p.amount) + CHARGEBACK_RECOUP_FEE_USD) * 100) / 100,
+          idempotencyKey,
+          status: "PENDING",
+        },
+      });
+      result.chargebackRecoupsOpened++;
+    }
+  }
+
+  // 2. Negative balance beyond what open chargeback recoups will recover.
+  //    Charged chargeback recoups are already credited into the balance;
+  //    pending ones will be, so don't double-collect them here.
+  const pendingPrincipal = await db.chargebackRecoup.findMany({
+    where: { projectId, status: { in: ["PENDING", "FAILED", "HELD_BACK"] } },
+    select: { kind: true, disputedAmount: true },
+  });
+  const pendingCredit = pendingPrincipal.reduce(
+    (sum: number, r: { disputedAmount: unknown }) => sum + Number(r.disputedAmount),
+    0
+  );
+  const hasOpenOverpayment = pendingPrincipal.some((r: { kind: string }) => r.kind === "OVERPAYMENT");
+  const shortfall = Math.round((-balance.remainingAmount - pendingCredit) * 100) / 100;
+  if (shortfall > 0 && !hasOpenOverpayment) {
+    await db.chargebackRecoup.create({
+      data: {
+        kind: "OVERPAYMENT",
+        projectId,
+        pledgeId: null,
+        creatorId: balance.creatorId,
+        processor: "payout-reconciliation",
+        reason: "Paid out, then refunds/chargebacks left a negative balance",
+        disputedAmount: shortfall,
+        feeAmount: 0,
+        amount: shortfall,
+        idempotencyKey: `recoup:overpay:${projectId}:${Date.now()}`,
+        status: "PENDING",
+      },
+    });
+    result.overpaymentOpened = shortfall;
+  }
+
+  // 3. Charge everything open.
+  const open = await db.chargebackRecoup.findMany({
+    where: { projectId, status: { in: ["PENDING", "FAILED", "HELD_BACK"] } },
+    select: { id: true },
+  });
+  for (const r of open) {
+    const res = await attemptRecoupCharge(r.id, { force: true }).catch(() => ({ status: "error" }));
+    if (res.status === "CHARGED") result.charged++;
+    else result.stillOpen++;
+  }
+  return result;
+}
+
+/** Every DivinityCoin campaign that has ended: open and charge what's owed. */
+export async function recoverAllProjects(): Promise<ProjectRecoveryResult[]> {
+  const now = new Date();
+  const projects = await db.project.findMany({
+    where: {
+      paymentProcessor: "DIVINITYCOIN",
+      deletedAt: null,
+      OR: [
+        { status: { in: ["FUNDED", "FAILED"] } },
+        { status: "LIVE", fundedAt: { not: null }, endDate: { lt: now } },
+      ],
+    },
+    select: { id: true },
+  });
+  const out: ProjectRecoveryResult[] = [];
+  for (const p of projects) {
+    out.push(
+      await recoverProject(p.id).catch((err) => {
+        log.error({ err: formatError(err), projectId: p.id }, "recoverProject threw");
+        return { projectId: p.id, title: "", chargebackRecoupsOpened: 0, overpaymentOpened: null, charged: 0, stillOpen: 0 };
+      })
+    );
+  }
+  return out;
+}
+
+/**
+ * Admin / super-admin owned campaign with a negative balance: record the
+ * loss and zero the balance. Logged as a WRITTEN_OFF recoup so the payout
+ * dialog shows the red figure with "internal loss" next to it, and the
+ * balance credit brings the remaining amount back to zero.
+ */
+export async function writeOffProjectBalance(
+  projectId: string,
+  adminId: string,
+  reason: string
+): Promise<{ ok: boolean; amount: number; error?: string }> {
+  const balance = await loadDcProjectBalance(projectId);
+  if (!balance) return { ok: false, amount: 0, error: "Not a DivinityCoin project" };
+  if (!isAdminRole(balance.creatorRole)) {
+    return { ok: false, amount: 0, error: "Only admin-owned campaigns can be written off; charge the creator's card instead" };
+  }
+  if (balance.remainingAmount >= 0) return { ok: false, amount: 0, error: "Balance is not negative" };
+  const amount = Math.round(-balance.remainingAmount * 100) / 100;
+  await db.chargebackRecoup.create({
+    data: {
+      kind: "OVERPAYMENT",
+      projectId,
+      pledgeId: null,
+      creatorId: balance.creatorId,
+      processor: "internal-write-off",
+      reason: reason.slice(0, 500),
+      disputedAmount: amount,
+      feeAmount: 0,
+      amount,
+      idempotencyKey: `writeoff:${projectId}:${Date.now()}`,
+      status: "WRITTEN_OFF",
+      waivedAt: new Date(),
+      waivedById: adminId,
+      waivedReason: reason.slice(0, 500),
+    },
+  });
+  log.warn({ projectId, adminId, amount }, "Admin-owned campaign balance written off as internal loss");
+  return { ok: true, amount };
 }

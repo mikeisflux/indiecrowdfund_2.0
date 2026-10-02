@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { logger } from "@/lib/logger";
 import { formatError } from "@/lib/errors";
-import { attemptRecoupCharge } from "@/lib/payments/chargeback-recoup";
+import { attemptRecoupCharge, recoverAllProjects } from "@/lib/payments/chargeback-recoup";
 
 const log = logger.child({ module: "cron-retry-chargeback-recoups" });
 
@@ -52,8 +52,22 @@ export async function GET(req: NextRequest) {
       else results.failed++;
     }
 
-    log.info(results, "Chargeback recoup retry tick");
-    return NextResponse.json({ ok: true, ...results });
+    // Once a day (the 03:xx UTC tick, or ?scan=1), walk every ended
+    // campaign for disputes without a recoup and negative balances.
+    const url = new URL(req.url);
+    const wantScan = url.searchParams.get("scan") === "1" || now.getUTCHours() === 3;
+    let scan: { scanned: number; charged: number; stillOpen: number } | undefined;
+    if (wantScan) {
+      const all = await recoverAllProjects();
+      scan = {
+        scanned: all.length,
+        charged: all.reduce((s, r) => s + r.charged, 0),
+        stillOpen: all.reduce((s, r) => s + r.stillOpen, 0),
+      };
+    }
+
+    log.info({ ...results, scan }, "Chargeback recoup retry tick");
+    return NextResponse.json({ ok: true, ...results, scan });
   } catch (error) {
     log.error({ err: formatError(error) }, "retry-chargeback-recoups failed");
     return NextResponse.json({ error: "Cron failed" }, { status: 500 });

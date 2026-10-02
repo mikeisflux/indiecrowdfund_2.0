@@ -8,6 +8,7 @@ import {
   Download,
   Banknote,
   RotateCcw,
+  Loader2,
   DollarSign,
 } from "lucide-react";
 import { format } from "date-fns";
@@ -179,6 +180,30 @@ export default function PayoutsPage() {
       setLoading(false);
     }
   }, [statusFilter, searchQuery]);
+
+  const [recoveringAll, setRecoveringAll] = useState(false);
+  const recoverAll = async () => {
+    setRecoveringAll(true);
+    try {
+      const res = await apiFetch("/api/admin/chargeback-recoups", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "scan" }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Scan failed");
+      toast.success(
+        `Scanned ${data.scanned} campaign(s): ${data.charged} recoup(s) charged, ${data.stillOpen} waiting on a creator's card` +
+          (data.skippedAdmin ? `, ${data.skippedAdmin} admin-owned skipped` : "")
+      );
+      fetchProjects();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Scan failed");
+    } finally {
+      setRecoveringAll(false);
+    }
+  };
+
 
   useEffect(() => {
     fetchProjects();
@@ -389,6 +414,16 @@ export default function PayoutsPage() {
           </Button>
           <Button
             variant="outline"
+            onClick={recoverAll}
+            disabled={recoveringAll}
+            className="flex-1 sm:flex-none border-red-300 text-red-700 hover:bg-red-50"
+            title="Scan every ended DivinityCoin campaign: open recoups for past chargebacks and overpaid balances, and charge creators' vaulted cards"
+          >
+            {recoveringAll ? <Loader2 className="w-4 h-4 sm:mr-2 animate-spin" /> : <RotateCcw className="w-4 h-4 sm:mr-2" />}
+            <span className="hidden sm:inline">Recover Owed Balances</span>
+          </Button>
+          <Button
+            variant="outline"
             onClick={() => { window.location.href = "/api/admin/grant-records"; }}
             className="flex-1 sm:flex-none"
             title="Grant Program record-keeping export: contributions, costs retained, grant amounts, agreement status"
@@ -563,6 +598,7 @@ export default function PayoutsPage() {
       <ProjectDetailDialog
         selectedProject={selectedProject}
         onClose={() => setSelectedProject(null)}
+        onRecovered={() => { setSelectedProject(null); fetchProjects(); }}
         onViewBankDetails={(id) =>
           viewBankDetails(id, selectedIsWhop ? "whop" : undefined)
         }

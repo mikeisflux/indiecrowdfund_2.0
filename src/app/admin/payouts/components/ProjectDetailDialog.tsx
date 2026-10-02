@@ -24,6 +24,7 @@ import { toast } from "sonner";
 import { apiFetch } from "@/lib/fetch-utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Dialog,
   DialogContent,
@@ -40,6 +41,8 @@ import { RecoupPanel } from "./RecoupPanel";
 interface ProjectDetailDialogProps {
   selectedProject: CreatorProject | null;
   onClose: () => void;
+  /** Called after a recovery / write-off so the listing reloads. */
+  onRecovered?: () => void;
   onViewBankDetails: (bankAccountId: string) => void;
   onCreateSettlement: (amount: string) => void;
   formatCurrency: (amount: number) => string;
@@ -48,6 +51,7 @@ interface ProjectDetailDialogProps {
 export function ProjectDetailDialog({
   selectedProject,
   onClose,
+  onRecovered,
   onViewBankDetails,
   onCreateSettlement,
   formatCurrency,
@@ -114,6 +118,54 @@ export function ProjectDetailDialog({
   // only). The dialog stays mounted across project selections, so track
   // per-project rather than a single flag.
   const [sentRequests, setSentRequests] = useState<Record<string, string>>({});
+
+  // Balance recovery: charge the creator's card for what they owe, or write
+  // off an admin-owned campaign's loss. Both reload the listing afterwards.
+  const [reconciling, setReconciling] = useState(false);
+  const [writeOffReason, setWriteOffReason] = useState("");
+  const recover = async (projectId: string) => {
+    setReconciling(true);
+    try {
+      const res = await apiFetch("/api/admin/chargeback-recoups", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "recover", projectId }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Recovery failed");
+      if (data.charged > 0) toast.success(`Charged the creator's card — ${data.charged} recoup(s) collected`);
+      else if (data.stillOpen > 0) toast.info(`Recoup opened (${data.stillOpen} waiting on the creator's card)`);
+      else toast.info("Nothing owed to recover");
+      onRecovered?.();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Recovery failed");
+    } finally {
+      setReconciling(false);
+    }
+  };
+  const writeOff = async (projectId: string) => {
+    if (!writeOffReason.trim()) {
+      toast.error("Give a reason for the write-off");
+      return;
+    }
+    setReconciling(true);
+    try {
+      const res = await apiFetch("/api/admin/chargeback-recoups", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "write-off", projectId, reason: writeOffReason.trim() }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Write-off failed");
+      toast.success(`Wrote off ${formatCurrency(data.amount)} as an internal loss`);
+      setWriteOffReason("");
+      onRecovered?.();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Write-off failed");
+    } finally {
+      setReconciling(false);
+    }
+  };
 
   const sendAgreementRequest = async (projectId: string) => {
     if (sendingRequest) return;
@@ -197,14 +249,57 @@ export function ProjectDetailDialog({
                 </div>
               </div>
 
-              {/* Overpaid Warning */}
+              {/* Overpaid: recover from the creator's card, or write off an admin-owned campaign */}
               {selectedProject.remainingAmount < 0 && (
                 <Alert className="border-red-200 bg-red-50">
                   <AlertTriangle className="h-4 w-4 text-red-600" />
-                  <AlertTitle className="text-red-800">Creator Overpaid</AlertTitle>
-                  <AlertDescription className="text-red-700">
-                    This creator has been paid {formatCurrency(Math.abs(selectedProject.remainingAmount))} more than owed due to refunds issued after settlement.
-                    This amount should be recovered from the creator or deducted from future payouts.
+                  <AlertTitle className="text-red-800">Creator Owes {formatCurrency(Math.abs(selectedProject.remainingAmount))}</AlertTitle>
+                  <AlertDescription className="text-red-700 space-y-2">
+                    <p>
+                      Paid out, then refunds or chargebacks took money back.
+                      {selectedProject.recoupHoldback
+                        ? ` ${formatCurrency(selectedProject.recoupHoldback)} is already queued against the creator's card (see Chargeback Recoups below).`
+                        : ""}
+                    </p>
+                    {selectedProject.creatorIsAdmin ? (
+                      <div className="flex flex-wrap items-center gap-2 pt-1">
+                        <span className="text-xs">Admin-owned campaign — never charged. Reconcile it as an internal loss:</span>
+                        <Input
+                          value={writeOffReason}
+                          onChange={(e) => setWriteOffReason(e.target.value)}
+                          placeholder="Reason (required)"
+                          className="h-8 w-56 bg-white"
+                          maxLength={200}
+                        />
+                        <Button size="sm" variant="destructive" disabled={reconciling} onClick={() => writeOff(selectedProject.id)}>
+                          {reconciling ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : null}
+                          Write off &amp; zero balance
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="flex flex-wrap items-center gap-2 pt-1">
+                        <Button size="sm" variant="destructive" disabled={reconciling} onClick={() => recover(selectedProject.id)}>
+                          {reconciling ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : null}
+                          Recover from creator&apos;s card
+                        </Button>
+                        {!selectedProject.chargebackCard?.vaultTokenized && (
+                          <span className="text-xs">
+                            No verified card yet — this opens the recoup now and charges automatically the moment the creator re-enters their card.
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  </AlertDescription>
+                </Alert>
+              )}
+
+              {/* Written-off losses on admin-owned campaigns: shown in red, balance reads zero */}
+              {!!selectedProject.writtenOff && selectedProject.writtenOff > 0 && (
+                <Alert className="border-red-200 bg-white">
+                  <AlertTriangle className="h-4 w-4 text-red-600" />
+                  <AlertTitle className="text-red-800">Internal loss: -{formatCurrency(selectedProject.writtenOff)}</AlertTitle>
+                  <AlertDescription className="text-muted-foreground">
+                    Written off on this admin-owned campaign and handled internally. The balance above is credited back to zero.
                   </AlertDescription>
                 </Alert>
               )}
@@ -360,6 +455,12 @@ export function ProjectDetailDialog({
                     <span>Already Settled</span>
                     <span>-{formatCurrency(selectedProject.amountSettled)}</span>
                   </div>
+                  {!!selectedProject.recoveredCredit && selectedProject.recoveredCredit > 0 && (
+                    <div className="flex justify-between text-emerald-600">
+                      <span>{selectedProject.writtenOff ? "Recovered / written off" : "Recovered from creator's card"}</span>
+                      <span>+{formatCurrency(selectedProject.recoveredCredit)}</span>
+                    </div>
+                  )}
                   <div className="border-t pt-2 flex justify-between font-bold text-lg">
                     <span>{selectedProject.remainingAmount < 0 ? "Creator Owes Back" : "Remaining"}</span>
                     <span className={
@@ -621,8 +722,7 @@ export function ProjectDetailDialog({
                 <h4 className="font-medium mb-3">Chargeback Recoups</h4>
                 {selectedProject.recoupHoldback ? (
                   <p className="text-xs text-red-600 mb-2">
-                    {formatCurrency(selectedProject.recoupHoldback)} in uncollected disputes is being withheld from
-                    the remaining payout.
+                    {formatCurrency(selectedProject.recoupHoldback)} is queued against the creator&apos;s card and not yet collected.
                   </p>
                 ) : null}
                 <RecoupPanel
