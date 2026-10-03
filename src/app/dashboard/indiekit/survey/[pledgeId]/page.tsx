@@ -260,7 +260,7 @@ export default function CreatorSurveyViewPage() {
             <AlertCircle className="h-8 w-8 mx-auto text-amber-500 mb-4" />
             <p className="text-muted-foreground">
               {data.orderLock
-                ? "This campaign uses Order Lock instead of a survey, so there are no survey questions to show. The confirmed order and address are above."
+                ? "No survey has been sent for this campaign yet. The locked order and confirmed address are above; send the survey to collect variants and answers."
                 : "No survey has been configured or sent for this project yet."}
             </p>
           </CardContent>

@@ -538,9 +538,10 @@ export default function BackerSurveyPage() {
     data.lateSubmission ??
     (!data.response.isComplete &&
       (isSurveyLocked || data.survey.addressesLocked || data.response.addressLocked));
-  // The address step is only ever reached by an unsubmitted response, and
-  // a first-time address is never locked (nothing is on file to freeze).
-  const isAddressLocked = false;
+  // A first-time address is never locked by a creator lock (nothing was on
+  // file to freeze), but an Order-Locked backer confirmed their address at
+  // lock time and the survey keeps it read-only.
+  const isAddressLocked = !!data.response.addressLocked && !!data.response.shippingAddress;
 
   // Locked and already submitted: read-only notice
   if (isSurveyLocked && data.response.isComplete) {

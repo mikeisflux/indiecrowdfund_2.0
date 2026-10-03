@@ -221,14 +221,16 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ ple
       chargeNote = "Your order is locked. Payment will be collected on the normal schedule for this campaign.";
     }
 
-    // Freeze + confirm: save address, mark locked, and treat as survey-complete
-    // so these backers flow into fulfillment and aren't re-surveyed.
+    // Freeze + confirm: save address and mark locked. The survey is a
+    // separate step and stays due — a lock confirms WHAT ships and WHERE,
+    // the survey collects variants and answers. Marking locked backers
+    // survey-complete here used to hide them from every survey send and
+    // reminder, so campaigns run on Order Lock never collected a survey.
     await db.pledge.update({
       where: { id: pledge.id },
       data: {
         orderLockStatus: "LOCKED",
         orderLockedAt: new Date(),
-        surveyCompleted: true,
         ...(shippingAddress ? { shippingAddress } : {}),
       },
     });

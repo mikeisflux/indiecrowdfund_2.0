@@ -902,7 +902,7 @@ export function BackerDialog({ open, onOpenChange, backer, availableAddons = [],
                       <div className="bg-muted/50 rounded-lg p-4 text-center">
                         <p className="text-sm text-muted-foreground">
                           {surveyData?.orderLock
-                            ? "This campaign uses Order Lock instead of a survey. The backer's confirmed reward, add-ons and shipping address are on the Details tab; there are no survey questions to show."
+                            ? "No survey has been sent for this campaign yet. The backer's locked reward, add-ons and shipping address are on the Details tab; send the survey to collect variants and answers."
                             : "No survey has been configured or sent for this project yet."}
                         </p>
                       </div>

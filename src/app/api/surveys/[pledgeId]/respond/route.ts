@@ -272,10 +272,12 @@ export async function GET(
     // submitted survey: the creator's toggle (IndieKit Settings > Survey),
     // no lock in place, and the order hasn't shipped.
     const projectSettings = await getIndiekitSettings(pledge.projectId);
+    const orderLocked = pledge.orderLockStatus === "LOCKED";
     const allowAddressChanges =
       projectSettings.survey.allowAddressChanges &&
       !survey.addressesLocked &&
       !response.addressLocked &&
+      !orderLocked &&
       pledge.fulfillmentStatus !== "SHIPPED" &&
       pledge.fulfillmentStatus !== "DELIVERED";
 
@@ -317,9 +319,10 @@ export async function GET(
       response: {
         itemResponses: response.itemResponses,
         backerResponses: response.backerResponses,
-        shippingAddress: response.shippingAddress,
+        // A locked order's confirmed address is the address, full stop.
+        shippingAddress: orderLocked && pledge.shippingAddress ? pledge.shippingAddress : response.shippingAddress,
         isComplete: response.isComplete,
-        addressLocked: response.addressLocked,
+        addressLocked: response.addressLocked || orderLocked,
         selectedAddons: {},
       },
     });
@@ -377,14 +380,11 @@ export async function POST(
       );
     }
 
-    // Order lock freeze: once a backer has locked their order it can no
-    // longer be changed (address / rewards / add-ons are final for print).
-    if (pledge.orderLockStatus === "LOCKED") {
-      return NextResponse.json(
-        { error: "Your order is locked and can no longer be changed." },
-        { status: 403 }
-      );
-    }
+    // Order lock: the reward, add-ons and address are frozen, but the
+    // survey (variants, questions) is still owed. Refusing the whole
+    // submission here stranded every locked backer with "survey pending"
+    // forever. The address freeze is enforced below instead.
+    const orderLocked = pledge.orderLockStatus === "LOCKED";
 
     // Only backers with a fully COMPLETED pledge may submit survey responses.
     // PENDING/FAILED/REFUNDED/CANCELLED/CHARGEBACK pledges are not real backers
@@ -483,6 +483,12 @@ export async function POST(
 
     const body = await req.json();
     const data = responseSchema.parse(body);
+
+    // A locked order's address was confirmed at lock time and is final:
+    // the survey keeps that address regardless of what the form sends.
+    if (orderLocked && pledge.shippingAddress) {
+      data.shippingAddress = pledge.shippingAddress as typeof data.shippingAddress;
+    }
 
     // Validate required fields if submitting
     if (data.submit) {

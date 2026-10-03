@@ -373,7 +373,7 @@ const tabContent: Record<string, TabContent> = {
     tips: [
       'Order Lock is optional — use it when you want to freeze orders early and start production without waiting for the campaign to end.',
       'A backer who declines ("I need to make changes first") stays unlocked and keeps their normal survey — follow up if you need their order sooner.',
-      'Locked backers skip the fulfillment survey, so make sure your lock request captures everything you need (address, variants, add-ons) before you send it.',
+      'Locking does NOT replace the survey. A lock freezes the reward, add-ons and shipping address; variants and questions still come from the survey, so send it as normal — locked backers stay "Survey pending" until they answer. Their confirmed address carries into the survey as read-only.',
     ],
     gotchas: [
       'Locking is final for the backer — reward, add-ons, and address can no longer be changed once locked.',
