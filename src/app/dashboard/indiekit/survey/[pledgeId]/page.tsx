@@ -20,6 +20,8 @@ import {
 import { fetchWithRetry } from "@/lib/fetch-utils";
 
 interface SurveyData {
+  /** Set when the backer confirmed their order through Order Lock. */
+  orderLock?: { status: "LOCKED"; lockedAt?: string | null; charged: boolean } | null;
   survey: {
     id: string;
     introTitle?: string;
@@ -215,11 +217,52 @@ export default function CreatorSurveyViewPage() {
         </CardContent>
       </Card>
 
+      {data.orderLock && (
+        <Card className="border-emerald-200 bg-emerald-50 dark:bg-emerald-950/30 dark:border-emerald-900">
+          <CardContent className="py-4">
+            <p className="font-medium text-emerald-800 dark:text-emerald-300 flex items-center gap-2">
+              <CheckCircle className="h-5 w-5" />
+              Order confirmed &amp; locked by the backer
+              {data.orderLock.lockedAt ? ` on ${new Date(data.orderLock.lockedAt).toLocaleDateString()}` : ""}
+            </p>
+            <p className="text-sm text-emerald-700 dark:text-emerald-400 mt-1">
+              The backer confirmed the reward, add-ons and shipping address on this page through the Order Lock
+              request{data.orderLock.charged ? " and their payment is collected" : ""}. The order is frozen for print and shipping.
+            </p>
+          </CardContent>
+        </Card>
+      )}
+
+      {!survey && response?.shippingAddress?.line1 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <MapPin className="h-5 w-5 text-teal-600" />
+              Shipping Address
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="text-sm">
+            {response.shippingAddress.name && <p className="font-medium">{response.shippingAddress.name}</p>}
+            <p>{response.shippingAddress.line1}</p>
+            {response.shippingAddress.line2 && <p>{response.shippingAddress.line2}</p>}
+            <p>
+              {[response.shippingAddress.city, response.shippingAddress.state].filter(Boolean).join(", ")} {response.shippingAddress.postalCode}
+            </p>
+            <p>{response.shippingAddress.country}</p>
+            {response.shippingAddress.phone && <p className="text-muted-foreground">{response.shippingAddress.phone}</p>}
+          </CardContent>
+        </Card>
+      )}
+
       {!survey ? (
         <Card>
           <CardContent className="py-12 text-center">
             <AlertCircle className="h-8 w-8 mx-auto text-amber-500 mb-4" />
-            <p className="text-muted-foreground">No survey has been configured or sent for this project yet.</p>
+            <p className="text-muted-foreground">
+              {data.orderLock
+                ? "This campaign uses Order Lock instead of a survey, so there are no survey questions to show. The confirmed order and address are above."
+                : "No survey has been configured or sent for this project yet."}
+            </p>
           </CardContent>
         </Card>
       ) : (

@@ -91,6 +91,8 @@ interface SurveyData {
     status: string;
     addressesLocked: boolean;
   } | null;
+  /** Set when the backer confirmed their order through Order Lock. */
+  orderLock?: { status: "LOCKED"; lockedAt?: string | null; charged: boolean } | null;
   questions: {
     itemQuestions: {
       id: string;
@@ -862,7 +864,21 @@ export function BackerDialog({ open, onOpenChange, backer, availableAddons = [],
                 ) : (
                   <div className="space-y-4">
                     {/* Status message */}
-                    {backer.surveyCompleted ? (
+                    {surveyData?.orderLock ? (
+                      <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 dark:bg-emerald-950/30 dark:border-emerald-900">
+                        <p className="text-sm font-medium text-emerald-800 dark:text-emerald-300 flex items-center gap-2">
+                          <Check className="h-4 w-4" />
+                          Order confirmed &amp; locked by the backer
+                          {surveyData.orderLock.lockedAt
+                            ? ` on ${new Date(surveyData.orderLock.lockedAt).toLocaleDateString()}`
+                            : ""}
+                        </p>
+                        <p className="text-xs text-emerald-700 dark:text-emerald-400 mt-1">
+                          They confirmed the reward, add-ons and shipping address shown on this card through the Order Lock
+                          request{surveyData.orderLock.charged ? " and their payment is collected" : ""}. The order is frozen for print and shipping.
+                        </p>
+                      </div>
+                    ) : backer.surveyCompleted ? (
                       <p className="text-sm text-muted-foreground">
                         This backer has completed their survey. View their responses below.
                       </p>
@@ -884,7 +900,11 @@ export function BackerDialog({ open, onOpenChange, backer, availableAddons = [],
                     {/* Survey not configured/sent yet */}
                     {!surveyData?.survey ? (
                       <div className="bg-muted/50 rounded-lg p-4 text-center">
-                        <p className="text-sm text-muted-foreground">No survey has been configured or sent for this project yet.</p>
+                        <p className="text-sm text-muted-foreground">
+                          {surveyData?.orderLock
+                            ? "This campaign uses Order Lock instead of a survey. The backer's confirmed reward, add-ons and shipping address are on the Details tab; there are no survey questions to show."
+                            : "No survey has been configured or sent for this project yet."}
+                        </p>
                       </div>
                     ) : (
                       <>

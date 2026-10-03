@@ -83,15 +83,40 @@ export async function GET(
       },
     });
 
+    // Order Lock confirmation. A campaign can run entirely on lock requests
+    // and never send a survey: the backer confirms reward, add-ons and
+    // address through the lock page, which marks the pledge survey-complete
+    // with no SurveyResponse row. The creator views must show that
+    // confirmation, not "no survey configured".
+    const orderLock =
+      pledge.orderLockStatus === "LOCKED"
+        ? {
+            status: "LOCKED" as const,
+            lockedAt: pledge.orderLockedAt,
+            charged: pledge.chargedImmediately || pledge.status === "COMPLETED",
+          }
+        : null;
+
     if (!survey) {
       // Still return the pledge block — the page header always renders
       // backer name/email/reward even when no survey is configured.
       // Returning the no-survey state without `pledge` made the dashboard
       // crash with "Cannot read properties of undefined (reading
       // 'backerName')" inside the dashboard error boundary.
+      const lockAddress = resolvePledgeShippingAddress(null, pledge.shippingAddress);
       return NextResponse.json({
         survey: null,
-        response: null,
+        orderLock,
+        response:
+          lockAddress || orderLock
+            ? {
+                itemResponses: null,
+                backerResponses: null,
+                shippingAddress: lockAddress,
+                isComplete: pledge.surveyCompleted === true,
+                completedAt: pledge.orderLockedAt,
+              }
+            : null,
         pledge: {
           id: pledge.id,
           rewardTitle: pledge.reward?.title || "No Reward",
@@ -139,6 +164,7 @@ export async function GET(
           title: a.addon.title,
         })),
       },
+      orderLock,
       questions: {
         // Return all item questions from the survey
         itemQuestions: survey.itemQuestions,
