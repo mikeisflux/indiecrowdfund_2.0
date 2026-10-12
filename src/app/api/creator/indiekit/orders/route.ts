@@ -370,6 +370,14 @@ const addTrackingSchema = z.object({
   markAsShipped: z.boolean().optional().default(true),
 });
 
+const removeTrackingSchema = z.object({
+  action: z.literal("remove_tracking"),
+  pledgeId: z.string(),
+  projectId: z.string(),
+  // Also take the order back out of "shipped" so it shows up for re-shipping.
+  revertShipped: z.boolean().optional().default(false),
+});
+
 const adjustBalanceSchema = z.object({
   action: z.literal("adjust_balance"),
   pledgeId: z.string(),
@@ -409,8 +417,15 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: "Project not found or access denied" }, { status: 403 });
       }
 
+      // COMPLETED, or a counted saved-card pledge (PENDING + confirmation
+      // sent) — the same set that can be pushed to a fulfillment provider.
       const pledge = await db.pledge.findFirst({
-        where: { id: data.pledgeId, projectId: data.projectId, deletedAt: null, status: "COMPLETED" },
+        where: {
+          id: data.pledgeId,
+          projectId: data.projectId,
+          deletedAt: null,
+          OR: [{ status: "COMPLETED" }, { status: "PENDING", confirmationEmailSent: true }],
+        },
         include: { user: { select: { email: true, name: true } } },
       });
       if (!pledge) {
@@ -422,9 +437,13 @@ export async function POST(req: NextRequest) {
       // place. This used to go into a metadata blob nothing read back —
       // the creator could never see what they'd entered.
       const trackingNumber = data.trackingNumber.trim();
-      const resolved = resolveTracking({ trackingNumber, trackingCarrier: data.carrier });
+      const carrierInput = data.carrier.trim();
+      const resolved = resolveTracking({ trackingNumber, trackingCarrier: carrierInput });
+      // Store the display name ("USPS"), not a dropdown id — it is what the
+      // backer dashboard, emails and exports print.
+      const carrierName = resolved?.carrier ?? carrierInput;
       const tracking = {
-        carrier: resolved?.carrier ?? data.carrier,
+        carrier: carrierName,
         trackingNumber,
         trackingUrl: resolved?.url ?? null,
         addedAt: new Date().toISOString(),
@@ -445,7 +464,7 @@ export async function POST(req: NextRequest) {
           where: { id: data.pledgeId },
           data: {
             trackingNumber,
-            trackingCarrier: data.carrier,
+            trackingCarrier: carrierName,
             trackingUrl: tracking.trackingUrl,
             // Keep the audit trail of who entered it; the columns are the truth.
             metadata: { ...freshMeta, tracking },
@@ -482,6 +501,83 @@ export async function POST(req: NextRequest) {
       }
 
       return NextResponse.json({ success: true, tracking });
+    }
+
+    if (action === "remove_tracking") {
+      const data = removeTrackingSchema.parse(body);
+
+      const project = await db.project.findFirst({
+        where: {
+          id: data.projectId,
+          deletedAt: null,
+          OR: [
+            { creatorId: session.user.id },
+            { collaborators: { some: { userId: session.user.id, status: "ACCEPTED" } } },
+          ],
+        },
+        select: { id: true },
+      });
+      if (!project) {
+        return NextResponse.json({ error: "Project not found or access denied" }, { status: 403 });
+      }
+
+      const pledge = await db.pledge.findFirst({
+        where: { id: data.pledgeId, projectId: data.projectId, deletedAt: null },
+        select: {
+          id: true,
+          trackingNumber: true,
+          trackingCarrier: true,
+          trackingUrl: true,
+          fulfillmentStatus: true,
+          externalOrderId: true,
+          metadata: true,
+        },
+      });
+      if (!pledge) {
+        return NextResponse.json({ error: "Pledge not found" }, { status: 404 });
+      }
+      if (!pledge.trackingNumber) {
+        return NextResponse.json({ error: "There is no tracking number on this order" }, { status: 400 });
+      }
+
+      const meta = (pledge.metadata as Record<string, unknown>) || {};
+      const { tracking: _previousTracking, ...restMeta } = meta;
+      void _previousTracking;
+      const revert = data.revertShipped && pledge.fulfillmentStatus === "SHIPPED";
+      await db.pledge.update({
+        where: { id: pledge.id },
+        data: {
+          trackingNumber: null,
+          trackingCarrier: null,
+          trackingUrl: null,
+          ...(revert
+            ? {
+                // Back to where it was before shipping: pushed if the provider
+                // has the order, otherwise not started.
+                fulfillmentStatus: pledge.externalOrderId ? "IN_PROGRESS" : "NOT_STARTED",
+                shippedAt: null,
+              }
+            : {}),
+          // Keep what was removed and by whom; the columns are cleared.
+          metadata: {
+            ...restMeta,
+            trackingRemoved: {
+              number: pledge.trackingNumber,
+              carrier: pledge.trackingCarrier,
+              url: pledge.trackingUrl,
+              removedAt: new Date().toISOString(),
+              removedBy: session.user.id,
+              revertedShipped: revert,
+            },
+          },
+        },
+      });
+
+      creatorIndiekitOrdersLogger.info(
+        { pledgeId: pledge.id, projectId: data.projectId, userId: session.user.id, revert },
+        "Tracking number removed"
+      );
+      return NextResponse.json({ success: true, revertedShipped: revert });
     }
 
     if (action === "adjust_balance") {

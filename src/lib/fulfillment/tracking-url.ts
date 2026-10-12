@@ -42,6 +42,25 @@ const CARRIERS: CarrierDefinition[] = [
 
 const BY_KEY = new Map(CARRIERS.map((c) => [c.key, c]));
 
+/** Dropdown key for a carrier the creator typed or picked but we don't know. */
+export const OTHER_CARRIER_KEY = "other";
+
+/** The carriers a creator can pick from when entering tracking by hand. */
+export const CARRIER_OPTIONS: ReadonlyArray<{ key: string; label: string }> = [
+  ...CARRIERS.map((c) => ({ key: c.key, label: c.label })),
+  { key: OTHER_CARRIER_KEY, label: "Other" },
+];
+
+/**
+ * Map a stored carrier (a code like "stamps_com", a label like "DHL Express",
+ * or whatever a creator typed) back onto a dropdown key. Unknown names land
+ * on "other" so the edit form still opens with something selected.
+ */
+export function carrierKeyFor(stored: string | null | undefined): string {
+  if (!stored) return "";
+  return normalizeCarrier(stored)?.key ?? OTHER_CARRIER_KEY;
+}
+
 // Free text from two different services, mapped onto the list above.
 // ShipStation sends codes like "stamps_com" and "dhl_global_mail"; Shopify
 // sends display names like "DHL Express". Matching is on a squashed form so

@@ -88,7 +88,16 @@ export interface Backer {
   surveyLate?: boolean;
   addressComplete: boolean;
   /** Current tracking on the pledge, resolved to a display name and link. */
-  tracking?: { number: string; carrier: string | null; url: string | null } | null;
+  tracking?: {
+    number: string;
+    carrier: string | null;
+    url: string | null;
+    /** "manual" = typed in by the creator; "carrier" = pulled from a shipping sync. */
+    source?: "manual" | "carrier";
+    addedAt?: string | null;
+  } | null;
+  /** When the order was marked shipped. */
+  shippedAt?: string | null;
   pledgeDate?: string;
   shippingAddress?: {
     name?: string;

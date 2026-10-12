@@ -48,6 +48,8 @@ import {
   Layers,
   ArrowRight,
   Send,
+  Copy,
+  Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
 import type { Backer } from "../../types";
@@ -56,6 +58,7 @@ import { AddressValidationDialog } from "./address-validation-dialog";
 import { BalanceEditorDialog } from "./balance-editor-dialog";
 import { EditOrderDialog } from "./edit-order-dialog";
 import { TrackingDialog } from "./tracking-dialog";
+import { TrackingForm, type TrackingInfo } from "./tracking-editor";
 import { RefundDialog } from "./refund-dialog";
 import { NotesDialog } from "./notes-dialog";
 import { NotesPanel } from "./notes-panel";
@@ -145,6 +148,83 @@ export function BackerDialog({ open, onOpenChange, backer, availableAddons = [],
   const [showBalanceEditor, setShowBalanceEditor] = useState(false);
   const [showEditOrder, setShowEditOrder] = useState(false);
   const [showTracking, setShowTracking] = useState(false);
+  // Inline tracking editor on the Shipping tab.
+  const [editingTracking, setEditingTracking] = useState(false);
+  const [trackingSaving, setTrackingSaving] = useState(false);
+  const [confirmRemoveTracking, setConfirmRemoveTracking] = useState(false);
+
+  // One save path for the Shipping tab's inline form and the Add/Edit dialog.
+  const saveTracking = async (tracking: TrackingInfo) => {
+    if (!backer?.projectId) return;
+    setTrackingSaving(true);
+    try {
+      const res = await apiFetch("/api/creator/indiekit/orders", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "add_tracking",
+          pledgeId: backer.id,
+          projectId: backer.projectId,
+          carrier: tracking.carrier,
+          trackingNumber: tracking.trackingNumber,
+          notifyBacker: tracking.notifyBacker,
+          markAsShipped: tracking.markAsShipped,
+        }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        toast.error(data.error || "Failed to save tracking info");
+        return;
+      }
+      toast.success(backer.tracking ? "Tracking number updated" : "Tracking number saved");
+      if (tracking.notifyBacker) {
+        toast.info(`Shipping notification sent to ${backer.email}`);
+      }
+      setEditingTracking(false);
+      onRefresh?.();
+    } catch {
+      toast.error("Failed to save tracking info");
+    } finally {
+      setTrackingSaving(false);
+    }
+  };
+
+  const removeTracking = async (revertShipped: boolean) => {
+    if (!backer?.projectId) return;
+    setTrackingSaving(true);
+    try {
+      const res = await apiFetch("/api/creator/indiekit/orders", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "remove_tracking",
+          pledgeId: backer.id,
+          projectId: backer.projectId,
+          revertShipped,
+        }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        toast.error(data.error || "Failed to remove tracking");
+        return;
+      }
+      toast.success(revertShipped ? "Tracking removed and order marked not shipped" : "Tracking number removed");
+      setConfirmRemoveTracking(false);
+      onRefresh?.();
+    } catch {
+      toast.error("Failed to remove tracking");
+    } finally {
+      setTrackingSaving(false);
+    }
+  };
+
+  const copyTrackingNumber = () => {
+    if (!backer?.tracking) return;
+    navigator.clipboard
+      .writeText(backer.tracking.number)
+      .then(() => toast.success("Tracking number copied"))
+      .catch(() => toast.error("Could not copy"));
+  };
   const [showRefund, setShowRefund] = useState(false);
   const [refundSuggestedAmount, setRefundSuggestedAmount] = useState<number | undefined>(undefined);
   const [refundSuggestedReason, setRefundSuggestedReason] = useState<string | undefined>(undefined);
@@ -1021,11 +1101,21 @@ export function BackerDialog({ open, onOpenChange, backer, availableAddons = [],
             {/* Shipping Tab */}
             <TabsContent value="shipping" className="space-y-4">
               <div className="rounded-lg border p-4">
-                <h4 className="font-medium mb-3">Shipping Status</h4>
+                <div className="flex items-center justify-between gap-3 mb-3">
+                  <h4 className="font-medium">Shipping Status</h4>
+                  <Badge className={STATUS_COLORS[backer.status]}>{STATUS_LABELS[backer.status]}</Badge>
+                </div>
                 <div className="flex items-center gap-3">
                   <Truck className="h-5 w-5 text-teal-600" />
                   <div>
-                    <p className="font-medium">{STATUS_LABELS[backer.status]}</p>
+                    <p className="font-medium">
+                      {backer.status === "shipped" ? "Shipped" : STATUS_LABELS[backer.status]}
+                    </p>
+                    {backer.shippedAt && (
+                      <p className="text-sm text-muted-foreground">
+                        Marked shipped {new Date(backer.shippedAt).toLocaleDateString()}
+                      </p>
+                    )}
                     {backer.status === "shipped" && !backer.tracking && (
                       <p className="text-sm text-amber-600">
                         Marked shipped, but no tracking number is on file.
@@ -1033,34 +1123,126 @@ export function BackerDialog({ open, onOpenChange, backer, availableAddons = [],
                     )}
                   </div>
                 </div>
-                <div className="mt-4 rounded-md bg-muted/50 p-3">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="text-xs font-medium text-muted-foreground mb-1">TRACKING</p>
-                      {backer.tracking ? (
-                        <>
-                          <p className="font-mono text-sm break-all">{backer.tracking.number}</p>
-                          <p className="text-sm text-muted-foreground">
-                            {backer.tracking.carrier || "Carrier not identified"}
-                            {backer.tracking.url && (
-                              <>
-                                {" · "}
-                                <a href={backer.tracking.url} target="_blank" rel="noopener noreferrer" className="text-teal-700 hover:underline inline-flex items-center gap-1">
-                                  Track package <ExternalLink className="h-3 w-3" />
-                                </a>
-                              </>
-                            )}
+
+                {/* Tracking: view, edit and remove right here. */}
+                <div className="mt-4 rounded-md border bg-muted/40 p-3">
+                  <div className="flex items-center justify-between gap-2 mb-2">
+                    <p className="text-xs font-medium text-muted-foreground">TRACKING</p>
+                    {!editingTracking && !confirmRemoveTracking && (
+                      <div className="flex items-center gap-1">
+                        {backer.tracking && (
+                          <Button variant="ghost" size="sm" onClick={copyTrackingNumber} title="Copy tracking number">
+                            <Copy className="h-3.5 w-3.5 mr-1" />
+                            Copy
+                          </Button>
+                        )}
+                        <Button variant="outline" size="sm" onClick={() => setEditingTracking(true)}>
+                          <Edit className="h-3 w-3 mr-1" />
+                          {backer.tracking ? "Edit" : "Add tracking"}
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+
+                  {editingTracking ? (
+                    <TrackingForm
+                      compact
+                      current={backer.tracking ?? null}
+                      alreadyShipped={backer.status === "shipped"}
+                      backerEmail={backer.email}
+                      saving={trackingSaving}
+                      onSave={saveTracking}
+                      onCancel={() => setEditingTracking(false)}
+                    />
+                  ) : backer.tracking ? (
+                    <div className="space-y-3">
+                      <div>
+                        <p className="font-mono text-base break-all select-all">{backer.tracking.number}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {backer.tracking.carrier || "Carrier not identified"}
+                          {backer.tracking.url && (
+                            <>
+                              {" · "}
+                              <a
+                                href={backer.tracking.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-teal-700 hover:underline inline-flex items-center gap-1"
+                              >
+                                Track package <ExternalLink className="h-3 w-3" />
+                              </a>
+                            </>
+                          )}
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {backer.tracking.source === "manual"
+                            ? `Entered by you${backer.tracking.addedAt ? ` on ${new Date(backer.tracking.addedAt).toLocaleDateString()}` : ""}`
+                            : "Pulled from your shipping provider"}
+                        </p>
+                      </div>
+
+                      {confirmRemoveTracking ? (
+                        <div className="rounded-md border border-red-200 bg-red-50 dark:bg-red-950/30 dark:border-red-900 p-3 space-y-2">
+                          <p className="text-sm text-red-800 dark:text-red-200">
+                            Remove this tracking number from the order? The backer will no longer see it.
                           </p>
-                        </>
+                          <div className="flex flex-wrap gap-2">
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              disabled={trackingSaving}
+                              onClick={() => removeTracking(false)}
+                            >
+                              {trackingSaving ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <Trash2 className="h-3 w-3 mr-1" />}
+                              Remove tracking
+                            </Button>
+                            {backer.status === "shipped" && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="border-red-300 text-red-700 hover:bg-red-100"
+                                disabled={trackingSaving}
+                                onClick={() => removeTracking(true)}
+                              >
+                                <Undo2 className="h-3 w-3 mr-1" />
+                                Remove & mark not shipped
+                              </Button>
+                            )}
+                            <Button size="sm" variant="ghost" disabled={trackingSaving} onClick={() => setConfirmRemoveTracking(false)}>
+                              Cancel
+                            </Button>
+                          </div>
+                        </div>
                       ) : (
-                        <p className="text-sm text-muted-foreground">No tracking number yet.</p>
+                        <div className="flex flex-wrap gap-2">
+                          {backer.tracking.url && (
+                            <Button size="sm" variant="outline" asChild>
+                              <a href={backer.tracking.url} target="_blank" rel="noopener noreferrer">
+                                <ExternalLink className="h-3 w-3 mr-1" />
+                                Open carrier tracking
+                              </a>
+                            </Button>
+                          )}
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="text-red-700 hover:text-red-800 hover:bg-red-50"
+                            onClick={() => setConfirmRemoveTracking(true)}
+                          >
+                            <Trash2 className="h-3 w-3 mr-1" />
+                            Remove
+                          </Button>
+                        </div>
                       )}
                     </div>
-                    <Button variant="outline" size="sm" onClick={() => setShowTracking(true)}>
-                      <Package className="h-3 w-3 mr-1" />
-                      {backer.tracking ? "Edit" : "Add tracking"}
-                    </Button>
-                  </div>
+                  ) : (
+                    <div className="py-2">
+                      <p className="text-sm text-muted-foreground">
+                        No tracking number on this order. Add one here, or push the order to your shipping
+                        provider and sync tracking from the Packages tab.
+                      </p>
+                    </div>
+                  )}
                 </div>
               </div>
             </TabsContent>
@@ -1344,36 +1526,8 @@ export function BackerDialog({ open, onOpenChange, backer, availableAddons = [],
         backerName={backer.name}
         backerEmail={backer.email}
         current={backer.tracking ?? null}
-        onSave={async (tracking) => {
-          if (!backer.projectId) return;
-          try {
-            const res = await apiFetch("/api/creator/indiekit/orders", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                action: "add_tracking",
-                pledgeId: backer.id,
-                projectId: backer.projectId,
-                carrier: tracking.carrier,
-                trackingNumber: tracking.trackingNumber,
-                notifyBacker: tracking.notifyBacker,
-                markAsShipped: tracking.markAsShipped,
-              }),
-            });
-            if (!res.ok) {
-              const data = await res.json();
-              toast.error(data.error || "Failed to save tracking info");
-            } else {
-              toast.success("Tracking information saved");
-              if (tracking.notifyBacker) {
-                toast.info(`Shipping notification sent to ${backer.email}`);
-              }
-              onRefresh?.();
-            }
-          } catch {
-            toast.error("Failed to save tracking info");
-          }
-        }}
+        alreadyShipped={backer.status === "shipped"}
+        onSave={saveTracking}
       />
 
       <RefundDialog

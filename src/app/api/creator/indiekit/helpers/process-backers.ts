@@ -18,6 +18,7 @@ interface PledgeForProcessing {
   trackingNumber?: string | null;
   trackingCarrier?: string | null;
   trackingUrl?: string | null;
+  shippedAt?: Date | null;
   orderLockStatus: string | null;
   // Set true and populated by the Order Lock flow (which stores the address on
   // the pledge itself, not via a SurveyResponse).
@@ -66,6 +67,32 @@ interface SurveyResponseForProcessing {
   completedAt: Date | null;
   shippingAddress: unknown;
   addressLocked?: boolean;
+}
+
+/**
+ * Tracking as the creator sees it: the resolved number/carrier/link plus where
+ * it came from. A manual entry leaves an audit blob at metadata.tracking; a
+ * number with no such blob was written by a carrier sync (ShipStation, Shippo,
+ * EasyPost, Stamps, Shopify).
+ */
+function trackingForBacker(pledge: PledgeForProcessing) {
+  const resolved = resolveTracking({
+    trackingNumber: pledge.trackingNumber,
+    trackingCarrier: pledge.trackingCarrier,
+    trackingUrl: pledge.trackingUrl,
+  });
+  if (!resolved) return null;
+  const meta = (pledge.metadata as Record<string, unknown>) || {};
+  const manual =
+    meta.tracking && typeof meta.tracking === "object"
+      ? (meta.tracking as { trackingNumber?: string; addedAt?: string })
+      : null;
+  const isManual = !!manual && manual.trackingNumber === resolved.number;
+  return {
+    ...resolved,
+    source: isManual ? ("manual" as const) : ("carrier" as const),
+    addedAt: isManual && typeof manual?.addedAt === "string" ? manual.addedAt : null,
+  };
 }
 
 export function processBackers(
@@ -226,11 +253,8 @@ export function processBackers(
       surveyLate,
       addressComplete,
       pledgeDate: pledge.createdAt.toISOString(),
-      tracking: resolveTracking({
-        trackingNumber: pledge.trackingNumber,
-        trackingCarrier: pledge.trackingCarrier,
-        trackingUrl: pledge.trackingUrl,
-      }),
+      tracking: trackingForBacker(pledge),
+      shippedAt: pledge.shippedAt ? pledge.shippedAt.toISOString() : null,
       shippingAddress: shippingAddress ? {
         name: shippingAddress.name,
         line1: shippingAddress.line1,
