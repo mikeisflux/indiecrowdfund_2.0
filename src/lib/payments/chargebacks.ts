@@ -4,7 +4,7 @@ import { reconcileStretchGoalsForPledge } from "@/lib/rewards/stretch-goals";
 import { withDisputeState } from "@/lib/payments/dispute-state";
 import { releaseAddonSlots } from "@/lib/payments/rewards";
 import { openChargebackRecoup } from "@/lib/payments/chargeback-recoup";
-import { banUserForChargeback } from "@/lib/bans";
+import { banUserForChargeback, notifyBackerOfChargebackBan } from "@/lib/bans";
 
 const chargebackLogger = logger.child({ module: "chargebacks" });
 
@@ -202,6 +202,14 @@ export async function applyChargeback(params: {
     await banUserForChargeback({ userId: pledge.userId, pledgeId, disputeId, processor });
   } catch (err) {
     chargebackLogger.error({ err: String(err), pledgeId, userId: pledge.userId }, "Chargeback ban failed");
+  }
+  // Tell the backer: account suspended, reward on hold until the dispute
+  // is dismissed or resolved. Runs after the dispute state is written so
+  // the email can quote the dispute id.
+  try {
+    await notifyBackerOfChargebackBan(pledgeId);
+  } catch (err) {
+    chargebackLogger.error({ err: String(err), pledgeId }, "Chargeback backer notice failed");
   }
 
   // Collect it from the creator's protection card. Runs after the

@@ -727,3 +727,57 @@ export async function sendChargebackRecoupFailedEmail(params: {
     priority: EMAIL_PRIORITY.SYSTEM,
   });
 }
+
+/**
+ * Backer: their bank dispute has banned the account and frozen the reward.
+ * Sent the moment a chargeback lands (applyChargeback) and resendable from
+ * the admin notify route for disputes that predate it.
+ */
+export async function sendChargebackBackerNoticeEmail(params: {
+  email: string;
+  backerName: string;
+  projectTitle: string;
+  rewardTitle: string | null;
+  amount: number;
+  disputeId: string | null;
+  alreadyShipped: boolean;
+}) {
+  const { email, backerName, projectTitle, rewardTitle, amount, disputeId, alreadyShipped } = params;
+  const policyUrl = `${APP_URL}/terms?tab=chargebacks`;
+  const html = `
+    <!DOCTYPE html>
+    <html>
+      <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+      <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="text-align: center; margin-bottom: 30px;"><h1 style="color: #333; margin: 0;">${APP_NAME}</h1></div>
+        <div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 24px; margin-bottom: 20px;">
+          <h2 style="margin-top: 0; color: #991b1b;">Your account has been suspended due to a payment dispute</h2>
+          <p>Hi ${escapeHtml(backerName || "there")},</p>
+          <p>Your bank or card issuer has opened a dispute (chargeback) against your pledge of <strong>$${amount.toFixed(2)}</strong> to <strong>${escapeHtml(projectTitle)}</strong>${rewardTitle ? ` for the reward &ldquo;${escapeHtml(rewardTitle)}&rdquo;` : ""}${disputeId ? ` (dispute reference ${escapeHtml(disputeId)})` : ""}.</p>
+          <p>Under our <a href="${policyUrl}" style="color: #991b1b;">Chargeback Handling Policy</a>, which you agreed to when you pledged, filing a dispute results in an immediate suspension of your ${APP_NAME} account. As a result:</p>
+          <ul style="margin: 10px 0; padding-left: 20px;">
+            <li>Your account is suspended and you can no longer sign in.</li>
+            <li>${alreadyShipped
+              ? "Your reward had already shipped. The creator will not send any further items, and the disputed amount is being recovered from them."
+              : "Your reward for this pledge is on hold and <strong>will not be produced or shipped</strong> while the dispute is open."}</li>
+            <li>Any other pledges on this account are also on hold.</li>
+          </ul>
+          <p><strong>If this dispute was a mistake</strong> &mdash; for example you did not recognise the charge on your statement &mdash; contact your bank and withdraw the dispute. Once the dispute is dismissed or resolved in the creator's favour, reply to this email and we will review reinstating your account and your reward.</p>
+          <p>If you believe you never made this pledge, no action is needed; the dispute will run its course and the account will stay closed.</p>
+        </div>
+        <div style="text-align: center; color: #999; font-size: 12px; margin-top: 30px;">
+          <p>Questions? Reply to this email.</p>
+          <p>&copy; ${new Date().getFullYear()} ${APP_NAME}. All rights reserved.</p>
+        </div>
+      </body>
+    </html>
+  `;
+  return queueEmail({
+    to: email,
+    subject: `Your ${APP_NAME} account has been suspended due to a payment dispute`,
+    html,
+    text: `Hi ${backerName || "there"} — your bank has opened a dispute against your $${amount.toFixed(2)} pledge to "${projectTitle}"${disputeId ? ` (${disputeId})` : ""}. Under the Chargeback Handling Policy (${policyUrl}) your account is suspended and your reward ${alreadyShipped ? "will receive no further items" : "will not be produced or shipped"} while the dispute is open. If the dispute was a mistake, withdraw it with your bank, then reply to this email once it is dismissed and we will review reinstatement.`,
+    skipUnsubscribeCheck: true, // Transactional: account status
+    priority: EMAIL_PRIORITY.SYSTEM,
+  });
+}

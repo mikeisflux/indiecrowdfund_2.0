@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { logger } from "@/lib/logger";
 import { formatError } from "@/lib/errors";
+import { sendChargebackBackerNoticeEmail } from "@/lib/email/email-templates-misc";
 
 const log = logger.child({ module: "bans" });
 
@@ -73,4 +74,57 @@ export async function banUserForChargeback(params: {
 
   log.warn({ userId, email: user.email, pledgeId, disputeId }, "Account banned for chargeback");
   return { banned: true, reason: detail };
+}
+
+
+/**
+ * Tell the backer their dispute banned the account and froze the reward.
+ * Idempotent per pledge: records metadata.disputeNoticeSentAt and skips
+ * when already set unless `force`.
+ */
+export async function notifyBackerOfChargebackBan(
+  pledgeId: string,
+  opts: { force?: boolean } = {}
+): Promise<{ sent: boolean; reason: string; to?: string }> {
+  const pledge = await db.pledge.findFirst({
+    where: { id: pledgeId },
+    select: {
+      id: true,
+      amount: true,
+      metadata: true,
+      fulfillmentStatus: true,
+      user: { select: { email: true, name: true } },
+      project: { select: { title: true } },
+      reward: { select: { title: true } },
+    },
+  });
+  if (!pledge) return { sent: false, reason: "pledge not found" };
+  if (!pledge.user?.email) return { sent: false, reason: "no email" };
+
+  const meta = (pledge.metadata && typeof pledge.metadata === "object" && !Array.isArray(pledge.metadata)
+    ? (pledge.metadata as Record<string, unknown>)
+    : {}) as Record<string, unknown> & { dispute?: { disputeId?: string }; disputeNoticeSentAt?: string };
+  if (meta.disputeNoticeSentAt && !opts.force) {
+    return { sent: false, reason: "already notified", to: pledge.user.email };
+  }
+
+  const result = await sendChargebackBackerNoticeEmail({
+    email: pledge.user.email,
+    backerName: pledge.user.name || "",
+    projectTitle: pledge.project.title,
+    rewardTitle: pledge.reward?.title ?? null,
+    amount: Number(pledge.amount),
+    disputeId: meta.dispute?.disputeId ?? null,
+    alreadyShipped: pledge.fulfillmentStatus === "SHIPPED" || pledge.fulfillmentStatus === "DELIVERED",
+  });
+  if (!result.success) return { sent: false, reason: result.error || "queue failed", to: pledge.user.email };
+
+  await db.pledge
+    .update({
+      where: { id: pledgeId },
+      data: { metadata: { ...meta, disputeNoticeSentAt: new Date().toISOString() } },
+    })
+    .catch((err: unknown) => log.warn({ err: formatError(err), pledgeId }, "could not record dispute notice"));
+  log.info({ pledgeId, to: pledge.user.email }, "Chargeback ban notice emailed to backer");
+  return { sent: true, reason: "sent", to: pledge.user.email };
 }
