@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Loader2, Lock, CheckCircle2, Package, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
+import { DescriptorAcknowledgement } from "@/components/checkout/descriptor-acknowledgement";
 
 interface Addr {
   fullName?: string;
@@ -72,6 +73,7 @@ export default function LockOrderPage() {
   }, [pledgeId, load]);
 
   const needsShipping = !!data?.pledge.requiresShipping;
+  const [descriptorAcknowledged, setDescriptorAcknowledged] = useState(false);
 
   const submit = async (action: "approve" | "decline") => {
     if (action === "approve" && needsShipping) {
@@ -274,8 +276,22 @@ export default function LockOrderPage() {
           </div>
         )}
 
+        {!p.alreadyPaid && (
+          <DescriptorAcknowledgement
+            pledgeId={pledgeId}
+            surface="order-lock"
+            onAcknowledged={() => setDescriptorAcknowledged(true)}
+          />
+        )}
+
         <div className="flex flex-col sm:flex-row gap-2">
-          <Button className="flex-1" size="lg" onClick={() => submit("approve")} disabled={submitting}>
+          <Button
+            className="flex-1"
+            size="lg"
+            onClick={() => submit("approve")}
+            disabled={submitting || (!p.alreadyPaid && !descriptorAcknowledged)}
+            title={!p.alreadyPaid && !descriptorAcknowledged ? "Confirm the statement descriptor first" : undefined}
+          >
             {submitting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Lock className="h-4 w-4 mr-2" />}
             Lock my order
           </Button>

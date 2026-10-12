@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { DescriptorAcknowledgement } from "@/components/checkout/descriptor-acknowledgement";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { loadStripe, Stripe } from "@stripe/stripe-js";
@@ -51,6 +52,7 @@ export default function CompleteWithDcPage() {
   const [paymentError, setPaymentError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [descriptorAcknowledged, setDescriptorAcknowledged] = useState(false);
   const [stripePromise, setStripePromise] = useState<Promise<Stripe | null> | null>(null);
 
   useEffect(() => {
@@ -214,7 +216,15 @@ export default function CompleteWithDcPage() {
         </div>
       )}
 
-      {stripePromise && info.clientSecret && (
+      {!descriptorAcknowledged && (
+        <DescriptorAcknowledgement
+          pledgeId={info.pledge.id}
+          surface="complete-with-dc"
+          onAcknowledged={() => setDescriptorAcknowledged(true)}
+        />
+      )}
+
+      {descriptorAcknowledged && stripePromise && info.clientSecret && (
         <Elements
           key={info.clientSecret}
           stripe={stripePromise}

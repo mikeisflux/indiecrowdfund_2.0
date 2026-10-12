@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -9,6 +9,7 @@ import type { Stripe } from "@stripe/stripe-js";
 import { ProjectData } from "../types";
 import { WhopPaymentForm } from "./WhopPaymentForm";
 import { apiFetch } from "@/lib/fetch-utils";
+import { DescriptorAcknowledgement } from "@/components/checkout/descriptor-acknowledgement";
 
 // Dynamically import the DC/Stripe wrapper so Stripe.js only loads when payment is initiated
 const DCHostedCheckoutFrame = dynamic(() => import("./DCHostedCheckoutFrame"), {
@@ -146,7 +147,7 @@ export function PaymentStep({
   setClientSecret,
   setIsProcessing,
   total,
-  agreedToTerms,
+  agreedToTerms: termsAgreed,
   currentPledgeId,
   handlePaymentSuccess,
   handlePaymentError,
@@ -161,6 +162,15 @@ export function PaymentStep({
   dcCheckoutUrl,
   dcSessionId,
 }: PaymentStepProps) {
+  // Hard acknowledgement: the backer must type the statement descriptor
+  // (recorded server-side with IP + browser) before any payment surface
+  // that can run a charge is rendered. Combined with the terms checkbox
+  // into the single `agreedToTerms` gate every form already honours.
+  const [descriptorAcknowledged, setDescriptorAcknowledged] = useState(false);
+  useEffect(() => {
+    setDescriptorAcknowledged(false);
+  }, [currentPledgeId]);
+  const agreedToTerms = termsAgreed && descriptorAcknowledged;
   // In modify mode, show the charge amount (difference), not the full total
   const displayTotal = isModifyMode && modifyChargeAmount != null ? modifyChargeAmount : total;
   // For upcharge flows (modify / add-items) the Whop form must
@@ -258,6 +268,16 @@ export function PaymentStep({
         <CardContent className="p-5">
           <h3 className="font-medium mb-4">Payment</h3>
 
+          {!descriptorAcknowledged && (
+            <div className="mb-4">
+              <DescriptorAcknowledgement
+                pledgeId={currentPledgeId}
+                surface="checkout"
+                onAcknowledged={() => setDescriptorAcknowledged(true)}
+              />
+            </div>
+          )}
+
           {/* Show error if any - Stripe removed, kept for DivinityCoin fallback */}
           {/* {paymentError && project?.paymentProcessor === "STRIPE" && (
             <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
@@ -343,7 +363,9 @@ export function PaymentStep({
                 // acknowledgment has to be ticked before a payment surface
                 // that can complete a charge is shown.
                 <div className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
-                  Please agree to the terms above to continue to secure payment.
+                  {descriptorAcknowledged
+                    ? "Please agree to the terms above to continue to secure payment."
+                    : "Confirm the statement descriptor above to continue to secure payment."}
                 </div>
               )
             ) : clientSecret && dcStripePromise ? (

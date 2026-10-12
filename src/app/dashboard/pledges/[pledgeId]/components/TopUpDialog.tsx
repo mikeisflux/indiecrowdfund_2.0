@@ -14,6 +14,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { apiFetch } from "@/lib/fetch-utils";
+import { DescriptorAcknowledgement } from "@/components/checkout/descriptor-acknowledgement";
 import { WhopPaymentForm } from "@/app/projects/[vanityname]/[slug]/pledge/components/WhopPaymentForm";
 
 /**
@@ -138,6 +139,7 @@ export function TopUpDialog({
   onComplete,
 }: TopUpDialogProps) {
   const [state, setState] = useState<UpchargeState>({ kind: "loading" });
+  const [descriptorAcknowledged, setDescriptorAcknowledged] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [stripePromise, setStripePromise] = useState<Promise<Stripe | null> | null>(null);
   // add-items stamps a 60s reservation marker on the pledge and opens a real
@@ -288,7 +290,15 @@ export function TopUpDialog({
           </div>
         )}
 
-        {state.kind === "whop" && (
+        {(state.kind === "whop" || state.kind === "dc_elements") && !descriptorAcknowledged && (
+          <DescriptorAcknowledgement
+            pledgeId={pledgeId}
+            surface="top-up"
+            onAcknowledged={() => setDescriptorAcknowledged(true)}
+          />
+        )}
+
+        {state.kind === "whop" && descriptorAcknowledged && (
           <WhopPaymentForm
             sessionId={state.sessionId}
             planId={state.planId}
@@ -305,7 +315,7 @@ export function TopUpDialog({
         )}
 
 
-        {state.kind === "dc_elements" && stripePromise && (
+        {state.kind === "dc_elements" && descriptorAcknowledged && stripePromise && (
           <Elements
             key={state.clientSecret}
             stripe={stripePromise}

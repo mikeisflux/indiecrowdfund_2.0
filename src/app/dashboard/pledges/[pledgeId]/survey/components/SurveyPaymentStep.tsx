@@ -1,11 +1,13 @@
 "use client";
 
+import { useState } from "react";
 import { CreditCard, ChevronLeft, Lock, ShieldCheck, RefreshCw } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
 import { Stripe } from "@stripe/stripe-js";
 import { SurveyData } from "./types";
+import { DescriptorAcknowledgement } from "@/components/checkout/descriptor-acknowledgement";
 import { WhopPaymentForm } from "@/app/projects/[vanityname]/[slug]/pledge/components/WhopPaymentForm";
 
 export interface SurveyUpchargePayment {
@@ -140,6 +142,7 @@ export function SurveyPaymentStep({
   onPrev,
 }: SurveyPaymentStepProps) {
   const pledgeId = upchargePayment?.pledgeId;
+  const [descriptorAcknowledged, setDescriptorAcknowledged] = useState(false);
   const confirmUrl = pledgeId
     ? `/api/pledges/${pledgeId}/confirm-add-items`
     : undefined;
@@ -199,8 +202,13 @@ export function SurveyPaymentStep({
       {/* Payment Form — branches by processor */}
       <Card>
         <CardContent className="py-5">
-          {/* Whop embedded checkout */}
-          {upchargePayment?.paymentMethod === "WHOP" && pledgeId ? (
+          {!descriptorAcknowledged ? (
+            <DescriptorAcknowledgement
+              pledgeId={pledgeId ?? null}
+              surface="survey-addons"
+              onAcknowledged={() => setDescriptorAcknowledged(true)}
+            />
+          ) : upchargePayment?.paymentMethod === "WHOP" && pledgeId ? (
             <WhopPaymentForm
               sessionId={upchargePayment.sessionId || ""}
               planId={upchargePayment.planId || ""}

@@ -4,6 +4,7 @@ import { logger } from "@/lib/logger";
 const pledgesAddItemsLogger = logger.child({ module: "pledges-add-items" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { readDescriptorAck } from "@/lib/payments/descriptor-ack";
 import { getCustomerOrigin } from "@/lib/payments/customer-origin";
 import { getProjectStats } from "@/lib/stats";
 import {
@@ -279,6 +280,14 @@ export async function POST(
     // immediately, KIA pledges, or backers who paid before the saved-
     // card flow shipped).
     if (paymentProcessor === "DIVINITYCOIN" && pledge.divinityCoinPaymentMethodId) {
+      // Off-session charge: the backer must have typed the statement
+      // descriptor (recorded with IP) on this pledge before we charge.
+      if (!readDescriptorAck(pledge.metadata)) {
+        return NextResponse.json(
+          { error: "Please confirm the statement descriptor before paying for add-ons.", code: "DESCRIPTOR_ACK_REQUIRED" },
+          { status: 400 }
+        );
+      }
       // A fresh idempotency key per upcharge, so this charge doesn't dedupe
       // against the pledge's original one. It goes in `idempotencyKey`, NOT
       // in `pledgeId`: this used to send `${pledge.id}-addon-${timestamp}` as

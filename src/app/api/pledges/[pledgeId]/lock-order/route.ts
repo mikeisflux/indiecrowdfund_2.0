@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { readDescriptorAck } from "@/lib/payments/descriptor-ack";
 import { getCustomerOrigin } from "@/lib/payments/customer-origin";
 import { logger } from "@/lib/logger";
 import { formatError } from "@/lib/errors";
@@ -127,6 +128,16 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ ple
     }
 
     // ---- Approve ----
+    // The typed statement-descriptor acknowledgement (with IP) must be on
+    // file before this route runs a charge. The page gates the button on
+    // it; this is the hard stop for anything that skips the page.
+    if (!pledge.chargedImmediately && pledge.status !== "COMPLETED" && !readDescriptorAck(pledge.metadata)) {
+      return NextResponse.json(
+        { error: "Please confirm the statement descriptor before locking your order.", code: "DESCRIPTOR_ACK_REQUIRED" },
+        { status: 400 }
+      );
+    }
+
     // Only physical orders need an address. A digital-only order (digital
     // reward + digital add-ons) locks without one.
     if (orderRequiresShipping(pledge) && !shippingAddress && !pledge.shippingAddress) {
