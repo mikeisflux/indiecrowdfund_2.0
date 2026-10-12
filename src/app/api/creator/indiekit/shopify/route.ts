@@ -443,7 +443,7 @@ export async function POST(req: NextRequest) {
             if (newStatus === "SHIPPED") {
               await db.pledge.update({
                 where: { id: order.pledgeId },
-                data: { fulfillmentStatus: "SHIPPED" },
+                data: { fulfillmentStatus: "SHIPPED", shippedAt: new Date() },
               });
             }
 

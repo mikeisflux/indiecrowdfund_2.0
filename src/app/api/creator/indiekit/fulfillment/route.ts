@@ -188,6 +188,7 @@ export async function POST(req: NextRequest) {
         },
         data: {
           fulfillmentStatus: effectiveStatus,
+          ...(effectiveStatus === "SHIPPED" || effectiveStatus === "DELIVERED" ? { shippedAt: new Date() } : {}),
         },
       });
 
@@ -225,6 +226,7 @@ export async function POST(req: NextRequest) {
         },
         data: {
           fulfillmentStatus: "SHIPPED",
+          shippedAt: new Date(),
         },
       });
 

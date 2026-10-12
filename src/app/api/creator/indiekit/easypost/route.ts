@@ -208,6 +208,7 @@ export async function POST(req: NextRequest) {
                     where: { id: pledge.id },
                     data: {
                       fulfillmentStatus: "DELIVERED",
+                      shippedAt: new Date(),
                     },
                   });
                   updated.push(pledge.id);

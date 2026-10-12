@@ -116,7 +116,7 @@ export async function markDigitalOnlyPledgesShipped(pledgeIds: string[]): Promis
 
   const res = await db.pledge.updateMany({
     where: { id: { in: digitalOnly }, fulfillmentStatus: { in: ["NOT_STARTED", "IN_PROGRESS"] } },
-    data: { fulfillmentStatus: "SHIPPED" },
+    data: { fulfillmentStatus: "SHIPPED", shippedAt: new Date() },
   });
   if (res.count > 0) {
     log.info({ count: res.count }, "digital-only pledges marked shipped after digital delivery");

@@ -10,6 +10,10 @@ const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 // backer leaves a star rating, up to RATING_REMINDER_MAX reminders (so we
 // never nag forever and torch deliverability). Tune these two to taste.
 export const RATING_REMINDER_INTERVAL_DAYS = 7;
+// Days after shipping before the FIRST rating request. "Shipped" means a
+// label exists; the book arrives a week or so later. Asking on day one got
+// "I haven't received it yet" replies to support.
+export const RATING_REQUEST_DELAY_DAYS = 10;
 export const RATING_REMINDER_MAX = 5;
 
 interface SendRatingRequestResult {
@@ -46,6 +50,9 @@ export async function maybeSendRatingRequest(
         ratingRequestSentAt: true,
         reviewSubmittedAt: true,
         ratingReminderCount: true,
+        fulfillmentStatus: true,
+        shippedAt: true,
+        updatedAt: true,
         user: { select: { email: true, name: true, emailUnsubscribedAt: true, deletedAt: true } },
         project: {
           select: {
@@ -63,6 +70,17 @@ export async function maybeSendRatingRequest(
     if (!pledge.user || pledge.user.deletedAt) return { sent: false, reason: "no-user" };
     if (!pledge.user.email) return { sent: false, reason: "no-email" };
     if (pledge.user.emailUnsubscribedAt) return { sent: false, reason: "unsubscribed" };
+
+    // Never ask before the reward is in their hands: shipped/delivered AND
+    // at least RATING_REQUEST_DELAY_DAYS since it shipped.
+    if (pledge.fulfillmentStatus !== "SHIPPED" && pledge.fulfillmentStatus !== "DELIVERED") {
+      return { sent: false, reason: "not-shipped" };
+    }
+    const shippedAt = pledge.shippedAt ?? pledge.updatedAt;
+    const daysSinceShipped = (Date.now() - shippedAt.getTime()) / (24 * 60 * 60 * 1000);
+    if (daysSinceShipped < RATING_REQUEST_DELAY_DAYS) {
+      return { sent: false, reason: "too-soon-after-shipping" };
+    }
 
     // Persistent-reminder cadence: stop at the cap, and don't re-send until
     // the weekly interval has elapsed since the last nudge.

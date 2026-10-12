@@ -125,6 +125,7 @@ export async function syncShipStationTracking(
             trackingCarrier: carrierCode,
             trackingUrl: carrier ? carrier.url(encodeURIComponent(String(s.trackingNumber))) : null,
             fulfillmentStatus: "SHIPPED",
+            shippedAt: new Date(),
           },
         });
         updated.push(pledgeId);

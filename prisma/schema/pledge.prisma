@@ -121,6 +121,11 @@ model Pledge {
   trackingCarrier String?
   trackingUrl     String?
 
+  // When the order left the building (first move to SHIPPED/DELIVERED).
+  // The rating request waits RATING_REQUEST_DELAY_DAYS after this — a label
+  // being printed is not the book being in the backer's hands.
+  shippedAt DateTime?
+
   // When we LAST sent the "rate your creator" nudge. The nudge re-sends on
   // a weekly cadence (see RATING_REMINDER_* in rating-request.ts) until the
   // backer leaves a rating or the reminder cap is hit.

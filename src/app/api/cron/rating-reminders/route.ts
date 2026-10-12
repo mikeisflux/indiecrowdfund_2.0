@@ -6,6 +6,7 @@ import {
   maybeSendRatingRequest,
   RATING_REMINDER_INTERVAL_DAYS,
   RATING_REMINDER_MAX,
+  RATING_REQUEST_DELAY_DAYS,
 } from "@/lib/email/rating-request";
 
 const cronRatingRemindersLogger = logger.child({ module: "cron-rating-reminders" });
@@ -34,6 +35,7 @@ async function handle(req: NextRequest) {
   }
 
   try {
+    const shippedBefore = new Date(Date.now() - RATING_REQUEST_DELAY_DAYS * 24 * 60 * 60 * 1000);
     const dueBefore = new Date(
       Date.now() - RATING_REMINDER_INTERVAL_DAYS * 24 * 60 * 60 * 1000
     );
@@ -46,8 +48,17 @@ async function handle(req: NextRequest) {
       where: {
         status: "COMPLETED",
         deletedAt: null,
-        // Reward is in the backer's hands (shipped or delivered).
+        // Reward is in the backer's hands: shipped or delivered, and long
+        // enough ago to have actually arrived.
         fulfillmentStatus: { in: ["SHIPPED", "DELIVERED"] },
+        AND: [
+          {
+            OR: [
+              { shippedAt: { lte: shippedBefore } },
+              { shippedAt: null, updatedAt: { lte: shippedBefore } },
+            ],
+          },
+        ],
         // Hasn't reviewed, under the reminder cap, and due for a nudge.
         reviewSubmittedAt: null,
         ratingReminderCount: { lt: RATING_REMINDER_MAX },

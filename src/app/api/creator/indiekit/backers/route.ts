@@ -677,7 +677,7 @@ export async function POST(req: NextRequest) {
             id: { in: pledgeIds },
             projectId,
           },
-          data: { fulfillmentStatus: "SHIPPED" },
+          data: { fulfillmentStatus: "SHIPPED", shippedAt: new Date() },
         });
 
         // Log activity

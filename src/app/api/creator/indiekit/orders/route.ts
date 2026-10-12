@@ -437,7 +437,7 @@ export async function POST(req: NextRequest) {
           where: { id: data.pledgeId },
           data: {
             metadata: { ...freshMeta, tracking },
-            ...(data.markAsShipped ? { fulfillmentStatus: "SHIPPED" } : {}),
+            ...(data.markAsShipped ? { fulfillmentStatus: "SHIPPED", shippedAt: new Date() } : {}),
           },
         });
       });

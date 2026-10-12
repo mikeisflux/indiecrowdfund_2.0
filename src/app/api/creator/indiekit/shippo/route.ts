@@ -246,6 +246,7 @@ export async function POST(req: NextRequest) {
                       data: {
                         trackingNumber: transaction.tracking_number,
                         fulfillmentStatus: "SHIPPED",
+                        shippedAt: new Date(),
                       },
                     });
                     updated.push(pledge.id);
