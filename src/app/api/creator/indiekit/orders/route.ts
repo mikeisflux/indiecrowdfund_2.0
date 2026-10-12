@@ -7,6 +7,7 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { z } from "zod";
 import { sendEmail } from "@/lib/email";
+import { resolveTracking } from "@/lib/fulfillment/tracking-url";
 
 export const dynamic = "force-dynamic";
 
@@ -416,28 +417,41 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: "Pledge not found" }, { status: 404 });
       }
 
+      // Resolve to the same columns ShipStation/Shopify sync writes, so the
+      // backer dashboard, exports and the creator's own view all read one
+      // place. This used to go into a metadata blob nothing read back —
+      // the creator could never see what they'd entered.
+      const trackingNumber = data.trackingNumber.trim();
+      const resolved = resolveTracking({ trackingNumber, trackingCarrier: data.carrier });
       const tracking = {
-        carrier: data.carrier,
-        trackingNumber: data.trackingNumber,
+        carrier: resolved?.carrier ?? data.carrier,
+        trackingNumber,
+        trackingUrl: resolved?.url ?? null,
         addedAt: new Date().toISOString(),
         addedBy: session.user.id,
       };
 
-      // Wrap metadata read-modify-write in a transaction with FOR UPDATE
-      // to prevent concurrent tracking updates from losing each other's writes.
       await db.$transaction(async (tx) => {
         await tx.$executeRaw`SELECT id FROM "Pledge" WHERE id = ${data.pledgeId} FOR UPDATE`;
         const freshPledge = await tx.pledge.findUnique({
           where: { id: data.pledgeId },
-          select: { metadata: true },
+          select: { metadata: true, fulfillmentStatus: true, shippedAt: true },
         });
         const freshMeta = (freshPledge?.metadata as Record<string, unknown>) || {};
+        const alreadyShipped =
+          freshPledge?.fulfillmentStatus === "SHIPPED" || freshPledge?.fulfillmentStatus === "DELIVERED";
 
         await tx.pledge.update({
           where: { id: data.pledgeId },
           data: {
+            trackingNumber,
+            trackingCarrier: data.carrier,
+            trackingUrl: tracking.trackingUrl,
+            // Keep the audit trail of who entered it; the columns are the truth.
             metadata: { ...freshMeta, tracking },
-            ...(data.markAsShipped ? { fulfillmentStatus: "SHIPPED", shippedAt: new Date() } : {}),
+            ...(data.markAsShipped && !alreadyShipped
+              ? { fulfillmentStatus: "SHIPPED", shippedAt: freshPledge?.shippedAt ?? new Date() }
+              : {}),
           },
         });
       });
@@ -454,8 +468,9 @@ export async function POST(req: NextRequest) {
                 <p>Hi ${pledge.user.name || "Backer"},</p>
                 <p>Great news! Your order for <strong>${project.title}</strong> has shipped.</p>
                 <div style="background: #f5f5f5; border-radius: 8px; padding: 16px; margin: 16px 0;">
-                  <p style="margin: 0;"><strong>Carrier:</strong> ${data.carrier.toUpperCase()}</p>
-                  <p style="margin: 8px 0 0;"><strong>Tracking Number:</strong> <code>${data.trackingNumber}</code></p>
+                  <p style="margin: 0;"><strong>Carrier:</strong> ${tracking.carrier}</p>
+                  <p style="margin: 8px 0 0;"><strong>Tracking Number:</strong> <code>${trackingNumber}</code></p>
+                  ${tracking.trackingUrl ? `<p style="margin: 8px 0 0;"><a href="${tracking.trackingUrl}">Track your package</a></p>` : ""}
                 </div>
                 <p>Thank you for your support!</p>
               </div>

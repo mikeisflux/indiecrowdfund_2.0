@@ -1,5 +1,5 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { resolvePledgeShippingAddress } from "@/lib/fulfillment/shipping-address";
+import { resolveTracking } from "@/lib/fulfillment/tracking-url";
 
 interface PledgeForProcessing {
   id: string;
@@ -15,6 +15,9 @@ interface PledgeForProcessing {
   addonsAmount?: unknown;
   shippingAmount: unknown;
   fulfillmentStatus: string | null;
+  trackingNumber?: string | null;
+  trackingCarrier?: string | null;
+  trackingUrl?: string | null;
   orderLockStatus: string | null;
   // Set true and populated by the Order Lock flow (which stores the address on
   // the pledge itself, not via a SurveyResponse).
@@ -223,6 +226,11 @@ export function processBackers(
       surveyLate,
       addressComplete,
       pledgeDate: pledge.createdAt.toISOString(),
+      tracking: resolveTracking({
+        trackingNumber: pledge.trackingNumber,
+        trackingCarrier: pledge.trackingCarrier,
+        trackingUrl: pledge.trackingUrl,
+      }),
       shippingAddress: shippingAddress ? {
         name: shippingAddress.name,
         line1: shippingAddress.line1,

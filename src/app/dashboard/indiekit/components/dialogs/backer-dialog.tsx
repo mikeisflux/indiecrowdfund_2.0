@@ -471,7 +471,7 @@ export function BackerDialog({ open, onOpenChange, backer, availableAddons = [],
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={() => setShowTracking(true)}>
                     <Truck className="h-4 w-4 mr-2" />
-                    Add Tracking
+                    {backer.tracking ? "Edit Tracking" : "Add Tracking"}
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => setShowPackingSlip(true)}>
                     <Printer className="h-4 w-4 mr-2" />
@@ -1026,11 +1026,40 @@ export function BackerDialog({ open, onOpenChange, backer, availableAddons = [],
                   <Truck className="h-5 w-5 text-teal-600" />
                   <div>
                     <p className="font-medium">{STATUS_LABELS[backer.status]}</p>
-                    {backer.status === "shipped" && (
-                      <p className="text-sm text-muted-foreground">
-                        Tracking information available
+                    {backer.status === "shipped" && !backer.tracking && (
+                      <p className="text-sm text-amber-600">
+                        Marked shipped, but no tracking number is on file.
                       </p>
                     )}
+                  </div>
+                </div>
+                <div className="mt-4 rounded-md bg-muted/50 p-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-xs font-medium text-muted-foreground mb-1">TRACKING</p>
+                      {backer.tracking ? (
+                        <>
+                          <p className="font-mono text-sm break-all">{backer.tracking.number}</p>
+                          <p className="text-sm text-muted-foreground">
+                            {backer.tracking.carrier || "Carrier not identified"}
+                            {backer.tracking.url && (
+                              <>
+                                {" · "}
+                                <a href={backer.tracking.url} target="_blank" rel="noopener noreferrer" className="text-teal-700 hover:underline inline-flex items-center gap-1">
+                                  Track package <ExternalLink className="h-3 w-3" />
+                                </a>
+                              </>
+                            )}
+                          </p>
+                        </>
+                      ) : (
+                        <p className="text-sm text-muted-foreground">No tracking number yet.</p>
+                      )}
+                    </div>
+                    <Button variant="outline" size="sm" onClick={() => setShowTracking(true)}>
+                      <Package className="h-3 w-3 mr-1" />
+                      {backer.tracking ? "Edit" : "Add tracking"}
+                    </Button>
                   </div>
                 </div>
               </div>
@@ -1071,10 +1100,16 @@ export function BackerDialog({ open, onOpenChange, backer, availableAddons = [],
                     )}
                   </div>
                 </div>
+                {backer.tracking && (
+                  <p className="text-xs text-muted-foreground">
+                    Tracking: <span className="font-mono">{backer.tracking.number}</span>
+                    {backer.tracking.carrier ? ` (${backer.tracking.carrier})` : ""}
+                  </p>
+                )}
                 <div className="flex gap-2">
                   <Button variant="outline" size="sm" onClick={() => setShowTracking(true)}>
                     <Package className="h-3 w-3 mr-1" />
-                    Tracking
+                    {backer.tracking ? "Edit tracking" : "Add tracking"}
                   </Button>
                   <Button
                     variant="outline"
@@ -1308,6 +1343,7 @@ export function BackerDialog({ open, onOpenChange, backer, availableAddons = [],
         orderId={backer.id}
         backerName={backer.name}
         backerEmail={backer.email}
+        current={backer.tracking ?? null}
         onSave={async (tracking) => {
           if (!backer.projectId) return;
           try {

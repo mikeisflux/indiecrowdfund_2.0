@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -34,6 +34,8 @@ interface TrackingDialogProps {
   orderId: string;
   backerName: string;
   backerEmail: string;
+  /** Existing tracking, when editing. */
+  current?: { number: string; carrier: string | null; url: string | null } | null;
   onSave?: (tracking: TrackingInfo) => void;
 }
 
@@ -54,18 +56,43 @@ const carriers = [
   { id: "other", name: "Other", trackingUrl: "" },
 ];
 
+// Map a stored carrier label/code back onto the dropdown ids.
+function carrierIdFor(label: string | null | undefined): string {
+  if (!label) return "";
+  const k = label.toLowerCase().replace(/[^a-z]/g, "");
+  if (k.startsWith("usps")) return "usps";
+  if (k.startsWith("ups")) return "ups";
+  if (k.startsWith("fedex")) return "fedex";
+  if (k.startsWith("dhl")) return "dhl";
+  if (k.startsWith("amazon")) return "amazon";
+  if (k.startsWith("ontrac")) return "ontrac";
+  return "other";
+}
+
 export function TrackingDialog({
   open,
   onOpenChange,
   orderId,
   backerName,
   backerEmail,
+  current,
   onSave,
 }: TrackingDialogProps) {
   const [carrier, setCarrier] = useState("");
   const [trackingNumber, setTrackingNumber] = useState("");
   const [notifyBacker, setNotifyBacker] = useState(true);
   const [markAsShipped, setMarkAsShipped] = useState(true);
+  const isEdit = !!current?.number;
+
+  // Prefill from what's on the pledge each time the dialog opens, so the
+  // creator sees and edits the existing number instead of a blank form.
+  useEffect(() => {
+    if (!open) return;
+    setCarrier(carrierIdFor(current?.carrier));
+    setTrackingNumber(current?.number ?? "");
+    // Re-notifying on an edit is opt-in; the backer already got the first one.
+    setNotifyBacker(!current?.number);
+  }, [open, current]);
 
   const selectedCarrier = carriers.find(c => c.id === carrier);
 
@@ -99,10 +126,10 @@ export function TrackingDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Truck className="h-5 w-5 text-teal-600" />
-            Add Tracking Number
+            {isEdit ? "Edit Tracking Number" : "Add Tracking Number"}
           </DialogTitle>
           <DialogDescription>
-            Add shipping tracking information for order #{orderId}
+            {isEdit ? "Update the shipping tracking for" : "Add shipping tracking information for"} order #{orderId}
           </DialogDescription>
         </DialogHeader>
 
@@ -117,6 +144,24 @@ export function TrackingDialog({
               </div>
             </div>
           </div>
+
+          {isEdit && current && (
+            <div className="rounded-lg border border-teal-200 bg-teal-50 dark:bg-teal-950/30 dark:border-teal-900 p-3 text-sm">
+              <p className="text-xs font-medium text-muted-foreground mb-1">CURRENTLY ON FILE</p>
+              <p className="font-mono break-all">{current.number}</p>
+              <p className="text-muted-foreground">
+                {current.carrier || "Carrier not identified"}
+                {current.url && (
+                  <>
+                    {" · "}
+                    <a href={current.url} target="_blank" rel="noopener noreferrer" className="text-teal-700 hover:underline inline-flex items-center gap-1">
+                      Track <ExternalLink className="h-3 w-3" />
+                    </a>
+                  </>
+                )}
+              </p>
+            </div>
+          )}
 
           {/* Carrier Selection */}
           <div className="space-y-2">
@@ -206,7 +251,7 @@ export function TrackingDialog({
             disabled={!carrier || !trackingNumber.trim()}
           >
             <Truck className="h-4 w-4 mr-2" />
-            Save Tracking
+            {isEdit ? "Update Tracking" : "Save Tracking"}
           </Button>
         </DialogFooter>
       </DialogContent>

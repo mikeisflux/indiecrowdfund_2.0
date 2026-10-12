@@ -87,6 +87,8 @@ export interface Backer {
   /** Submitted after the creator locked orders (auto-locked on submit). */
   surveyLate?: boolean;
   addressComplete: boolean;
+  /** Current tracking on the pledge, resolved to a display name and link. */
+  tracking?: { number: string; carrier: string | null; url: string | null } | null;
   pledgeDate?: string;
   shippingAddress?: {
     name?: string;
