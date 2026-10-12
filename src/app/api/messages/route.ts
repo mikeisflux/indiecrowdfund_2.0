@@ -8,23 +8,11 @@ import { db } from "@/lib/db";
 import { z } from "zod";
 import { htmlToPlainText, looksLikeHtml } from "@/lib/email/email-to-text";
 import { storeMessageAttachments } from "@/lib/messages/attachments";
-import { sendEmail } from "@/lib/email";
+import { notifyNewMessage } from "@/lib/messages/notify";
 import {
   getDelegatedProjectCreators,
   getDelegatedProjectIds,
 } from "@/lib/messages/delegated-projects";
-
-const APP_NAME = process.env.NEXT_PUBLIC_APP_NAME || "IndieCrowdfund";
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-
-function escapeHtml(str: string): string {
-  return str
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#x27;");
-}
 
 const createMessageSchema = z.object({
   projectId: z.string().optional(),
@@ -56,7 +44,6 @@ export async function POST(req: NextRequest) {
 
     // Verify project exists (only when one was provided — project-less DMs
     // are allowed for direct messages started from a user profile)
-    let projectForEmail: { title: string; slug: string } | null = null;
     if (data.projectId) {
       const project = await db.project.findFirst({
         where: { id: data.projectId, deletedAt: null },
@@ -66,11 +53,6 @@ export async function POST(req: NextRequest) {
       if (!project) {
         return NextResponse.json({ error: "Project not found" }, { status: 404 });
       }
-
-      projectForEmail = await db.project.findFirst({
-        where: { id: data.projectId, deletedAt: null },
-        select: { title: true, slug: true },
-      });
     }
 
     // Verify recipient exists and is not deleted
@@ -121,48 +103,20 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    // Send email notification to recipient
-    if (recipient.email) {
-      try {
-        const senderName = sender?.name || "Someone";
-        const projectTitle = projectForEmail?.title || null;
-        const contentPreview = data.content.length > 200
-          ? data.content.substring(0, 200) + "..."
-          : data.content;
-
-        const replyParams = new URLSearchParams({ recipientId: session.user.id });
-        if (data.projectId) replyParams.set("projectId", data.projectId);
-
-        await sendEmail({
-          to: recipient.email,
-          subject: projectTitle
-            ? `New message from ${senderName} about "${projectTitle}"`
-            : `New message from ${senderName}`,
-          html: `
-            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-              <h2 style="color: #6366f1;">You have a new message</h2>
-              <p>Hi ${escapeHtml(recipient.name || "there")},</p>
-              <p><strong>${escapeHtml(senderName)}</strong> sent you ${projectTitle ? `a message about <strong>${escapeHtml(projectTitle)}</strong>` : "a direct message"}:</p>
-              <div style="background: #f3f4f6; border-left: 4px solid #6366f1; padding: 16px; margin: 20px 0; border-radius: 0 8px 8px 0;">
-                ${data.subject ? `<p style="margin: 0 0 8px 0; font-weight: bold;">${escapeHtml(data.subject)}</p>` : ""}
-                <p style="margin: 0; color: #374151; white-space: pre-wrap;">${escapeHtml(contentPreview)}</p>
-              </div>
-              <p style="margin-top: 20px;">
-                <a href="${APP_URL}/dashboard/messages?${replyParams.toString()}" style="background: linear-gradient(to right, #6366f1, #a855f7); color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; display: inline-block;">View & Reply</a>
-              </p>
-              <p style="color: #6b7280; font-size: 14px; margin-top: 30px;">
-                You received this email because someone sent you a message on ${APP_NAME}.
-                <a href="${APP_URL}/dashboard/backer?tab=notifications" style="color: #6366f1;">Manage your notification preferences</a>
-              </p>
-            </div>
-          `,
-          skipUnsubscribeCheck: true, // Transactional email for direct messages
-        });
-      } catch (emailError) {
-        messagesLogger.error({ err: String(emailError) }, "Failed to send message notification email:");
-        // Don't fail the message creation if email fails
-      }
-    }
+    // In-app notification (+ shared-inbox collaborators) and an email copy.
+    // Awaited so a failure is in the log before the response goes out; it
+    // never fails the message itself.
+    await notifyNewMessage({
+      messageId: message.id,
+      recipientId: data.recipientId,
+      senderId: session.user.id,
+      senderName: sender?.name || "Someone",
+      projectId: data.projectId ?? null,
+      subject: data.subject ?? null,
+      content: message.content,
+      sendEmailCopy: true,
+      source: "direct",
+    });
 
     return NextResponse.json({ message }, { status: 201 });
   } catch (error) {

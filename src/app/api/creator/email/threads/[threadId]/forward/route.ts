@@ -7,6 +7,7 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { sendEmail, escapeHtmlForEmail } from "@/lib/email";
 import { htmlToPlainText, looksLikeHtml } from "@/lib/email/email-to-text";
+import { notifyNewMessage } from "@/lib/messages/notify";
 
 export const dynamic = "force-dynamic";
 
@@ -232,6 +233,20 @@ export async function POST(
             },
           },
         },
+      });
+    }
+
+    if (messageRecord && recipient) {
+      await notifyNewMessage({
+        messageId: messageRecord.id,
+        recipientId: recipient.id,
+        senderId: session.user.id,
+        senderName: creatorName,
+        projectId,
+        subject,
+        content: fullContent,
+        sendEmailCopy: false,
+        source: "creator-email",
       });
     }
 

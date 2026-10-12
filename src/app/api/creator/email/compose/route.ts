@@ -8,6 +8,7 @@ import { db } from "@/lib/db";
 import { sendEmail, escapeHtmlForEmail } from "@/lib/email";
 import { htmlToPlainText, looksLikeHtml } from "@/lib/email/email-to-text";
 import { storeMessageAttachments, type IncomingAttachment } from "@/lib/messages/attachments";
+import { notifyNewMessage } from "@/lib/messages/notify";
 import { filterEmailsByEmailPreference } from "@/lib/email/email-preferences";
 
 export const dynamic = "force-dynamic";
@@ -322,6 +323,20 @@ export async function POST(request: NextRequest) {
         { error: "This person has unsubscribed from emails and doesn't have an account, so your message couldn't be delivered." },
         { status: 403 }
       );
+    }
+
+    if (messageRecord && recipient) {
+      await notifyNewMessage({
+        messageId: messageRecord.id,
+        recipientId: recipient.id,
+        senderId: session.user.id,
+        senderName,
+        projectId: projectId || null,
+        subject: emailSubject,
+        content: plainContent,
+        sendEmailCopy: false,
+        source: "creator-email",
+      });
     }
 
     return NextResponse.json({

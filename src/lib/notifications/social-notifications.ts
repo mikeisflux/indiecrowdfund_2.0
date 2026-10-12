@@ -15,23 +15,25 @@ export async function notifyMessageReceived(
   recipientId: string,
   senderId: string,
   senderName: string,
-  projectId: string,
+  projectId: string | null,
   subject: string
 ) {
-  const project = await db.project.findFirst({
-    where: { id: projectId , deletedAt: null },
-    select: { title: true, slug: true },
-  });
-
-  if (!project) return;
+  const project = projectId
+    ? await db.project.findFirst({
+        where: { id: projectId, deletedAt: null },
+        select: { title: true, slug: true },
+      })
+    : null;
 
   await createNotification({
     userId: recipientId,
     type: "MESSAGE_RECEIVED",
     title: "New Message",
-    message: `${senderName} sent you a message about "${project.title}": ${subject || "No subject"}`,
+    message: project
+      ? `${senderName} sent you a message about "${project.title}": ${subject || "No subject"}`
+      : `${senderName} sent you a message: ${subject || "No subject"}`,
     actionUrl: `/dashboard/messages`,
-    projectId,
+    projectId: projectId ?? undefined,
     senderId,
   });
 }

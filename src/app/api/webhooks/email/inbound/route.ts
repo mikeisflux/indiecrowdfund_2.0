@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { emailBodyToPlainText } from "@/lib/email/email-to-text";
 import { storeMessageAttachments } from "@/lib/messages/attachments";
+import { notifyNewMessage } from "@/lib/messages/notify";
 import { db } from "@/lib/db";
 import { getR2Storage, generateEmailAttachmentKey } from "@/lib/r2";
 import { isSenderBlocked, recordBlockHit } from "@/lib/email/inbound-blocklist";
@@ -459,6 +460,21 @@ export async function POST(request: NextRequest) {
       });
 
       webhooksEmailInboundLogger.info(`[Inbound Email] Created message ${message.id} for creator ${creator.id}`);
+
+      // Tell the creator. This used to stop at the Message row: nothing on
+      // the bell, nothing to their real address, so mail to their
+      // @indiecrowdfund.com handle sat unseen until they opened the inbox.
+      await notifyNewMessage({
+        messageId: message.id,
+        recipientId: creator.id,
+        senderId: sender?.id ?? null,
+        senderName: sender?.name || fromParsed.name || fromParsed.email,
+        projectId: null,
+        subject: emailData.subject || null,
+        content: cleanBody,
+        sendEmailCopy: true,
+        source: "inbound-email",
+      });
 
       return NextResponse.json({
         success: true,

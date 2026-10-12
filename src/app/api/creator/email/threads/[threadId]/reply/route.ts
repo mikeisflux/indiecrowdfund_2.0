@@ -8,6 +8,7 @@ import { db } from "@/lib/db";
 import { sendEmail, escapeHtmlForEmail } from "@/lib/email";
 import { htmlToPlainText, looksLikeHtml } from "@/lib/email/email-to-text";
 import { storeMessageAttachments, type IncomingAttachment } from "@/lib/messages/attachments";
+import { notifyNewMessage } from "@/lib/messages/notify";
 
 export const dynamic = "force-dynamic";
 
@@ -255,6 +256,21 @@ export async function POST(
           },
         },
       },
+    });
+
+    // The email above is the delivery; this puts it on the recipient's bell.
+    // If the email was skipped (unsubscribed/blocked) the bell is the only
+    // channel, so it matters more, not less.
+    await notifyNewMessage({
+      messageId: message.id,
+      recipientId,
+      senderId: session.user.id,
+      senderName: creatorName,
+      projectId: hasProject ? projectId : null,
+      subject,
+      content: plainContent,
+      sendEmailCopy: false,
+      source: "creator-email",
     });
 
     return NextResponse.json({
