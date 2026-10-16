@@ -336,7 +336,8 @@ export async function GET(req: NextRequest) {
 
       // Get digital files
       shouldInclude("digital_files") ? db.digitalFile.findMany({
-        where: { projectId: selectedProjectId },
+        // Carrier rows for in-flight replacements are not files of their own.
+        where: { projectId: selectedProjectId, replacesFileId: null },
         include: {
           distributions: true,
         },

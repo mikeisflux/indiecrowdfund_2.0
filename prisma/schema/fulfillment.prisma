@@ -209,6 +209,10 @@ model DigitalFile {
   multipartUploadId String?
   uploadedParts     Json?
   uploadedAt        DateTime?
+  // Set on the temporary row that carries a replacement upload. When it
+  // completes, its object is moved onto the file it replaces and this row
+  // is deleted. Hidden from every list while it exists.
+  replacesFileId    String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

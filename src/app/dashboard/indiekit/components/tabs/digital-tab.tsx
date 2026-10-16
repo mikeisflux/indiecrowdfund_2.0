@@ -40,6 +40,7 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { uploadDigitalFileChunked, ChunkedUploadError } from "@/lib/digital-upload-client";
 import type { DigitalFile, DistributionRule, FulfillmentStats } from "../../types";
 
 interface DigitalTabProps {
@@ -77,6 +78,8 @@ export function DigitalTab({
   const [replaceAffectedCount, setReplaceAffectedCount] = useState<number | null>(null);
   const [replaceStep, setReplaceStep] = useState<"select" | "uploading" | "done">("select");
   const [replaceProgress, setReplaceProgress] = useState(0);
+  const [replacePhase, setReplacePhase] = useState<"starting" | "uploading" | "finalizing">("starting");
+  const [replaceNote, setReplaceNote] = useState<string | null>(null);
 
   const handleBlastNotifications = async () => {
     if (!projectId) {
@@ -260,73 +263,44 @@ export function DigitalTab({
     setReplaceAffectedCount(null);
     setReplaceStep("select");
     setReplaceProgress(0);
+    setReplaceNote(null);
   };
 
   const handleReplaceUpload = async () => {
     if (!replaceFile || !replaceFileInput || !projectId) return;
 
     setReplaceStep("uploading");
-    setReplaceProgress(10);
+    setReplaceProgress(1);
+    setReplaceNote(null);
 
     try {
-      // Step 1: get presigned URL
-      const urlRes = await apiFetch("/api/creator/digital-files", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "get_replace_url",
-          fileId: replaceFile.id,
-          fileName: replaceFileInput.name,
-          fileSize: replaceFileInput.size,
-          mimeType: replaceFileInput.type || "application/octet-stream",
-        }),
+      // Same chunked, same-origin, resumable path as new uploads. The old
+      // flow PUT the whole file from the browser straight to R2, which
+      // home networks and browsers often refuse ("network error", nothing
+      // in our logs).
+      const result = await uploadDigitalFileChunked({
+        file: replaceFileInput,
+        projectId,
+        replaceOfFileId: replaceFile.id,
+        notifyBackers: replaceNotify,
+        onProgress: setReplaceProgress,
+        onPhase: (phase) => setReplacePhase(phase),
+        onNote: setReplaceNote,
       });
-
-      if (!urlRes.ok) {
-        const err = await urlRes.json();
-        throw new Error(err.error || "Failed to get upload URL");
-      }
-
-      const { uploadUrl, newStorageKey, affectedCount } = await urlRes.json();
-      setReplaceAffectedCount(affectedCount);
-      setReplaceProgress(30);
-
-      // Step 2: upload directly to R2
-      const uploadRes = await fetch(uploadUrl, {
-        method: "PUT",
-        body: replaceFileInput,
-        headers: { "Content-Type": replaceFileInput.type || "application/octet-stream" },
-      });
-
-      if (!uploadRes.ok) throw new Error("Upload failed");
-      setReplaceProgress(75);
-
-      // Step 3: confirm replace
-      const confirmRes = await apiFetch("/api/creator/digital-files", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "confirm_replace",
-          fileId: replaceFile.id,
-          newStorageKey,
-          fileName: replaceFileInput.name,
-          fileSize: replaceFileInput.size,
-          mimeType: replaceFileInput.type || "application/octet-stream",
-          notifyBackers: replaceNotify,
-        }),
-      });
-
-      if (!confirmRes.ok) {
-        const err = await confirmRes.json();
-        throw new Error(err.error || "Failed to confirm replacement");
-      }
-
+      setReplaceAffectedCount(result.affectedCount ?? null);
       setReplaceProgress(100);
       setReplaceStep("done");
-      toast.success(`"${replaceFile.name}" replaced successfully`);
+      toast.success(
+        result.notifiedCount
+          ? `"${replaceFile.name}" replaced — ${result.notifiedCount} backer${result.notifiedCount === 1 ? "" : "s"} notified`
+          : `"${replaceFile.name}" replaced successfully`
+      );
       onRefresh?.();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Replace failed");
+      const message = err instanceof Error ? err.message : "Replace failed";
+      const resumable = err instanceof ChunkedUploadError && err.resumable;
+      toast.error(message);
+      setReplaceNote(resumable ? `${message}. Your progress is saved — click Replace again to resume.` : message);
       setReplaceStep("select");
       setReplaceProgress(0);
     }
@@ -748,6 +722,9 @@ export function DigitalTab({
                   onChange={(e) => setReplaceFileInput(e.target.files?.[0] ?? null)}
                   accept=".pdf,.epub,.zip,.mp3"
                 />
+                {replaceNote && replaceStep === "select" && (
+                  <p className="text-xs text-red-600">{replaceNote}</p>
+                )}
                 {replaceFileInput && (
                   <p className="text-xs text-muted-foreground">
                     {replaceFileInput.name} — {(replaceFileInput.size / 1024 / 1024).toFixed(1)} MB
@@ -777,10 +754,15 @@ export function DigitalTab({
               <div className="flex items-center gap-3">
                 <Loader2 className="h-5 w-5 animate-spin text-teal-600" />
                 <span className="text-sm">
-                  {replaceProgress < 30 ? "Preparing upload…" : replaceProgress < 75 ? "Uploading file…" : "Finalising…"}
+                  {replacePhase === "starting"
+                    ? "Preparing upload…"
+                    : replacePhase === "finalizing"
+                      ? "Swapping in the new file…"
+                      : `Uploading file… ${replaceProgress}%`}
                 </span>
               </div>
               <Progress value={replaceProgress} className="h-2" />
+              {replaceNote && <p className="text-xs text-muted-foreground">{replaceNote}</p>}
             </div>
           )}
 

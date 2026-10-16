@@ -4,6 +4,7 @@ import { logger } from "@/lib/logger";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { getR2Storage, generateFileKey } from "@/lib/r2";
+import { applyFileReplacement } from "@/lib/digital-files/replace";
 
 const multipartLogger = logger.child({ module: "creator-digital-files-multipart" });
 
@@ -28,8 +29,11 @@ export const maxDuration = 300;
 // looked uploaded with no object behind it.
 //
 // Actions (all POST, JSON body unless noted):
-//   init          { projectId, fileName, fileSize, mimeType, name }
+//   init          { projectId, fileName, fileSize, mimeType, name,
+//                   replaceOfFileId? }
 //                 → { fileId, key, uploadId, uploadedParts: {} }
+//                 With replaceOfFileId the row is a hidden temporary carrier;
+//                 `complete` moves its object onto that file and deletes it.
 //   find-pending  { projectId, fileName, fileSize }
 //                 → { found: true, fileId, uploadId, uploadedParts } | { found: false }
 //   upload-part   raw bytes; ?action=upload-part&fileId&uploadId&partNumber
@@ -139,6 +143,7 @@ export async function POST(request: NextRequest) {
 
     if (action === "init") {
       const { projectId, fileName, fileSize, mimeType, name, description, accessType, rewardIds, addonIds } = body;
+      const replaceOfFileId = typeof body.replaceOfFileId === "string" ? body.replaceOfFileId : null;
 
       if (!projectId || !fileName || !fileSize) {
         return NextResponse.json(
@@ -193,9 +198,22 @@ export async function POST(request: NextRequest) {
         );
       }
 
+      let replacing: { id: string; fileSize: number } | null = null;
+      if (replaceOfFileId) {
+        const target = await db.digitalFile.findFirst({
+          where: { id: replaceOfFileId, projectId },
+          select: { id: true, fileSize: true },
+        });
+        if (!target) {
+          return NextResponse.json({ error: "File to replace not found" }, { status: 404 });
+        }
+        replacing = target;
+      }
+
       const currentUsage = await r2.getProjectStorageUsed(projectId);
       const maxProjectBytes = (settings.maxProjectStorageMB || 10240) * 1024 * 1024;
-      if (currentUsage + fileSize > maxProjectBytes) {
+      // A replacement frees the old object, so only count the difference.
+      if (currentUsage - (replacing?.fileSize ?? 0) + fileSize > maxProjectBytes) {
         return NextResponse.json(
           { error: `Project storage limit exceeded (${settings.maxProjectStorageMB}MB max)` },
           { status: 400 }
@@ -227,6 +245,7 @@ export async function POST(request: NextRequest) {
           uploadStatus: "UPLOADING",
           multipartUploadId: uploadId,
           uploadedParts: {},
+          replacesFileId: replacing?.id ?? null,
         },
       });
 
@@ -243,6 +262,8 @@ export async function POST(request: NextRequest) {
           projectId,
           fileName,
           fileSize: Number(fileSize),
+          // A half-done replacement only resumes as that same replacement.
+          replacesFileId: typeof body.replaceOfFileId === "string" ? body.replaceOfFileId : null,
           uploadStatus: "UPLOADING",
           multipartUploadId: { not: null },
           // Match the stale-upload cron's window; older ones get aborted.
@@ -353,6 +374,25 @@ export async function POST(request: NextRequest) {
       if (!exists) {
         await db.digitalFile.update({ where: { id: fileId }, data: { uploadStatus: "FAILED" } });
         return NextResponse.json({ error: "Upload finished but the file is not readable in storage" }, { status: 502 });
+      }
+
+      if (file.replacesFileId) {
+        // Replacement: move the new object onto the original file (keeps its
+        // id, distributions and reading progress), drop the carrier row.
+        const result = await applyFileReplacement({
+          fileId: file.replacesFileId,
+          newStorageKey: file.r2StorageKey as string,
+          fileName: file.fileName,
+          fileSize: file.fileSize,
+          mimeType: file.mimeType,
+          notifyBackers: body.notifyBackers === true,
+        });
+        await db.digitalFile.deleteMany({ where: { id: fileId } });
+        multipartLogger.info(
+          { replacedFileId: file.replacesFileId, parts: cleanParts.length, size: file.fileSize },
+          "Digital file replacement complete"
+        );
+        return NextResponse.json({ replaced: true, fileId: file.replacesFileId, ...result });
       }
 
       const updated = await db.digitalFile.update({

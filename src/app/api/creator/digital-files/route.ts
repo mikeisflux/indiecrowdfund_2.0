@@ -5,8 +5,8 @@ import { logger } from "@/lib/logger";
 const creatorDigitalFilesLogger = logger.child({ module: "creator-digital-files" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { applyFileReplacement } from "@/lib/digital-files/replace";
 import { getR2Storage, generateFileKey } from "@/lib/r2";
-import { sendEmail } from "@/lib/email";
 
 // CORS headers for API responses
 const corsHeaders = {
@@ -299,109 +299,23 @@ export async function PATCH(request: NextRequest) {
     // Step 2: confirm_replace — swap the file in DB and optionally notify backers
     if (action === "confirm_replace") {
       const { newStorageKey, fileName, fileSize, mimeType, notifyBackers } = body;
-
       if (!newStorageKey) {
         return NextResponse.json({ error: "newStorageKey required" }, { status: 400, headers: corsHeaders });
       }
-
-      // Security: verify the key was generated for this project (prevents a creator from
-      // pointing this DigitalFile at another project's R2 object by passing an arbitrary key)
+      // Security: the key must have been generated for this project.
       const expectedPrefix = `digital-rewards/${file.project.id}/`;
       if (!newStorageKey.startsWith(expectedPrefix)) {
         return NextResponse.json({ error: "Invalid storage key" }, { status: 400, headers: corsHeaders });
       }
-
-      const r2 = await getR2Storage();
-
-      // Swap the storage key and reset cover (new file may have different pages)
-      const oldStorageKey = file.r2StorageKey;
-      await db.digitalFile.update({
-        where: { id: fileId },
-        data: {
-          r2StorageKey: newStorageKey,
-          fileName: fileName || file.fileName,
-          fileSize: fileSize || file.fileSize,
-          mimeType: mimeType || file.mimeType,
-          // Reset cover extraction so it gets re-extracted from the new file
-          coverImageUrl: null,
-          coverExtractedAt: null,
-          coverExtractionFailed: false,
-          updatedAt: new Date(),
-        },
+      const result = await applyFileReplacement({
+        fileId,
+        newStorageKey,
+        fileName,
+        fileSize,
+        mimeType,
+        notifyBackers: !!notifyBackers,
       });
-
-      // Delete old file from R2
-      if (oldStorageKey && r2) {
-        await r2.deleteFile(oldStorageKey).catch((err: unknown) =>
-          creatorDigitalFilesLogger.warn({ err: String(err), oldStorageKey }, "Failed to delete old R2 file after replacement")
-        );
-      }
-
-      // Find all backers who received this file and send notification emails
-      let notifiedCount = 0;
-      if (notifyBackers) {
-        // DigitalDistribution has no pledge relation — only pledgeId field.
-        // Fetch distributions to get pledgeIds, then look up users via Pledge.
-        const distributions = await db.digitalDistribution.findMany({
-          where: { digitalFileId: fileId, distributedAt: { not: null } },
-          select: { pledgeId: true },
-        });
-
-        const pledgeIds = distributions.map((d: { pledgeId: string }) => d.pledgeId);
-        const pledges = pledgeIds.length > 0
-          ? await db.pledge.findMany({
-              where: { id: { in: pledgeIds } },
-              select: { user: { select: { email: true, name: true, deletedAt: true } } },
-            })
-          : [];
-
-        const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "";
-        const APP_NAME = process.env.NEXT_PUBLIC_APP_NAME || "IndieCrowdfund";
-        const escapeMap: Record<string, string> = { "<": "&lt;", ">": "&gt;", "&": "&amp;", '"': "&quot;" };
-        const safeFileName = file.name.replace(/[<>&"]/g, (c: string) => escapeMap[c] ?? c);
-        const downloadsUrl = `${APP_URL}/dashboard/backer?tab=downloads`;
-
-        const emailResults = await Promise.allSettled(
-          pledges
-            .filter((p) => p.user && !p.user.deletedAt && p.user.email)
-            .map((p) => {
-              const user = p.user!;
-              const safeName = (user.name || "Backer").replace(/[<>&"]/g, (c: string) => escapeMap[c] ?? c);
-              return sendEmail({
-                to: user.email!,
-                subject: `Updated file available: ${file.name}`,
-                html: `
-                  <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;">
-                    <h2 style="color:#333;">Updated File Available</h2>
-                    <p>Hi ${safeName},</p>
-                    <p>The creator has uploaded a corrected version of <strong>${safeFileName}</strong>.</p>
-                    <p>The updated file is now available in your digital downloads. Your reading progress has been preserved.</p>
-                    <p style="margin:24px 0;">
-                      <a href="${downloadsUrl}" style="background:#0d9488;color:#fff;padding:12px 24px;border-radius:6px;text-decoration:none;font-weight:bold;">
-                        View Downloads
-                      </a>
-                    </p>
-                    <p style="color:#666;font-size:12px;">— The ${APP_NAME} Team</p>
-                  </div>
-                `,
-                text: `Hi ${user.name || "Backer"},\n\nThe creator has uploaded a corrected version of "${file.name}".\n\nThe updated file is now available in your digital downloads at: ${downloadsUrl}\n\n— The ${APP_NAME} Team`,
-              });
-            })
-        );
-        notifiedCount = emailResults.filter(r => r.status === "fulfilled").length;
-        emailResults.forEach((r, i) => {
-          if (r.status === "rejected") {
-            creatorDigitalFilesLogger.warn({ err: String(r.reason), index: i }, "Failed to send replacement notification email");
-          }
-        });
-      }
-
-      const affectedCount = await db.digitalDistribution.count({
-        where: { digitalFileId: fileId, distributedAt: { not: null } },
-      });
-
-      creatorDigitalFilesLogger.info({ fileId, affectedCount, notifiedCount }, "Digital file replaced");
-      return NextResponse.json({ success: true, affectedCount, notifiedCount }, { headers: corsHeaders });
+      return NextResponse.json({ success: true, ...result }, { headers: corsHeaders });
     }
 
     return NextResponse.json({ error: "Unknown action" }, { status: 400, headers: corsHeaders });

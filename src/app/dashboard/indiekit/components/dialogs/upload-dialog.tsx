@@ -1,6 +1,5 @@
 "use client";
 
-import { apiFetch } from "@/lib/fetch-utils";
 import { useState, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -14,6 +13,7 @@ import {
 import { Upload, FileText, X, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { uploadDigitalFileChunked, ChunkedUploadError } from "@/lib/digital-upload-client";
 
 
 interface UploadDialogProps {
@@ -84,43 +84,6 @@ export function UploadDialog({ open, onOpenChange, projectId, onUploaded }: Uplo
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   };
 
-  // ---- Upload engine ----
-  //
-  // Same-origin chunked multipart: the browser POSTs each part to our
-  // server, which forwards it to R2. Parts are small (8MB) so every
-  // request finishes in seconds on a slow link and well inside any proxy
-  // timeout; a few run in parallel for throughput; each has its own
-  // deadline and retry, so a stalled connection fails fast and resumes
-  // instead of sitting at 63% forever. The server records every accepted
-  // part, so if the tab is refreshed the same file picked again carries
-  // on from the last good part.
-  const CHUNK_SIZE = 8 * 1024 * 1024;
-  const CONCURRENCY = 3;
-  const PART_TIMEOUT_MS = 120_000;
-  const MAX_PART_RETRIES = 5;
-
-  const reportClientFailure = (reason: string, extra: Record<string, unknown> = {}) => {
-    if (!selectedFile) return;
-    try {
-      void fetch("/api/error-report", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          message: `[digital-file-upload] ${reason}`,
-          url: typeof window !== "undefined" ? window.location.href : "",
-          metadata: {
-            fileName: selectedFile.name,
-            fileSize: selectedFile.size,
-            fileType: selectedFile.type || "application/octet-stream",
-            userAgent: navigator.userAgent,
-            ...extra,
-          },
-        }),
-        keepalive: true,
-      }).catch(() => {});
-    } catch {}
-  };
-
   const handleUpload = async () => {
     if (!selectedFile) {
       toast.error("Please select a file");
@@ -132,199 +95,15 @@ export function UploadDialog({ open, onOpenChange, projectId, onUploaded }: Uplo
     }
 
     setIsUploading(true);
-    setPhase("starting");
-    setUploadProgress(1);
     setStatusNote(null);
-
-    const csrfToken =
-      typeof document !== "undefined" ? document.cookie.match(/csrf_token=([^;]+)/)?.[1] || "" : "";
-
-    const postJson = async (payload: Record<string, unknown>) => {
-      const res = await apiFetch("/api/creator/digital-files/multipart", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      const data = await res.json().catch(() => ({}));
-      return { res, data };
-    };
-
-    const totalParts = Math.ceil(selectedFile.size / CHUNK_SIZE);
-    let fileId: string | null = null;
-    let uploadId: string | null = null;
-    const etags = new Map<number, string>();
-
     try {
-      // 1. Resume if the server already has parts of this exact file.
-      const pending = await postJson({
-        action: "find-pending",
+      await uploadDigitalFileChunked({
+        file: selectedFile,
         projectId,
-        fileName: selectedFile.name,
-        fileSize: selectedFile.size,
+        onProgress: setUploadProgress,
+        onPhase: setPhase,
+        onNote: setStatusNote,
       });
-      if (pending.res.ok && pending.data.found && pending.data.fileId && pending.data.uploadId) {
-        fileId = pending.data.fileId as string;
-        uploadId = pending.data.uploadId as string;
-        for (const [k, v] of Object.entries((pending.data.uploadedParts || {}) as Record<string, string>)) {
-          const n = Number(k);
-          if (Number.isInteger(n) && n >= 1 && n <= totalParts) etags.set(n, v);
-        }
-        if (etags.size > 0) {
-          setStatusNote(`Resuming — ${etags.size} of ${totalParts} parts were already uploaded.`);
-        }
-      } else {
-        const init = await postJson({
-          action: "init",
-          projectId,
-          fileName: selectedFile.name,
-          fileSize: selectedFile.size,
-          mimeType: selectedFile.type || "application/octet-stream",
-          name: selectedFile.name,
-        });
-        if (!init.res.ok) {
-          throw Object.assign(new Error(init.data.error || "Failed to start upload"), { permanent: true });
-        }
-        fileId = init.data.fileId as string;
-        uploadId = init.data.uploadId as string;
-      }
-
-      // 2. Upload the missing parts, a few at a time.
-      setPhase("uploading");
-      const partProgress = new Map<number, number>();
-      let doneBytes = 0;
-      for (const n of etags.keys()) {
-        doneBytes += Math.min(CHUNK_SIZE, selectedFile.size - (n - 1) * CHUNK_SIZE);
-      }
-      const paint = () => {
-        let inFlight = 0;
-        for (const v of partProgress.values()) inFlight += v;
-        const pct = Math.min(99, Math.round(((doneBytes + inFlight) / selectedFile.size) * 100));
-        setUploadProgress(Math.max(1, pct));
-      };
-      paint();
-
-      const uploadPart = (partNumber: number, chunk: Blob) =>
-        new Promise<string>((resolve, reject) => {
-          const xhr = new XMLHttpRequest();
-          const proxyUrl = `/api/creator/digital-files/multipart?action=upload-part&fileId=${encodeURIComponent(
-            fileId as string
-          )}&uploadId=${encodeURIComponent(uploadId as string)}&partNumber=${partNumber}`;
-          xhr.open("POST", proxyUrl);
-          xhr.timeout = PART_TIMEOUT_MS;
-          xhr.setRequestHeader("Content-Type", "application/octet-stream");
-          if (csrfToken) xhr.setRequestHeader("X-CSRF-Token", csrfToken);
-          xhr.upload.onprogress = (event) => {
-            if (event.lengthComputable) {
-              partProgress.set(partNumber, event.loaded);
-              paint();
-            }
-          };
-          const fail = (message: string, retryable: boolean) =>
-            reject(Object.assign(new Error(message), { retryable }));
-          xhr.onload = () => {
-            if (xhr.status >= 200 && xhr.status < 300) {
-              try {
-                const data = JSON.parse(xhr.responseText);
-                if (!data.etag) return fail(`Part ${partNumber} returned no etag`, true);
-                resolve(data.etag as string);
-              } catch {
-                fail(`Part ${partNumber} returned an unreadable response`, true);
-              }
-            } else if (xhr.status === 409) {
-              fail("This upload was closed elsewhere. Choose the file again to restart.", false);
-            } else {
-              // 5xx, 408 and 429 are transient. Other 4xx are permanent.
-              const transient = xhr.status >= 500 || xhr.status === 408 || xhr.status === 429;
-              fail(`Part ${partNumber} failed (HTTP ${xhr.status})`, transient);
-            }
-          };
-          xhr.ontimeout = () => fail(`Part ${partNumber} timed out`, true);
-          xhr.onerror = () => fail(`Network error on part ${partNumber}`, true);
-          xhr.onabort = () => fail("Upload cancelled", false);
-          xhr.send(chunk);
-        });
-
-      const uploadPartWithRetry = async (partNumber: number) => {
-        const start = (partNumber - 1) * CHUNK_SIZE;
-        const end = Math.min(start + CHUNK_SIZE, selectedFile.size);
-        const chunk = selectedFile.slice(start, end);
-        let lastErr: Error | null = null;
-        for (let attempt = 1; attempt <= MAX_PART_RETRIES; attempt++) {
-          try {
-            const etag = await uploadPart(partNumber, chunk);
-            etags.set(partNumber, etag);
-            partProgress.delete(partNumber);
-            doneBytes += end - start;
-            paint();
-            return;
-          } catch (err) {
-            lastErr = err as Error;
-            partProgress.delete(partNumber);
-            paint();
-            const retryable = (err as { retryable?: boolean }).retryable === true;
-            if (!retryable || attempt >= MAX_PART_RETRIES) {
-              reportClientFailure("Upload part failed after retries", {
-                partNumber,
-                attempt,
-                phase: "proxy-upload-part",
-                error: lastErr.message,
-              });
-              throw lastErr;
-            }
-            setStatusNote(`Connection hiccup on part ${partNumber} — retrying (${attempt}/${MAX_PART_RETRIES - 1})…`);
-            await new Promise((r) => setTimeout(r, Math.min(1000 * 2 ** (attempt - 1), 15000)));
-          }
-        }
-        throw lastErr ?? new Error("Upload failed");
-      };
-
-      const queue: number[] = [];
-      for (let n = 1; n <= totalParts; n++) if (!etags.has(n)) queue.push(n);
-      let firstError: Error | null = null;
-      const worker = async () => {
-        while (queue.length > 0 && !firstError) {
-          const n = queue.shift() as number;
-          try {
-            await uploadPartWithRetry(n);
-          } catch (err) {
-            firstError = firstError ?? (err as Error);
-          }
-        }
-      };
-      await Promise.all(Array.from({ length: Math.min(CONCURRENCY, queue.length || 1) }, worker));
-      if (firstError) throw firstError;
-
-      // 3. Finalize. The server also knows every part it accepted, so a
-      // lost response here is safe to retry.
-      setPhase("finalizing");
-      setUploadProgress(99);
-      setStatusNote(null);
-      let completed = false;
-      let lastError = "Failed to complete upload";
-      for (let attempt = 1; attempt <= 3 && !completed; attempt++) {
-        const done = await postJson({
-          action: "complete",
-          fileId,
-          uploadId,
-          parts: Array.from(etags.entries()).map(([partNumber, etag]) => ({ partNumber, etag })),
-        });
-        if (done.res.ok) {
-          completed = true;
-        } else {
-          lastError = done.data.error || lastError;
-          if (done.res.status === 400 && typeof done.data.missingPart === "number") {
-            // Server lost a part we think we sent; send it again and retry.
-            await uploadPartWithRetry(done.data.missingPart as number);
-          } else if (done.res.status < 500) {
-            break;
-          } else {
-            await new Promise((r) => setTimeout(r, 2000 * attempt));
-          }
-        }
-      }
-      if (!completed) throw new Error(lastError);
-
-      setUploadProgress(100);
       setPhase("done");
       toast.success("File uploaded. Create a distribution rule to send it to backers.");
       onUploaded?.();
@@ -334,19 +113,11 @@ export function UploadDialog({ open, onOpenChange, projectId, onUploaded }: Uplo
       onOpenChange(false);
     } catch (error) {
       const message = error instanceof Error ? error.message : "Failed to upload file";
-      const permanent = (error as { permanent?: boolean }).permanent === true;
-      if (fileId && permanent) {
-        // Nothing worth keeping (init-level failure); drop the empty row.
-        void postJson({ action: "abort", fileId, uploadId }).catch(() => {});
-      }
-      // Otherwise the parts stay on the server for 24h: picking the same
-      // file again resumes instead of starting over.
+      const resumable = error instanceof ChunkedUploadError && error.resumable;
       setPhase("error");
-      setStatusNote(
-        fileId && !permanent
-          ? `${message}. Your progress is saved — click Upload again to resume.`
-          : message
-      );
+      // Parts already uploaded stay on the server for 24h: picking the same
+      // file again resumes instead of starting over.
+      setStatusNote(resumable ? `${message}. Your progress is saved — click Upload again to resume.` : message);
       toast.error(message);
     } finally {
       setIsUploading(false);
