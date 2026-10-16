@@ -147,6 +147,29 @@ server {
         proxy_request_buffering off;
     }
 
+    # Digital-file upload chunks (8MB each, a few in flight). The generic
+    # /api/ block killed these: 120s read timeout while Node forwarded a
+    # 50MB part to R2, then proxy_next_upstream REPLAYED the whole body on
+    # another worker, so the creator's progress bar froze at the end of a
+    # part and the browser eventually got a 504. Stream the body through
+    # (so the browser's progress is real), never replay a chunk, no burst
+    # limit on a dozen back-to-back parts.
+    location /api/creator/digital-files/multipart {
+        proxy_pass http://ic_nextjs;
+        proxy_http_version 1.1;
+        proxy_set_header Connection "";
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_connect_timeout 10s;
+        proxy_send_timeout 600s;
+        proxy_read_timeout 600s;
+        proxy_request_buffering off;
+        proxy_next_upstream off;
+        client_max_body_size 64m;
+    }
+
     location /api/ {
         limit_req zone=api_limit burst=20 nodelay;
         proxy_pass http://ic_nextjs;

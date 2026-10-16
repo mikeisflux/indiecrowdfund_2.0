@@ -450,10 +450,14 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: "Access denied" }, { status: 403, headers: corsHeaders });
     }
 
-    // Delete from R2 if storage key exists
+    // Delete from R2 if storage key exists. An unfinished multipart upload
+    // has no object yet, only parts — abort it so R2 stops billing for them.
     if (file.r2StorageKey) {
       const r2 = await getR2Storage();
       if (r2) {
+        if (file.multipartUploadId) {
+          await r2.abortMultipartUpload(file.r2StorageKey, file.multipartUploadId);
+        }
         await r2.deleteFile(file.r2StorageKey);
       }
     }

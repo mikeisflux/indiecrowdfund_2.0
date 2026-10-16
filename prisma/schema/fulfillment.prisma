@@ -200,6 +200,16 @@ model DigitalFile {
   uploadedById String?
   uploadedBy   User?   @relation(fields: [uploadedById], references: [id], onDelete: SetNull)
 
+  // Multipart upload bookkeeping. A row is created at init so the upload
+  // can be resumed after a refresh; until `complete` flips it to READY the
+  // object does not exist in R2, so UPLOADING/FAILED rows are hidden from
+  // backers and cannot be distributed. uploadedParts is {partNumber: etag}
+  // for the parts R2 has accepted. Added by add_digital_file_upload_status.sql.
+  uploadStatus      DigitalUploadStatus @default(READY)
+  multipartUploadId String?
+  uploadedParts     Json?
+  uploadedAt        DateTime?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -208,6 +218,12 @@ model DigitalFile {
 
   @@index([projectId])
   @@index([uploadedById])
+}
+
+enum DigitalUploadStatus {
+  UPLOADING // init done, parts arriving; object not yet assembled in R2
+  READY // complete done; downloadable and distributable
+  FAILED // abandoned or R2 complete failed; delete and re-upload
 }
 
 enum DigitalAccessType {

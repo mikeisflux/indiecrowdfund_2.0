@@ -289,6 +289,12 @@ export async function POST(req: NextRequest) {
       if (!file) {
         return NextResponse.json({ error: "File not found" }, { status: 404 });
       }
+      if (file.uploadStatus !== "READY") {
+        return NextResponse.json(
+          { error: `"${file.name}" hasn't finished uploading. Finish or re-upload it before creating a rule.` },
+          { status: 400 }
+        );
+      }
 
       // Determine trigger type and IDs
       let dbTriggerType: "ALL_BACKERS" | "SPECIFIC_REWARD" | "SPECIFIC_ADDON" = "ALL_BACKERS";
@@ -414,6 +420,12 @@ export async function POST(req: NextRequest) {
       if (!rule) {
         return NextResponse.json({ error: "Rule not found or already started" }, { status: 404 });
       }
+      if (rule.digitalFile.uploadStatus !== "READY") {
+        return NextResponse.json(
+          { error: `"${rule.digitalFile.name}" hasn't finished uploading, so it can't be distributed yet.` },
+          { status: 409 }
+        );
+      }
 
       // Find eligible pledges based on trigger type
       let eligiblePledges;
@@ -532,6 +544,8 @@ export async function POST(req: NextRequest) {
         });
 
         if (!rule) continue;
+        // Nothing to hand out until the object exists in R2.
+        if (rule.digitalFile.uploadStatus !== "READY") continue;
 
         // Find eligible pledges based on trigger type
         let eligiblePledges;
@@ -647,7 +661,7 @@ export async function POST(req: NextRequest) {
     if (action === "blast_notifications" || action === "resend_all_delivery_emails") {
       // Get all digital files for this project
       const files = await db.digitalFile.findMany({
-        where: { projectId },
+        where: { projectId, uploadStatus: "READY" },
         select: { id: true },
       });
       const fileIds = files.map((f: { id: string }) => f.id);
@@ -699,6 +713,12 @@ export async function POST(req: NextRequest) {
 
       if (!file) {
         return NextResponse.json({ error: "File not found" }, { status: 404 });
+      }
+      if (file.uploadStatus !== "READY") {
+        return NextResponse.json(
+          { error: `"${file.name}" hasn't finished uploading, so it can't be distributed yet.` },
+          { status: 409 }
+        );
       }
 
       // Find all eligible pledges based on file access type

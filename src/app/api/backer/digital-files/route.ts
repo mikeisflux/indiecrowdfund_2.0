@@ -74,6 +74,8 @@ export async function GET(request: NextRequest) {
     const allFiles = await db.digitalFile.findMany({
       where: {
         projectId: { in: projectIds },
+        // An upload still in progress has no object behind it yet.
+        uploadStatus: "READY",
       },
       include: {
         project: {
@@ -221,7 +223,7 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    if (!file) {
+    if (!file || file.uploadStatus !== "READY") {
       return NextResponse.json({ error: "File not found" }, { status: 404, headers: corsHeaders });
     }
 

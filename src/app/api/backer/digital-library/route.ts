@@ -73,6 +73,7 @@ export async function GET(request: Request) {
       const digitalFiles = await prisma.digitalFile.findMany({
         where: {
           projectId: { in: projectIds },
+          uploadStatus: "READY",
           ...(fileType === "pdf"
             ? {
                 OR: [

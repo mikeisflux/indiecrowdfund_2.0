@@ -198,6 +198,8 @@ export interface DigitalFile {
   uploadedAt: string;
   distributedTo: number;
   totalEligible: number;
+  /** UPLOADING = parts still arriving (resumable); FAILED = abandoned. */
+  uploadStatus?: "UPLOADING" | "READY" | "FAILED";
 }
 
 export interface EmailCampaign {

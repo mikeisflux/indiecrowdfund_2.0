@@ -35,6 +35,9 @@ export async function GET(request: NextRequest) {
     if (!file) {
       return NextResponse.json({ error: "File not found" }, { status: 404 });
     }
+    if (file.uploadStatus !== "READY") {
+      return NextResponse.json({ error: "This file is still being uploaded by the creator" }, { status: 409 });
+    }
 
     // Verify access: user must have an active pledge for this project
     // (PENDING = campaign backer, COMPLETED = charged/funded)

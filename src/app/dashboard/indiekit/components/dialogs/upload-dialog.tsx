@@ -28,6 +28,8 @@ export function UploadDialog({ open, onOpenChange, projectId, onUploaded }: Uplo
   const [isDragging, setIsDragging] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [phase, setPhase] = useState<"idle" | "starting" | "uploading" | "finalizing" | "done" | "error">("idle");
+  const [statusNote, setStatusNote] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleClose = (isOpen: boolean) => {
@@ -35,6 +37,8 @@ export function UploadDialog({ open, onOpenChange, projectId, onUploaded }: Uplo
       // Reset to default when closing
       setSelectedFile(null);
       setUploadProgress(0);
+      setPhase("idle");
+      setStatusNote(null);
     }
     if (!isUploading) {
       onOpenChange(isOpen);
@@ -43,6 +47,9 @@ export function UploadDialog({ open, onOpenChange, projectId, onUploaded }: Uplo
 
   const handleFileSelect = (file: File) => {
     setSelectedFile(file);
+    setPhase("idle");
+    setStatusNote(null);
+    setUploadProgress(0);
   };
 
   const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -77,6 +84,43 @@ export function UploadDialog({ open, onOpenChange, projectId, onUploaded }: Uplo
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   };
 
+  // ---- Upload engine ----
+  //
+  // Same-origin chunked multipart: the browser POSTs each part to our
+  // server, which forwards it to R2. Parts are small (8MB) so every
+  // request finishes in seconds on a slow link and well inside any proxy
+  // timeout; a few run in parallel for throughput; each has its own
+  // deadline and retry, so a stalled connection fails fast and resumes
+  // instead of sitting at 63% forever. The server records every accepted
+  // part, so if the tab is refreshed the same file picked again carries
+  // on from the last good part.
+  const CHUNK_SIZE = 8 * 1024 * 1024;
+  const CONCURRENCY = 3;
+  const PART_TIMEOUT_MS = 120_000;
+  const MAX_PART_RETRIES = 5;
+
+  const reportClientFailure = (reason: string, extra: Record<string, unknown> = {}) => {
+    if (!selectedFile) return;
+    try {
+      void fetch("/api/error-report", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message: `[digital-file-upload] ${reason}`,
+          url: typeof window !== "undefined" ? window.location.href : "",
+          metadata: {
+            fileName: selectedFile.name,
+            fileSize: selectedFile.size,
+            fileType: selectedFile.type || "application/octet-stream",
+            userAgent: navigator.userAgent,
+            ...extra,
+          },
+        }),
+        keepalive: true,
+      }).catch(() => {});
+    } catch {}
+  };
+
   const handleUpload = async () => {
     if (!selectedFile) {
       toast.error("Please select a file");
@@ -88,193 +132,222 @@ export function UploadDialog({ open, onOpenChange, projectId, onUploaded }: Uplo
     }
 
     setIsUploading(true);
-    setUploadProgress(2);
+    setPhase("starting");
+    setUploadProgress(1);
+    setStatusNote(null);
 
-    // All digital file uploads go through server-proxied R2 multipart
-    // (browser POSTs each chunk to indiecrowdfund.com, our server
-    // forwards to R2 server-to-server). The browser never has to
-    // reach r2.cloudflarestorage.com, which eliminates the entire
-    // class of CORS / residential ISP / CGNAT failures creators were
-    // hitting. Small files take the same path (R2 accepts single-part
-    // multipart for any size since the only part is also the last
-    // part, and the 5MB minimum only applies to intermediate parts).
-    // 50MB chunks → ~18 parts for a 900MB file, 1 part for anything
-    // under 50MB.
-    const CHUNK_SIZE = 50 * 1024 * 1024;
+    const csrfToken =
+      typeof document !== "undefined" ? document.cookie.match(/csrf_token=([^;]+)/)?.[1] || "" : "";
 
-    const reportClientFailure = (reason: string, extra: Record<string, unknown> = {}) => {
-      try {
-        void fetch("/api/error-report", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            message: `[digital-file-upload] ${reason}`,
-            url: typeof window !== "undefined" ? window.location.href : "",
-            metadata: {
-              fileName: selectedFile.name,
-              fileSize: selectedFile.size,
-              fileType: selectedFile.type || "application/octet-stream",
-              userAgent: navigator.userAgent,
-              ...extra,
-            },
-          }),
-          keepalive: true,
-        }).catch(() => {});
-      } catch {}
+    const postJson = async (payload: Record<string, unknown>) => {
+      const res = await apiFetch("/api/creator/digital-files/multipart", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json().catch(() => ({}));
+      return { res, data };
     };
 
+    const totalParts = Math.ceil(selectedFile.size / CHUNK_SIZE);
+    let fileId: string | null = null;
+    let uploadId: string | null = null;
+    const etags = new Map<number, string>();
+
     try {
-      {
-        // ---- Server-proxy multipart (single path for every file) ----
-        const initRes = await apiFetch("/api/creator/digital-files/multipart", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            action: "init",
-            projectId,
-            fileName: selectedFile.name,
-            fileSize: selectedFile.size,
-            mimeType: selectedFile.type || "application/octet-stream",
-            name: selectedFile.name,
-          }),
+      // 1. Resume if the server already has parts of this exact file.
+      const pending = await postJson({
+        action: "find-pending",
+        projectId,
+        fileName: selectedFile.name,
+        fileSize: selectedFile.size,
+      });
+      if (pending.res.ok && pending.data.found && pending.data.fileId && pending.data.uploadId) {
+        fileId = pending.data.fileId as string;
+        uploadId = pending.data.uploadId as string;
+        for (const [k, v] of Object.entries((pending.data.uploadedParts || {}) as Record<string, string>)) {
+          const n = Number(k);
+          if (Number.isInteger(n) && n >= 1 && n <= totalParts) etags.set(n, v);
+        }
+        if (etags.size > 0) {
+          setStatusNote(`Resuming — ${etags.size} of ${totalParts} parts were already uploaded.`);
+        }
+      } else {
+        const init = await postJson({
+          action: "init",
+          projectId,
+          fileName: selectedFile.name,
+          fileSize: selectedFile.size,
+          mimeType: selectedFile.type || "application/octet-stream",
+          name: selectedFile.name,
         });
-        if (!initRes.ok) {
-          const data = await initRes.json();
-          throw new Error(data.error || "Failed to initiate multipart upload");
+        if (!init.res.ok) {
+          throw Object.assign(new Error(init.data.error || "Failed to start upload"), { permanent: true });
         }
-        const { fileId, uploadId } = await initRes.json();
-        setUploadProgress(5);
-
-        const totalParts = Math.ceil(selectedFile.size / CHUNK_SIZE);
-        const parts: { partNumber: number; etag: string }[] = [];
-        let bytesUploaded = 0;
-
-        // CSRF token for the same-origin proxy POST (raw-bytes body, so
-        // apiFetch can't be used). Computed once — it doesn't change.
-        const csrfToken =
-          typeof document !== "undefined"
-            ? document.cookie.match(/csrf_token=([^;]+)/)?.[1] || ""
-            : "";
-
-        // Upload one part with retry + exponential backoff. Flaky consumer
-        // networks drop mid-part (observed "Network error uploading part"),
-        // and a single dropped part used to fail the whole multi-hundred-MB
-        // upload. Retry transient failures (network + 5xx); 4xx and bad
-        // responses are permanent, so fail fast on those.
-        const MAX_PART_RETRIES = 4;
-        const uploadPartWithRetry = async (partNumber: number, chunk: Blob): Promise<string> => {
-          let lastErr: Error | null = null;
-          for (let attempt = 1; attempt <= MAX_PART_RETRIES; attempt++) {
-            try {
-              return await new Promise<string>((resolve, reject) => {
-                const xhr = new XMLHttpRequest();
-                const proxyUrl = `/api/creator/digital-files/multipart?action=upload-part&fileId=${encodeURIComponent(
-                  fileId
-                )}&uploadId=${encodeURIComponent(uploadId)}&partNumber=${partNumber}`;
-                xhr.open("POST", proxyUrl);
-                xhr.setRequestHeader("Content-Type", "application/octet-stream");
-                if (csrfToken) xhr.setRequestHeader("X-CSRF-Token", csrfToken);
-                xhr.upload.onprogress = (event) => {
-                  if (event.lengthComputable) {
-                    const done = bytesUploaded + event.loaded;
-                    setUploadProgress(Math.round(5 + (done / selectedFile.size) * 90));
-                  }
-                };
-                xhr.onload = () => {
-                  if (xhr.status >= 200 && xhr.status < 300) {
-                    try {
-                      const data = JSON.parse(xhr.responseText);
-                      if (!data.etag) {
-                        reject(Object.assign(new Error(`Part ${partNumber} returned no etag`), { retryable: false }));
-                        return;
-                      }
-                      resolve(data.etag);
-                    } catch {
-                      reject(Object.assign(new Error(`Part ${partNumber} parse failed`), { retryable: false }));
-                    }
-                  } else {
-                    // 5xx = transient (retry); 4xx = permanent (fail fast).
-                    reject(Object.assign(new Error(`Part ${partNumber} failed with status ${xhr.status}`), { retryable: xhr.status >= 500 }));
-                  }
-                };
-                xhr.onerror = () =>
-                  reject(Object.assign(new Error(`Network error on part ${partNumber}`), { retryable: true }));
-                xhr.onabort = () => reject(Object.assign(new Error("Upload cancelled"), { retryable: false }));
-                xhr.send(chunk);
-              });
-            } catch (err) {
-              lastErr = err as Error;
-              const retryable = (err as { retryable?: boolean }).retryable === true;
-              if (!retryable || attempt >= MAX_PART_RETRIES) {
-                reportClientFailure("Upload part failed after retries", {
-                  partNumber,
-                  attempt,
-                  phase: "proxy-upload-part",
-                  error: lastErr.message,
-                });
-                throw lastErr;
-              }
-              // Exponential backoff: 1s, 2s, 4s, 8s (capped 15s).
-              await new Promise((r) => setTimeout(r, Math.min(1000 * 2 ** (attempt - 1), 15000)));
-            }
-          }
-          throw lastErr ?? new Error("Upload failed");
-        };
-
-        try {
-          for (let partNumber = 1; partNumber <= totalParts; partNumber++) {
-            const start = (partNumber - 1) * CHUNK_SIZE;
-            const end = Math.min(start + CHUNK_SIZE, selectedFile.size);
-            const chunk = selectedFile.slice(start, end);
-
-            // Server-proxy upload with per-part retry: browser POSTs the
-            // chunk to our origin (same-origin -> no CORS, no
-            // r2.cloudflarestorage.com to reach); our server forwards to R2.
-            // A single dropped part now retries instead of failing the whole
-            // upload.
-            const etag = await uploadPartWithRetry(partNumber, chunk);
-
-            parts.push({ partNumber, etag });
-            bytesUploaded += end - start;
-          }
-
-          const completeRes = await apiFetch("/api/creator/digital-files/multipart", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              action: "complete",
-              fileId,
-              uploadId,
-              parts,
-            }),
-          });
-          if (!completeRes.ok) {
-            const data = await completeRes.json();
-            throw new Error(data.error || "Failed to complete upload");
-          }
-        } catch (err) {
-          // Best-effort abort so R2 doesn't keep storing the partial
-          // parts (and the DB row goes too). Don't await failure --
-          // we want to surface the original error.
-          void apiFetch("/api/creator/digital-files/multipart", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ action: "abort", fileId, uploadId }),
-          }).catch(() => {});
-          throw err;
-        }
+        fileId = init.data.fileId as string;
+        uploadId = init.data.uploadId as string;
       }
 
-      setUploadProgress(100);
-      toast.success("File uploaded successfully. Create distribution rules to send it to backers.");
-      onUploaded?.();
+      // 2. Upload the missing parts, a few at a time.
+      setPhase("uploading");
+      const partProgress = new Map<number, number>();
+      let doneBytes = 0;
+      for (const n of etags.keys()) {
+        doneBytes += Math.min(CHUNK_SIZE, selectedFile.size - (n - 1) * CHUNK_SIZE);
+      }
+      const paint = () => {
+        let inFlight = 0;
+        for (const v of partProgress.values()) inFlight += v;
+        const pct = Math.min(99, Math.round(((doneBytes + inFlight) / selectedFile.size) * 100));
+        setUploadProgress(Math.max(1, pct));
+      };
+      paint();
 
-      // Reset and close
+      const uploadPart = (partNumber: number, chunk: Blob) =>
+        new Promise<string>((resolve, reject) => {
+          const xhr = new XMLHttpRequest();
+          const proxyUrl = `/api/creator/digital-files/multipart?action=upload-part&fileId=${encodeURIComponent(
+            fileId as string
+          )}&uploadId=${encodeURIComponent(uploadId as string)}&partNumber=${partNumber}`;
+          xhr.open("POST", proxyUrl);
+          xhr.timeout = PART_TIMEOUT_MS;
+          xhr.setRequestHeader("Content-Type", "application/octet-stream");
+          if (csrfToken) xhr.setRequestHeader("X-CSRF-Token", csrfToken);
+          xhr.upload.onprogress = (event) => {
+            if (event.lengthComputable) {
+              partProgress.set(partNumber, event.loaded);
+              paint();
+            }
+          };
+          const fail = (message: string, retryable: boolean) =>
+            reject(Object.assign(new Error(message), { retryable }));
+          xhr.onload = () => {
+            if (xhr.status >= 200 && xhr.status < 300) {
+              try {
+                const data = JSON.parse(xhr.responseText);
+                if (!data.etag) return fail(`Part ${partNumber} returned no etag`, true);
+                resolve(data.etag as string);
+              } catch {
+                fail(`Part ${partNumber} returned an unreadable response`, true);
+              }
+            } else if (xhr.status === 409) {
+              fail("This upload was closed elsewhere. Choose the file again to restart.", false);
+            } else {
+              // 5xx, 408 and 429 are transient. Other 4xx are permanent.
+              const transient = xhr.status >= 500 || xhr.status === 408 || xhr.status === 429;
+              fail(`Part ${partNumber} failed (HTTP ${xhr.status})`, transient);
+            }
+          };
+          xhr.ontimeout = () => fail(`Part ${partNumber} timed out`, true);
+          xhr.onerror = () => fail(`Network error on part ${partNumber}`, true);
+          xhr.onabort = () => fail("Upload cancelled", false);
+          xhr.send(chunk);
+        });
+
+      const uploadPartWithRetry = async (partNumber: number) => {
+        const start = (partNumber - 1) * CHUNK_SIZE;
+        const end = Math.min(start + CHUNK_SIZE, selectedFile.size);
+        const chunk = selectedFile.slice(start, end);
+        let lastErr: Error | null = null;
+        for (let attempt = 1; attempt <= MAX_PART_RETRIES; attempt++) {
+          try {
+            const etag = await uploadPart(partNumber, chunk);
+            etags.set(partNumber, etag);
+            partProgress.delete(partNumber);
+            doneBytes += end - start;
+            paint();
+            return;
+          } catch (err) {
+            lastErr = err as Error;
+            partProgress.delete(partNumber);
+            paint();
+            const retryable = (err as { retryable?: boolean }).retryable === true;
+            if (!retryable || attempt >= MAX_PART_RETRIES) {
+              reportClientFailure("Upload part failed after retries", {
+                partNumber,
+                attempt,
+                phase: "proxy-upload-part",
+                error: lastErr.message,
+              });
+              throw lastErr;
+            }
+            setStatusNote(`Connection hiccup on part ${partNumber} — retrying (${attempt}/${MAX_PART_RETRIES - 1})…`);
+            await new Promise((r) => setTimeout(r, Math.min(1000 * 2 ** (attempt - 1), 15000)));
+          }
+        }
+        throw lastErr ?? new Error("Upload failed");
+      };
+
+      const queue: number[] = [];
+      for (let n = 1; n <= totalParts; n++) if (!etags.has(n)) queue.push(n);
+      let firstError: Error | null = null;
+      const worker = async () => {
+        while (queue.length > 0 && !firstError) {
+          const n = queue.shift() as number;
+          try {
+            await uploadPartWithRetry(n);
+          } catch (err) {
+            firstError = firstError ?? (err as Error);
+          }
+        }
+      };
+      await Promise.all(Array.from({ length: Math.min(CONCURRENCY, queue.length || 1) }, worker));
+      if (firstError) throw firstError;
+
+      // 3. Finalize. The server also knows every part it accepted, so a
+      // lost response here is safe to retry.
+      setPhase("finalizing");
+      setUploadProgress(99);
+      setStatusNote(null);
+      let completed = false;
+      let lastError = "Failed to complete upload";
+      for (let attempt = 1; attempt <= 3 && !completed; attempt++) {
+        const done = await postJson({
+          action: "complete",
+          fileId,
+          uploadId,
+          parts: Array.from(etags.entries()).map(([partNumber, etag]) => ({ partNumber, etag })),
+        });
+        if (done.res.ok) {
+          completed = true;
+        } else {
+          lastError = done.data.error || lastError;
+          if (done.res.status === 400 && typeof done.data.missingPart === "number") {
+            // Server lost a part we think we sent; send it again and retry.
+            await uploadPartWithRetry(done.data.missingPart as number);
+          } else if (done.res.status < 500) {
+            break;
+          } else {
+            await new Promise((r) => setTimeout(r, 2000 * attempt));
+          }
+        }
+      }
+      if (!completed) throw new Error(lastError);
+
+      setUploadProgress(100);
+      setPhase("done");
+      toast.success("File uploaded. Create a distribution rule to send it to backers.");
+      onUploaded?.();
       setSelectedFile(null);
       setUploadProgress(0);
+      setStatusNote(null);
       onOpenChange(false);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to upload file");
+      const message = error instanceof Error ? error.message : "Failed to upload file";
+      const permanent = (error as { permanent?: boolean }).permanent === true;
+      if (fileId && permanent) {
+        // Nothing worth keeping (init-level failure); drop the empty row.
+        void postJson({ action: "abort", fileId, uploadId }).catch(() => {});
+      }
+      // Otherwise the parts stay on the server for 24h: picking the same
+      // file again resumes instead of starting over.
+      setPhase("error");
+      setStatusNote(
+        fileId && !permanent
+          ? `${message}. Your progress is saved — click Upload again to resume.`
+          : message
+      );
+      toast.error(message);
     } finally {
       setIsUploading(false);
     }
@@ -332,9 +405,25 @@ export function UploadDialog({ open, onOpenChange, projectId, onUploaded }: Uplo
                     />
                   </div>
                   <p className="text-xs text-muted-foreground mt-1 text-center">
-                    {uploadProgress < 100 ? `Uploading... ${uploadProgress}%` : "Complete!"}
+                    {phase === "starting"
+                      ? "Starting upload…"
+                      : phase === "finalizing"
+                        ? "Assembling file in storage… almost done"
+                        : uploadProgress < 100
+                          ? `Uploading… ${uploadProgress}%`
+                          : "Complete!"}
                   </p>
                 </div>
+              )}
+              {statusNote && (
+                <p
+                  className={cn(
+                    "text-xs mt-2",
+                    phase === "error" ? "text-red-600" : "text-muted-foreground"
+                  )}
+                >
+                  {statusNote}
+                </p>
               )}
             </div>
           ) : (

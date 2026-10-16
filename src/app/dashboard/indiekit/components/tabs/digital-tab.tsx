@@ -537,11 +537,33 @@ export function DigitalTab({
                     <FileText className="h-6 w-6 text-purple-600" />
                   </div>
                   <div>
-                    <h4 className="font-medium">{file.name}</h4>
+                    <h4 className="font-medium flex items-center gap-2 flex-wrap">
+                      {file.name}
+                      {file.uploadStatus === "UPLOADING" && (
+                        <Badge variant="outline" className="border-amber-400 text-amber-700 bg-amber-50">
+                          Upload incomplete
+                        </Badge>
+                      )}
+                      {file.uploadStatus === "FAILED" && (
+                        <Badge variant="outline" className="border-red-400 text-red-700 bg-red-50">
+                          Upload failed
+                        </Badge>
+                      )}
+                    </h4>
                     <p className="text-sm text-muted-foreground">{file.size} · {file.type}</p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Uploaded {file.uploadedAt}
-                    </p>
+                    {file.uploadStatus === "UPLOADING" ? (
+                      <p className="text-xs text-amber-700 mt-1">
+                        Not yet available to backers. Click Create, pick this same file again and it resumes where it left off.
+                      </p>
+                    ) : file.uploadStatus === "FAILED" ? (
+                      <p className="text-xs text-red-700 mt-1">
+                        Delete this entry and upload the file again.
+                      </p>
+                    ) : (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Uploaded {file.uploadedAt}
+                      </p>
+                    )}
                   </div>
                 </div>
                 <div className="text-right">
@@ -557,7 +579,11 @@ export function DigitalTab({
                       size="sm"
                       variant="outline"
                       onClick={() => handleDistributeFile(file)}
-                      disabled={distributingFileId === file.id || file.distributedTo >= file.totalEligible}
+                      disabled={
+                        distributingFileId === file.id ||
+                        file.distributedTo >= file.totalEligible ||
+                        (file.uploadStatus ?? "READY") !== "READY"
+                      }
                     >
                       {distributingFileId === file.id ? (
                         <>
@@ -576,6 +602,7 @@ export function DigitalTab({
                       variant="outline"
                       onClick={() => openReplaceDialog(file)}
                       title="Replace with corrected version"
+                      disabled={(file.uploadStatus ?? "READY") !== "READY"}
                     >
                       <RefreshCw className="h-4 w-4 mr-2" />
                       Replace
