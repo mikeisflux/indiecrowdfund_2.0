@@ -79,14 +79,50 @@ export async function GET(req: NextRequest) {
   const admin = await requireAdmin();
   if (!admin) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
-  const projectId = new URL(req.url).searchParams.get("projectId");
+  // ?projectId= — one project (payouts dialog). Otherwise platform-wide,
+  // ?status=open (default) | charged | closed | all. Platform-wide rows
+  // carry the campaign and creator, since a recoup can sit on a campaign
+  // the payouts listing never shows (not ended, or not even launched).
+  const url = new URL(req.url);
+  const projectId = url.searchParams.get("projectId");
+  const statusFilter = url.searchParams.get("status") || "open";
+  const statusWhere =
+    statusFilter === "all"
+      ? {}
+      : statusFilter === "charged"
+        ? { status: { in: ["CHARGED" as const] } }
+        : statusFilter === "closed"
+          ? { status: { in: ["CHARGED" as const, "WAIVED" as const, "WRITTEN_OFF" as const, "REFUNDED" as const] } }
+          : { status: { in: ["PENDING" as const, "FAILED" as const, "HELD_BACK" as const] } };
+
   const rows = await db.chargebackRecoup.findMany({
-    where: projectId
-      ? { projectId }
-      : { status: { in: ["PENDING", "FAILED", "HELD_BACK"] } },
+    where: projectId ? { projectId } : statusWhere,
     orderBy: { createdAt: "desc" },
-    take: 200,
+    take: 300,
   });
+
+  const projectIds = [...new Set(rows.map((r: { projectId: string }) => r.projectId))];
+  const projects = projectIds.length
+    ? await db.project.findMany({
+        where: { id: { in: projectIds } },
+        select: {
+          id: true,
+          title: true,
+          status: true,
+          creator: { select: { id: true, name: true, email: true } },
+          chargebackCard: { select: { divinityCoinPaymentMethodId: true } },
+        },
+      })
+    : [];
+  const byProject = new Map(
+    (projects as {
+      id: string;
+      title: string;
+      status: string;
+      creator: { id: string; name: string | null; email: string | null } | null;
+      chargebackCard: { divinityCoinPaymentMethodId: string | null } | null;
+    }[]).map((p) => [p.id, p])
+  );
 
   const pledgeIds = [...new Set(rows.map((r: { pledgeId: string | null }) => r.pledgeId).filter((x: string | null): x is string => !!x))];
   const pledges = pledgeIds.length
@@ -101,11 +137,17 @@ export async function GET(req: NextRequest) {
     fee: CHARGEBACK_RECOUP_FEE_USD,
     recoups: rows.map((r: Parameters<typeof serialize>[0]) => {
       const p = r.pledgeId ? byPledge.get(r.pledgeId) : undefined;
+      const proj = byProject.get(r.projectId);
       return {
         ...serialize(r),
         backerNumber: p?.backerNumber ?? null,
         backerName: p?.user?.name ?? null,
         backerEmail: p?.user?.email ?? null,
+        projectTitle: proj?.title ?? null,
+        projectStatus: proj?.status ?? null,
+        creatorName: proj?.creator?.name ?? null,
+        creatorEmail: proj?.creator?.email ?? null,
+        cardVaulted: !!proj?.chargebackCard?.divinityCoinPaymentMethodId,
       };
     }),
   });

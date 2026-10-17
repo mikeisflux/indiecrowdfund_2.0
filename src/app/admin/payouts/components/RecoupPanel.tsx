@@ -28,7 +28,15 @@ interface Recoup {
   createdAt: string;
   backerNumber: number | null;
   backerName: string | null;
+  // Present on platform-wide listings.
+  projectTitle?: string | null;
+  projectStatus?: string | null;
+  creatorName?: string | null;
+  creatorEmail?: string | null;
+  cardVaulted?: boolean;
 }
+
+type StatusFilter = "open" | "charged" | "closed" | "all";
 
 const STATUS_BADGE: Record<Recoup["status"], { label: string; className: string; icon: typeof Clock }> = {
   PENDING: { label: "Charging…", className: "bg-blue-100 text-blue-700", icon: Clock },
@@ -40,17 +48,22 @@ const STATUS_BADGE: Record<Recoup["status"], { label: string; className: string;
   REFUNDED: { label: "Refunded to creator", className: "bg-sky-100 text-sky-700", icon: RefreshCw },
 };
 
-// Chargeback recoups for one project, with the two admin overrides:
-// charge the card again right now, or waive the amount.
+// Chargeback recoups, with the admin overrides: charge the card again
+// right now, waive the amount, or refund a charge. With a projectId it
+// lists one campaign (payouts dialog); without one it lists the whole
+// platform with a status filter — the only place a recoup on a campaign
+// that hasn't ended (or launched) can be reached.
 export function RecoupPanel({
   projectId,
   formatCurrency,
   canCharge,
 }: {
-  projectId: string;
+  projectId?: string;
   formatCurrency: (amount: number) => string;
-  canCharge: boolean;
+  /** Per-project mode: whether the creator's card is vaulted. Platform-wide rows carry their own. */
+  canCharge?: boolean;
 }) {
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("open");
   const [recoups, setRecoups] = useState<Recoup[] | null>(null);
   const [fee, setFee] = useState<number>(0);
   const [busy, setBusy] = useState<string | null>(null);
@@ -86,7 +99,11 @@ export function RecoupPanel({
 
   const load = useCallback(async () => {
     try {
-      const res = await fetch(`/api/admin/chargeback-recoups?projectId=${encodeURIComponent(projectId)}`);
+      const res = await fetch(
+        projectId
+          ? `/api/admin/chargeback-recoups?projectId=${encodeURIComponent(projectId)}`
+          : `/api/admin/chargeback-recoups?status=${statusFilter}`
+      );
       if (!res.ok) return;
       const data = await res.json();
       setRecoups(data.recoups || []);
@@ -94,7 +111,7 @@ export function RecoupPanel({
     } catch {
       setRecoups([]);
     }
-  }, [projectId]);
+  }, [projectId, statusFilter]);
 
   useEffect(() => {
     load();
@@ -145,27 +162,71 @@ export function RecoupPanel({
     }
   };
 
+  const filterBar = !projectId && (
+    <div className="flex flex-wrap items-center gap-1 mb-3">
+      {(
+        [
+          ["open", "Open"],
+          ["charged", "Charged"],
+          ["closed", "Closed"],
+          ["all", "All"],
+        ] as [StatusFilter, string][]
+      ).map(([key, label]) => (
+        <Button
+          key={key}
+          size="sm"
+          variant={statusFilter === key ? "default" : "outline"}
+          onClick={() => setStatusFilter(key)}
+        >
+          {label}
+        </Button>
+      ))}
+      <Button size="sm" variant="ghost" onClick={() => load()} title="Reload">
+        <RefreshCw className="h-3 w-3" />
+      </Button>
+    </div>
+  );
+
   if (recoups === null) {
     return (
-      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-        <Loader2 className="h-4 w-4 animate-spin" /> Loading chargeback recoups…
+      <div>
+        {filterBar}
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Loader2 className="h-4 w-4 animate-spin" /> Loading chargeback recoups…
+        </div>
       </div>
     );
   }
   if (recoups.length === 0) {
-    return <p className="text-sm text-muted-foreground">No chargebacks on this campaign.</p>;
+    return (
+      <div>
+        {filterBar}
+        <p className="text-sm text-muted-foreground">
+          {projectId ? "No chargebacks on this campaign." : `No ${statusFilter === "all" ? "" : statusFilter + " "}recoups.`}
+        </p>
+      </div>
+    );
   }
 
   return (
     <div className="space-y-2">
+      {filterBar}
       {recoups.map((r) => {
         const badge = STATUS_BADGE[r.status];
         const Icon = badge.icon;
         const open = r.status === "FAILED" || r.status === "HELD_BACK" || r.status === "PENDING";
+        const rowCanCharge = projectId ? !!canCharge : !!r.cardVaulted;
         return (
           <div key={r.id} className="rounded-lg border p-3 text-sm space-y-2">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
+                {!projectId && (
+                  <p className="text-xs font-medium text-teal-700">
+                    {r.projectTitle ?? "Unknown campaign"}
+                    {r.projectStatus ? ` (${r.projectStatus.toLowerCase()})` : ""}
+                    {r.creatorName || r.creatorEmail ? ` · ${r.creatorName ?? ""}${r.creatorEmail ? ` <${r.creatorEmail}>` : ""}` : ""}
+                  </p>
+                )}
                 <p className="font-medium">
                   {r.kind === "OVERPAYMENT"
                     ? "Overpaid balance"
@@ -236,8 +297,8 @@ export function RecoupPanel({
                 <Button
                   size="sm"
                   variant="outline"
-                  disabled={busy === r.id || !canCharge}
-                  title={canCharge ? undefined : "No verified card on file — the creator must re-enter it first"}
+                  disabled={busy === r.id || !rowCanCharge}
+                  title={rowCanCharge ? undefined : "No verified card on file — the creator must re-enter it first"}
                   onClick={() => charge(r.id)}
                 >
                   {busy === r.id ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <RefreshCw className="h-3 w-3 mr-1" />}

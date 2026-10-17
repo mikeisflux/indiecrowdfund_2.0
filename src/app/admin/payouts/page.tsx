@@ -26,6 +26,7 @@ import { PayoutStatsCards } from "./components/PayoutStatsCards";
 import { ProjectsTable } from "./components/ProjectsTable";
 import { CreatorBalancesTable } from "./components/CreatorBalancesTable";
 import { ProjectDetailDialog } from "./components/ProjectDetailDialog";
+import { RecoupPanel } from "./components/RecoupPanel";
 import { BankDetailsDialog } from "./components/BankDetailsDialog";
 import { CreateSettlementDialog } from "./components/CreateSettlementDialog";
 import { CreatorBalancePayoutDialog } from "./components/CreatorBalancePayoutDialog";
@@ -436,6 +437,18 @@ export default function PayoutsPage() {
 
       {/* Stats Cards */}
       <PayoutStatsCards stats={stats} formatCurrency={formatCurrency} />
+
+      {/* Every chargeback / overpayment recoup on the platform. The
+          per-campaign list inside a project's dialog only covers campaigns
+          this page lists (ended ones); a recoup on a live or unlaunched
+          campaign is only reachable here. */}
+      <div className="rounded-lg border bg-card p-4">
+        <div className="flex items-center justify-between gap-3 mb-1">
+          <h3 className="font-semibold">Chargeback Recoups</h3>
+          <p className="text-xs text-muted-foreground">Charge, waive or refund a creator&apos;s protection-card charge</p>
+        </div>
+        <RecoupPanel formatCurrency={formatCurrency} />
+      </div>
 
       {/* Refund/Overpaid Alert */}
       {(stats.totalRefunded > 0 || stats.overpaidPayouts > 0) && (
