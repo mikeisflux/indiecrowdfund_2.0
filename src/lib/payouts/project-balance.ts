@@ -106,13 +106,22 @@ export async function loadPlatformFeeRate(): Promise<number> {
  */
 export async function loadDcProjectBalance(projectId: string): Promise<
   | null
-  | (DcPayoutMath & { creatorId: string; creatorRole: string; title: string })
+  | (DcPayoutMath & {
+      creatorId: string;
+      creatorRole: string;
+      title: string;
+      status: string;
+      endDate: Date | null;
+      settlementCount: number;
+    })
 > {
   const project = await db.project.findFirst({
     where: { id: projectId, deletedAt: null, paymentProcessor: "DIVINITYCOIN" },
     select: {
       id: true,
       title: true,
+      status: true,
+      endDate: true,
       creator: {
         select: {
           id: true,
@@ -150,5 +159,13 @@ export async function loadDcProjectBalance(projectId: string): Promise<
     amountSettled: project.divinityCoinSettlements.reduce((s: number, x: { amount: unknown }) => s + Number(x.amount), 0),
     recoveredCredit: credits.get(projectId) || 0,
   });
-  return { ...math, creatorId: project.creator.id, creatorRole: project.creator.role, title: project.title };
+  return {
+    ...math,
+    creatorId: project.creator.id,
+    creatorRole: project.creator.role,
+    title: project.title,
+    status: project.status,
+    endDate: project.endDate,
+    settlementCount: project.divinityCoinSettlements.length,
+  };
 }

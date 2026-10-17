@@ -332,7 +332,7 @@ async function recordFailure(
   priorAttempts: number,
   reason: string,
   ctx: RecoupContext,
-  recoup: { creatorId: string; projectId: string; amount: unknown; disputedAmount: unknown; feeAmount: unknown; disputeId: string | null }
+  recoup: { creatorId: string; projectId: string; amount: unknown; disputedAmount: unknown; feeAmount: unknown; disputeId: string | null; kind: string }
 ): Promise<{ status: string; error: string }> {
   const attempts = priorAttempts + 1;
   const exhausted = attempts >= MAX_ATTEMPTS;
@@ -444,7 +444,10 @@ export interface ProjectRecoveryResult {
   title: string;
   skipped?: "admin" | "not-dc";
   chargebackRecoupsOpened: number;
-  overpaymentOpened: number | null; // amount, or null when balance isn't negative
+  /** Amount opened for collection, or null when the balance isn't negative. */
+  overpaymentOpened: number | null;
+  /** Why a negative balance was not turned into a charge. */
+  overpaymentBlocked?: string;
   charged: number;
   stillOpen: number;
 }
@@ -518,7 +521,42 @@ export async function recoverProject(projectId: string): Promise<ProjectRecovery
   );
   const hasOpenOverpayment = pendingPrincipal.some((r: { kind: string }) => r.kind === "OVERPAYMENT");
   const shortfall = Math.round((-balance.remainingAmount - pendingCredit) * 100) / 100;
+
+  // An overpayment only exists if money actually went out. A campaign with
+  // no completed settlement cannot have been overpaid, however the books
+  // read — and a campaign still running hasn't been paid out at all. A
+  // negative revenue figure means the refund records are inconsistent, not
+  // that the creator owes anything: flag it for an admin instead of
+  // charging a card. (A creator re-vaulting their card on a freshly
+  // launched campaign triggered this path and was charged $25 for a
+  // campaign that had earned nothing.)
+  const campaignOver =
+    balance.status === "FUNDED" ||
+    balance.status === "FAILED" ||
+    balance.status === "CANCELLED" ||
+    (balance.endDate !== null && balance.endDate < new Date());
   if (shortfall > 0 && !hasOpenOverpayment) {
+    let blocked: string | null = null;
+    if (balance.settlementCount === 0 || balance.amountSettled <= 0) blocked = "nothing has been paid out";
+    else if (!campaignOver) blocked = "campaign still running";
+    else if (balance.effectiveRevenue < 0) blocked = "negative revenue — refund records inconsistent";
+    if (blocked) {
+      log.warn(
+        {
+          projectId,
+          title: balance.title,
+          shortfall,
+          amountSettled: balance.amountSettled,
+          effectiveRevenue: balance.effectiveRevenue,
+          status: balance.status,
+          reason: blocked,
+        },
+        "Overpayment recoup NOT opened"
+      );
+      result.overpaymentBlocked = blocked;
+    }
+  }
+  if (shortfall > 0 && !hasOpenOverpayment && !result.overpaymentBlocked) {
     await db.chargebackRecoup.create({
       data: {
         kind: "OVERPAYMENT",
