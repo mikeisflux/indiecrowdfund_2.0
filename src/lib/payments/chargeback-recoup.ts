@@ -321,6 +321,7 @@ async function markRecoupCharged(
       feeAmount: Number(recoup.feeAmount),
       total: Number(recoup.amount),
       reason: recoup.reason,
+      kind: recoup.kind as "CHARGEBACK" | "OVERPAYMENT",
     }).catch((err) => log.warn({ err: String(err), recoupId }, "recoup charged email failed"));
   }
   log.info({ recoupId, paymentIntentId, amount: Number(recoup.amount) }, "Chargeback recouped");
@@ -371,6 +372,7 @@ async function recordFailure(
         total: Number(recoup.amount),
         reason,
         heldBack: exhausted,
+        kind: recoup.kind as "CHARGEBACK" | "OVERPAYMENT",
       }).catch((err) => log.warn({ err: String(err), recoupId }, "recoup failed email failed"));
     }
   }

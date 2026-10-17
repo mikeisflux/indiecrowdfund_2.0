@@ -646,8 +646,18 @@ export async function sendChargebackRecoupChargedEmail(params: {
   feeAmount: number;
   total: number;
   reason: string | null;
+  /** CHARGEBACK = one backer's dispute; OVERPAYMENT = paid out more than the campaign ended up earning. */
+  kind?: "CHARGEBACK" | "OVERPAYMENT";
 }) {
   const { email, creatorName, projectTitle, backerLabel, disputedAmount, feeAmount, total, reason } = params;
+  const overpayment = params.kind === "OVERPAYMENT";
+  const heading = overpayment
+    ? "Overpaid payout collected from your protection card"
+    : "Chargeback recouped from your protection card";
+  const explanation = overpayment
+    ? `<p>Your campaign <strong>${escapeHtml(projectTitle)}</strong> was paid out, and refunds or reversed pledges issued afterwards brought the amount it actually earned below what had already been sent to you. Under the chargeback protection terms you agreed to at launch, the difference was charged to your card on file.</p>`
+    : `<p>A backer's bank reversed a pledge on <strong>${escapeHtml(projectTitle)}</strong> (${escapeHtml(backerLabel)}${reason ? `, reason: ${escapeHtml(reason)}` : ""}). Under the chargeback protection terms you agreed to at launch, the amount was charged to your card on file.</p>`;
+  const lineLabel = overpayment ? "Paid out beyond earnings" : "Disputed pledge";
   const html = `
     <!DOCTYPE html>
     <html>
@@ -655,25 +665,29 @@ export async function sendChargebackRecoupChargedEmail(params: {
       <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
         <div style="text-align: center; margin-bottom: 30px;"><h1 style="color: #333; margin: 0;">${APP_NAME}</h1></div>
         <div style="background: #fff7ed; border: 1px solid #fed7aa; border-radius: 8px; padding: 24px; margin-bottom: 20px;">
-          <h2 style="margin-top: 0; color: #9a3412;">Chargeback recouped from your protection card</h2>
+          <h2 style="margin-top: 0; color: #9a3412;">${heading}</h2>
           <p>Hi ${escapeHtml(creatorName)},</p>
-          <p>A backer's bank reversed a pledge on <strong>${escapeHtml(projectTitle)}</strong> (${escapeHtml(backerLabel)}${reason ? `, reason: ${escapeHtml(reason)}` : ""}). Under the chargeback protection terms you agreed to at launch, the amount was charged to your card on file.</p>
+          ${explanation}
         </div>
         <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
-          <tr><td style="padding: 6px 0; color: #666;">Disputed pledge</td><td style="padding: 6px 0; text-align: right;">$${disputedAmount.toFixed(2)}</td></tr>
-          <tr><td style="padding: 6px 0; color: #666;">Dispute fee</td><td style="padding: 6px 0; text-align: right;">$${feeAmount.toFixed(2)}</td></tr>
+          <tr><td style="padding: 6px 0; color: #666;">${lineLabel}</td><td style="padding: 6px 0; text-align: right;">$${disputedAmount.toFixed(2)}</td></tr>
+          ${overpayment ? "" : `<tr><td style="padding: 6px 0; color: #666;">Dispute fee</td><td style="padding: 6px 0; text-align: right;">$${feeAmount.toFixed(2)}</td></tr>`}
           <tr><td style="padding: 8px 0; font-weight: 600; border-top: 1px solid #eee;">Charged to your card</td><td style="padding: 8px 0; text-align: right; font-weight: 600; border-top: 1px solid #eee;">$${total.toFixed(2)}</td></tr>
         </table>
-        <p style="color: #666; font-size: 14px;">It will appear on your statement as <strong>ICF CHARGEBACK</strong>. If the dispute is later won, the amount is returned to you. Questions? Reply to this email.</p>
+        <p style="color: #666; font-size: 14px;">It will appear on your statement as <strong>ICF CHARGEBACK</strong>. ${overpayment ? "The full breakdown is on your campaign's payout page. Questions? Reply to this email." : "If the dispute is later won, the amount is returned to you. Questions? Reply to this email."}</p>
         <div style="text-align: center; color: #999; font-size: 12px; margin-top: 30px;"><p>&copy; ${new Date().getFullYear()} ${APP_NAME}. All rights reserved.</p></div>
       </body>
     </html>
   `;
   return queueEmail({
     to: email,
-    subject: `Chargeback recouped: $${total.toFixed(2)} charged for "${projectTitle}"`,
+    subject: overpayment
+      ? `Overpaid payout collected: $${total.toFixed(2)} charged for "${projectTitle}"`
+      : `Chargeback recouped: $${total.toFixed(2)} charged for "${projectTitle}"`,
     html,
-    text: `Hi ${creatorName} — a backer's bank reversed a pledge on "${projectTitle}" (${backerLabel}). $${total.toFixed(2)} ($${disputedAmount.toFixed(2)} disputed + $${feeAmount.toFixed(2)} dispute fee) was charged to your chargeback protection card. It will appear as ICF CHARGEBACK.`,
+    text: overpayment
+      ? `Hi ${creatorName} — "${projectTitle}" was paid out, and later refunds or reversed pledges brought its earnings below what was already sent to you. $${total.toFixed(2)} was charged to your chargeback protection card. It will appear as ICF CHARGEBACK.`
+      : `Hi ${creatorName} — a backer's bank reversed a pledge on "${projectTitle}" (${backerLabel}). $${total.toFixed(2)} ($${disputedAmount.toFixed(2)} disputed + $${feeAmount.toFixed(2)} dispute fee) was charged to your chargeback protection card. It will appear as ICF CHARGEBACK.`,
     skipUnsubscribeCheck: true, // Transactional: receipt for a charge
     priority: EMAIL_PRIORITY.SYSTEM,
   });
@@ -692,8 +706,13 @@ export async function sendChargebackRecoupFailedEmail(params: {
   total: number;
   reason: string;
   heldBack: boolean;
+  kind?: "CHARGEBACK" | "OVERPAYMENT";
 }) {
   const { email, creatorName, projectTitle, backerLabel, total, reason, heldBack } = params;
+  const overpayment = params.kind === "OVERPAYMENT";
+  const cause = overpayment
+    ? `Your campaign <strong>${escapeHtml(projectTitle)}</strong> was paid out, and later refunds or reversed pledges left <strong>$${total.toFixed(2)}</strong> owed back.`
+    : `A backer's bank reversed a pledge on <strong>${escapeHtml(projectTitle)}</strong> (${escapeHtml(backerLabel)}).`;
   const dashboardUrl = `${APP_URL}/dashboard`;
   const html = `
     <!DOCTYPE html>
@@ -704,7 +723,7 @@ export async function sendChargebackRecoupFailedEmail(params: {
         <div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 24px; margin-bottom: 20px;">
           <h2 style="margin-top: 0; color: #991b1b;">${heldBack ? "Chargeback amount will be withheld from your payout" : "Action needed: update your chargeback protection card"}</h2>
           <p>Hi ${escapeHtml(creatorName)},</p>
-          <p>A backer's bank reversed a pledge on <strong>${escapeHtml(projectTitle)}</strong> (${escapeHtml(backerLabel)}). We tried to charge <strong>$${total.toFixed(2)}</strong> to your chargeback protection card and it did not go through: <em>${escapeHtml(reason)}</em>.</p>
+          <p>${cause} We tried to charge <strong>$${total.toFixed(2)}</strong> to your chargeback protection card and it did not go through: <em>${escapeHtml(reason)}</em>.</p>
           ${heldBack
             ? `<p>We have stopped retrying. The amount will be deducted from your next payout for this campaign.</p>`
             : `<p>Please open your campaign's Payment step and re-enter or replace your card. The outstanding amount is collected automatically as soon as a verified card is on file; otherwise it is deducted from your payout.</p>`}
@@ -722,7 +741,7 @@ export async function sendChargebackRecoupFailedEmail(params: {
       ? `Chargeback of $${total.toFixed(2)} will be withheld from your "${projectTitle}" payout`
       : `Action needed: chargeback recoup of $${total.toFixed(2)} failed for "${projectTitle}"`,
     html,
-    text: `Hi ${creatorName} — we tried to charge $${total.toFixed(2)} to your chargeback protection card for a dispute on "${projectTitle}" (${backerLabel}) and it failed: ${reason}. ${heldBack ? "The amount will be deducted from your next payout." : `Please update your card at ${dashboardUrl}.`}`,
+    text: `Hi ${creatorName} — we tried to charge $${total.toFixed(2)} to your chargeback protection card ${overpayment ? `for the overpaid payout on "${projectTitle}"` : `for a dispute on "${projectTitle}" (${backerLabel})`} and it failed: ${reason}. ${heldBack ? "The amount will be deducted from your next payout." : `Please update your card at ${dashboardUrl}.`}`,
     skipUnsubscribeCheck: true, // Transactional: money owed
     priority: EMAIL_PRIORITY.SYSTEM,
   });
