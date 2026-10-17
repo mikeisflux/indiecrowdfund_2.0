@@ -6,11 +6,13 @@ import {
   lookupDcPayment,
 } from "@/lib/payments/divinitycoin/saved-cards";
 import { createNotification } from "@/lib/notifications/core";
+import { callDivinityCoinAPI } from "@/lib/payments/divinitycoin";
 import { loadDcProjectBalance } from "@/lib/payouts/project-balance";
 import { isValidCustomerIp, type CustomerOrigin } from "@/lib/payments/customer-origin";
 import {
   sendChargebackRecoupChargedEmail,
   sendChargebackRecoupFailedEmail,
+  sendChargebackRecoupRefundedEmail,
 } from "@/lib/email/email-templates-misc";
 
 const log = logger.child({ module: "chargeback-recoup" });
@@ -418,6 +420,74 @@ export async function retryOpenRecoupsForProject(projectId: string): Promise<num
     if (res.status === "CHARGED") charged++;
   }
   return charged;
+}
+
+/**
+ * Send a charged recoup back to the creator's card. For a recoup that
+ * should never have been opened, or a dispute the platform later won.
+ * The refund runs through DivinityCoin against the original charge, so
+ * it lands on the same card; the row becomes REFUNDED and stops counting
+ * as recovered credit on the project balance.
+ */
+export async function refundRecoup(
+  recoupId: string,
+  adminId: string,
+  reason: string
+): Promise<{ ok: boolean; error?: string; refundId?: string | null }> {
+  const recoup = await db.chargebackRecoup.findUnique({ where: { id: recoupId } });
+  if (!recoup) return { ok: false, error: "Recoup not found" };
+  if (recoup.status !== "CHARGED") return { ok: false, error: `Only a charged recoup can be refunded (this one is ${recoup.status})` };
+  if (!recoup.divinityCoinPaymentId) return { ok: false, error: "No DivinityCoin payment is recorded for this recoup" };
+
+  const amountCents = Math.round(Number(recoup.amount) * 100);
+  const dcResult = await callDivinityCoinAPI("refund", {
+    pledgeId: dcPledgeKeyForRecoup(recoup),
+    paymentId: recoup.divinityCoinPaymentId,
+    amount: amountCents,
+    reason: `Recoup refunded by admin: ${reason}`.slice(0, 200),
+    requestedBy: "admin",
+  });
+  if (!dcResult.success) {
+    log.error({ recoupId, err: dcResult.error }, "Recoup refund failed at DivinityCoin");
+    return { ok: false, error: dcResult.error || "DivinityCoin refund failed" };
+  }
+  const refundId =
+    (dcResult.data && typeof dcResult.data.refundId === "string" && dcResult.data.refundId) ||
+    (dcResult.data && typeof dcResult.data.id === "string" && dcResult.data.id) ||
+    null;
+
+  await db.chargebackRecoup.update({
+    where: { id: recoupId },
+    data: {
+      status: "REFUNDED",
+      refundedAt: new Date(),
+      refundedById: adminId,
+      divinityCoinRefundId: refundId,
+      waivedReason: reason.slice(0, 500),
+    },
+  });
+
+  const ctx = await loadContext(recoup.projectId, recoup.pledgeId);
+  await createNotification({
+    userId: recoup.creatorId,
+    type: "CHARGEBACK_RECOUPED",
+    title: `$${Number(recoup.amount).toFixed(2)} refunded to your protection card`,
+    message: `The charge for "${ctx.projectTitle}" has been refunded: ${reason}`,
+    actionUrl: "/dashboard",
+    projectId: recoup.projectId,
+  }).catch(() => {});
+  if (ctx.creatorEmail) {
+    await sendChargebackRecoupRefundedEmail({
+      email: ctx.creatorEmail,
+      creatorName: ctx.creatorName || "there",
+      projectTitle: ctx.projectTitle,
+      amount: Number(recoup.amount),
+      reason,
+      kind: recoup.kind as "CHARGEBACK" | "OVERPAYMENT",
+    }).catch((err) => log.warn({ err: String(err), recoupId }, "recoup refunded email failed"));
+  }
+  log.info({ recoupId, adminId, amount: Number(recoup.amount), refundId }, "Recoup refunded to creator");
+  return { ok: true, refundId };
 }
 
 export async function waiveRecoup(recoupId: string, adminId: string, reason: string): Promise<boolean> {

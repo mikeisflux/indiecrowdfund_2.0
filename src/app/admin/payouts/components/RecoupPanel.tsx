@@ -18,7 +18,7 @@ interface Recoup {
   disputedAmount: number;
   feeAmount: number;
   amount: number;
-  status: "PENDING" | "CHARGED" | "FAILED" | "HELD_BACK" | "WAIVED" | "WRITTEN_OFF";
+  status: "PENDING" | "CHARGED" | "FAILED" | "HELD_BACK" | "WAIVED" | "WRITTEN_OFF" | "REFUNDED";
   attempts: number;
   nextAttemptAt: string | null;
   lastError: string | null;
@@ -37,6 +37,7 @@ const STATUS_BADGE: Record<Recoup["status"], { label: string; className: string;
   HELD_BACK: { label: "Withheld from payout", className: "bg-red-100 text-red-700", icon: Ban },
   WAIVED: { label: "Waived", className: "bg-muted text-muted-foreground", icon: Ban },
   WRITTEN_OFF: { label: "Internal loss (written off)", className: "bg-red-100 text-red-700", icon: Ban },
+  REFUNDED: { label: "Refunded to creator", className: "bg-sky-100 text-sky-700", icon: RefreshCw },
 };
 
 // Chargeback recoups for one project, with the two admin overrides:
@@ -55,6 +56,33 @@ export function RecoupPanel({
   const [busy, setBusy] = useState<string | null>(null);
   const [waiving, setWaiving] = useState<string | null>(null);
   const [waiveReason, setWaiveReason] = useState("");
+  const [refunding, setRefunding] = useState<string | null>(null);
+  const [refundReason, setRefundReason] = useState("");
+
+  const refund = async (recoupId: string) => {
+    if (!refundReason.trim()) {
+      toast.error("Give a reason for the refund — the creator is told why");
+      return;
+    }
+    setBusy(recoupId);
+    try {
+      const res = await apiFetch("/api/admin/chargeback-recoups", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "refund", recoupId, reason: refundReason.trim() }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Refund failed");
+      toast.success("Refunded to the creator's card");
+      setRefunding(null);
+      setRefundReason("");
+      await load();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Refund failed");
+    } finally {
+      setBusy(null);
+    }
+  };
 
   const load = useCallback(async () => {
     try {
@@ -165,8 +193,37 @@ export function RecoupPanel({
                     {r.nextAttemptAt ? ` · next retry ${format(new Date(r.nextAttemptAt), "MMM d")}` : ""}
                   </p>
                 )}
-                {(r.status === "WAIVED" || r.status === "WRITTEN_OFF") && r.waivedReason && (
-                  <p className="text-xs text-muted-foreground">{r.status === "WRITTEN_OFF" ? "Written off" : "Waived"}: {r.waivedReason}</p>
+                {(r.status === "WAIVED" || r.status === "WRITTEN_OFF" || r.status === "REFUNDED") && r.waivedReason && (
+                  <p className="text-xs text-muted-foreground">
+                    {r.status === "WRITTEN_OFF" ? "Written off" : r.status === "REFUNDED" ? "Refunded" : "Waived"}: {r.waivedReason}
+                  </p>
+                )}
+                {r.status === "CHARGED" && (
+                  <div className="flex flex-wrap items-center gap-2 mt-2">
+                    {refunding === r.id ? (
+                      <>
+                        <Input
+                          value={refundReason}
+                          onChange={(e) => setRefundReason(e.target.value)}
+                          placeholder="Reason the creator will see (required)"
+                          className="h-8 w-72"
+                          maxLength={200}
+                        />
+                        <Button size="sm" variant="destructive" disabled={busy === r.id} onClick={() => refund(r.id)}>
+                          {busy === r.id ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : null}
+                          Confirm refund {formatCurrency(r.amount)}
+                        </Button>
+                        <Button size="sm" variant="ghost" onClick={() => setRefunding(null)}>
+                          Cancel
+                        </Button>
+                      </>
+                    ) : (
+                      <Button size="sm" variant="ghost" onClick={() => setRefunding(r.id)}>
+                        <RefreshCw className="h-3 w-3 mr-1" />
+                        Refund to creator
+                      </Button>
+                    )}
+                  </div>
                 )}
               </div>
               <Badge className={badge.className}>

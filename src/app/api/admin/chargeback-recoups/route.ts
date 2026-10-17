@@ -6,6 +6,7 @@ import { formatError } from "@/lib/errors";
 import {
   attemptRecoupCharge,
   waiveRecoup,
+  refundRecoup,
   openChargebackRecoup,
   recoverProject,
   recoverAllProjects,
@@ -138,6 +139,17 @@ export async function POST(req: NextRequest) {
       }
       const ok = await waiveRecoup(recoupId, admin.id, reason);
       return NextResponse.json({ ok, status: ok ? "WAIVED" : "unchanged" });
+    }
+
+    if (action === "refund") {
+      const recoupId = typeof body.recoupId === "string" ? body.recoupId : "";
+      const reason = typeof body.reason === "string" ? body.reason.trim() : "";
+      if (!recoupId || !reason) {
+        return NextResponse.json({ error: "recoupId and reason are required" }, { status: 400 });
+      }
+      const res = await refundRecoup(recoupId, admin.id, reason);
+      if (!res.ok) return NextResponse.json({ error: res.error }, { status: 400 });
+      return NextResponse.json({ ok: true, status: "REFUNDED", refundId: res.refundId });
     }
 
     if (action === "create") {

@@ -637,6 +637,46 @@ export async function sendDigitalDeliveryEmail(
  * Creator: a dispute on their campaign was recouped from their chargeback
  * protection card. This is their receipt for the charge.
  */
+export async function sendChargebackRecoupRefundedEmail(params: {
+  email: string;
+  creatorName: string;
+  projectTitle: string;
+  amount: number;
+  reason: string;
+  kind: "CHARGEBACK" | "OVERPAYMENT";
+}) {
+  const { email, creatorName, projectTitle, amount, reason, kind } = params;
+  const what =
+    kind === "OVERPAYMENT"
+      ? `the $${amount.toFixed(2)} collected from your protection card for "${projectTitle}"`
+      : `the $${amount.toFixed(2)} charged to your protection card for a dispute on "${projectTitle}"`;
+  const html = `
+    <!DOCTYPE html>
+    <html>
+      <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+      <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="text-align: center; margin-bottom: 30px;"><h1 style="color: #333; margin: 0;">${APP_NAME}</h1></div>
+        <div style="background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 8px; padding: 24px; margin-bottom: 20px;">
+          <h2 style="margin-top: 0; color: #065f46;">$${amount.toFixed(2)} refunded to your card</h2>
+          <p>Hi ${escapeHtml(creatorName)},</p>
+          <p>We have refunded ${escapeHtml(what)}.</p>
+          <p><strong>Why:</strong> ${escapeHtml(reason)}</p>
+          <p style="color: #666; font-size: 14px;">Refunds usually appear on your statement within 5–10 business days. Questions? Reply to this email.</p>
+        </div>
+        <div style="text-align: center; color: #999; font-size: 12px; margin-top: 30px;"><p>&copy; ${new Date().getFullYear()} ${APP_NAME}. All rights reserved.</p></div>
+      </body>
+    </html>
+  `;
+  return queueEmail({
+    to: email,
+    subject: `Refunded: $${amount.toFixed(2)} returned to your card for "${projectTitle}"`,
+    html,
+    text: `Hi ${creatorName} — we have refunded ${what}. Why: ${reason}. Refunds usually appear within 5–10 business days.`,
+    skipUnsubscribeCheck: true,
+    priority: EMAIL_PRIORITY.SYSTEM,
+  });
+}
+
 export async function sendChargebackRecoupChargedEmail(params: {
   email: string;
   creatorName: string;

@@ -653,6 +653,12 @@ model ChargebackRecoup {
   waivedById   String?
   waivedReason String?
 
+  // A charge sent back to the creator's card by an admin (wrongly opened,
+  // dispute later won). Added by add_recoup_refunded.sql.
+  refundedAt           DateTime?
+  refundedById         String?
+  divinityCoinRefundId String?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now()) @updatedAt
 
@@ -670,6 +676,8 @@ enum ChargebackRecoupStatus {
   // Admin-owned campaign: never charged, logged as an internal loss and
   // credited so the balance reads zero.
   WRITTEN_OFF
+  // Charged, then sent back to the creator's card by an admin.
+  REFUNDED
 }
 
 enum RecoupKind {
