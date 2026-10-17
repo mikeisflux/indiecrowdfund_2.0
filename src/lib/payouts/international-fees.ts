@@ -25,7 +25,11 @@ export function calculateInternationalFees(
   const country = (bankCountry || "US").toUpperCase();
   const isInternational = country !== "US";
 
-  const wireFee = isInternational ? INTERNATIONAL_WIRE_FEE_USD : 0;
+  // The wire fee is the cost of sending money. With nothing to send there
+  // is no wire and no fee — otherwise an international creator's campaign
+  // reads as owing $25 before a single pledge, and the balance recovery
+  // charged exactly that to a creator whose campaign hadn't launched.
+  const wireFee = isInternational && subtotalBeforeWireFees > 0 ? INTERNATIONAL_WIRE_FEE_USD : 0;
   const currencyConversionFee = isInternational
     ? Math.round(subtotalBeforeWireFees * INTERNATIONAL_CURRENCY_CONVERSION_RATE * 100) / 100
     : 0;
