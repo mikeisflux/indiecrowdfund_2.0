@@ -44,20 +44,45 @@ export async function POST(req: NextRequest) {
 
     // Verify project exists (only when one was provided — project-less DMs
     // are allowed for direct messages started from a user profile)
+    // Where a project message is addressed. A campaign's messages belong to
+    // whoever runs it NOW. Backers reply into old threads and follow old
+    // links, so when a campaign changes hands their messages kept landing
+    // in the previous owner's inbox. If neither the sender nor the named
+    // recipient is on the campaign team, deliver to the current owner.
+    let recipientId = data.recipientId;
     if (data.projectId) {
       const project = await db.project.findFirst({
         where: { id: data.projectId, deletedAt: null },
-        select: { id: true, creatorId: true },
+        select: {
+          id: true,
+          creatorId: true,
+          collaborators: {
+            where: { status: "ACCEPTED", userId: { not: null } },
+            select: { userId: true },
+          },
+        },
       });
 
       if (!project) {
         return NextResponse.json({ error: "Project not found" }, { status: 404 });
       }
+
+      const team = new Set<string>([project.creatorId]);
+      for (const c of project.collaborators as { userId: string | null }[]) {
+        if (c.userId) team.add(c.userId);
+      }
+      if (!team.has(session.user.id) && !team.has(recipientId)) {
+        messagesLogger.info(
+          { projectId: project.id, from: session.user.id, addressed: recipientId, deliveredTo: project.creatorId },
+          "Project message re-addressed to the campaign's current owner"
+        );
+        recipientId = project.creatorId;
+      }
     }
 
     // Verify recipient exists and is not deleted
     const recipient = await db.user.findFirst({
-      where: { id: data.recipientId, deletedAt: null },
+      where: { id: recipientId, deletedAt: null },
       select: { id: true, email: true, name: true },
     });
 
@@ -89,7 +114,7 @@ export async function POST(req: NextRequest) {
       data: {
         projectId: data.projectId ?? null,
         senderId: session.user.id,
-        recipientId: data.recipientId,
+        recipientId,
         subject: data.subject,
         attachments: storedAttachments.length > 0 ? storedAttachments : undefined,
         // Messages render as plain text on every surface; a rich-editor
@@ -108,7 +133,7 @@ export async function POST(req: NextRequest) {
     // never fails the message itself.
     await notifyNewMessage({
       messageId: message.id,
-      recipientId: data.recipientId,
+      recipientId,
       senderId: session.user.id,
       senderName: sender?.name || "Someone",
       projectId: data.projectId ?? null,
