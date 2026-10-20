@@ -104,6 +104,20 @@ export async function notifyNewMessage(input: NotifyNewMessageInput): Promise<vo
       select: { id: true, email: true, name: true, creatorEmailHandle: true },
     });
 
+    // Where a reply to the notification email should go. Platform mail is
+    // sent from noreply@, so hitting Reply bounced ("blocked as spam"). If
+    // the sender is a creator with an @indiecrowdfund.com handle, replies
+    // go to that handle and land in their inbox; otherwise the platform's
+    // configured reply-to (Settings → Email) applies.
+    let replyTo: string | undefined;
+    if (input.senderId) {
+      const sender = await db.user.findUnique({
+        where: { id: input.senderId },
+        select: { creatorEmailHandle: true },
+      });
+      if (sender?.creatorEmailHandle) replyTo = `${sender.creatorEmailHandle}@indiecrowdfund.com`;
+    }
+
     for (const user of users as {
       id: string;
       email: string | null;
@@ -160,6 +174,7 @@ export async function notifyNewMessage(input: NotifyNewMessageInput): Promise<vo
         html,
         text: `${input.senderName} sent you a message${projectTitle ? ` about "${projectTitle}"` : ""}${input.subject ? `: ${input.subject}` : ""}\n\n${preview}\n\nReply: ${APP_URL}${inboxPath}`,
         skipUnsubscribeCheck: true, // Transactional: someone wrote to them
+        ...(replyTo ? { replyTo } : {}),
       }).catch((err) => ({ success: false, error: String(err) }));
       if (!result.success) {
         log.warn(
