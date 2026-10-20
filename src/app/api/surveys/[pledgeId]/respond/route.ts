@@ -6,6 +6,7 @@ const surveysRespondLogger = logger.child({ module: "surveys-respond" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { z } from "zod";
+import { normalizeShippingAddress } from "@/lib/fulfillment/shipping-address";
 
 // Lenient address schema for progress saves (allows empty strings)
 const addressSchemaPartial = z.object({
@@ -15,7 +16,7 @@ const addressSchemaPartial = z.object({
   city: z.string().max(100),
   state: z.string().max(100),
   postalCode: z.string().max(20),
-  country: z.string().max(10),
+  country: z.string().max(60),
   phone: z.string().max(30).optional().nullable(),
 });
 
@@ -27,7 +28,7 @@ const addressSchemaStrict = z.object({
   city: z.string().min(1, "City is required").max(100),
   state: z.string().min(1, "State is required").max(100),
   postalCode: z.string().min(1, "Postal code is required").max(20),
-  country: z.string().min(1, "Country is required").max(10),
+  country: z.string().min(1, "Country is required").max(60),
   phone: z.string().max(30).optional().nullable(),
 });
 
@@ -320,7 +321,17 @@ export async function GET(
         itemResponses: response.itemResponses,
         backerResponses: response.backerResponses,
         // A locked order's confirmed address is the address, full stop.
-        shippingAddress: orderLocked && pledge.shippingAddress ? pledge.shippingAddress : response.shippingAddress,
+        // Always the survey's own shape. An Order-Locked backer's address
+        // comes from the pledge, which checkout wrote as address1/zip and
+        // Order Lock wrote as fullName/region — the survey page read
+        // line1/postalCode from it, got blanks, and the backer could
+        // neither submit ("invalid country") nor edit the locked address.
+        shippingAddress:
+          (orderLocked && pledge.shippingAddress
+            ? normalizeShippingAddress(pledge.shippingAddress)
+            : null) ??
+          normalizeShippingAddress(response.shippingAddress) ??
+          response.shippingAddress,
         isComplete: response.isComplete,
         addressLocked: response.addressLocked || orderLocked,
         selectedAddons: {},
@@ -487,7 +498,13 @@ export async function POST(
     // A locked order's address was confirmed at lock time and is final:
     // the survey keeps that address regardless of what the form sends.
     if (orderLocked && pledge.shippingAddress) {
-      data.shippingAddress = pledge.shippingAddress as typeof data.shippingAddress;
+      // The pledge's address may be in checkout shape (address1/zip) or
+      // Order Lock shape (fullName/region); the survey validates and stores
+      // the survey shape, so coalesce first or the locked address fails
+      // its own validation with nothing the backer can do about it.
+      data.shippingAddress =
+        (normalizeShippingAddress(pledge.shippingAddress) as typeof data.shippingAddress) ??
+        (pledge.shippingAddress as typeof data.shippingAddress);
     }
 
     // Validate required fields if submitting
@@ -588,7 +605,14 @@ export async function POST(
           addonRewardsForShipping.some(a => a.shippingType !== "NO_SHIPPING");
 
         if (pledgeRequiresShipping) {
-          const addressToValidate = data.shippingAddress || existingResponse.shippingAddress;
+          const rawAddress = data.shippingAddress || existingResponse.shippingAddress;
+          // Validate the canonical shape: "United States" becomes "US",
+          // address1/zip become line1/postalCode. Keep the raw object only
+          // when there is nothing recognisable to normalise.
+          const addressToValidate = normalizeShippingAddress(rawAddress) ?? rawAddress;
+          if (addressToValidate && data.shippingAddress) {
+            data.shippingAddress = addressToValidate as typeof data.shippingAddress;
+          }
           if (!addressToValidate) {
             return NextResponse.json(
               { error: "Shipping address is required" },

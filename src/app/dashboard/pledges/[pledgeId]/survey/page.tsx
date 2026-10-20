@@ -279,7 +279,11 @@ export default function BackerSurveyPage() {
 
     // Shipping address — required when survey collects addresses AND the
     // pledge requires shipping. Mirror the strict zod schema on the server.
-    if (showAddressStep) {
+    // A locked address (Order Lock / creator lock) is frozen server-side
+    // and shown read-only; the backer can't change it, so it must never be
+    // what blocks their submission.
+    const addressFrozen = !!data.response.addressLocked && !!data.response.shippingAddress;
+    if (showAddressStep && !addressFrozen) {
       const required: { key: keyof typeof shippingAddress; label: string }[] = [
         { key: "name", label: "Name" },
         { key: "line1", label: "Address line 1" },
