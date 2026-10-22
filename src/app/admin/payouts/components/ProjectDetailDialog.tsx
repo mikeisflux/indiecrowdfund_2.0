@@ -123,6 +123,48 @@ export function ProjectDetailDialog({
   // off an admin-owned campaign's loss. Both reload the listing afterwards.
   const [reconciling, setReconciling] = useState(false);
   const [writeOffReason, setWriteOffReason] = useState("");
+  const [windDownOpen, setWindDownOpen] = useState(false);
+  const [windDownReason, setWindDownReason] = useState("");
+  const [windDownConfirm, setWindDownConfirm] = useState("");
+  const [windingDown, setWindingDown] = useState(false);
+
+  const windDown = async (projectId: string) => {
+    if (!windDownReason.trim()) {
+      toast.error("Give the creator a reason");
+      return;
+    }
+    if (windDownConfirm.trim().toUpperCase() !== "REFUND") {
+      toast.error('Type REFUND to confirm');
+      return;
+    }
+    setWindingDown(true);
+    try {
+      const res = await apiFetch(`/api/admin/projects/${projectId}/wind-down`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reason: windDownReason.trim(), notifyCreator: true }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Wind-down failed");
+      const parts = [
+        `${data.dcRefunded} refunded ($${Number(data.dcRefundedAmount || 0).toFixed(2)})`,
+        `${(data.dcPendingCancelled || 0) + (data.stripeCancelled || 0) + (data.paypalCancelled || 0) + (data.whopPendingCancelled || 0)} uncharged pledges released`,
+        `${data.backersEmailed} backers emailed`,
+        data.creatorEmailed ? "creator emailed" : "creator NOT emailed",
+      ];
+      toast.success(`Campaign closed — ${parts.join(", ")}`);
+      if (data.dcRefundFailed > 0) toast.error(`${data.dcRefundFailed} refund(s) failed at DivinityCoin — use Retry refunds on this campaign`);
+      if (data.whopNeedsManualRefund > 0) toast.warning(`${data.whopNeedsManualRefund} Whop payment(s) must be reversed in the Whop dashboard`);
+      setWindDownOpen(false);
+      setWindDownReason("");
+      setWindDownConfirm("");
+      onRecovered?.();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Wind-down failed");
+    } finally {
+      setWindingDown(false);
+    }
+  };
   const recover = async (projectId: string) => {
     setReconciling(true);
     try {
@@ -292,6 +334,57 @@ export function ProjectDetailDialog({
                   </AlertDescription>
                 </Alert>
               )}
+
+              {/* Close a campaign that isn't worth processing and give the money back */}
+              {["LIVE", "FUNDED", "APPROVED", "SUBMITTED"].includes(selectedProject.status) &&
+                !(selectedProject.amountSettled > 0) && (
+                  <Alert className="border-amber-200 bg-amber-50">
+                    <AlertTriangle className="h-4 w-4 text-amber-600" />
+                    <AlertTitle className="text-amber-900">Wind down &amp; refund all backers</AlertTitle>
+                    <AlertDescription className="text-amber-900 space-y-2">
+                      <p className="text-xs">
+                        For a campaign that raised so little that processing it would cost more than it made. Refunds every
+                        charged pledge, releases every uncharged one, emails each backer, and sends the creator a courteous
+                        note. Not reversible.
+                      </p>
+                      {windDownOpen ? (
+                        <div className="space-y-2 pt-1">
+                          <Input
+                            value={windDownReason}
+                            onChange={(e) => setWindDownReason(e.target.value)}
+                            placeholder="Note to the creator (required) — e.g. raised far below the costs of processing it"
+                            className="h-8 bg-white"
+                            maxLength={500}
+                          />
+                          <div className="flex flex-wrap items-center gap-2">
+                            <Input
+                              value={windDownConfirm}
+                              onChange={(e) => setWindDownConfirm(e.target.value)}
+                              placeholder="Type REFUND to confirm"
+                              className="h-8 w-48 bg-white font-mono"
+                            />
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              disabled={windingDown || windDownConfirm.trim().toUpperCase() !== "REFUND" || !windDownReason.trim()}
+                              onClick={() => windDown(selectedProject.id)}
+                            >
+                              {windingDown ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : null}
+                              Close campaign &amp; refund {selectedProject.backerCount} backer{selectedProject.backerCount === 1 ? "" : "s"}
+                            </Button>
+                            <Button size="sm" variant="ghost" disabled={windingDown} onClick={() => setWindDownOpen(false)}>
+                              Cancel
+                            </Button>
+                          </div>
+                        </div>
+                      ) : (
+                        <Button size="sm" variant="outline" className="border-amber-400" onClick={() => setWindDownOpen(true)}>
+                          Wind down this campaign…
+                        </Button>
+                      )}
+                    </AlertDescription>
+                  </Alert>
+                )}
 
               {/* Written-off losses on admin-owned campaigns: shown in red, balance reads zero */}
               {!!selectedProject.writtenOff && selectedProject.writtenOff > 0 && (

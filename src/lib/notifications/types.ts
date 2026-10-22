@@ -19,6 +19,7 @@ export type NotificationType =
   | "COMMENT_REPLY"
   | "COMMENT_NEW"
   | "MESSAGE_RECEIVED"
+  | "PLEDGE_REFUNDED"
   | "SURVEY_SENT"
   | "SURVEY_REMINDER"
   | "SURVEY_UPDATE_REQUESTED"

@@ -637,6 +637,67 @@ export async function sendDigitalDeliveryEmail(
  * Creator: a dispute on their campaign was recouped from their chargeback
  * protection card. This is their receipt for the charge.
  */
+/**
+ * A campaign has been closed and every backer refunded. Two causes: it
+ * ended below the minimum funding level (Terms §6), or an admin closed it.
+ * The tone is deliberate — this is bad news for someone who put months
+ * into a book, and they should feel welcome to try again.
+ */
+export async function sendCampaignWoundDownEmail(params: {
+  email: string;
+  creatorName: string;
+  projectTitle: string;
+  goalAmount: number;
+  raisedAmount: number;
+  cause: "under-minimum" | "not-funded" | "admin";
+  note: string | null;
+  refundedCount: number;
+}) {
+  const { email, creatorName, projectTitle, goalAmount, raisedAmount, cause, note, refundedCount } = params;
+  const pct = goalAmount > 0 ? Math.round((raisedAmount / goalAmount) * 100) : 0;
+  const money = (n: number) => `$${n.toFixed(2)}`;
+  const why =
+    cause === "under-minimum"
+      ? `<p>When a campaign closes, we look at what it raised against its goal. <strong>${escapeHtml(projectTitle)}</strong> finished at ${money(raisedAmount)} of its ${money(goalAmount)} goal (${pct}%). Under our Terms of Service, a campaign that ends below 60% of its goal is treated as not funded: at that level, the fixed costs of processing payments, issuing a payout and supporting fulfilment would cost more than the campaign brought in, which would leave you out of pocket as well as us.</p>`
+      : cause === "not-funded"
+        ? `<p><strong>${escapeHtml(projectTitle)}</strong> closed at ${money(raisedAmount)} of its ${money(goalAmount)} goal. As an All-or-Nothing campaign, it was not funded.</p>`
+        : `<p>We have closed <strong>${escapeHtml(projectTitle)}</strong>. It raised ${money(raisedAmount)} against a ${money(goalAmount)} goal, and at that level the costs of processing the payments, issuing a payout and supporting fulfilment would have exceeded what the campaign made. Rather than let that happen, we have ended it and returned every backer's money.</p>${note ? `<p><em>${escapeHtml(note)}</em></p>` : ""}`;
+  const html = `
+    <!DOCTYPE html>
+    <html>
+      <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+      <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="text-align: center; margin-bottom: 30px;"><h1 style="color: #333; margin: 0;">${APP_NAME}</h1></div>
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 24px; margin-bottom: 20px;">
+          <h2 style="margin-top: 0; color: #1e293b;">About ${escapeHtml(projectTitle)}</h2>
+          <p>Hi ${escapeHtml(creatorName)},</p>
+          <p>Thank you for launching with us. We know how much work goes into a campaign, and we wanted to write to you directly about what happens next.</p>
+          ${why}
+          <p><strong>What we have done:</strong> every backer (${refundedCount}) has been refunded in full or had their uncharged pledge released, and each has been emailed to say so. You owe nothing, and no fees have been taken.</p>
+          <p><strong>What this is not:</strong> a judgement on the book. Plenty of great projects need a second run with a longer lead-up, a smaller first goal, or a different launch window. Your campaign page, rewards and backer list are still in your dashboard, so relaunching is a copy rather than a rebuild.</p>
+          <p>If you would like a hand planning a relaunch, or if anything about this seems wrong, reply to this email and a person will answer.</p>
+          <p>With thanks,<br>The ${APP_NAME} team</p>
+        </div>
+        <div style="text-align: center; color: #999; font-size: 12px; margin-top: 30px;"><p>&copy; ${new Date().getFullYear()} ${APP_NAME}. All rights reserved.</p></div>
+      </body>
+    </html>
+  `;
+  return queueEmail({
+    to: email,
+    subject: `About your campaign "${projectTitle}"`,
+    html,
+    text: `Hi ${creatorName},\n\nThank you for launching with us. "${projectTitle}" finished at ${money(raisedAmount)} of its ${money(goalAmount)} goal (${pct}%). ${
+      cause === "under-minimum"
+        ? "Under our Terms of Service, a campaign that ends below 60% of its goal is treated as not funded, because at that level the fixed costs of processing, payout and fulfilment support would exceed what it raised."
+        : cause === "not-funded"
+          ? "As an All-or-Nothing campaign, it was not funded."
+          : "At that level the costs of processing, payout and fulfilment support would have exceeded what the campaign made, so we have closed it."
+    } Every backer (${refundedCount}) has been refunded or released and emailed. You owe nothing and no fees were taken.${note ? ` ${note}` : ""}\n\nThis is not a judgement on the book — many great projects need a second run. Your page, rewards and backer list are still in your dashboard. Reply to this email if you'd like help planning a relaunch.\n\nWith thanks, The ${APP_NAME} team`,
+    skipUnsubscribeCheck: true,
+    priority: EMAIL_PRIORITY.SYSTEM,
+  });
+}
+
 export async function sendChargebackRecoupRefundedEmail(params: {
   email: string;
   creatorName: string;

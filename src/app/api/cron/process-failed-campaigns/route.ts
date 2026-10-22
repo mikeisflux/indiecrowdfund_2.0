@@ -4,9 +4,7 @@ import { logger } from "@/lib/logger";
 
 const cronProcessFailedCampaignsLogger = logger.child({ module: "cron-process-failed-campaigns" });
 import { db } from "@/lib/db";
-import { callDivinityCoinAPI } from "@/lib/payments/divinitycoin";
-import { unwindCountedPledge } from "@/lib/payments/unwind-counted-pledge";
-import { getPayPalConfig, getPayPalAccessToken } from "@/lib/payments/paypal";
+import { windDownProject, meetsMinimumFunding, MIN_FUNDING_RATIO } from "@/lib/projects/wind-down";
 import { distributeReadyFilesForProject } from "@/lib/fulfillment/auto-distribute";
 
 /**
@@ -57,17 +55,17 @@ export async function GET(req: NextRequest) {
     });
 
     // Separate into funded and failed
-    // KEEP_IT_ALL campaigns are always considered "funded" regardless of goal
-    const fundedProjects = endedProjects.filter(
-      (project) =>
-        project.campaignType === "KEEP_IT_ALL" ||
-        Number(project.currentAmount) >= Number(project.goalAmount)
-    );
-    const failedProjects = endedProjects.filter(
-      (project) =>
-        project.campaignType !== "KEEP_IT_ALL" &&
-        Number(project.currentAmount) < Number(project.goalAmount)
-    );
+    // Funded: All-or-Nothing at/over goal, or Keep-It-All at/over the
+    // minimum funding ratio (Terms §6). Anything else is refunded — a
+    // Keep-It-All campaign that ends far below its goal used to be paid
+    // out as "funded", and at that level processing, payout and
+    // fulfilment support cost more than it raised.
+    const isFunded = (project: { campaignType: string; currentAmount: unknown; goalAmount: unknown }) =>
+      project.campaignType === "KEEP_IT_ALL"
+        ? meetsMinimumFunding(project.currentAmount, project.goalAmount)
+        : Number(project.currentAmount) >= Number(project.goalAmount);
+    const fundedProjects = endedProjects.filter(isFunded);
+    const failedProjects = endedProjects.filter((p) => !isFunded(p));
 
     const results = {
       projectsChecked: endedProjects.length,
@@ -137,77 +135,36 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    // --- Process FAILED projects (didn't meet goal, campaign ended) ---
+    // --- Process FAILED projects (campaign ended, not funded) ---
     for (const project of failedProjects) {
       try {
-        // Atomic CAS on status: LIVE → FAILED before processing any
-        // pledges. If a concurrent cron tick already started processing
-        // this failed campaign, skip immediately — otherwise the
-        // downstream refund loops would attempt to refund the same
-        // pledges twice. (Each refund operation has its own guard via
-        // `where: { status: "COMPLETED" }` on the pledge, but the DC
-        // API call and notification fires at the project level aren't
-        // similarly guarded.)
-        const failCas = await db.project.updateMany({
-          where: { id: project.id, status: "LIVE", deletedAt: null },
-          data: { status: "FAILED" },
+        const underMinimum =
+          project.campaignType === "KEEP_IT_ALL" ||
+          !meetsMinimumFunding(project.currentAmount, project.goalAmount);
+        const r = await windDownProject({
+          projectId: project.id,
+          cause: underMinimum ? "under-minimum" : "not-funded",
+          outcome: "FAILED",
         });
-
-        if (failCas.count === 0) {
-          cronProcessFailedCampaignsLogger.info(`[Cron Ended Campaigns] "${project.title}" status already transitioned out of LIVE — skipping failed-campaign processing`);
+        if (r.outcome === "skipped") {
+          cronProcessFailedCampaignsLogger.info(`[Cron Ended Campaigns] "${project.title}" skipped: ${r.skippedReason}`);
           continue;
         }
-
-        const projectResult = {
+        results.failed.count++;
+        results.failed.projects.push({
           projectId: project.id,
           projectTitle: project.title,
-          divinityCoinRefunds: 0,
-          divinityCoinAmount: 0,
-          divinityCoinPendingCancelled: 0,
-          stripePledgesCancelled: 0,
-          paypalAuthsCancelled: 0,
-          whopPledgesCancelled: 0,
-        };
-
-        // Process DivinityCoin refunds
-        if (project.paymentProcessor === "DIVINITYCOIN") {
-          const refundResult = await refundDivinityCoinPledges(project.id, project.title);
-          projectResult.divinityCoinRefunds = refundResult.count;
-          projectResult.divinityCoinAmount = refundResult.totalAmount;
-
-          // Release the committed saved-card pledges — the whole AoN
-          // backer base. They were counted and slot-holding but never
-          // charged; leaving them PENDING kept them in the totals
-          // forever and showed every backer a live "you'll be charged
-          // when the campaign succeeds" pledge for a campaign that failed.
-          const pendingResult = await cancelDivinityCoinPendingPledges(project.id);
-          projectResult.divinityCoinPendingCancelled = pendingResult.count;
-        }
-
-        // Cancel Stripe pledges (they weren't charged since campaign wasn't funded)
-        const stripeCancelResult = await cancelStripePledges(project.id);
-        projectResult.stripePledgesCancelled = stripeCancelResult.count;
-
-        // Void PayPal authorized pledges (authorization holds must be explicitly released)
-        const paypalCancelResult = await cancelPaypalAuthorizedPledges(project.id);
-        projectResult.paypalAuthsCancelled = paypalCancelResult.count;
-
-        // Cancel Whop pending pledges
-        const whopCancelResult = await cancelWhopPledges(project.id);
-        projectResult.whopPledgesCancelled = whopCancelResult.count;
-
-        // Note: project status was already flipped to FAILED via the
-        // CAS at the top of this loop iteration — no-op now.
-
-        results.failed.count++;
-        results.failed.projects.push(projectResult);
-        results.totalDivinityCoinRefunds += projectResult.divinityCoinRefunds;
-        results.totalDivinityCoinAmount += projectResult.divinityCoinAmount;
-        results.totalStripePledgesCancelled += projectResult.stripePledgesCancelled;
-
-        cronProcessFailedCampaignsLogger.info(`[Cron Ended Campaigns] "${project.title}" → FAILED: ` +
-          `${projectResult.divinityCoinRefunds} DC refunds ($${projectResult.divinityCoinAmount}), ` +
-          `${projectResult.stripePledgesCancelled} Stripe pledges cancelled`);
+          divinityCoinRefunds: r.dcRefunded,
+          divinityCoinAmount: r.dcRefundedAmount,
+          stripePledgesCancelled: r.stripeCancelled,
+        });
+        results.totalDivinityCoinRefunds += r.dcRefunded;
+        results.totalDivinityCoinAmount += r.dcRefundedAmount;
+        results.totalStripePledgesCancelled += r.stripeCancelled;
+        cronProcessFailedCampaignsLogger.info(
+          `[Cron Ended Campaigns] "${project.title}" → FAILED (${underMinimum ? `under ${Math.round(MIN_FUNDING_RATIO * 100)}% of goal` : "goal not met"}): ` +
+            `${r.dcRefunded} DC refunds ($${r.dcRefundedAmount}), ${r.dcRefundFailed} failed, ${r.whopNeedsManualRefund} Whop need manual reversal`
+        );
       } catch (error) {
         cronProcessFailedCampaignsLogger.error({ err: error }, `[Cron Ended Campaigns] Error processing failed project ${project.id}:`);
       }
@@ -225,318 +182,6 @@ export async function GET(req: NextRequest) {
       { status: 500 }
     );
   }
-}
-
-/**
- * Refund DivinityCoin pledges for a failed project
- *
- * Calls DC's API to:
- * 1. Release any credit holds (for unfunded campaigns)
- * 2. Process Stripe refunds for card payments
- *
- * Only refunds pledges where:
- * - paymentProcessor = DIVINITYCOIN
- * - status = COMPLETED
- */
-async function refundDivinityCoinPledges(projectId: string, projectTitle: string) {
-  // Find all DivinityCoin pledges that need refunding
-  const pledgesToRefund = await db.pledge.findMany({
-    where: {
-      projectId,
-      paymentProcessor: "DIVINITYCOIN",
-      status: "COMPLETED",
-      deletedAt: null,
-    },
-    select: {
-      id: true,
-      userId: true,
-      amount: true,
-      rewardId: true,
-      divinityCoinPaymentId: true,
-    },
-  });
-
-  let totalAmount = 0;
-
-  for (const pledge of pledgesToRefund) {
-    try {
-      const amount = Number(pledge.amount);
-
-      // Step 1: Call DC API to release hold + refund the Stripe charge
-      const dcResult = await callDivinityCoinAPI("release", {
-        pledgeId: pledge.id,
-        paymentId: pledge.divinityCoinPaymentId,
-        reason: "campaign_failed",
-        refund: true, // Tell DC to also process the Stripe refund
-      });
-
-      if (!dcResult.success) {
-        cronProcessFailedCampaignsLogger.error({ err: dcResult.error }, `[Cron Failed Campaigns] DC API release failed for pledge ${pledge.id}:`);
-        // Do NOT mark this pledge REFUNDED — the money is still captured
-        // at DC. Falling through here used to write REFUNDED anyway, and
-        // because this query only selects COMPLETED pledges, the refund
-        // was never retried: the backer's money stayed silently stranded.
-        // Leaving it COMPLETED means the next hourly run retries it.
-        continue;
-      }
-
-      // Step 2: Update local records
-      await db.$transaction(async (tx) => {
-        // Mark pledge as refunded
-        await tx.pledge.update({
-          where: { id: pledge.id },
-          data: {
-            status: "REFUNDED",
-            lastFailureReason: "Campaign did not reach funding goal",
-          },
-        });
-
-        // Decrement reward quantity if applicable
-        if (pledge.rewardId) {
-          await tx.$executeRaw`UPDATE "Reward" SET "quantityClaimed" = GREATEST(0, "quantityClaimed" - 1) WHERE id = ${pledge.rewardId}`;
-        }
-
-        // Create refund transaction record
-        await tx.divinityCoinTransaction.create({
-          data: {
-            userId: pledge.userId,
-            pledgeId: pledge.id,
-            amount: -amount,
-            type: "REFUND",
-            description: `Refund for failed campaign "${projectTitle}"`,
-            metadata: JSON.stringify({
-              reason: "campaign_failed",
-              projectId,
-              originalPaymentId: pledge.divinityCoinPaymentId,
-              dcReleaseResult: dcResult.data,
-              timestamp: new Date().toISOString(),
-            }),
-          },
-        });
-      });
-
-      totalAmount += amount;
-    } catch (error) {
-      cronProcessFailedCampaignsLogger.error({ err: error }, `[Cron Failed Campaigns] Error refunding pledge ${pledge.id}:`);
-    }
-  }
-
-  return {
-    count: pledgesToRefund.length,
-    totalAmount,
-  };
-}
-
-/**
- * Cancel Stripe pledges for a failed project
- *
- * Since these pledges were never charged (campaign wasn't funded),
- * we just need to mark them as cancelled
- */
-/**
- * Cancel a failed campaign's uncharged DivinityCoin saved-card pledges
- * (PENDING with a card on file). No money moved, so nothing to refund —
- * but the counted ones come out of the totals and give back their slots.
- */
-async function cancelDivinityCoinPendingPledges(projectId: string) {
-  const pending = await db.pledge.findMany({
-    where: {
-      projectId,
-      paymentProcessor: "DIVINITYCOIN",
-      status: "PENDING",
-      deletedAt: null,
-    },
-    select: { id: true, projectId: true, amount: true, rewardId: true, confirmationEmailSent: true },
-  });
-
-  let count = 0;
-  for (const pledge of pending) {
-    try {
-      const cas = await db.pledge.updateMany({
-        where: { id: pledge.id, status: "PENDING", deletedAt: null },
-        data: {
-          status: "CANCELLED",
-          lastFailureReason: "Campaign did not reach funding goal",
-        },
-      });
-      if (cas.count > 0) {
-        await unwindCountedPledge(pledge);
-        count++;
-      }
-    } catch (error) {
-      cronProcessFailedCampaignsLogger.error({ err: error }, `[Cron Failed Campaigns] Error cancelling DC pending pledge ${pledge.id}:`);
-    }
-  }
-  return { count };
-}
-
-async function cancelStripePledges(projectId: string) {
-  // Find all pending Stripe pledges
-  const pledgesToCancel = await db.pledge.findMany({
-    where: {
-      projectId,
-      paymentProcessor: "STRIPE",
-      status: "PENDING",
-      chargedImmediately: false, // Pledges that weren't charged yet
-      deletedAt: null,
-    },
-    select: {
-      id: true,
-      rewardId: true,
-    },
-  });
-
-  for (const pledge of pledgesToCancel) {
-    try {
-      await db.$transaction(async (tx) => {
-        // Mark pledge as cancelled
-        await tx.pledge.update({
-          where: { id: pledge.id },
-          data: {
-            status: "CANCELLED",
-            lastFailureReason: "Campaign did not reach funding goal",
-          },
-        });
-
-        // Decrement reward quantity if applicable
-        if (pledge.rewardId) {
-          await tx.$executeRaw`UPDATE "Reward" SET "quantityClaimed" = GREATEST(0, "quantityClaimed" - 1) WHERE id = ${pledge.rewardId}`;
-        }
-      });
-    } catch (error) {
-      cronProcessFailedCampaignsLogger.error({ err: error }, `[Cron Failed Campaigns] Error cancelling pledge ${pledge.id}:`);
-    }
-  }
-
-  return {
-    count: pledgesToCancel.length,
-  };
-}
-
-async function cancelPaypalAuthorizedPledges(projectId: string) {
-  // Find PayPal pledges with an authorization hold (backer authorized, campaign didn't fund).
-  // House convention: `NOT: { field: null }` rather than `{ field: { not: null } }` on nullable fields at
-  // runtime — use `NOT: { field: null }` wrapper syntax instead.
-  const pledges = await db.pledge.findMany({
-    where: {
-      projectId,
-      paymentProcessor: "PAYPAL",
-      status: "PENDING",
-      NOT: { paypalAuthorizationId: null },
-      deletedAt: null,
-    },
-    select: { id: true, rewardId: true, confirmationEmailSent: true, amount: true, paypalAuthorizationId: true },
-  });
-
-  // Skip the PayPal OAuth + the rest of the void loop entirely when
-  // there's nothing to do. Otherwise every failed-campaign iteration
-  // pulls fresh PayPal credentials and burns an OAuth call — and if
-  // the platform's PayPal credentials are wrong/expired (`invalid_client`),
-  // the cron logs an error per failed project per run despite there
-  // being no PayPal pledges that needed voiding in the first place.
-  if (pledges.length === 0) {
-    return { count: 0 };
-  }
-
-  let count = 0;
-  try {
-    const paypalConfig = await getPayPalConfig();
-    const accessToken = await getPayPalAccessToken();
-
-    for (const pledge of pledges) {
-      try {
-        // Void the PayPal authorization to release the hold on the backer's card
-        const voidRes = await fetch(
-          `${paypalConfig.baseUrl}/v2/payments/authorizations/${pledge.paypalAuthorizationId}/void`,
-          {
-            method: "POST",
-            headers: {
-              Authorization: `Bearer ${accessToken}`,
-              "Content-Type": "application/json",
-            },
-          }
-        );
-        if (!voidRes.ok && voidRes.status !== 422) {
-          // 422 means already voided/captured — treat as success
-          cronProcessFailedCampaignsLogger.error(
-            { pledgeId: pledge.id, status: voidRes.status },
-            "[Cron Failed] Failed to void PayPal authorization"
-          );
-        }
-      } catch (voidErr) {
-        cronProcessFailedCampaignsLogger.error({ err: String(voidErr), pledgeId: pledge.id }, "[Cron Failed] Error voiding PayPal auth");
-      }
-
-      // Mark pledge cancelled and reverse stats if they were counted
-      await db.$transaction(async (tx) => {
-        await tx.pledge.update({
-          where: { id: pledge.id },
-          data: { status: "CANCELLED", lastFailureReason: "Campaign did not reach funding goal" },
-        });
-
-        if (pledge.confirmationEmailSent) {
-          await tx.project.update({
-            where: { id: projectId },
-            data: {
-              backerCount: { decrement: 1 },
-              currentAmount: { decrement: Number(pledge.amount) },
-            },
-          });
-        }
-
-        if (pledge.rewardId) {
-          await tx.$executeRaw`UPDATE "Reward" SET "quantityClaimed" = GREATEST(0, "quantityClaimed" - 1) WHERE id = ${pledge.rewardId}`;
-        }
-      });
-
-      count++;
-    }
-  } catch (err) {
-    cronProcessFailedCampaignsLogger.error({ err: String(err) }, "[Cron Failed] Error in cancelPaypalAuthorizedPledges");
-  }
-
-  return { count };
-}
-
-async function cancelWhopPledges(projectId: string) {
-  const pledges = await db.pledge.findMany({
-    where: {
-      projectId,
-      paymentProcessor: "WHOP",
-      status: "PENDING",
-      deletedAt: null,
-    },
-    select: { id: true, rewardId: true, confirmationEmailSent: true, amount: true },
-  });
-
-  for (const pledge of pledges) {
-    try {
-      await db.$transaction(async (tx) => {
-        await tx.pledge.update({
-          where: { id: pledge.id },
-          data: { status: "CANCELLED", lastFailureReason: "Campaign did not reach funding goal" },
-        });
-
-        if (pledge.confirmationEmailSent) {
-          await tx.project.update({
-            where: { id: projectId },
-            data: {
-              backerCount: { decrement: 1 },
-              currentAmount: { decrement: Number(pledge.amount) },
-            },
-          });
-        }
-
-        if (pledge.rewardId) {
-          await tx.$executeRaw`UPDATE "Reward" SET "quantityClaimed" = GREATEST(0, "quantityClaimed" - 1) WHERE id = ${pledge.rewardId}`;
-        }
-      });
-    } catch (err) {
-      cronProcessFailedCampaignsLogger.error({ err: String(err), pledgeId: pledge.id }, "[Cron Failed] Error cancelling Whop pledge");
-    }
-  }
-
-  return { count: pledges.length };
 }
 
 // Also support POST for flexibility

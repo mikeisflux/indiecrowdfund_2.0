@@ -11,7 +11,7 @@ import Link from "next/link";
 // it re-prompts every creator on their next dashboard visit.
 //
 // Date-based so the ordering is obvious, with a counter for same-day edits.
-export const TERMS_VERSION = "2026-08-16.1";
+export const TERMS_VERSION = "2026-10-22.1";
 export const TERMS_LAST_UPDATED = "August 16, 2026";
 
 export function TermsOfServiceContent() {
@@ -149,8 +149,18 @@ export function TermsOfServiceContent() {
         </p>
         <ul className="list-disc pl-6 mb-4 space-y-2">
           <li><strong>All or Nothing:</strong> Funds are only collected if the campaign reaches its stated funding goal by the deadline. If the goal is not reached, no money changes hands and backers are not charged.</li>
-          <li><strong>Keep It All:</strong> The creator keeps all pledges regardless of whether the funding goal is reached. Backers are charged immediately at the time of their pledge.</li>
+          <li><strong>Keep It All:</strong> The creator keeps all pledges regardless of whether the funding goal is reached, subject to the minimum funding level below. Backers are charged immediately at the time of their pledge.</li>
         </ul>
+        <p className="mb-4">
+          <strong>Minimum funding level.</strong> Regardless of campaign type, a campaign that ends having raised less
+          than <strong>sixty percent (60%)</strong> of its stated funding goal is treated as not funded. Every backer
+          of such a campaign is refunded in full (or has their uncharged pledge released) and no funds are disbursed
+          to the creator. The fixed costs of processing payments, issuing a payout and supporting fulfilment exceed
+          what a campaign at that level raises, which would leave the creator, and the Grant Program, out of pocket.
+          IndieCrowdfund may likewise close and refund a campaign at any time before payout where the amount raised
+          would not cover the cost of processing it. In either case the creator owes nothing, no fees are taken, and
+          the creator is notified by email and remains free to relaunch.
+        </p>
         <p className="mb-4">Creators authorize IndieCrowdfund and its payment processors to:</p>
         <ul className="list-disc pl-6 mb-4 space-y-2">
           <li>Collect contributions from backers on behalf of the Grant Program</li>
