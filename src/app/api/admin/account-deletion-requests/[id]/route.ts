@@ -6,6 +6,7 @@ import { db } from "@/lib/db";
 import { queueEmail } from "@/lib/email";
 import { getDeletionEligibility } from "@/lib/account-deletion/eligibility";
 import { performAccountDeletion } from "@/lib/account-deletion/perform";
+import { sendAccountDeletedEmail } from "@/lib/email/email-templates-misc";
 
 const log = logger.child({ module: "admin-account-deletion-request-review" });
 
@@ -145,18 +146,7 @@ ${notes ? `<p><strong>Reason:</strong> ${notes}</p>` : ""}
     // Send the confirmation before the wipe — deletion sets
     // emailUnsubscribedAt, and the address is the only way to reach them
     // afterwards.
-    await queueEmail({
-      to: deletionRequest.user.email,
-      subject: "Your IndieCrowdfund account has been deleted",
-      html: `<p>Hi ${firstName},</p>
-<p>Your IndieCrowdfund account has been deleted as you requested. This is permanent and cannot be undone.</p>
-<p>You can no longer sign in, and this email address can't be used to create a new account &mdash; it stays attached to the campaign records for anything you ran or backed.</p>
-<p>Pledge amounts, dates, and payout records are retained for tax and audit purposes as described in our <a href="${APP_URL}/terms?tab=data-deletion">Data Deletion Policy</a>.</p>
-<p>&mdash; IndieCrowdfund Support</p>`,
-      text: `Hi ${firstName} — your IndieCrowdfund account has been deleted as you requested. This is permanent and cannot be undone. You can no longer sign in, and this email address can't be used to create a new account. Pledge amounts, dates, and payout records are retained for tax and audit purposes: ${APP_URL}/terms?tab=data-deletion`,
-      skipUnsubscribeCheck: true, // Transactional: confirming their own request
-      priority: 9,
-    }).catch((err) =>
+    await sendAccountDeletedEmail({ email: deletionRequest.user.email, firstName }).catch((err) =>
       log.error({ err: formatError(err) }, "Failed to queue deletion-approved email")
     );
 

@@ -204,6 +204,13 @@ const tabContent: Record<string, TabContent> = {
         ],
       },
       {
+        heading: 'Group 5 — Your Account',
+        description: 'Settings that belong to you rather than to any project.',
+        steps: [
+          { title: 'Delete your account', description: 'Dashboard → Settings → scroll to Privacy & Security → "Delete Account". The dialog checks your account first and tells you plainly whether it can go ahead. Tick the acknowledgement that you forfeit any rewards still owed to you, confirm your password (Google / social sign-ins skip this), type DELETE MY ACCOUNT, and click the red button. It happens immediately: you are signed out and a confirmation email is sent. There is no waiting period and no support ticket.', tip: 'Deletion is a full release — creators no longer owe you anything, and your email address cannot be used to sign up again. If a creator still owes you a reward, wait until it arrives before deleting. Your pledge amounts and dates are kept (anonymised) for tax and audit reasons; see the Data Deletion Policy on the Terms page.' },
+        ],
+      },
+      {
         heading: 'Quick URLs',
         description: 'Every tab has its own URL. Bookmark the ones you use most.',
         steps: [
@@ -224,6 +231,7 @@ const tabContent: Record<string, TabContent> = {
       { title: 'How do I contact a creator?', description: 'Use "Contact" or "Ask a question" on the project page. Backers often have priority response.', tip: 'Always mention your backer email for pledge-specific issues.' },
       { title: 'What if a creator never delivers?', description: 'Crowdfunding carries risk. Creators are legally obligated to fulfill or refund. Report concerns to our support team.', tip: 'Our verification process helps, but due diligence is important.' },
       { title: 'What happens if I file a chargeback or credit-card dispute?', description: 'File a chargeback or credit-card dispute against IndieCrowdfund or any of our payment processors and your account is permanently banned the moment the dispute is filed, regardless of outcome. You lose every pledge, reward, and digital download tied to that account, and any future accounts under the same email, payment method, IP, or device are also banned. Our ToS makes it explicit: rewards are not guaranteed, you back at your own risk, and a delayed or scaled-back campaign is not grounds for a chargeback.', tip: 'The only carve-outs are actual unauthorized-use fraud (card stolen) and regulator/law-enforcement directives. Everything else is the risk you accepted at checkout. See the full Chargeback Handling Policy at /terms?tab=chargebacks.' },
+      { title: 'How do I delete my account?', description: 'Yourself, in about a minute: Dashboard → Settings → Privacy & Security → Delete Account. Acknowledge that you give up any rewards still owed to you, confirm your password, type DELETE MY ACCOUNT, and confirm. It is immediate and permanent, and you get a confirmation email. If you have ever run a campaign, the same dialog also checks that every backer has been fulfilled and that no money is owed in either direction; if a payout is still due to you, a team member settles it and then completes the deletion.', tip: 'Wait for anything a creator still owes you before deleting — deletion releases them from delivering it.' },
       { title: 'Can I back anonymously?', description: 'Your pledge is visible to the creator, but you can hide from public backer lists. Payment info is always private.', tip: 'Check your privacy settings in your account.' },
       { title: 'How do stretch goals work?', description: 'Bonus features added if campaign exceeds its goal. If unlocked while you\'re a backer, you get them free!', tip: 'Stretch goals make backing early more exciting!' },
     ]

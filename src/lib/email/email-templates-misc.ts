@@ -643,6 +643,27 @@ export async function sendDigitalDeliveryEmail(
  * The tone is deliberate — this is bad news for someone who put months
  * into a book, and they should feel welcome to try again.
  */
+/**
+ * Confirmation that an account has been deleted. Queued BEFORE the wipe:
+ * deletion unsubscribes the address, and it is the only way to reach the
+ * person afterwards.
+ */
+export async function sendAccountDeletedEmail(params: { email: string; firstName: string }) {
+  const { email, firstName } = params;
+  return queueEmail({
+    to: email,
+    subject: "Your IndieCrowdfund account has been deleted",
+    html: `<p>Hi ${escapeHtml(firstName)},</p>
+<p>Your IndieCrowdfund account has been deleted as you requested. This is permanent and cannot be undone.</p>
+<p>You can no longer sign in, and this email address can't be used to create a new account &mdash; it stays attached to the campaign records for anything you ran or backed.</p>
+<p>Pledge amounts, dates, and payout records are retained for tax and audit purposes as described in our <a href="${APP_URL}/terms?tab=data-deletion">Data Deletion Policy</a>.</p>
+<p>&mdash; IndieCrowdfund Support</p>`,
+    text: `Hi ${firstName} — your IndieCrowdfund account has been deleted as you requested. This is permanent and cannot be undone. You can no longer sign in, and this email address can't be used to create a new account. Pledge amounts, dates, and payout records are retained for tax and audit purposes: ${APP_URL}/terms?tab=data-deletion`,
+    skipUnsubscribeCheck: true,
+    priority: EMAIL_PRIORITY.SYSTEM,
+  });
+}
+
 export async function sendCampaignWoundDownEmail(params: {
   email: string;
   creatorName: string;

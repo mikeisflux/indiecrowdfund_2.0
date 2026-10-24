@@ -87,7 +87,7 @@ export function DeleteAccountDialog({
           </DialogTitle>
           <DialogDescription>
             {needsApproval
-              ? "Because you've run a campaign, an admin has to review this before anything is deleted."
+              ? "A member of our team has to settle one thing before this can be completed."
               : "Read this carefully. Deletion is immediate, permanent, and cannot be reversed by you or by support."}
           </DialogDescription>
         </DialogHeader>
@@ -123,7 +123,21 @@ export function DeleteAccountDialog({
               </div>
             )}
 
-            {/* ---- BLOCKED: outstanding fulfillment or a running campaign ---- */}
+            {/* ---- REQUIRES_APPROVAL: fulfilled, but a payout is still owed to them ---- */}
+            {needsApproval && !alreadyPending && !deleteAccount.submittedForApproval && (
+              <div className="rounded-lg border-2 border-blue-300 bg-blue-50 dark:bg-blue-950/30 dark:border-blue-800 p-4 text-sm space-y-2">
+                <p className="font-semibold text-blue-900 dark:text-blue-200 flex items-center gap-2">
+                  <Clock className="h-4 w-4" />
+                  Your request will be reviewed first
+                </p>
+                <p className="text-blue-800 dark:text-blue-300">
+                  {eligibility?.approvalReason ||
+                    "Because you've run a campaign, a member of our team confirms nothing is outstanding before anything is deleted."}
+                </p>
+              </div>
+            )}
+
+            {/* ---- BLOCKED: outstanding fulfillment, a running campaign, or money owed back ---- */}
             {blocked && (
               <div className="rounded-lg border-2 border-amber-400 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-700 p-4 text-sm space-y-2">
                 <p className="font-semibold text-amber-900 dark:text-amber-200 flex items-center gap-2">
@@ -133,10 +147,12 @@ export function DeleteAccountDialog({
                 <p className="text-amber-800 dark:text-amber-300">
                   {eligibility?.blockedReason}
                 </p>
-                <p className="text-amber-800 dark:text-amber-300">
-                  Your backers paid for those rewards. Mark every backer shipped or
-                  delivered in your fulfillment dashboard, then come back here.
-                </p>
+                {!!eligibility?.totalUnfulfilled && (
+                  <p className="text-amber-800 dark:text-amber-300">
+                    Your backers paid for those rewards. Mark every backer shipped or
+                    delivered in your fulfillment dashboard, then come back here.
+                  </p>
+                )}
                 <p className="text-amber-800 dark:text-amber-300">
                   If you believe this is wrong, email{" "}
                   <a

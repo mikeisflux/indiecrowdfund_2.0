@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import { logger } from "@/lib/logger";
 import { getDeletionEligibility } from "@/lib/account-deletion/eligibility";
 import { performAccountDeletion } from "@/lib/account-deletion/perform";
+import { sendAccountDeletedEmail } from "@/lib/email/email-templates-misc";
 
 const deleteAccountLogger = logger.child({ module: "user-delete-account" });
 
@@ -60,6 +61,8 @@ export async function GET() {
       totalUnfulfilled: eligibility.totalUnfulfilled,
       totalFulfilled: eligibility.totalFulfilled,
       blockedReason: eligibility.blockedReason,
+      approvalReason: eligibility.approvalReason,
+      owedToCreator: eligibility.owedToCreator,
       projects: eligibility.projects,
       pendingRequest,
     });
@@ -191,6 +194,7 @@ export async function POST(req: NextRequest) {
         launchedProjectCount: eligibility.projects.length,
         unfulfilledCount: eligibility.totalUnfulfilled,
         fulfilledCount: eligibility.totalFulfilled,
+        reviewNotes: eligibility.approvalReason ? `Needs review: ${eligibility.approvalReason}` : null,
         snapshot: eligibility.projects.map((p) => ({
           id: p.id,
           title: p.title,
@@ -218,8 +222,18 @@ export async function POST(req: NextRequest) {
       pendingApproval: true,
       requestId: created.id,
       message:
-        "Your deletion request has been submitted for review. Because you've run a campaign on IndieCrowdfund, an admin has to approve it. We'll email you when it's been processed.",
+        eligibility.approvalReason ||
+        "Your deletion request has been submitted for review. We'll email you when it's been processed.",
     });
+  }
+
+  // Confirmation goes out before the wipe: deletion unsubscribes the
+  // address and clears the name, so this is the last moment we can.
+  const who = await db.user.findUnique({ where: { id: userId }, select: { email: true, name: true } });
+  if (who?.email) {
+    await sendAccountDeletedEmail({ email: who.email, firstName: who.name?.split(" ")[0] || "there" }).catch((err) =>
+      deleteAccountLogger.warn({ err: String(err), userId }, "Failed to queue account-deleted email")
+    );
   }
 
   // Backers and never-launched creators delete immediately.

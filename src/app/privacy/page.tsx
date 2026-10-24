@@ -158,9 +158,10 @@ const sections = [
         subtitle: "How to Exercise Your Rights",
         items: [
           "Update account settings in your dashboard",
+          "Delete your account yourself: Dashboard → Settings → Privacy & Security → Delete Account (immediate; see the Data Deletion Policy for what is retained and the rules for creators)",
           "Contact us at privacy@indiecrowdfund.com",
           "Unsubscribe from emails using the link in each message",
-          "Request data export or deletion through support",
+          "Request a data export, or deletion if you can no longer sign in, through support",
         ],
       },
     ],

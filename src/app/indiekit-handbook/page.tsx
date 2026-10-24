@@ -611,7 +611,7 @@ const tabContent: Record<string, TabContent> = {
       { step: 'Change password', detail: 'Standard password change — old password + new password twice. Strong passwords required.' },
       { step: 'Enable two-factor authentication (2FA)', detail: 'Highly recommended for accounts that handle payouts. Pick TOTP (Google Authenticator, Authy, 1Password) or SMS. Once enabled, every login asks for the code.' },
       { step: 'Manage active sessions', detail: 'See every device currently logged into your account. Revoke any you don\'t recognize. Useful after a stolen laptop or shared computer.' },
-      { step: 'Delete account', detail: 'Last resort — irreversible. Schedules a 30-day deletion of your data. Active campaigns must be wrapped up first.' },
+      { step: 'Delete account', detail: 'Last resort — immediate and irreversible. Dashboard → Settings → Privacy & Security → Delete Account. The dialog checks your account first: a running campaign, an unfulfilled backer, or a chargeback / overpaid-payout balance you owe back blocks it until resolved; a payout still owed to you holds it for a team member to settle; otherwise you confirm your password, type DELETE MY ACCOUNT, and it is gone — no ticket, no waiting period. Your campaign pages and pledge records stay (anonymised) for backers and tax purposes.' },
     ],
     tips: [
       'Turn on 2FA today. It\'s a 30-second setup and stops the most common account takeover vectors.',

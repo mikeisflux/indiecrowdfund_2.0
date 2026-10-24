@@ -60,6 +60,9 @@ export interface DeletionEligibilityInfo {
   totalUnfulfilled: number;
   totalFulfilled: number;
   blockedReason: string | null;
+  /** Why a person has to look first (status REQUIRES_APPROVAL). */
+  approvalReason?: string | null;
+  owedToCreator?: number;
   projects: DeletionProjectSummary[];
   pendingRequest: { id: string; createdAt: string } | null;
 }

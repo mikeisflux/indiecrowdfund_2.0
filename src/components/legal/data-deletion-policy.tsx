@@ -8,7 +8,7 @@ export function DataDeletionPolicyContent() {
       <div className="rounded-lg border bg-white dark:bg-zinc-900 p-6 md:p-8">
         <h2 className="text-2xl font-bold mb-2">IndieCrowdfund — Data Deletion Policy</h2>
         <p className="text-sm text-muted-foreground mb-8">
-          <strong>Last Updated:</strong> August 17, 2026
+          <strong>Last Updated:</strong> October 23, 2026
         </p>
 
         <p className="mb-6">
@@ -269,20 +269,27 @@ export function DataDeletionPolicyContent() {
           <p className="text-sm text-muted-foreground">Subject Line: Data Deletion Request</p>
         </div>
 
-        <h4 className="text-lg font-semibold mt-6 mb-3">B. Account Settings</h4>
-        <p className="mb-4">
-          Dashboard → Settings → Privacy &amp; Security → Delete My Account (if logged in)
-        </p>
-        <p className="mb-6">You will be required to confirm your password and type a confirmation phrase to verify ownership.</p>
+        <h4 className="text-lg font-semibold mt-6 mb-3">B. Account Settings (self-service)</h4>
+        <p className="mb-2">While logged in:</p>
+        <ol className="list-decimal pl-6 mb-4 space-y-1">
+          <li>Open <strong>Dashboard → Settings</strong> and scroll to <strong>Privacy &amp; Security</strong>.</li>
+          <li>Click <strong>Delete Account</strong>. The dialog first checks your account and tells you whether deletion can proceed right away, needs a review, or is blocked, and why.</li>
+          <li>Read the reward-forfeiture notice (Section 4) and tick the acknowledgement.</li>
+          <li>Confirm your password (accounts that sign in with Google or another provider skip this step) and type <strong>DELETE MY ACCOUNT</strong>.</li>
+          <li>Click <strong>Permanently delete my account</strong>. Deletion happens immediately, you are signed out, and a confirmation is emailed to you.</li>
+        </ol>
+        <p className="mb-6">No support ticket is needed. Email is still available for anyone who cannot sign in.</p>
 
         <h4 className="text-lg font-semibold mt-6 mb-3">C. Additional Requirements for Creators</h4>
         <p className="mb-4">
           If you have ever launched a live campaign on IndieCrowdfund, your account cannot be deleted on request alone. Because deletion releases you from your obligations to the backers who funded you, the following apply:
         </p>
         <ul className="list-disc pl-6 mb-4 space-y-2">
-          <li><strong>Outstanding fulfillment blocks deletion entirely.</strong> If any backer on any campaign you launched is not yet marked shipped or delivered, we will not accept a deletion request. You must complete fulfillment first.</li>
-          <li><strong>Deletion requires administrator approval.</strong> Once fulfillment is complete, you may submit a request. An IndieCrowdfund administrator reviews it before any data is removed. Your account remains fully active until the request is approved.</li>
-          <li><strong>Running campaigns must be concluded.</strong> A campaign that is currently live or paused must be cancelled or finished before a request can be submitted.</li>
+          <li><strong>Running campaigns must be concluded.</strong> A campaign that is currently live or paused must be cancelled or finished before deletion is offered.</li>
+          <li><strong>Outstanding fulfillment blocks deletion entirely.</strong> If any backer on any campaign you launched is not yet marked shipped or delivered, deletion is not offered. You must complete fulfillment first.</li>
+          <li><strong>Money you owe back blocks deletion.</strong> An open chargeback recoup or an overpaid payout balance must be settled first, because the protection card used to collect it is removed with the account.</li>
+          <li><strong>Money owed to you needs a review.</strong> If a finished campaign still has a payout due, your request is held for a member of our team, who settles the payout with you and then completes the deletion. Your account remains active until then, and you are emailed either way.</li>
+          <li><strong>Otherwise, you delete your own account.</strong> Once every backer is fulfilled and nothing is owed in either direction, the self-service steps in 7.B apply to creators exactly as they do to backers, with no administrator involved.</li>
         </ul>
         <p className="mb-4">
           Prelaunch pages do not count as launched campaigns. A prelaunch page collects no funds and creates no reward obligations, so creators whose projects never left prelaunch or draft may delete their accounts immediately like any other user.
@@ -297,7 +304,10 @@ export function DataDeletionPolicyContent() {
         </p>
 
         <h3 className="text-xl font-semibold mt-8 mb-4">8. Processing Time</h3>
-        <p className="mb-4">Deletion requests are processed within:</p>
+        <p className="mb-4">
+          Self-service deletions (Section 7.B) take effect immediately. Requests that need a review, and
+          requests made by email, are processed within:
+        </p>
         <ul className="list-disc pl-6 mb-4 space-y-2">
           <li><strong>30 days</strong> for standard requests</li>
           <li><strong>Up to 90 days</strong> for complex cases involving financial records or legal holds</li>
@@ -320,6 +330,7 @@ export function DataDeletionPolicyContent() {
         <p className="mb-4">Creators who delete their account must:</p>
         <ul className="list-disc pl-6 mb-4 space-y-2">
           <li>Resolve outstanding backer obligations before deletion</li>
+          <li>Settle any chargeback or overpaid-payout balance before deletion</li>
           <li>Provide a final status update on all active campaigns</li>
           <li>Ensure physical goods already shipped have tracking</li>
           <li>Ensure digital rewards already delivered remain accessible</li>
