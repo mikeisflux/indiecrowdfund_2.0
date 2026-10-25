@@ -74,6 +74,44 @@ interface ReconciliationSummary {
 }
 
 export default function ReconcilePage() {
+  const [recoverSession, setRecoverSession] = useState("");
+  const [recoverPayment, setRecoverPayment] = useState("");
+  const [recoverProject, setRecoverProject] = useState("");
+  const [recoverEmail, setRecoverEmail] = useState("");
+  const [recoverReward, setRecoverReward] = useState("");
+  const [recovering, setRecovering] = useState(false);
+  const [recoverResult, setRecoverResult] = useState<string | null>(null);
+
+  const recoverDc = async () => {
+    setRecovering(true);
+    setRecoverResult(null);
+    try {
+      const res = await apiFetch("/api/admin/pledges/recover-dc", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(
+          recoverSession.trim()
+            ? { sessionId: recoverSession.trim(), rewardId: recoverReward.trim() || undefined }
+            : {
+                paymentIntentId: recoverPayment.trim(),
+                projectId: recoverProject.trim() || undefined,
+                userEmail: recoverEmail.trim() || undefined,
+                rewardId: recoverReward.trim() || undefined,
+              }
+        ),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Recovery failed");
+      const p = data.pledge;
+      setRecoverResult(
+        `Done — ${data.project}: pledge ${p?.id} is ${p?.status}${p?.backerNumber ? ` (backer #${p.backerNumber})` : ""}, $${Number(p?.amount || 0).toFixed(2)}, ${p?.user?.email ?? "?"}${p?.confirmationEmailSent ? ", confirmation emailed" : ""}.`
+      );
+    } catch (err) {
+      setRecoverResult(err instanceof Error ? err.message : "Recovery failed");
+    } finally {
+      setRecovering(false);
+    }
+  };
   const [isLoading, setIsLoading] = useState(false);
   const [isApplyingFixes, setIsApplyingFixes] = useState(false);
   const [summary, setSummary] = useState<ReconciliationSummary | null>(null);
@@ -192,6 +230,35 @@ export default function ReconcilePage() {
                 )}
               </Button>
             </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Rebuild a pledge from DivinityCoin's own record. For the backer who
+          paid, saw "Payment complete. Returning…" hang, and whose pledge row
+          is missing or never committed. */}
+      <Card className="mb-6 border-teal-200">
+        <CardHeader>
+          <CardTitle className="text-lg">Recover a DivinityCoin payment</CardTitle>
+          <CardDescription>
+            Paste the checkout session id (cs_…) from DivinityCoin, or a payment id (pi_…) with the project id and the backer&apos;s
+            account email. The pledge is recreated under its original id and committed exactly as the webhook would have: counters,
+            backer number and confirmation email.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="grid gap-2 sm:grid-cols-2">
+            <Input value={recoverSession} onChange={(e) => setRecoverSession(e.target.value)} placeholder="Checkout session id (cs_…)" className="font-mono" />
+            <Input value={recoverPayment} onChange={(e) => setRecoverPayment(e.target.value)} placeholder="or payment id (pi_…)" className="font-mono" />
+            <Input value={recoverProject} onChange={(e) => setRecoverProject(e.target.value)} placeholder="Project id (payment-id path only)" className="font-mono" />
+            <Input value={recoverEmail} onChange={(e) => setRecoverEmail(e.target.value)} placeholder="Backer account email (payment-id path only)" />
+            <Input value={recoverReward} onChange={(e) => setRecoverReward(e.target.value)} placeholder="Reward id (optional)" className="font-mono" />
+          </div>
+          <div className="flex items-center gap-3">
+            <Button onClick={recoverDc} disabled={recovering || (!recoverSession.trim() && !recoverPayment.trim())} className="bg-teal-600 hover:bg-teal-700">
+              {recovering ? "Recovering…" : "Verify with DivinityCoin & commit"}
+            </Button>
+            {recoverResult && <p className="text-sm">{recoverResult}</p>}
           </div>
         </CardContent>
       </Card>

@@ -91,10 +91,18 @@ export async function POST(req: NextRequest) {
         // checkout and is waiting on us, so it is the line between "abandoned
         // cart" and "money we are going to collect". The STRIPE branch above
         // has always drawn it that way; this branch was missing it.
+        //
+        // And a pledge that opened a hosted checkout session is never
+        // abandoned from our side of the fence: the backer may have paid and
+        // the return to our page dropped. One such pledge was hard-deleted
+        // here after 48h with $55 captured at DC, and with the row gone the
+        // reconcile sweeper had nothing to recover. Session pledges belong to
+        // reconcile-dc-pledges, which asks DC whether they were paid.
         {
           paymentProcessor: "DIVINITYCOIN" as const,
           divinityCoinPaymentId: null,
           divinityCoinPaymentMethodId: null,
+          divinityCoinCheckoutSessionId: null,
           confirmationEmailSent: false,
         },
         // PayPal pledges: never authorized, so nothing was ever owed.
