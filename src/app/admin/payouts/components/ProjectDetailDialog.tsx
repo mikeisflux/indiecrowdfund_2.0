@@ -123,6 +123,35 @@ export function ProjectDetailDialog({
   // off an admin-owned campaign's loss. Both reload the listing afterwards.
   const [reconciling, setReconciling] = useState(false);
   const [writeOffReason, setWriteOffReason] = useState("");
+  const [settlementBusy, setSettlementBusy] = useState<string | null>(null);
+
+  // Wires go out by hand; the record is updated here afterwards. There was
+  // no way to do that from this dialog, so settlements sat PENDING forever
+  // after the money had long since arrived.
+  const updateSettlement = async (settlementId: string, action: "PROCESS" | "COMPLETE" | "FAIL", notes?: string) => {
+    if (!selectedProject) return;
+    setSettlementBusy(settlementId);
+    try {
+      const endpoint =
+        selectedProject.paymentProcessor === "WHOP" ? "/api/admin/payouts/whop" : "/api/admin/payouts/divinitycoin";
+      const res = await apiFetch(endpoint, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ settlementId, action, ...(notes ? { adminNotes: notes } : {}) }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Could not update settlement");
+      toast.success(
+        action === "COMPLETE" ? "Settlement marked completed" : action === "PROCESS" ? "Marked as sent" : "Settlement marked failed"
+      );
+      onRecovered?.();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not update settlement");
+    } finally {
+      setSettlementBusy(null);
+    }
+  };
+
   const [windDownOpen, setWindDownOpen] = useState(false);
   const [windDownReason, setWindDownReason] = useState("");
   const [windDownConfirm, setWindDownConfirm] = useState("");
@@ -860,9 +889,48 @@ export function ProjectDetailDialog({
                             </p>
                           </div>
                         </div>
-                        <Badge variant="outline">
-                          {settlement.status}
-                        </Badge>
+                        <div className="flex items-center gap-2">
+                          {!["COMPLETED", "CANCELLED"].includes(settlement.status) && (
+                            <>
+                              {settlement.status !== "PROCESSING" && (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  disabled={settlementBusy === settlement.id}
+                                  onClick={() => updateSettlement(settlement.id, "PROCESS")}
+                                  title="The wire has been sent and is on its way"
+                                >
+                                  Mark wire sent
+                                </Button>
+                              )}
+                              <Button
+                                size="sm"
+                                className="bg-emerald-600 hover:bg-emerald-700"
+                                disabled={settlementBusy === settlement.id}
+                                onClick={() => updateSettlement(settlement.id, "COMPLETE")}
+                                title="The money has landed with the creator"
+                              >
+                                {settlementBusy === settlement.id ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : null}
+                                Mark completed
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="text-red-700"
+                                disabled={settlementBusy === settlement.id}
+                                onClick={() => {
+                                  const reason = window.prompt("Why did this settlement fail? (shown in the record)");
+                                  if (reason && reason.trim()) updateSettlement(settlement.id, "FAIL", reason.trim());
+                                }}
+                              >
+                                Mark failed
+                              </Button>
+                            </>
+                          )}
+                          <Badge variant="outline">
+                            {settlement.status}
+                          </Badge>
+                        </div>
                       </div>
                     ))}
                   </div>
