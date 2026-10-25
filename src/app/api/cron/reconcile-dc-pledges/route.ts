@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { logger } from "@/lib/logger";
 import { db } from "@/lib/db";
+import { alertAdmins } from "@/lib/admin-alerts";
 import {
   verifyDcPayment,
   getDcCheckoutSession,
@@ -22,7 +23,14 @@ const MIN_AGE_MINUTES = 10;
 // isn't a missed webhook anymore — it's an abandoned or in-limbo intent
 // that polling won't fix. Past this we surface the pledge in admin /
 // reconcile-pledges for human review instead of pegging DC's API.
-const MAX_AGE_HOURS = 24;
+// Thirty days, not one. A backer's paid pledge sat PENDING for five days
+// because the sweeper stopped looking after 24h and nothing told anyone.
+// One lookup per stuck pledge per tick is cheap; MAX_PLEDGES_PER_TICK
+// still bounds the DC traffic.
+const MAX_AGE_HOURS = 24 * 30;
+// Anything PENDING this long with a successful payment is a backer who
+// has been waiting; say so loudly when it's finally committed.
+const LATE_COMMIT_MINUTES = 60;
 
 // Reconcile DC pledges stuck in PENDING because the user's iframe never
 // delivered the "complete" postMessage AND the webhook also failed to
@@ -37,7 +45,9 @@ const MAX_AGE_HOURS = 24;
 // the same handlePaymentSucceeded path the webhook uses (CAS-guarded,
 // idempotent — safe if the real webhook lands seconds later).
 //
-// Scheduled every 5 minutes via vercel.json.
+// Runs every 5 minutes. On the PM2/crontab deployment it must be in the
+// crontab — it is not, by itself, scheduled by anything:
+//   */5 * * * * curl -s -H "Authorization: Bearer $CRON_SECRET" https://indiecrowdfund.com/api/cron/reconcile-dc-pledges
 //
 // Security: protected by CRON_SECRET.
 export async function GET(req: NextRequest) {
@@ -68,8 +78,12 @@ export async function GET(req: NextRequest) {
       },
       select: {
         id: true,
+        createdAt: true,
+        amount: true,
         divinityCoinPaymentId: true,
         divinityCoinCheckoutSessionId: true,
+        user: { select: { email: true } },
+        project: { select: { title: true } },
       },
       take: MAX_PLEDGES_PER_TICK,
     });
@@ -79,6 +93,8 @@ export async function GET(req: NextRequest) {
     let failedAtGateway = 0;
     let stillPending = 0;
     let errored = 0;
+    const lateCommits: string[] = [];
+    const gatewayFailures: string[] = [];
 
     for (const p of stuck) {
       checked++;
@@ -118,12 +134,17 @@ export async function GET(req: NextRequest) {
             { pledgeId: p.id, paymentIntentId },
             "[Reconcile DC] Committed stuck pledge via verify-payment"
           );
+          const ageMin = Math.round((Date.now() - new Date(p.createdAt).getTime()) / 60000);
+          if (ageMin >= LATE_COMMIT_MINUTES) {
+            lateCommits.push(`${p.user?.email ?? p.id} · $${Number(p.amount).toFixed(2)} · "${p.project?.title ?? "?"}" · stuck ${ageMin >= 120 ? `${Math.round(ageMin / 60)}h` : `${ageMin}m`}`);
+          }
         } else if (verified.status === "failed") {
           // Genuinely failed at the gateway but still PENDING locally.
           // Don't auto-flip to FAILED from the cron — the stats rollback
           // is delicate and we want eyes on a real decline that slipped
           // past our webhook handler. Surface loudly for admin review.
           failedAtGateway++;
+          gatewayFailures.push(`${p.user?.email ?? p.id} · $${Number(p.amount).toFixed(2)} · "${p.project?.title ?? "?"}"`);
           log.warn(
             { pledgeId: p.id, paymentIntentId },
             "[Reconcile DC] DC reports failed for stuck pledge — needs manual review"
@@ -138,6 +159,38 @@ export async function GET(req: NextRequest) {
           "[Reconcile DC] Error reconciling pledge"
         );
       }
+    }
+
+    // Tell a human. A pledge that needed the sweeper after an hour means
+    // the backer saw "Payment complete. Returning…" hang and has probably
+    // already written in; one DC says failed needs eyes.
+    if (lateCommits.length > 0) {
+      await alertAdmins({
+        title: `Recovered ${lateCommits.length} stuck pledge${lateCommits.length === 1 ? "" : "s"}`,
+        message: `These backers paid but their pledge sat PENDING until the reconcile sweep committed it:\n\n${lateCommits.join("\n")}\n\nThey have now been confirmed and emailed. If any wrote to support, reply and let them know.`,
+        actionUrl: "/admin/reconcile",
+        email: true,
+      });
+    }
+    if (gatewayFailures.length > 0) {
+      await alertAdmins({
+        title: `${gatewayFailures.length} pledge${gatewayFailures.length === 1 ? "" : "s"} failed at DivinityCoin but still PENDING`,
+        message: `DivinityCoin reports the payment failed, but the pledge is still PENDING here and needs a decision:\n\n${gatewayFailures.join("\n")}`,
+        actionUrl: "/admin/reconcile",
+        email: true,
+        throttleKey: "reconcile-gateway-failed",
+        throttleMinutes: 360,
+      });
+    }
+    if (errored > 0 && checked > 0 && errored === checked) {
+      await alertAdmins({
+        title: "Reconcile sweep cannot reach DivinityCoin",
+        message: `Every one of ${checked} stuck pledge lookups errored this tick. Stuck pledges are not being recovered until this clears.`,
+        actionUrl: "/admin/reconcile",
+        email: true,
+        throttleKey: "reconcile-dc-down",
+        throttleMinutes: 120,
+      });
     }
 
     return NextResponse.json({

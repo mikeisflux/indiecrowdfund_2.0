@@ -3,6 +3,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { alertAdmins } from "@/lib/admin-alerts";
 import { logger } from "@/lib/logger";
 import { sendEmail } from "@/lib/email";
 import { rateLimiter } from "@/lib/rate-limiter";
@@ -300,12 +301,23 @@ export async function POST(req: NextRequest) {
       toolsExecuted: toolExecutions.map((t) => ({ name: t.name, ok: t.result.ok })),
     });
   } catch (err) {
-    log.error(
-      { err: err instanceof Error ? err.message : String(err), stack: err instanceof Error ? err.stack : undefined },
-      "support chat error"
-    );
+    const message = err instanceof Error ? err.message : String(err);
+    log.error({ err: message, stack: err instanceof Error ? err.stack : undefined }, "support chat error");
+    // The bot failed every request for weeks on a revoked API key and the
+    // only trace was a line in pm2's error log. Once an hour, tell a human.
+    await alertAdmins({
+      title: "Support chat bot is failing",
+      message: `The support chat returned an error to a visitor:\n\n${message.slice(0, 400)}\n\nIf this mentions an API key, update it under Admin → Settings → AI. Visitors are being told to email support@indiecrowdfund.com in the meantime.`,
+      actionUrl: "/admin/settings",
+      email: true,
+      throttleKey: "support-chat-failing",
+      throttleMinutes: 60,
+    });
     return NextResponse.json(
-      { error: "Support chat is having trouble. Please try again or email support@indiecrowdfund.com." },
+      {
+        error:
+          "Our support assistant is unavailable right now. Email support@indiecrowdfund.com and a person will reply — include your account email and the campaign name.",
+      },
       { status: 500 }
     );
   }

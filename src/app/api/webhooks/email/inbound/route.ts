@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { emailBodyToPlainText } from "@/lib/email/email-to-text";
 import { storeMessageAttachments } from "@/lib/messages/attachments";
 import { notifyNewMessage } from "@/lib/messages/notify";
+import { alertAdmins } from "@/lib/admin-alerts";
 import { db } from "@/lib/db";
 import { getR2Storage, generateEmailAttachmentKey } from "@/lib/r2";
 import { isSenderBlocked, recordBlockHit } from "@/lib/email/inbound-blocklist";
@@ -584,6 +585,19 @@ export async function POST(request: NextRequest) {
           : (emailData.attachmentCount ? { count: emailData.attachmentCount } : null),
       },
     });
+
+    // Nobody was told. Mail to support@ sat unread in the admin inbox until
+    // someone happened to open it; a backer waited five days. Every admin
+    // now hears about each non-spam email in their own inbox.
+    if (!emailData.spamFlag) {
+      await alertAdmins({
+        title: `New email to ${mailbox.name}: ${(emailData.subject || "(no subject)").slice(0, 120)}`,
+        message: `From: ${fromParsed.name ? `${fromParsed.name} <${fromParsed.email}>` : fromParsed.email}\nTo: ${recipientEmail}\n\n${(finalBodyText || "").trim().slice(0, 600)}${(finalBodyText || "").length > 600 ? "…" : ""}`,
+        actionUrl: "/admin/email",
+        email: true,
+        skipEmail: recipientEmail,
+      });
+    }
 
     return NextResponse.json({
       success: true,
