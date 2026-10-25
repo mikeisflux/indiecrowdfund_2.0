@@ -105,15 +105,30 @@ export async function GET(req: NextRequest) {
         // If we don't have a PaymentIntent yet, fish one out of the
         // checkout session. This is the postMessage-dropped scenario
         // where confirm-dc-checkout never ran.
+        // The session is the authority, not the intent already stamped on
+        // the row: a backer whose first attempt was abandoned or declined
+        // and who then paid inside the same checkout has a stale intent
+        // here and the successful one on DC's session. Verifying the stale
+        // one reads "pending" forever.
         let paymentIntentId = p.divinityCoinPaymentId;
-        if (!paymentIntentId && p.divinityCoinCheckoutSessionId) {
+        if (p.divinityCoinCheckoutSessionId) {
           const sessionResult = await getDcCheckoutSession(p.divinityCoinCheckoutSessionId);
           if (sessionResult.success && sessionResult.session.paymentIntentId) {
-            paymentIntentId = sessionResult.session.paymentIntentId;
-            await db.pledge.update({
-              where: { id: p.id },
-              data: { divinityCoinPaymentId: paymentIntentId },
-            });
+            if (sessionResult.session.paymentIntentId !== paymentIntentId) {
+              paymentIntentId = sessionResult.session.paymentIntentId;
+              await db.pledge.update({
+                where: { id: p.id },
+                data: { divinityCoinPaymentId: paymentIntentId },
+              });
+            }
+          } else if (
+            sessionResult.success &&
+            (sessionResult.session.status === "expired" || sessionResult.session.status === "canceled") &&
+            !paymentIntentId
+          ) {
+            // Never paid and the session is gone: nothing to recover.
+            stillPending++;
+            continue;
           }
         }
         if (!paymentIntentId) {
