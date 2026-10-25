@@ -114,8 +114,14 @@ export async function GET(req: NextRequest) {
         if (p.divinityCoinCheckoutSessionId) {
           const sessionResult = await getDcCheckoutSession(p.divinityCoinCheckoutSessionId);
           if (sessionResult.success && sessionResult.session.paymentIntentId) {
-            if (sessionResult.session.paymentIntentId !== paymentIntentId) {
-              paymentIntentId = sessionResult.session.paymentIntentId;
+            // Only a COMPLETE session's intent outranks what is stamped
+            // here. A session that is still "pending" may point at one of
+            // several dead attempts while the stamped intent (set by hand,
+            // or by the success webhook) is the one that was paid.
+            const sessionIntent = sessionResult.session.paymentIntentId;
+            const sessionComplete = sessionResult.session.status === "complete";
+            if (sessionIntent !== paymentIntentId && (sessionComplete || !paymentIntentId)) {
+              paymentIntentId = sessionIntent;
               await db.pledge.update({
                 where: { id: p.id },
                 data: { divinityCoinPaymentId: paymentIntentId },
