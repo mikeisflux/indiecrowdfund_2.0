@@ -94,6 +94,43 @@ export async function POST(req: NextRequest) {
     const pledgeCents = Math.round(Number(pledge.amount) * 100);
     const refundCents = typeof verified.amount === "number" && verified.amount > 0 ? Math.round(verified.amount) : pledgeCents;
 
+    // A second succeeded intent on a pledge is usually NOT a duplicate: it
+    // is the upcharge from a pledge modification (DC's CSV counted exactly
+    // this as paid_intents=2 for a $78 pledge later raised to $193). Two
+    // tells, either one blocks the refund:
+    //  - we recorded the intent ourselves as an upcharge payment
+    //  - kept payment + this payment adds up to the pledge's current amount
+    const recordedUpcharge = await db.divinityCoinTransaction.findFirst({
+      where: { pledgeId: pledge.id, type: "PAYMENT", metadata: { contains: strayIntent } },
+      select: { id: true, amount: true, createdAt: true },
+    });
+    if (recordedUpcharge) {
+      return NextResponse.json(
+        {
+          error: `${strayIntent} is recorded here as a PAYMENT on this pledge ($${Number(recordedUpcharge.amount).toFixed(2)} on ${recordedUpcharge.createdAt.toISOString().slice(0, 10)}) — that is the pledge's upcharge, not a duplicate. Nothing to refund.`,
+        },
+        { status: 409 }
+      );
+    }
+    const kept = await verifyDcPayment(pledge.divinityCoinPaymentId);
+    const keptCents = kept.success && typeof kept.amount === "number" ? Math.round(kept.amount) : null;
+    if (keptCents !== null && Math.abs(keptCents + refundCents - pledgeCents) <= 1) {
+      return NextResponse.json(
+        {
+          error: `The kept payment ($${(keptCents / 100).toFixed(2)}) plus this one ($${(refundCents / 100).toFixed(2)}) equals the pledge total ($${(pledgeCents / 100).toFixed(2)}). This is a pledge that was upgraded and then charged the difference, not a double charge. Nothing to refund.`,
+        },
+        { status: 409 }
+      );
+    }
+    if (keptCents !== null && keptCents !== pledgeCents) {
+      return NextResponse.json(
+        {
+          error: `The kept payment is $${(keptCents / 100).toFixed(2)} but the pledge is $${(pledgeCents / 100).toFixed(2)}; this pledge has been modified since it was paid. Work out the charge history in Stripe before refunding anything.`,
+        },
+        { status: 409 }
+      );
+    }
+
     const dcResult = await callDivinityCoinAPI("refund", {
       pledgeId: pledge.id,
       paymentId: strayIntent,

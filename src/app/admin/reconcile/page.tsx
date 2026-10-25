@@ -330,7 +330,8 @@ export default function ReconcilePage() {
           <CardDescription>
             For a backer whose card was captured twice for one pledge (two checkout sessions). Paste the pledge id and the payment id
             (pi_…) of the <strong>extra</strong> charge, not the one stamped on the pledge. DivinityCoin refunds that charge, the pledge stays
-            paid, and the backer gets an apology with the refund amount.
+            paid, and the backer gets an apology with the refund amount. A second charge that is the pledge&apos;s <em>upcharge</em> (pledge was
+            upgraded and the difference charged) is detected and refused: two succeeded charges on one pledge is usually that, not a duplicate.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
