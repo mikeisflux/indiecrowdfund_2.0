@@ -67,6 +67,7 @@ export async function createDcCheckoutSession(
   if (input.description) payload.description = input.description;
   if (input.expiresInMinutes) payload.expiresInMinutes = input.expiresInMinutes;
   if (input.disableAutoRedirect) payload.disableAutoRedirect = true;
+  if (input.idempotencyKey) payload.idempotencyKey = input.idempotencyKey.slice(0, 255);
   if (mode === "payment") {
     payload.amount = input.amount;
     payload.currency = input.currency || "usd";
@@ -83,11 +84,19 @@ export async function createDcCheckoutSession(
     log.warn({ data }, "[DivinityCoin] create-checkout-session returned without expected fields");
     return { success: false, error: "DivinityCoin returned an incomplete checkout session" };
   }
+  if (data.reused === true) {
+    log.info(
+      { sessionId: data.sessionId, status: data.status ?? null, idempotencyKey: input.idempotencyKey ?? null },
+      "[DivinityCoin] create-checkout-session reused an existing session"
+    );
+  }
   return {
     success: true,
     sessionId: data.sessionId as string,
     checkoutUrl: data.checkoutUrl as string,
     expiresAt: data.expiresAt as string,
+    reused: data.reused === true,
+    status: typeof data.status === "string" ? (data.status as DcCheckoutStatus) : undefined,
   };
 }
 

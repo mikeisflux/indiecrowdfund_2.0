@@ -90,8 +90,12 @@ export async function POST(
         status: pledge.status,
       });
     }
-    if (pledge.status !== "PENDING") {
-      log.warn({ pledgeId: pledge.id, status: pledge.status }, "[confirm-dc-checkout] pledge is in non-PENDING terminal state (CANCELLED/FAILED/REFUNDED)");
+    // FAILED is not terminal here: a sibling intent's decline can mark the
+    // pledge failed while the backer is paying on another session. DC's
+    // session is the authority — if it is complete, the commit below goes
+    // through (the success handler accepts FAILED).
+    if (pledge.status !== "PENDING" && pledge.status !== "FAILED") {
+      log.warn({ pledgeId: pledge.id, status: pledge.status }, "[confirm-dc-checkout] pledge is in a terminal state (CANCELLED/REFUNDED)");
       return NextResponse.json(
         { error: `Pledge is ${pledge.status.toLowerCase()}; cannot confirm` },
         { status: 400 }

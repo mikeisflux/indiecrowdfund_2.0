@@ -668,6 +668,9 @@ export async function POST(req: NextRequest) {
               // control. The "complete" postMessage still fires and
               // we transition the wizard inline.
               disableAutoRedirect: true,
+              // One session per pledge: a remount, a retry or a second
+              // visit gets the same session back instead of a new intent.
+              idempotencyKey: pledge.id,
               ...(useSavedCardFlow
                 ? {}
                 : {
@@ -697,7 +700,16 @@ export async function POST(req: NextRequest) {
             });
 
             metrics.pledgesCreated.inc({ status: "pending", processor: "divinitycoin" });
-            metrics.dcHostedCheckoutSessions.inc({ state: "created" });
+            if (dcSession.reused && dcSession.status === "complete") {
+              // The backer already paid on this session (came back after a
+              // dropped return). The frame fires complete immediately and
+              // confirm-dc-checkout commits it.
+              pledgeLogger.warn(
+                { correlationId, pledgeId: pledge.id, sessionId: dcSession.sessionId },
+                "DC returned an already-completed session for this pledge; confirm path will commit it"
+              );
+            }
+            metrics.dcHostedCheckoutSessions.inc({ state: dcSession.reused ? "reused" : "created" });
             metrics.pledgesByDcFlow.inc({ flow: "hosted_checkout" });
 
             return NextResponse.json({

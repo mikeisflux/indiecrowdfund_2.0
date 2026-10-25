@@ -282,6 +282,12 @@ export interface CreateCheckoutSessionInput {
   // — DC's default nav would yank the top window to returnUrl
   // before the partner's React handler had a chance to finish.
   disableAutoRedirect?: boolean;
+  // One session per pledge. Repeat calls with the same key return the
+  // same session and intent (`reused: true`) instead of minting another;
+  // a completed session comes back as-is, so a repeat can never charge
+  // twice. Without it, every mount or retry created a fresh intent, and
+  // 70+ pledges in October accumulated two to seven sessions each.
+  idempotencyKey?: string;
   // PAYMENT-mode only:
   amount?: number;                  // cents, >0
   currency?: string;                // default "usd"
@@ -294,6 +300,10 @@ export interface CreateCheckoutSessionResult {
   sessionId: string;                // cs_...
   checkoutUrl: string;              // https://divinitycoin.com/checkout/cs_...
   expiresAt: string;                // ISO
+  /** True when an idempotencyKey matched an existing session. */
+  reused?: boolean;
+  /** Present on a reused session: "pending" or "complete". */
+  status?: DcCheckoutStatus;
 }
 
 export interface CheckoutSessionDetails {

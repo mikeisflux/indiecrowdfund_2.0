@@ -776,6 +776,25 @@ export async function handlePaymentFailed(
   const reason = data.error || data.reason;
   const purchaseId = data.purchaseId as string | undefined;
 
+  // DC now says when the failed intent is an abandoned sibling of one that
+  // was already paid. That is information, not a failure — and if we
+  // somehow missed the success, the paid intent id lets us commit it now.
+  const extra = data as Record<string, unknown>;
+  if (extra.pledgeAlreadyPaid === true && pledgeId) {
+    const paidIntent = typeof extra.paidPaymentIntentId === "string" ? extra.paidPaymentIntentId : null;
+    paymentsDivinitycoinLogger.info(
+      { pledgeId, failedPaymentId: paymentId ?? null, paidIntent },
+      "[DivinityCoin] payment.failed for an abandoned sibling of a paid pledge — ignoring the failure"
+    );
+    if (paidIntent) {
+      const current = await db.pledge.findFirst({ where: { id: pledgeId, deletedAt: null }, select: { status: true } });
+      if (current && current.status !== "COMPLETED") {
+        return handlePaymentSucceeded({ ...data, paymentId: paidIntent, paymentIntentId: paidIntent });
+      }
+    }
+    return { success: true, message: "Abandoned sibling intent; pledge already paid" };
+  }
+
   // Handle marketplace purchase failure
   if (purchaseId) {
     paymentsDivinitycoinLogger.info(`[DivinityCoin] Marketplace payment failed: purchase=${purchaseId}, payment=${paymentId}, reason=${reason}`);
