@@ -23,6 +23,13 @@ export interface DcPayoutMathInput {
    * doesn't also show as "owes back".
    */
   recoveredCredit: number;
+  /**
+   * Overpaid balance written off as an internal loss (admin-owned
+   * campaigns). It only neutralises a negative balance — it is never
+   * money to pay out. Counting it as a plain credit paid an overpayment
+   * twice once later pledges pushed the balance positive.
+   */
+  writtenOffCredit?: number;
 }
 
 export interface DcPayoutMath {
@@ -36,9 +43,21 @@ export interface DcPayoutMath {
   totalFees: number;
   amountOwed: number;
   amountSettled: number;
+  /** Credit actually applied: charged recoups plus whatever part of a write-off was needed to reach zero. */
   recoveredCredit: number;
   /** Positive = still to pay the creator; negative = creator owes back. */
   remainingAmount: number;
+}
+
+/**
+ * Charged recoups are real money the creator returned, so they always
+ * count. A write-off only absorbs a shortfall: it brings a negative balance
+ * up to zero and no further.
+ */
+export function applyRecoveredCredits(base: number, charged: number, writtenOff: number): { remaining: number; applied: number } {
+  const afterCharged = r2(base + charged);
+  const writtenOffUsed = afterCharged < 0 ? Math.min(writtenOff, -afterCharged) : 0;
+  return { remaining: r2(afterCharged + writtenOffUsed), applied: r2(charged + writtenOffUsed) };
 }
 
 const r2 = (n: number) => Math.round(n * 100) / 100;
@@ -59,7 +78,8 @@ export function computeDcPayoutMath(i: DcPayoutMathInput): DcPayoutMath {
   const intl = calculateInternationalFees(i.bankCountry, subtotalAfterPlatformFees);
   const totalFees = r2(platformAndProcessorFees + intl.totalInternationalFees);
   const amountOwed = r2(effectiveRevenue - totalFees);
-  const remainingAmount = r2(amountOwed - i.amountSettled + i.recoveredCredit);
+  const credit = applyRecoveredCredits(r2(amountOwed - i.amountSettled), i.recoveredCredit, i.writtenOffCredit ?? 0);
+  const remainingAmount = credit.remaining;
 
   return {
     effectiveRevenue,
@@ -72,21 +92,31 @@ export function computeDcPayoutMath(i: DcPayoutMathInput): DcPayoutMath {
     totalFees,
     amountOwed,
     amountSettled: i.amountSettled,
-    recoveredCredit: i.recoveredCredit,
+    recoveredCredit: credit.applied,
     remainingAmount,
   };
 }
 
-/** Disputed principal already collected from the creator's card — or written off as an internal loss — per project. */
-export async function loadRecoveredCredits(projectIds: string[]): Promise<Map<string, number>> {
-  const out = new Map<string, number>();
+export interface RecoveredCredits {
+  /** Disputed principal the creator actually paid back from their card. */
+  charged: number;
+  /** Overpaid balance written off as an internal loss. */
+  writtenOff: number;
+}
+
+/** Per project: principal collected from the creator's card, and amounts written off, kept separate. */
+export async function loadRecoveredCredits(projectIds: string[]): Promise<Map<string, RecoveredCredits>> {
+  const out = new Map<string, RecoveredCredits>();
   if (projectIds.length === 0) return out;
   const rows = await db.chargebackRecoup.findMany({
     where: { projectId: { in: projectIds }, status: { in: ["CHARGED", "WRITTEN_OFF"] } },
-    select: { projectId: true, disputedAmount: true },
+    select: { projectId: true, disputedAmount: true, status: true },
   });
-  for (const row of rows) {
-    out.set(row.projectId, r2((out.get(row.projectId) || 0) + Number(row.disputedAmount)));
+  for (const row of rows as { projectId: string; disputedAmount: unknown; status: string }[]) {
+    const cur = out.get(row.projectId) || { charged: 0, writtenOff: 0 };
+    if (row.status === "WRITTEN_OFF") cur.writtenOff = r2(cur.writtenOff + Number(row.disputedAmount));
+    else cur.charged = r2(cur.charged + Number(row.disputedAmount));
+    out.set(row.projectId, cur);
   }
   return out;
 }
@@ -157,7 +187,8 @@ export async function loadDcProjectBalance(projectId: string): Promise<
     bankCountry: project.creator.divinityCoinBankAccount?.bankCountry,
     platformFeeRate,
     amountSettled: project.divinityCoinSettlements.reduce((s: number, x: { amount: unknown }) => s + Number(x.amount), 0),
-    recoveredCredit: credits.get(projectId) || 0,
+    recoveredCredit: credits.get(projectId)?.charged || 0,
+    writtenOffCredit: credits.get(projectId)?.writtenOff || 0,
   });
   return {
     ...math,

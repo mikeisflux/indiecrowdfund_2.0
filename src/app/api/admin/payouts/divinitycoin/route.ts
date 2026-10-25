@@ -7,7 +7,7 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { sendPayoutCreatedEmail } from "@/lib/notifications/email-templates";
 import { loadChargebackCards } from "@/lib/payouts/chargeback-card-summary";
-import { computeDcPayoutMath, loadRecoveredCredits } from "@/lib/payouts/project-balance";
+import { computeDcPayoutMath, loadRecoveredCredits, applyRecoveredCredits } from "@/lib/payouts/project-balance";
 import {
   calculateDivinityCoinOwed,
   remainingToSettle,
@@ -332,7 +332,8 @@ export async function GET(request: NextRequest) {
         bankCountry: project.creator.divinityCoinBankAccount?.bankCountry,
         platformFeeRate: configuredPlatformFeeRate,
         amountSettled,
-        recoveredCredit: recoveredCredits.get(project.id) || 0,
+        recoveredCredit: recoveredCredits.get(project.id)?.charged || 0,
+        writtenOffCredit: recoveredCredits.get(project.id)?.writtenOff || 0,
       });
       const { effectiveRevenue, partnerFee, platformFee, totalFees, amountOwed, remainingAmount } = math;
       const processorFee = Math.round(effectiveRevenue * 0.03 * 100) / 100;
@@ -823,7 +824,15 @@ export async function POST(request: NextRequest) {
           _sum: { amount: true },
         });
         const alreadyCommitted = Number(committed._sum.amount || 0);
-        const remaining = remainingToSettle(owed.amountOwed, alreadyCommitted);
+        // Same credit rule as the listing, so Max in the dialog and the cap
+        // here agree to the cent: charged recoups count in full, a write-off
+        // only up to the shortfall it was written off against.
+        const credits = (await loadRecoveredCredits([projectId])).get(projectId) || { charged: 0, writtenOff: 0 };
+        const remaining = applyRecoveredCredits(
+          remainingToSettle(owed.amountOwed, alreadyCommitted),
+          credits.charged,
+          credits.writtenOff
+        ).remaining;
 
         if (remaining <= 0) {
           throw new Error("ALREADY_SETTLED");
