@@ -376,14 +376,35 @@ export async function POST(request: NextRequest) {
       settlement = await db.$transaction(async (tx) => {
         await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`whop-settlement-${projectId}`}))`;
 
-        const existing = await tx.whopSettlement.findFirst({
-          where: {
-            projectId,
-            status: { in: ["PENDING", "INITIATED", "PROCESSING", "COMPLETED"] },
-          },
+        // Only a settlement still in flight blocks a new one. A COMPLETED
+        // settlement used to block too, which made a second payout
+        // impossible: late pledges and post-campaign orders left a real
+        // remaining balance that could never be paid.
+        const inFlight = await tx.whopSettlement.findFirst({
+          where: { projectId, status: { in: ["PENDING", "INITIATED", "PROCESSING"] } },
+          select: { id: true, status: true },
         });
-        if (existing) {
+        if (inFlight) {
           throw new Error("SETTLEMENT_ALREADY_EXISTS");
+        }
+
+        // Never pay out more than ever came in. The exact owed figure (after
+        // fees and refunds) is what the listing shows as Max; this is the
+        // server-side ceiling so a typo can't exceed gross receipts.
+        const [paid, gross] = await Promise.all([
+          tx.whopSettlement.aggregate({
+            where: { projectId, status: { in: ["PENDING", "INITIATED", "PROCESSING", "COMPLETED"] } },
+            _sum: { amount: true },
+          }),
+          tx.pledge.aggregate({
+            where: { projectId, status: "COMPLETED", deletedAt: null },
+            _sum: { amount: true },
+          }),
+        ]);
+        const alreadyPaid = Number(paid._sum.amount ?? 0);
+        const grossRaised = Number(gross._sum.amount ?? 0);
+        if (alreadyPaid + Number(amount) > grossRaised + 0.01) {
+          throw new Error(`SETTLEMENT_EXCEEDS_RECEIPTS:${(grossRaised - alreadyPaid).toFixed(2)}`);
         }
 
         return tx.whopSettlement.create({
@@ -399,9 +420,15 @@ export async function POST(request: NextRequest) {
         });
       });
     } catch (err) {
+      if (err instanceof Error && err.message.startsWith("SETTLEMENT_EXCEEDS_RECEIPTS:")) {
+        return NextResponse.json(
+          { error: `That would pay out more than the campaign took in. At most $${err.message.split(":")[1]} can still be settled.` },
+          { status: 400 }
+        );
+      }
       if (err instanceof Error && err.message === "SETTLEMENT_ALREADY_EXISTS") {
         return NextResponse.json(
-          { error: "A Whop settlement for this project already exists or is in flight" },
+          { error: "A Whop settlement for this project is still in flight — complete or fail it before creating another" },
           { status: 409 }
         );
       }
