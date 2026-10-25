@@ -112,6 +112,66 @@ export default function ReconcilePage() {
       setRecovering(false);
     }
   };
+  // Refund the second of two captured charges on one pledge.
+  const [dupPledge, setDupPledge] = useState("");
+  const [dupIntent, setDupIntent] = useState("");
+  const [dupReason, setDupReason] = useState("");
+  const [dupBusy, setDupBusy] = useState(false);
+  const [dupResult, setDupResult] = useState<string | null>(null);
+
+  const refundDuplicate = async () => {
+    setDupBusy(true);
+    setDupResult(null);
+    try {
+      const res = await apiFetch("/api/admin/pledges/refund-duplicate-dc", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pledgeId: dupPledge.trim(), paymentIntentId: dupIntent.trim(), reason: dupReason.trim() || undefined }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Refund failed");
+      setDupResult(
+        `Done — ${data.project}: refunded $${Number(data.refunded).toFixed(2)} on ${data.refundedPayment} to ${data.backer}. Pledge stays paid via ${data.keptPayment}${data.emailed ? "; backer emailed" : "; backer NOT emailed (no address or send failed)"}.`
+      );
+    } catch (err) {
+      setDupResult(err instanceof Error ? err.message : "Refund failed");
+    } finally {
+      setDupBusy(false);
+    }
+  };
+
+  // Reverse a pledge that was committed without the money ever arriving.
+  const [revPledge, setRevPledge] = useState("");
+  const [revReason, setRevReason] = useState("");
+  const [revChecked, setRevChecked] = useState(false);
+  const [revForce, setRevForce] = useState(false);
+  const [revBusy, setRevBusy] = useState(false);
+  const [revResult, setRevResult] = useState<string | null>(null);
+  const [revConfirmOpen, setRevConfirmOpen] = useState(false);
+
+  const revertCommit = async () => {
+    setRevBusy(true);
+    setRevResult(null);
+    try {
+      const res = await apiFetch("/api/admin/pledges/revert-dc-commit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pledgeId: revPledge.trim(), reason: revReason.trim(), confirmedUnpaidInStripe: revChecked, force: revForce }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Reversal failed");
+      setRevResult(
+        `Done — ${data.project}: $${Number(data.amount).toFixed(2)} pledge from ${data.backer} is now CANCELLED${data.previousBackerNumber ? ` (was backer #${data.previousBackerNumber})` : ""}. Counters ${data.countersReversed ? "reversed" : "were never counted"}, ${data.transactionsVoided} payment record${data.transactionsVoided === 1 ? "" : "s"} voided. DC records: ${data.dcLookupPaid === null ? "unreachable" : data.dcLookupPaid ? "PAID (forced)" : "unpaid"}; verify-payment said ${data.dcVerifyStatus ?? "n/a"}. ${data.emailed ? "Backer emailed" : "Backer NOT emailed"}${data.campaignOpen ? " with a link to pledge again." : "; campaign is closed."}`
+      );
+      setRevChecked(false);
+      setRevForce(false);
+    } catch (err) {
+      setRevResult(err instanceof Error ? err.message : "Reversal failed");
+    } finally {
+      setRevBusy(false);
+      setRevConfirmOpen(false);
+    }
+  };
   const [isLoading, setIsLoading] = useState(false);
   const [isApplyingFixes, setIsApplyingFixes] = useState(false);
   const [summary, setSummary] = useState<ReconciliationSummary | null>(null);
@@ -262,6 +322,83 @@ export default function ReconcilePage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* One pledge, two captured charges: refund the stray one, keep the pledge. */}
+      <Card className="mb-6 border-amber-200">
+        <CardHeader>
+          <CardTitle className="text-lg">Refund a duplicate DivinityCoin charge</CardTitle>
+          <CardDescription>
+            For a backer whose card was captured twice for one pledge (two checkout sessions). Paste the pledge id and the payment id
+            (pi_…) of the <strong>extra</strong> charge, not the one stamped on the pledge. DivinityCoin refunds that charge, the pledge stays
+            paid, and the backer gets an apology with the refund amount.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="grid gap-2 sm:grid-cols-2">
+            <Input value={dupPledge} onChange={(e) => setDupPledge(e.target.value)} placeholder="Pledge id" className="font-mono" />
+            <Input value={dupIntent} onChange={(e) => setDupIntent(e.target.value)} placeholder="Extra payment id to refund (pi_…)" className="font-mono" />
+            <Input value={dupReason} onChange={(e) => setDupReason(e.target.value)} placeholder="Reason (optional, kept on the record)" className="sm:col-span-2" />
+          </div>
+          <div className="flex items-center gap-3">
+            <Button onClick={refundDuplicate} disabled={dupBusy || !dupPledge.trim() || !dupIntent.trim()} className="bg-amber-600 hover:bg-amber-700">
+              {dupBusy ? "Refunding…" : "Verify with DivinityCoin & refund the extra charge"}
+            </Button>
+            {dupResult && <p className="text-sm">{dupResult}</p>}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* A pledge we marked paid that Stripe never captured. */}
+      <Card className="mb-6 border-red-200">
+        <CardHeader>
+          <CardTitle className="text-lg">Reverse a pledge that was confirmed but never paid</CardTitle>
+          <CardDescription>
+            For a COMPLETED DivinityCoin pledge whose payment intent is <strong>not</strong> succeeded in Stripe. Sets it CANCELLED, takes it out
+            of the campaign total and backer count, releases the reward and add-on slots, voids its payment record, and emails the backer that
+            no money was taken (with a link to pledge again if the campaign is still live). No refund is issued. Refused if DivinityCoin&apos;s
+            payment records say it was paid, unless you force it.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="grid gap-2 sm:grid-cols-2">
+            <Input value={revPledge} onChange={(e) => setRevPledge(e.target.value)} placeholder="Pledge id" className="font-mono" />
+            <Input value={revReason} onChange={(e) => setRevReason(e.target.value)} placeholder="Reason (required) — e.g. Stripe shows pi_… incomplete" />
+          </div>
+          <label className="flex items-center gap-2 text-sm">
+            <input type="checkbox" checked={revChecked} onChange={(e) => setRevChecked(e.target.checked)} />
+            I looked this payment intent up in Stripe and it is not succeeded.
+          </label>
+          <label className="flex items-center gap-2 text-sm text-red-700">
+            <input type="checkbox" checked={revForce} onChange={(e) => setRevForce(e.target.checked)} />
+            Force: reverse even if DivinityCoin&apos;s records claim it was paid (Stripe disagrees).
+          </label>
+          <div className="flex items-center gap-3">
+            <Button variant="destructive" onClick={() => setRevConfirmOpen(true)} disabled={revBusy || !revPledge.trim() || !revReason.trim() || !revChecked}>
+              {revBusy ? "Reversing…" : "Reverse this pledge"}
+            </Button>
+            {revResult && <p className="text-sm">{revResult}</p>}
+          </div>
+        </CardContent>
+      </Card>
+
+      <AlertDialog open={revConfirmOpen} onOpenChange={setRevConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Reverse pledge {revPledge.trim()}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              The pledge becomes CANCELLED, the campaign total and backer count drop, and the backer is emailed that their payment never
+              went through. This is for a payment Stripe never captured. If money actually moved, use a refund instead.
+              {revForce && <><br /><br /><strong className="text-red-700">Force is on: DivinityCoin&apos;s record of a successful charge will be overridden.</strong></>}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={revertCommit} className="bg-red-600 hover:bg-red-700">
+              Reverse
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Error Display */}
       {error && (

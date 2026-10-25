@@ -729,3 +729,120 @@ export async function sendRefundRequestDecisionEmail(
   const result = await sendEmail({ to: email, subject, html });
   return { ...result, subject, html };
 }
+
+/**
+ * A backer was charged twice for one pledge (two DivinityCoin checkout
+ * sessions both captured) and the duplicate has just been refunded. Their
+ * pledge is unaffected; this is purely a "we saw it, money is on its way
+ * back" note so they don't dispute the second charge.
+ */
+export async function sendDuplicateChargeRefundedEmail(
+  email: string,
+  backerName: string,
+  projectTitle: string,
+  pledgeAmount: number,
+  refundedAmount: number,
+  projectUrlPath?: string,
+  currency: string = "USD"
+) {
+  const projectUrl = projectUrlPath ? `${APP_URL}${projectUrlPath}` : `${APP_URL}/dashboard/pledges`;
+  const sym = currency === "USD" ? "$" : currency;
+  const html = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Duplicate charge refunded</title>
+      </head>
+      <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f5f5f5;">
+        <div style="background: linear-gradient(135deg, #0d9488 0%, #0f766e 100%); padding: 30px; border-radius: 12px 12px 0 0; text-align: center;">
+          <h1 style="color: white; margin: 0; font-size: 24px;">We refunded a duplicate charge</h1>
+          <p style="color: rgba(255,255,255,0.9); margin: 8px 0 0; font-size: 14px;">&ldquo;${escapeHtml(projectTitle)}&rdquo;</p>
+        </div>
+        <div style="background: white; padding: 30px; border-radius: 0 0 12px 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+          <p style="font-size: 16px;">Hi ${escapeHtml(backerName || "there")},</p>
+          <p>While reviewing payments for &ldquo;${escapeHtml(projectTitle)}&rdquo; we found that your card was charged <strong>twice</strong> for a single pledge of <strong>${sym}${pledgeAmount.toFixed(2)}</strong>. That was our checkout&rsquo;s fault, not yours, and we are sorry.</p>
+          <div style="background: #ecfdf5; border-left: 4px solid #10b981; padding: 15px; border-radius: 0 8px 8px 0; margin: 20px 0;">
+            <p style="margin: 0; font-weight: bold; color: #065f46;">Refund issued: ${sym}${refundedAmount.toFixed(2)}</p>
+            <p style="margin: 5px 0 0; font-size: 14px; color: #047857;">The duplicate charge has been refunded to the card it was taken from. Refunds usually show on a statement within 5&ndash;10 business days. You do not need to do anything.</p>
+          </div>
+          <p>Your pledge itself is unchanged: it is still confirmed, still counts toward the campaign, and your rewards are not affected.</p>
+          <p style="color: #666; font-size: 14px;">If the refund has not appeared after ten business days, reply to this email and we will chase it with the processor for you.</p>
+          <div style="text-align: center; margin-top: 25px;">
+            <a href="${projectUrl}" style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; text-decoration: none; padding: 12px 30px; border-radius: 8px; font-weight: bold;">View the campaign</a>
+          </div>
+        </div>
+        <div style="text-align: center; color: #999; font-size: 12px; margin-top: 30px;">
+          <p>You received this email because of a payment on your ${APP_NAME} account.</p>
+          <p>&copy; ${new Date().getFullYear()} ${APP_NAME}. All rights reserved.</p>
+        </div>
+      </body>
+    </html>
+  `;
+  const subject = `We refunded a duplicate ${sym}${refundedAmount.toFixed(2)} charge for "${projectTitle.replace(/[\r\n]/g, " ")}"`;
+  const text = `Hi ${backerName || "there"},\n\nYour card was charged twice for a single ${sym}${pledgeAmount.toFixed(2)} pledge to "${projectTitle}". That was our checkout's fault and we are sorry.\n\nThe duplicate ${sym}${refundedAmount.toFixed(2)} has been refunded to the same card; refunds usually appear within 5-10 business days. Your pledge itself is unchanged.\n\nIf it has not appeared after ten business days, reply to this email.\n\n${projectUrl}`;
+  const result = await sendEmail({ to: email, subject, html, text, skipUnsubscribeCheck: true });
+  return { ...result, subject, html };
+}
+
+/**
+ * We told a backer their pledge was confirmed, then found the payment never
+ * actually completed at the processor (the gateway reported a session as
+ * complete that Stripe never captured). The pledge has been reversed; no
+ * money was taken. Honest about the mistake, and gives them the way back in
+ * if the campaign is still open.
+ */
+export async function sendPledgeConfirmationRevokedEmail(
+  email: string,
+  backerName: string,
+  projectTitle: string,
+  amount: number,
+  campaignStillOpen: boolean,
+  projectUrlPath?: string,
+  currency: string = "USD"
+) {
+  const projectUrl = projectUrlPath ? `${APP_URL}${projectUrlPath}` : `${APP_URL}/discover`;
+  const sym = currency === "USD" ? "$" : currency;
+  const html = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>About your pledge</title>
+      </head>
+      <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f5f5f5;">
+        <div style="background: linear-gradient(135deg, #d97706 0%, #b45309 100%); padding: 30px; border-radius: 12px 12px 0 0; text-align: center;">
+          <h1 style="color: white; margin: 0; font-size: 24px;">Your payment did not go through</h1>
+          <p style="color: rgba(255,255,255,0.9); margin: 8px 0 0; font-size: 14px;">&ldquo;${escapeHtml(projectTitle)}&rdquo;</p>
+        </div>
+        <div style="background: white; padding: 30px; border-radius: 0 0 12px 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+          <p style="font-size: 16px;">Hi ${escapeHtml(backerName || "there")},</p>
+          <p>We owe you a correction. We sent you a confirmation for a <strong>${sym}${amount.toFixed(2)}</strong> pledge to &ldquo;${escapeHtml(projectTitle)}&rdquo;, but on checking with the card processor we found the payment was never completed. <strong>No money was taken from your card.</strong></p>
+          <div style="background: #fffbeb; border-left: 4px solid #f59e0b; padding: 15px; border-radius: 0 8px 8px 0; margin: 20px 0;">
+            <p style="margin: 0; font-weight: bold; color: #92400e;">What this means</p>
+            <p style="margin: 5px 0 0; font-size: 14px; color: #a16207;">The pledge has been removed from your account and from the campaign total. Nothing is owed and there is nothing to refund. The confirmation you received earlier was sent in error, and we are sorry for the confusion.</p>
+          </div>
+          ${campaignStillOpen ? `
+          <p>The campaign is still open. If you would like to back it, you can place the pledge again and the payment will be taken normally:</p>
+          <div style="text-align: center; margin-top: 25px;">
+            <a href="${projectUrl}" style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; text-decoration: none; padding: 12px 30px; border-radius: 8px; font-weight: bold;">Back this project</a>
+          </div>
+          ` : `
+          <p>The campaign has since closed, so the pledge cannot be placed again here. If you would still like a copy, reply to this email and we will put you in touch with the creator.</p>
+          `}
+          <p style="color: #666; font-size: 14px; margin-top: 25px;">If your card statement shows a charge for this pledge, reply to this email with the date and amount and we will sort it out immediately.</p>
+        </div>
+        <div style="text-align: center; color: #999; font-size: 12px; margin-top: 30px;">
+          <p>You received this email because of a pledge on your ${APP_NAME} account.</p>
+          <p>&copy; ${new Date().getFullYear()} ${APP_NAME}. All rights reserved.</p>
+        </div>
+      </body>
+    </html>
+  `;
+  const subject = `Correction: your ${sym}${amount.toFixed(2)} pledge for "${projectTitle.replace(/[\r\n]/g, " ")}" was not paid`;
+  const text = `Hi ${backerName || "there"},\n\nWe owe you a correction. We sent a confirmation for a ${sym}${amount.toFixed(2)} pledge to "${projectTitle}", but the card processor shows the payment was never completed. No money was taken from your card.\n\nThe pledge has been removed from your account and from the campaign total. Nothing is owed and there is nothing to refund. Sorry for the confusion.\n\n${campaignStillOpen ? `The campaign is still open; you can place the pledge again here: ${projectUrl}` : "The campaign has since closed. Reply to this email if you would still like a copy and we will put you in touch with the creator."}\n\nIf your statement does show a charge for this pledge, reply with the date and amount and we will sort it out immediately.`;
+  const result = await sendEmail({ to: email, subject, html, text, skipUnsubscribeCheck: true });
+  return { ...result, subject, html };
+}
