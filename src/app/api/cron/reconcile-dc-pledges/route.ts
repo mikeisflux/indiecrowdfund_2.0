@@ -65,9 +65,12 @@ export async function GET(req: NextRequest) {
     // Pulls pledges with either a stamped PaymentIntent (confirm-dc-checkout
     // ran but webhook dropped) or only a checkout-session id (postMessage
     // dropped, confirm-dc-checkout never ran).
+    // FAILED is included: a decline followed by a successful retry inside
+    // the same hosted checkout leaves the row FAILED with the money taken.
+    // DC's verify-payment is the authority; a genuinely failed one stays put.
     const stuck = await db.pledge.findMany({
       where: {
-        status: "PENDING",
+        status: { in: ["PENDING", "FAILED"] },
         paymentProcessor: "DIVINITYCOIN",
         deletedAt: null,
         createdAt: { lt: newerThan, gte: olderThan },

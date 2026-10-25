@@ -103,6 +103,12 @@ export async function POST(req: NextRequest) {
     });
     if (byPayment) {
       pledgeId = byPayment.id;
+      if (byPayment.status === "FAILED" || byPayment.status === "CANCELLED") {
+        await db.pledge.update({
+          where: { id: byPayment.id },
+          data: { status: "PENDING", lastFailureReason: null, ...(rewardId ? { rewardId } : {}) },
+        });
+      }
     } else {
       const existing = pledgeId ? await db.pledge.findUnique({ where: { id: pledgeId }, select: { id: true, status: true, deletedAt: true } }) : null;
       if (existing) {

@@ -610,20 +610,32 @@ export async function handlePaymentSucceeded(
       return { success: true, message: matched ? "Chargeback recoup confirmed" : "Pledge already CHARGEBACK" };
     }
 
-    // Only process initial payments if the pledge is still PENDING
-    if (pledge.status !== "PENDING") {
+    // Only process initial payments if the pledge is still open. FAILED
+    // counts as open: a hosted-checkout backer whose first card declined
+    // and who then paid with another card inside the same DC session
+    // produced payment.failed (we flipped to FAILED) and then
+    // payment.succeeded — which this gate used to throw away. The money
+    // was captured at DC and the backer saw "Payment complete" while the
+    // pledge here said failed. DC is the authority on whether it was paid.
+    if (pledge.status !== "PENDING" && pledge.status !== "FAILED") {
       paymentsDivinitycoinLogger.info(`[DivinityCoin] Pledge ${pledgeId} already ${pledge.status}, skipping`);
       return { success: true, message: `Pledge already ${pledge.status}` };
     }
+    if (pledge.status === "FAILED") {
+      paymentsDivinitycoinLogger.warn(
+        { pledgeId, paymentId: paymentId || stripePI },
+        "[DivinityCoin] payment.succeeded on a FAILED pledge — late success, committing"
+      );
+    }
 
-    // CAS on status PENDING → COMPLETED before creating the
+    // CAS on status PENDING/FAILED → COMPLETED before creating the
     // DivinityCoinTransaction record. Without this, DC's at-least-once
     // webhook delivery could fire this handler twice for the same
     // payment and create duplicate transaction records + double-charge
     // the chargedImmediately flag (the stats increment is already
     // separately CAS-guarded via confirmationEmailSent below).
     const pledgeCompleteCas = await db.pledge.updateMany({
-      where: { id: pledgeId, status: "PENDING", deletedAt: null },
+      where: { id: pledgeId, status: { in: ["PENDING", "FAILED"] }, deletedAt: null },
       data: {
         status: "COMPLETED",
         divinityCoinPaymentId: paymentId || stripePI || holdId || null,
@@ -874,6 +886,28 @@ export async function handlePaymentFailed(
       };
     }
 
+    // A hosted-checkout pledge: the backer is still on DC's page and can
+    // retry with another card inside the same session. A single declined
+    // attempt is not the end of the session — checkout.failed / expired
+    // is. Flipping FAILED here on the first decline is how a pledge ended
+    // up "failed" with $55 captured on the retry.
+    if (pledge.divinityCoinCheckoutSessionId && !pledge.divinityCoinPaymentMethodId) {
+      await db.pledge.updateMany({
+        where: { id: pledgeId, status: "PENDING", deletedAt: null },
+        data: {
+          lastFailureReason: formatDeclineReason({
+            declineCode: data.declineCode,
+            code: data.code,
+            fallbackError: reason,
+          }),
+        },
+      });
+      paymentsDivinitycoinLogger.info(
+        { pledgeId, sessionId: pledge.divinityCoinCheckoutSessionId },
+        "[DivinityCoin] payment.failed inside an open hosted checkout; reason recorded, status left PENDING for the session outcome"
+      );
+      return { success: true, message: "Decline recorded; checkout session still open" };
+    }
     // CAS for idempotent webhook retries
     const failCas = await db.pledge.updateMany({
       where: { id: pledgeId, status: "PENDING", deletedAt: null },
