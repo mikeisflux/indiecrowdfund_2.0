@@ -232,6 +232,39 @@ export async function verifyDcPayment(
 }
 
 /**
+ * Has this pledge been paid, according to DC's payment records (not its
+ * session state)? Added by DC after the multi-session incident: a pledge
+ * can have several sessions and intents, and the one stamped on our row
+ * may be a dead sibling. This answers the only question that matters.
+ */
+export async function lookupDcPledgePayment(
+  pledgeId: string
+): Promise<
+  | { success: false; error: string }
+  | { success: true; paid: boolean; paymentIntentId: string | null; sessionId: string | null; amount?: number }
+> {
+  const result = await callDivinityCoinAPI("lookup-payment", { pledgeId });
+  if (!result.success || !result.data) {
+    return { success: false, error: result.error || "Failed to look up pledge payment" };
+  }
+  const d = result.data as Record<string, unknown>;
+  const paid = d.hasSuccessfulCharge === true;
+  const intent =
+    (typeof d.paidPaymentIntentId === "string" && d.paidPaymentIntentId) ||
+    (typeof d.paymentIntentId === "string" && d.paymentIntentId) ||
+    (typeof d.paymentId === "string" && d.paymentId) ||
+    null;
+  const session = (typeof d.paidSessionId === "string" && d.paidSessionId) || (typeof d.sessionId === "string" && d.sessionId) || null;
+  return {
+    success: true,
+    paid,
+    paymentIntentId: paid ? intent : null,
+    sessionId: paid ? session : null,
+    amount: typeof d.amount === "number" ? d.amount : undefined,
+  };
+}
+
+/**
  * Every charge attempt DC has on record for a pledge, with live processor
  * status, plus DC's own `hasSuccessfulCharge` verdict.
  *

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { logger } from "@/lib/logger";
 import { db } from "@/lib/db";
 import { alertAdmins } from "@/lib/admin-alerts";
+import { lookupDcPledgePayment } from "@/lib/payments/divinitycoin/saved-cards";
 import {
   verifyDcPayment,
   getDcCheckoutSession,
@@ -111,7 +112,22 @@ export async function GET(req: NextRequest) {
         // here and the successful one on DC's session. Verifying the stale
         // one reads "pending" forever.
         let paymentIntentId = p.divinityCoinPaymentId;
-        if (p.divinityCoinCheckoutSessionId) {
+        // DC's payment records answer "was this pledge paid" directly,
+        // whichever of its sessions or intents did it. Prefer that over
+        // the intent stamped on our row, which may be a dead sibling.
+        const record = await lookupDcPledgePayment(p.id);
+        if (record.success && record.paid && record.paymentIntentId) {
+          if (record.paymentIntentId !== paymentIntentId) {
+            paymentIntentId = record.paymentIntentId;
+            await db.pledge.update({
+              where: { id: p.id },
+              data: {
+                divinityCoinPaymentId: paymentIntentId,
+                ...(record.sessionId ? { divinityCoinCheckoutSessionId: record.sessionId } : {}),
+              },
+            });
+          }
+        } else if (p.divinityCoinCheckoutSessionId) {
           const sessionResult = await getDcCheckoutSession(p.divinityCoinCheckoutSessionId);
           if (sessionResult.success && sessionResult.session.paymentIntentId) {
             // Only a COMPLETE session's intent outranks what is stamped

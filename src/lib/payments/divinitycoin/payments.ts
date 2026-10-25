@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import { alertAdmins } from "@/lib/admin-alerts";
 import { markRecoupChargedByPayment } from "@/lib/payments/chargeback-recoup";
 import { unwindCountedPledge } from "@/lib/payments/unwind-counted-pledge";
 import { releaseAddonSlots } from "@/lib/payments/rewards";
@@ -1121,6 +1122,19 @@ export async function handleCheckoutCompleted(
   if (!sessionId) {
     return { success: false, error: "sessionId required" };
   }
+  if ((data as Record<string, unknown>).pledgeAlreadyPaid === true) {
+    // Two sessions for one pledge both completed: a double charge. Should
+    // be impossible with the idempotency key; if it happens, a human must
+    // refund one at DC.
+    const d = data as Record<string, unknown>;
+    paymentsDivinitycoinLogger.error({ sessionId, paidSessionId: d.paidSessionId ?? null, paidPaymentIntentId: d.paidPaymentIntentId ?? null }, "[DivinityCoin] checkout.completed on a pledge already paid on another session — DOUBLE CHARGE");
+    await alertAdmins({
+      title: "Possible double charge on a DivinityCoin pledge",
+      message: `Session ${sessionId} completed for a pledge DivinityCoin says was already paid on session ${String(d.paidSessionId ?? "?")} (intent ${String(d.paidPaymentIntentId ?? "?")}). One of the two charges must be refunded at DivinityCoin.`,
+      actionUrl: "/admin/reconcile",
+      email: true,
+    });
+  }
 
   const pledge = await db.pledge.findFirst({
     where: { divinityCoinCheckoutSessionId: sessionId, deletedAt: null },
@@ -1195,6 +1209,15 @@ export async function handleCheckoutFailed(
   data: NonNullable<DivinityCoinWebhookRequest["data"]>
 ): Promise<PaymentEventResponse> {
   const sessionId = data.sessionId;
+  // A dead sibling of a session that was paid: DC says so explicitly now.
+  // Nothing about the pledge changed; it was paid elsewhere.
+  if ((data as Record<string, unknown>).pledgeAlreadyPaid === true) {
+    paymentsDivinitycoinLogger.info(
+      { sessionId, paidSessionId: (data as Record<string, unknown>).paidSessionId ?? null },
+      "[DivinityCoin] checkout event for an abandoned sibling of a paid pledge — ignored"
+    );
+    return { success: true, message: "Abandoned sibling session; pledge already paid" };
+  }
   const reason = data.error || data.reason || "Hosted checkout failed";
 
   paymentsDivinitycoinLogger.info(
@@ -1261,6 +1284,15 @@ export async function handleCheckoutExpired(
   data: NonNullable<DivinityCoinWebhookRequest["data"]>
 ): Promise<PaymentEventResponse> {
   const sessionId = data.sessionId;
+  // A dead sibling of a session that was paid: DC says so explicitly now.
+  // Nothing about the pledge changed; it was paid elsewhere.
+  if ((data as Record<string, unknown>).pledgeAlreadyPaid === true) {
+    paymentsDivinitycoinLogger.info(
+      { sessionId, paidSessionId: (data as Record<string, unknown>).paidSessionId ?? null },
+      "[DivinityCoin] checkout event for an abandoned sibling of a paid pledge — ignored"
+    );
+    return { success: true, message: "Abandoned sibling session; pledge already paid" };
+  }
   metrics.dcHostedCheckoutSessions.inc({ state: "expired" });
   paymentsDivinitycoinLogger.info(
     { sessionId },
@@ -1279,6 +1311,15 @@ export async function handleCheckoutCanceled(
   data: NonNullable<DivinityCoinWebhookRequest["data"]>
 ): Promise<PaymentEventResponse> {
   const sessionId = data.sessionId;
+  // A dead sibling of a session that was paid: DC says so explicitly now.
+  // Nothing about the pledge changed; it was paid elsewhere.
+  if ((data as Record<string, unknown>).pledgeAlreadyPaid === true) {
+    paymentsDivinitycoinLogger.info(
+      { sessionId, paidSessionId: (data as Record<string, unknown>).paidSessionId ?? null },
+      "[DivinityCoin] checkout event for an abandoned sibling of a paid pledge — ignored"
+    );
+    return { success: true, message: "Abandoned sibling session; pledge already paid" };
+  }
   metrics.dcHostedCheckoutSessions.inc({ state: "canceled" });
   paymentsDivinitycoinLogger.info(
     { sessionId },
