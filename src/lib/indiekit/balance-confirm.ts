@@ -3,6 +3,7 @@ import { logger } from "@/lib/logger";
 // The client module directly, not the package index: payments.ts imports
 // this file, and the index re-exports payments.ts.
 import { callDivinityCoinAPI } from "@/lib/payments/divinitycoin/client";
+import { lookupDcPayment } from "@/lib/payments/divinitycoin/saved-cards";
 import { verifyWhopUpchargePayment } from "@/lib/payments/whop/upcharge";
 import { createNotification } from "@/lib/notifications/core";
 import { sendBalancePaidEmail } from "@/lib/email/email-templates-pledge";
@@ -56,6 +57,7 @@ export async function confirmBalancePayment(opts: {
         addonsAmount: true,
         shippingAmount: true,
         metadata: true,
+        divinityCoinPaymentId: true,
         user: { select: { id: true, email: true, name: true } },
         project: {
           select: { id: true, title: true, slug: true, paymentProcessor: true, creatorId: true, currency: true, creator: { select: { vanityUrl: true } } },
@@ -81,8 +83,16 @@ export async function confirmBalancePayment(opts: {
       // The webhook's intent outranks the stored one: the stored id is
       // whichever intent the backer last opened the form with, and a
       // retried card produces a sibling. Both get verified below.
-      const intentId = opts.webhookIntentId || stored || opts.clientIntentId || null;
-      if (!intentId) return { status: "missing", error: "No payment reference to verify" };
+      let intentId = opts.webhookIntentId || stored || opts.clientIntentId || null;
+      if (!intentId) {
+        // Nothing stored (the pay page lost the id for a while). DC keeps
+        // every attempt against the pledge; a succeeded one for exactly
+        // this balance, that is not the pledge's original payment and was
+        // made after the link went out, is the payment we're looking for.
+        intentId = await findBalanceIntentInDcHistory(pledge.id, pledge.divinityCoinPaymentId, balanceDue, meta);
+        if (!intentId) return { status: "missing", error: "No payment reference to verify" };
+        log.info({ pledgeId: pledge.id, intentId, source: opts.source }, "balance confirm: recovered intent from DC payment history");
+      }
       const verify = await callDivinityCoinAPI("verify-payment", { paymentIntentId: intentId });
       if (!verify.success) return { status: "error", error: verify.error || "Could not reach DivinityCoin" };
       if (verify.data?.status !== "succeeded") return { status: "unpaid" };
@@ -139,6 +149,26 @@ export async function confirmBalancePayment(opts: {
         },
       });
       await tx.project.update({ where: { id: pledge.projectId }, data: { currentAmount: { increment: due } } });
+      // Its own ledger type. Every "was this pledge paid" check reads
+      // type PAYMENT rows, so a shipping or balance payment must never
+      // be written as one.
+      const reasonNow = typeof freshMeta.balanceDueReason === "string" ? freshMeta.balanceDueReason : null;
+      await tx.divinityCoinTransaction.create({
+        data: {
+          userId: pledge.user.id,
+          pledgeId: pledge.id,
+          amount: due,
+          type: reasonNow === "shipping" ? "SHIPPING_PAYMENT" : "BALANCE_PAYMENT",
+          description: `${reasonNow === "shipping" ? "Shipping" : "Balance"} payment on "${pledge.project.title}" via ${processor}`,
+          metadata: JSON.stringify({
+            paymentReference,
+            processor,
+            confirmedVia: opts.source,
+            reason: reasonNow,
+            processedAt: new Date().toISOString(),
+          }),
+        },
+      });
       return true;
     });
     if (!credited) return { status: "already", amount: balanceDue };
@@ -170,12 +200,39 @@ export async function confirmBalancePayment(opts: {
   }
 }
 
+async function findBalanceIntentInDcHistory(
+  pledgeId: string,
+  originalPaymentId: string | null,
+  balanceDue: number,
+  meta: Record<string, unknown>
+): Promise<string | null> {
+  const history = await lookupDcPayment(pledgeId);
+  if (!history.success) return null;
+  const sentAt = typeof meta.balanceNotificationSentAt === "string" ? new Date(meta.balanceNotificationSentAt).getTime() : 0;
+  const cents = Math.round(balanceDue * 100);
+  const match = history.attempts.find((a) => {
+    if (a?.status !== "succeeded" || typeof a.paymentIntentId !== "string") return false;
+    if (a.paymentIntentId === originalPaymentId) return false;
+    if (typeof a.amount !== "number" || Math.abs(a.amount - cents) > 0.5) return false;
+    if (sentAt && typeof a.createdAt === "string") {
+      const made = new Date(a.createdAt).getTime();
+      // A minute of slack for clock skew between us and DC.
+      if (Number.isFinite(made) && made < sentAt - 60_000) return false;
+    }
+    return true;
+  });
+  return match?.paymentIntentId ?? null;
+}
+
 /**
- * Pledges that were sent a pay link, had a payment attempt opened at the
- * processor, and are still not marked paid. The sweep verifies each one.
+ * Pledges that were sent a pay link and are still not marked paid. Ones
+ * with a stored payment attempt are always checked; ones without (the pay
+ * page lost the id for a while, or the backer never opened the form) are
+ * checked in a bounded batch no more than every six hours each, so a few
+ * hundred open links don't burn DC's rate limit every five minutes.
  */
-export async function findUnconfirmedBalancePayments(limit = 100): Promise<string[]> {
-  const rows = await db.$queryRaw<{ id: string }[]>`
+export async function findUnconfirmedBalancePayments(limit = 100, unreferencedLimit = 30): Promise<string[]> {
+  const withRef = await db.$queryRaw<{ id: string }[]>`
     SELECT id FROM "Pledge"
     WHERE status = 'COMPLETED'
       AND "deletedAt" IS NULL
@@ -187,5 +244,36 @@ export async function findUnconfirmedBalancePayments(limit = 100): Promise<strin
     ORDER BY (metadata->>'balanceNotificationSentAt')::timestamptz DESC
     LIMIT ${limit}
   `;
-  return rows.map((r) => r.id);
+  const withoutRef = await db.$queryRaw<{ id: string }[]>`
+    SELECT id FROM "Pledge"
+    WHERE status = 'COMPLETED'
+      AND "deletedAt" IS NULL
+      AND metadata->>'balancePaymentToken' IS NOT NULL
+      AND metadata->>'balancePaymentCompletedAt' IS NULL
+      AND metadata->>'balanceDivinityCoinPaymentId' IS NULL
+      AND metadata->>'balanceWhopCheckoutId' IS NULL
+      AND metadata->>'balanceNotificationSentAt' IS NOT NULL
+      AND (metadata->>'balanceNotificationSentAt')::timestamptz > now() - interval '45 days'
+      AND (metadata->>'balanceSweepCheckedAt' IS NULL OR (metadata->>'balanceSweepCheckedAt')::timestamptz < now() - interval '6 hours')
+    ORDER BY (metadata->>'balanceSweepCheckedAt')::timestamptz ASC NULLS FIRST, (metadata->>'balanceNotificationSentAt')::timestamptz ASC
+    LIMIT ${unreferencedLimit}
+  `;
+  const seen = new Set<string>();
+  const ids: string[] = [];
+  for (const r of [...withRef, ...withoutRef]) {
+    if (!seen.has(r.id)) {
+      seen.add(r.id);
+      ids.push(r.id);
+    }
+  }
+  return ids;
+}
+
+/** Remember that the sweep looked at this pledge, so the unreferenced batch rotates. */
+export async function markBalanceSweepChecked(pledgeId: string): Promise<void> {
+  await db.$executeRaw`
+    UPDATE "Pledge"
+    SET metadata = jsonb_set(COALESCE(metadata, '{}'::jsonb), '{balanceSweepCheckedAt}', to_jsonb(now()::text))
+    WHERE id = ${pledgeId}
+  `.catch(() => undefined);
 }

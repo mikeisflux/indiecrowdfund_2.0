@@ -245,6 +245,19 @@ export async function POST(req: NextRequest) {
       }
 
       const dcData = await dcResponse.json();
+      // DC answers create-payment-intent with `paymentIntentId` (see
+      // add-items). This read `paymentId`, which does not exist, so the
+      // intent was never stored, the confirm step had nothing to verify,
+      // and every shipping payment made through this page went
+      // unrecorded while Stripe showed it succeeded.
+      const intentId: string | null =
+        (typeof dcData.paymentIntentId === "string" && dcData.paymentIntentId) ||
+        (typeof dcData.paymentId === "string" && dcData.paymentId) ||
+        null;
+      if (!intentId || !dcData.clientSecret) {
+        payBalanceLogger.error({ pledgeId: pledge.id, keys: Object.keys(dcData || {}) }, "[Balance DC] create-payment-intent response missing intent id or client secret");
+        return NextResponse.json({ error: "Payment processing failed" }, { status: 502 });
+      }
 
       await db.$transaction(async (tx) => {
         await tx.$executeRaw`SELECT id FROM "Pledge" WHERE id = ${pledge.id} FOR UPDATE`;
@@ -258,7 +271,8 @@ export async function POST(req: NextRequest) {
           data: {
             metadata: {
               ...freshMeta,
-              balanceDivinityCoinPaymentId: dcData.paymentId,
+              balanceDivinityCoinPaymentId: intentId,
+              balancePaymentAttemptAt: new Date().toISOString(),
             },
           },
         });
@@ -269,7 +283,7 @@ export async function POST(req: NextRequest) {
         publishableKey: dcData.publishableKey,
         paymentProcessor: "DIVINITYCOIN",
         amount: balanceDue,
-        divinityCoinPaymentId: dcData.paymentId,
+        divinityCoinPaymentId: intentId,
       });
     }
 

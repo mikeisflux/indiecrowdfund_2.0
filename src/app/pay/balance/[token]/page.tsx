@@ -57,6 +57,7 @@ export default function BalancePaymentPage() {
   const [dcStripePromise, setDcStripePromise] = useState<Promise<Stripe | null> | null>(null);
   const [whopSession, setWhopSession] = useState<WhopSession | null>(null);
   const [verifying, setVerifying] = useState(false);
+  const [dcIntentId, setDcIntentId] = useState<string | null>(null);
 
   const fetchDetails = useCallback(async () => {
     try {
@@ -145,6 +146,7 @@ export default function BalancePaymentPage() {
       }
 
       setClientSecret(data.clientSecret);
+      if (typeof data.divinityCoinPaymentId === "string") setDcIntentId(data.divinityCoinPaymentId);
 
       // For DivinityCoin, load the DC Stripe instance using the publishable key from the API
       if (data.paymentProcessor === "DIVINITYCOIN" && data.publishableKey && !dcStripePromise) {
@@ -165,7 +167,7 @@ export default function BalancePaymentPage() {
       const res = await apiFetch("/api/pay/balance/confirm", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token }),
+        body: JSON.stringify({ token, ...(dcIntentId ? { paymentIntentId: dcIntentId } : {}) }),
       });
       if (res.ok) return "confirmed";
       const data = await res.json().catch(() => ({}));
@@ -173,7 +175,7 @@ export default function BalancePaymentPage() {
     } catch {
       return "pending";
     }
-  }, [token]);
+  }, [token, dcIntentId]);
 
   const handlePaymentSuccess = async () => {
     setIsProcessing(true);

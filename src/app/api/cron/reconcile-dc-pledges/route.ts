@@ -3,7 +3,7 @@ import { logger } from "@/lib/logger";
 import { db } from "@/lib/db";
 import { alertAdmins } from "@/lib/admin-alerts";
 import { lookupDcPledgePayment } from "@/lib/payments/divinitycoin/saved-cards";
-import { confirmBalancePayment, findUnconfirmedBalancePayments } from "@/lib/indiekit/balance-confirm";
+import { confirmBalancePayment, findUnconfirmedBalancePayments, markBalanceSweepChecked } from "@/lib/indiekit/balance-confirm";
 import {
   verifyDcPayment,
   getDcCheckoutSession,
@@ -275,6 +275,7 @@ export async function GET(req: NextRequest) {
         } else if (r.status === "error") {
           errored++;
         }
+        if (r.status !== "confirmed") await markBalanceSweepChecked(id);
       }
     } catch (err) {
       log.error({ err: err instanceof Error ? err.message : String(err) }, "[Reconcile DC] balance sweep failed");
