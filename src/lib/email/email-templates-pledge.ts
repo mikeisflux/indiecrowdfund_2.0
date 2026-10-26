@@ -545,6 +545,16 @@ export async function sendSurveyCompletionEmail(
 /**
  * Send balance due email to backer when order has been edited and additional payment is needed
  */
+/**
+ * What a balance is for, when the creator set it deliberately (a shipping
+ * charge, for instance) rather than it falling out of an order edit. Changes
+ * the wording and replaces the generic item list with these lines.
+ */
+export interface BalanceBreakdown {
+  reason?: string;
+  lines: { label: string; amount: number }[];
+}
+
 export async function sendBalanceDueEmail(
   email: string,
   backerName: string,
@@ -556,6 +566,7 @@ export async function sendBalanceDueEmail(
   addons: Array<{ title: string; quantity: number; amount: number }> = [],
   projectUrlPath?: string,
   currency: string = "USD",
+  breakdown?: BalanceBreakdown,
 ) {
   const paymentUrl = `${APP_URL}/pay/balance/${paymentToken}`;
   const projectUrl = projectUrlPath ? `${APP_URL}${projectUrlPath}` : `${APP_URL}/projects/${projectSlug}`;
@@ -566,8 +577,30 @@ export async function sendBalanceDueEmail(
   }).format(value);
 
   const formattedBalance = formatCurrency(balanceDue);
+  const isShipping = breakdown?.reason === "shipping";
+  const headline = isShipping ? "Shipping Due on Your Order" : "Balance Due on Your Order";
+  const intro = isShipping
+    ? `Hi ${escapeHtml(backerName || "there")}, your rewards from <strong>${escapeHtml(projectTitle)}</strong> are getting ready to ship, and shipping for your order is now being collected.`
+    : `Hi ${escapeHtml(backerName || "there")}, your order for <strong>${escapeHtml(projectTitle)}</strong> has been updated and there is an outstanding balance.`;
+  const lead = isShipping
+    ? "Shipping for your order comes to:"
+    : "Your order has been modified and you have an outstanding balance of:";
 
-  const addonsHtml = addons.length > 0 ? `
+  const breakdownHtml = breakdown && breakdown.lines.length > 0 ? `
+    <div style="margin-top: 15px;">
+      <table style="width: 100%; border-collapse: collapse;">
+        ${breakdown.lines.map(l => `
+        <tr>
+          <td style="padding: 6px 0; border-bottom: 1px solid #eee; font-size: 14px;">${escapeHtml(l.label)}</td>
+          <td style="padding: 6px 0; border-bottom: 1px solid #eee; text-align: right; font-size: 14px;">${formatCurrency(l.amount)}</td>
+        </tr>
+        `).join("")}
+      </table>
+      ${rewardTitle ? `<p style="margin: 10px 0 0 0; font-size: 13px; color: #666;">Order: ${escapeHtml(rewardTitle)}${addons.length > 0 ? ` + ${addons.map(a => `${escapeHtml(a.title)} x${a.quantity}`).join(", ")}` : ""}</p>` : ""}
+    </div>
+  ` : "";
+
+  const addonsHtml = breakdownHtml || (addons.length > 0 ? `
     <div style="margin-top: 15px;">
       <p style="margin: 0 0 8px 0; font-weight: 600; font-size: 14px;">Current Order Items:</p>
       <table style="width: 100%; border-collapse: collapse;">
@@ -585,7 +618,7 @@ export async function sendBalanceDueEmail(
         `).join("")}
       </table>
     </div>
-  ` : "";
+  ` : "");
 
   const html = `
     <!DOCTYPE html>
@@ -593,7 +626,7 @@ export async function sendBalanceDueEmail(
       <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Balance Due</title>
+        <title>${headline}</title>
       </head>
       <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
         <div style="text-align: center; margin-bottom: 30px;">
@@ -606,16 +639,16 @@ export async function sendBalanceDueEmail(
               &#36;
             </div>
           </div>
-          <h2 style="margin-top: 0; color: white; text-align: center;">Balance Due on Your Order</h2>
+          <h2 style="margin-top: 0; color: white; text-align: center;">${headline}</h2>
           <p style="text-align: center; margin-bottom: 0; color: rgba(255,255,255,0.9);">
-            Hi ${escapeHtml(backerName || "there")}, your order for <strong>${escapeHtml(projectTitle)}</strong> has been updated and there is an outstanding balance.
+            ${intro}
           </p>
         </div>
 
         <div style="background: #f9f9f9; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
           <h3 style="margin-top: 0;">Payment Required</h3>
           <p style="margin: 0 0 10px 0;">
-            Your order has been modified and you have an outstanding balance of:
+            ${lead}
           </p>
           <div style="text-align: center; padding: 15px; background: white; border-radius: 8px; border: 2px solid #0d9488; margin: 15px 0;">
             <p style="font-size: 32px; font-weight: bold; color: #0d9488; margin: 0;">${formattedBalance}</p>
@@ -648,7 +681,9 @@ export async function sendBalanceDueEmail(
     </html>
   `;
 
-  const subject = `Balance due: ${formattedBalance} for "${projectTitle.replace(/[\r\n]/g, " ")}"`;
+  const subject = isShipping
+    ? `Shipping due: ${formattedBalance} for "${projectTitle.replace(/[\r\n]/g, " ")}"`
+    : `Balance due: ${formattedBalance} for "${projectTitle.replace(/[\r\n]/g, " ")}"`;
 
   const result = await sendEmail({ to: email, subject, html, skipUnsubscribeCheck: true });
   return { ...result, subject, html };

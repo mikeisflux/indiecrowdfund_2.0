@@ -128,6 +128,12 @@ export async function POST(req: NextRequest) {
             balancePaymentCompletedAt: new Date().toISOString(),
             balancePaymentIntentId: paymentIntentId || currentMeta.balancePaymentIntentId,
             balanceAmountPaid: balanceDue,
+            // The stored balance is what IndieKit reads as "still owes";
+            // it never came down after payment, so paid orders kept
+            // showing as Not Charged.
+            ...(currentMeta.balanceDue != null
+              ? { balanceDue: Math.max(0, Math.round((Number(currentMeta.balanceDue) - balanceDue) * 100) / 100) }
+              : {}),
           },
         },
       });

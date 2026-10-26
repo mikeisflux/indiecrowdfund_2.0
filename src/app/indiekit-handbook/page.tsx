@@ -110,6 +110,7 @@ const sections: SectionGroup[] = [
     label: 'Phase 2 — Fulfillment',
     tabs: [
       { id: 'payments', label: 'Payments', icon: CreditCard },
+      { id: 'shipping-charges', label: 'Shipping Charges', icon: Truck },
       { id: 'digital-delivery', label: 'Digital Delivery', icon: Download },
       { id: 'physical-delivery', label: 'Physical Delivery', icon: Box },
       { id: 'shipstation', label: 'ShipStation', icon: Send },
@@ -436,6 +437,27 @@ const tabContent: Record<string, TabContent> = {
     gotchas: [
       'You cannot charge a card that\'s been refunded or charged-back. The row will be locked.',
       'Manual charges still go through the processor\'s normal settlement window — they don\'t pay out instantly.',
+    ],
+  },
+  'shipping-charges': {
+    title: 'Shipping Charges Tab (Fulfillment)',
+    description: 'Collect shipping after the campaign, one order at a time. Built for campaigns whose rewards were priced with free or zero shipping: you open each backer, see exactly what they bought and the address it ships to, type the shipping amount yourself, and email them a pay link. Nothing is calculated for you and nothing is charged to a card automatically — the backer pays through the link, the same way add-on balances are paid.',
+    howTo: [
+      { step: 'Read the list', detail: 'Every paid order with something physical in it is listed with the backer, the city/state/country it ships to, the reward and add-on count, what they have paid, and a status: Needs shipping (nothing set yet), Set not sent, Sent (awaiting payment), Paid, or No address (survey not completed). Digital-only orders are left out. Use the filter pills and the search box to work through the list.' },
+      { step: 'Open an order', detail: 'Click a row. The dialog shows the full shipping address (from the survey, or from checkout if the survey is not done), every item in the order with digital items marked, the total paid so far, and any shipping that was already collected at checkout so you do not charge it twice.' },
+      { step: 'Set the shipping', detail: 'Type the amount in "Shipping to charge" and, optionally, how it should read on the backer\'s email ("Shipping (US) — 1 box"). "Save" records it as a balance due on the order. "Save & email pay link" records it and sends the email in the same click. Saving a different amount later replaces the earlier one; the backer\'s existing link shows the new total.' },
+      { step: 'Email pay links in bulk', detail: 'Work through the backers first, saving each amount. Then click "Email pay links to N backers not yet sent" to send everyone with a saved charge their link at once. Each link lasts 30 days and is paid through the processor the campaign ran on.' },
+      { step: 'Chase the unpaid', detail: '"Resend to unpaid (sent over 3 days ago)" re-emails anyone who has not paid and was last emailed more than three days ago. Anyone emailed more recently is left alone so nobody gets two in a day. A single backer can be re-sent from their dialog at any time.' },
+      { step: 'See it get paid', detail: 'When the backer pays, the order flips to Paid with the date, the amount joins the campaign total, and the balance on the order drops to zero. The Payments tab\'s "Charged" count and the Dashboard pipeline reflect it.' },
+    ],
+    tips: [
+      'Set the amount for everyone before sending anything. Sending as you go means the backers you reach first wait longest to ship.',
+      'Put the country and what the charge covers in the note — "Shipping (Canada) — 2 boxes" — so the backer is not surprised and does not write in asking.',
+      'Backers with no address have not finished their survey. Send a survey reminder from the Backers tab first; their row will fill in once they do.',
+    ],
+    gotchas: [
+      'A backer who has already paid an earlier balance on the same order (an add-on, say) can still be sent a shipping charge — it issues a fresh link — but their earlier paid marker is reset to track the new one.',
+      'Removing a charge after the link was sent leaves the backer with a link that says nothing is due. That is fine, but tell them if they have already opened it.',
     ],
   },
   'digital-delivery': {

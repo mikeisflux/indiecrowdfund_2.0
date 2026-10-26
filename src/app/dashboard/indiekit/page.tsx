@@ -129,6 +129,7 @@ import { SurveysTab } from "./components/tabs/SurveysTab";
 import { FinalizeTab } from "./components/tabs/FinalizeTab";
 import { OrderLockTab } from "./components/tabs/OrderLockTab";
 import { PaymentsTab } from "./components/tabs/PaymentsTab";
+import { ShippingChargesTab } from "./components/tabs/ShippingChargesTab";
 import { DigitalDeliveryTab } from "./components/tabs/DigitalDeliveryTab";
 import { PhysicalDeliveryTab } from "./components/tabs/PhysicalDeliveryTab";
 import { ReportsTab } from "./components/tabs/ReportsTab";
@@ -158,6 +159,7 @@ const PRE_FULFILLMENT_TABS: { id: PhaseTab; label: string; icon: React.ElementTy
 
 const FULFILLMENT_TABS: { id: PhaseTab; label: string; icon: React.ElementType }[] = [
   { id: "payments", label: "Payments", icon: CreditCard },
+  { id: "shipping-charges", label: "Shipping Charges", icon: Truck },
   { id: "digital-delivery", label: "Digital Delivery", icon: Download },
   { id: "physical-delivery", label: "Physical Delivery", icon: Box },
 ];
@@ -184,6 +186,7 @@ const TAB_TIPS: Record<string, string> = {
   "finalize": "Close out surveys and freeze the final order list for production.",
   "teaser-pages": "Public coming-soon pages that collect interest for your next campaign.",
   "payments": "Charge cards on file — survey balances, shipping differences, and extra items.",
+  "shipping-charges": "Set shipping per backer by hand — open an order, see what they bought and where it ships, and email a pay link.",
   "digital-delivery": "Upload digital files and distribute them to the backers entitled to them.",
   "physical-delivery": "Push orders to shipping carriers, print labels, and track what's shipped.",
   "printing-comics": "Order print runs and hard-copy proofs for your book.",
@@ -952,6 +955,10 @@ export default function IndieKitPage() {
                 <PaymentsTab
                   stats={stats}
                 />
+              )}
+
+              {activeSection === "phase" && activePhaseTab === "shipping-charges" && (
+                <ShippingChargesTab projectId={selectedProjectId} />
               )}
 
               {activeSection === "phase" && activePhaseTab === "digital-delivery" && (
