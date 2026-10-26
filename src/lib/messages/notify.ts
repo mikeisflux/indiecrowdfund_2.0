@@ -2,6 +2,7 @@ import { db } from "@/lib/db";
 import { logger } from "@/lib/logger";
 import { sendEmail } from "@/lib/email";
 import { createNotification } from "@/lib/notifications/core";
+import { PLATFORM_OWNER_EMAIL } from "@/lib/platform-owner";
 
 const log = logger.child({ module: "message-notify" });
 
@@ -60,11 +61,17 @@ export async function notifyNewMessage(input: NotifyNewMessageInput): Promise<vo
     if (input.projectId) {
       const project = await db.project.findFirst({
         where: { id: input.projectId, deletedAt: null },
-        select: { creatorId: true },
+        select: { creatorId: true, creator: { select: { role: true } } },
       });
       // Only the campaign owner's inbox is shared; a message to a backer stays
       // with the backer.
       if (project && project.creatorId === input.recipientId) {
+        // The platform owner's silent support seat on every campaign is not
+        // a team member and must not be told about the creator's mail. Same
+        // rule as getProjectNotificationRecipients: a SUPER_ADMIN sitting on
+        // someone else's campaign is support, not team — unless the campaign
+        // is the platform's own (owner is also SUPER_ADMIN).
+        const creatorIsSuperAdmin = project.creator?.role === "SUPER_ADMIN";
         const collaborators = await db.projectCollaborator.findMany({
           where: {
             projectId: input.projectId,
@@ -72,11 +79,14 @@ export async function notifyNewMessage(input: NotifyNewMessageInput): Promise<vo
             canManageCommunity: true,
             userId: { not: null },
             user: { deletedAt: null },
+            NOT: { email: { equals: PLATFORM_OWNER_EMAIL, mode: "insensitive" } },
           },
-          select: { userId: true },
+          select: { userId: true, user: { select: { role: true } } },
         });
-        for (const c of collaborators as { userId: string | null }[]) {
-          if (c.userId) recipientIds.add(c.userId);
+        for (const c of collaborators as { userId: string | null; user: { role: string } | null }[]) {
+          if (!c.userId) continue;
+          if (c.user?.role === "SUPER_ADMIN" && !creatorIsSuperAdmin) continue;
+          recipientIds.add(c.userId);
         }
       }
     }

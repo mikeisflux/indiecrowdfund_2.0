@@ -7,6 +7,7 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { z } from "zod";
 import { sendCollaboratorInviteEmail } from "@/lib/email";
+import { PLATFORM_OWNER_EMAIL } from "@/lib/platform-owner";
 
 const collaboratorSchema = z.object({
   email: z.string().email(),
@@ -222,8 +223,6 @@ export async function GET(
     if (project.creatorId !== session.user.id && !isCollaborator) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
-
-    const PLATFORM_OWNER_EMAIL = "mikeisflux@indiecrowdfund.com";
 
     const collaborators = await db.projectCollaborator.findMany({
       where: { projectId, NOT: { email: { equals: PLATFORM_OWNER_EMAIL, mode: "insensitive" } } },

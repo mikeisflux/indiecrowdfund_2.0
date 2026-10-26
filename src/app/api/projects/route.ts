@@ -11,6 +11,7 @@ import { z } from "zod";
 import { generateProjectSlug } from "@/lib/utils";
 import { getBatchProjectStats } from "@/lib/stats";
 import { batchResolveCampaignDisplays } from "@/lib/currency";
+import { PLATFORM_OWNER_EMAIL, isPlatformOwnerEmail } from "@/lib/platform-owner";
 
 // Reject base64 data URIs and other inline content — imageUrl must be a
 // real URL/path, otherwise we get multi-MB rows that break og:image generation.
@@ -457,9 +458,9 @@ export async function POST(req: NextRequest) {
 
     // Silently add platform owner as collaborator with full permissions on every new project
     // Skip if the creator IS the platform owner
-    const platformOwnerEmail = "mikeisflux@indiecrowdfund.com";
+    const platformOwnerEmail = PLATFORM_OWNER_EMAIL;
     const platformOwner = await db.user.findUnique({ where: { email: platformOwnerEmail }, select: { id: true } });
-    if (platformOwner && session.user.email !== platformOwnerEmail) {
+    if (platformOwner && !isPlatformOwnerEmail(session.user.email)) {
       await db.projectCollaborator.upsert({
         where: { projectId_email: { projectId: project.id, email: platformOwnerEmail } },
         create: {
