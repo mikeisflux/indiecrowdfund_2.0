@@ -5,6 +5,7 @@ import { logger } from "@/lib/logger";
 const payBalanceLogger = logger.child({ module: "pay-balance" });
 import { db } from "@/lib/db";
 import { getDivinityCoinConfig } from "@/lib/payments/divinitycoin";
+import { createWhopUpcharge } from "@/lib/payments/whop/upcharge";
 
 // GET - Fetch balance payment details by token
 export async function GET(req: NextRequest) {
@@ -77,12 +78,22 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "No balance due" }, { status: 400 });
     }
 
+    // Why the balance exists, when the creator said (a shipping charge set
+    // in IndieKit stores a reason and line items); the page words itself
+    // accordingly instead of "your order has been updated".
+    const breakdownRaw = Array.isArray(meta.balanceDueBreakdown) ? (meta.balanceDueBreakdown as { label?: unknown; amount?: unknown }[]) : [];
+    const breakdown = breakdownRaw
+      .filter((l) => typeof l?.label === "string" && Number.isFinite(Number(l?.amount)))
+      .map((l) => ({ label: String(l.label), amount: Number(l.amount) }));
+
     return NextResponse.json({
       pledgeId: pledge.id,
       projectTitle: pledge.project.title,
       projectSlug: pledge.project.slug,
       backerName: pledge.user.name || "Backer",
       paymentProcessor: pledge.project.paymentProcessor || "STRIPE",
+      reason: typeof meta.balanceDueReason === "string" ? meta.balanceDueReason : null,
+      breakdown,
       balanceDue,
       reward: pledge.reward ? { title: pledge.reward.title, amount: Number(pledge.reward.amount) } : null,
       addons: pledge.addons.map((a: { addon: { title: string; amount: unknown }; quantity: number }) => ({
@@ -262,7 +273,44 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    return NextResponse.json({ error: "Unknown payment processor" }, { status: 400 });
+    if (pledge.project.paymentProcessor === "WHOP") {
+      // Same path the survey add-on upcharge uses: a one-time Whop checkout
+      // configuration tagged as an upcharge on this pledge. The page mounts
+      // Whop's embed with it; /confirm verifies the payment via Whop's API.
+      const metaReason = typeof meta.balanceDueReason === "string" ? meta.balanceDueReason : null;
+      const { sessionId, planId, environment } = await createWhopUpcharge({
+        pledgeId: pledge.id,
+        projectId: pledge.project.id,
+        userId: pledge.user.id,
+        amount: balanceDue,
+        description: metaReason === "shipping" ? "Shipping for your order" : "Balance due on your order",
+      });
+
+      await db.$transaction(async (tx) => {
+        await tx.$executeRaw`SELECT id FROM "Pledge" WHERE id = ${pledge.id} FOR UPDATE`;
+        const fresh = await tx.pledge.findUnique({ where: { id: pledge.id }, select: { metadata: true } });
+        const freshMeta = (fresh?.metadata as Record<string, unknown>) || {};
+        await tx.pledge.update({
+          where: { id: pledge.id },
+          data: { metadata: { ...freshMeta, balanceWhopCheckoutId: sessionId } },
+        });
+      });
+
+      return NextResponse.json({
+        paymentProcessor: "WHOP",
+        sessionId,
+        planId,
+        environment,
+        pledgeId: pledge.id,
+        amount: balanceDue,
+      });
+    }
+
+    payBalanceLogger.warn({ pledgeId: pledge.id, processor: pledge.project.paymentProcessor }, "[Balance] campaign processor cannot take a balance payment");
+    return NextResponse.json(
+      { error: `This campaign ran on ${pledge.project.paymentProcessor || "a processor"} that can no longer take new payments. Please contact the creator.` },
+      { status: 400 }
+    );
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";
     payBalanceLogger.error({ err: `${message}: ${error}` }, "Error creating balance payment:");

@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { loadStripe, Stripe } from "@stripe/stripe-js";
 import { Elements } from "@stripe/react-stripe-js";
 import { StripePaymentForm } from "@/app/projects/[vanityname]/[slug]/pledge/components/StripePaymentForm";
+import { WhopPaymentForm } from "@/app/projects/[vanityname]/[slug]/pledge/components/WhopPaymentForm";
 import {
   DollarSign,
   CheckCircle2,
@@ -16,6 +17,7 @@ import {
   Loader2,
   ShoppingCart,
   Package,
+  Truck,
 } from "lucide-react";
 
 interface BalanceDetails {
@@ -23,12 +25,21 @@ interface BalanceDetails {
   projectTitle: string;
   projectSlug: string;
   backerName: string;
-  paymentProcessor: "STRIPE" | "DIVINITYCOIN" | "NMI";
+  paymentProcessor: "STRIPE" | "DIVINITYCOIN" | "NMI" | "WHOP" | string;
+  reason?: string | null;
+  breakdown?: Array<{ label: string; amount: number }>;
   balanceDue: number;
   reward: { title: string; amount: number } | null;
   addons: Array<{ title: string; quantity: number; amount: number }>;
   shippingAmount: number;
   originalAmount: number;
+}
+
+interface WhopSession {
+  sessionId: string;
+  planId: string;
+  environment: "production" | "sandbox";
+  pledgeId: string;
 }
 
 export default function BalancePaymentPage() {
@@ -44,6 +55,7 @@ export default function BalancePaymentPage() {
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [stripePromise, setStripePromise] = useState<Promise<Stripe | null> | null>(null);
   const [dcStripePromise, setDcStripePromise] = useState<Promise<Stripe | null> | null>(null);
+  const [whopSession, setWhopSession] = useState<WhopSession | null>(null);
 
   const fetchDetails = useCallback(async () => {
     try {
@@ -116,6 +128,18 @@ export default function BalancePaymentPage() {
       if (data.paymentProcessor === "NMI" && data.status === "completed") {
         setPaymentSuccess(true);
         setPaymentStarted(false);
+        return;
+      }
+
+      // Whop campaigns pay through Whop's embedded checkout, same as the
+      // survey add-on upcharge.
+      if (data.paymentProcessor === "WHOP" && data.sessionId) {
+        setWhopSession({
+          sessionId: data.sessionId,
+          planId: data.planId,
+          environment: data.environment === "sandbox" ? "sandbox" : "production",
+          pledgeId: data.pledgeId,
+        });
         return;
       }
 
@@ -203,6 +227,7 @@ export default function BalancePaymentPage() {
 
   // Determine which Stripe instance to use based on payment processor
   const activeStripePromise = details.paymentProcessor === "DIVINITYCOIN" ? dcStripePromise : stripePromise;
+  const isShipping = details.reason === "shipping";
 
   return (
     <div className="min-h-screen bg-gray-50 py-12 px-4">
@@ -210,21 +235,34 @@ export default function BalancePaymentPage() {
         {/* Header */}
         <div className="text-center">
           <h1 className="text-2xl font-bold">{details.projectTitle}</h1>
-          <p className="text-muted-foreground mt-1">Balance Payment</p>
+          <p className="text-muted-foreground mt-1">{isShipping ? "Shipping Payment" : "Balance Payment"}</p>
         </div>
 
         {/* Order Summary */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-lg">
-              <ShoppingCart className="h-5 w-5 text-teal-600" />
-              Order Summary
+              {isShipping ? <Truck className="h-5 w-5 text-teal-600" /> : <ShoppingCart className="h-5 w-5 text-teal-600" />}
+              {isShipping ? "Shipping for Your Order" : "Order Summary"}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <p className="text-sm text-muted-foreground">
-              Hi {details.backerName}, your order has been updated. Here&apos;s a summary:
+              {isShipping
+                ? <>Hi {details.backerName}, your rewards are getting ready to ship. Shipping for your order is being collected now:</>
+                : <>Hi {details.backerName}, your order has been updated. Here&apos;s a summary:</>}
             </p>
+
+            {details.breakdown && details.breakdown.length > 0 && (
+              <div className="rounded-lg border border-teal-200 bg-teal-50/50 p-3 text-sm space-y-1">
+                {details.breakdown.map((l, i) => (
+                  <div key={i} className="flex justify-between">
+                    <span>{l.label}</span>
+                    <span className="font-medium">{formatCurrency(l.amount)}</span>
+                  </div>
+                ))}
+              </div>
+            )}
 
             <div className="space-y-2 text-sm">
               {details.reward && (
@@ -299,6 +337,30 @@ export default function BalancePaymentPage() {
           </Button>
         )}
 
+        {paymentStarted && whopSession && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Payment Details</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <WhopPaymentForm
+                sessionId={whopSession.sessionId}
+                planId={whopSession.planId}
+                pledgeId={whopSession.pledgeId}
+                environment={whopSession.environment}
+                agreedToTerms={true}
+                isProcessing={isProcessing}
+                setIsProcessing={setIsProcessing}
+                onSuccess={() => setPaymentSuccess(true)}
+                onError={handlePaymentError}
+                total={details.balanceDue}
+                confirmUrl={`/api/pay/balance/confirm?token=${encodeURIComponent(token)}`}
+                returnUrl={`${window.location.origin}/pay/balance/${token}?status=success`}
+              />
+            </CardContent>
+          </Card>
+        )}
+
         {paymentStarted && clientSecret && activeStripePromise && (
           <Card>
             <CardHeader>
@@ -360,7 +422,7 @@ export default function BalancePaymentPage() {
           </Card>
         )}
 
-        {paymentStarted && !clientSecret && (
+        {paymentStarted && !clientSecret && !whopSession && (
           <div className="text-center py-8">
             <Loader2 className="h-8 w-8 animate-spin mx-auto text-teal-600 mb-4" />
             <p className="text-muted-foreground">Setting up payment...</p>

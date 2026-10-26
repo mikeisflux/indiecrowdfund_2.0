@@ -30,6 +30,11 @@ interface WhopPaymentFormProps {
   // so the same component drives both pledge creation and add-on
   // upcharges.
   confirmUrl?: string;
+  // Where Whop sends the browser back after a redirect-style payment
+  // (3-D Secure, wallets). Defaults to the campaign pledge page, which is
+  // right for pledges and survey upcharges but not for the balance pay
+  // page at /pay/balance/[token].
+  returnUrl?: string;
 }
 
 export function WhopPaymentForm({
@@ -44,6 +49,7 @@ export function WhopPaymentForm({
   onError,
   total,
   confirmUrl,
+  returnUrl: returnUrlOverride,
 }: WhopPaymentFormProps) {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -128,7 +134,9 @@ export function WhopPaymentForm({
     );
   }
 
-  const returnUrl = `${typeof window !== "undefined" ? window.location.origin : ""}/projects/${encodeURIComponent(window.location.pathname.split("/")[2] || "")}/${encodeURIComponent(window.location.pathname.split("/")[3] || "")}/pledge?status=success&pledgeId=${pledgeId}`;
+  const returnUrl =
+    returnUrlOverride ??
+    `${typeof window !== "undefined" ? window.location.origin : ""}/projects/${encodeURIComponent(window.location.pathname.split("/")[2] || "")}/${encodeURIComponent(window.location.pathname.split("/")[3] || "")}/pledge?status=success&pledgeId=${pledgeId}`;
 
   return (
     <div className="space-y-4">

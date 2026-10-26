@@ -5,12 +5,16 @@ import { logger } from "@/lib/logger";
 const payBalanceConfirmLogger = logger.child({ module: "pay-balance-confirm" });
 import { db } from "@/lib/db";
 import { callDivinityCoinAPI } from "@/lib/payments/divinitycoin";
+import { verifyWhopUpchargePayment } from "@/lib/payments/whop/upcharge";
 
 // POST - Confirm balance payment was successful
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
-    const { token, paymentIntentId } = body;
+    const body = await req.json().catch(() => ({}));
+    // The Whop embed posts to its confirm URL with an empty body (or just
+    // a receiptId), so the token may arrive on the query string instead.
+    const token: string | undefined = body.token || req.nextUrl.searchParams.get("token") || undefined;
+    const paymentIntentId: string | undefined = body.paymentIntentId;
 
     if (!token) {
       return NextResponse.json({ error: "Missing token" }, { status: 400 });
@@ -45,43 +49,58 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: true, message: "Already confirmed" });
     }
 
-    // Verify the payment actually succeeded before crediting the balance.
-    // Balance payments are only DivinityCoin now.
-    const storedDcPaymentId = meta.balanceDivinityCoinPaymentId as string | undefined;
+    // Verify the payment actually succeeded before crediting the balance,
+    // with the processor the campaign ran on. Never trust the client.
     const paymentProcessor = (pledge as { project?: { paymentProcessor?: string } }).project?.paymentProcessor;
-
-    // The intent we verify must be the one this pledge's balance flow
-    // created. The client-supplied id used to win, so any succeeded $1
-    // intent from anywhere on the platform could clear an arbitrary balance.
-    if (storedDcPaymentId && paymentIntentId && storedDcPaymentId !== paymentIntentId) {
-      payBalanceConfirmLogger.warn({ pledgeId: pledge.id, storedDcPaymentId, paymentIntentId }, "[Balance Confirm] client intent id does not match the stored one");
-      return NextResponse.json({ error: "Payment reference does not match this balance" }, { status: 400 });
-    }
-    const dcIntentId = storedDcPaymentId || paymentIntentId;
-
-    if (paymentProcessor !== "DIVINITYCOIN") {
-      return NextResponse.json(
-        { error: "Balance payments are only supported for DivinityCoin pledges" },
-        { status: 400 }
-      );
-    }
-
-    if (!dcIntentId) {
-      payBalanceConfirmLogger.warn({ pledgeId: pledge.id }, "[Balance Confirm] No DC payment ID to verify");
-      return NextResponse.json({ error: "Payment not verified — missing payment reference" }, { status: 400 });
-    }
     let verifiedAmount: number | undefined;
-    try {
-      const verifyResult = await callDivinityCoinAPI("verify-payment", { paymentIntentId: dcIntentId });
-      if (!verifyResult.success || verifyResult.data?.status !== "succeeded") {
-        payBalanceConfirmLogger.warn({ pledgeId: pledge.id, dcIntentId }, "[Balance Confirm] DC payment not succeeded");
+    let paymentReference: string | undefined;
+
+    if (paymentProcessor === "DIVINITYCOIN") {
+      const storedDcPaymentId = meta.balanceDivinityCoinPaymentId as string | undefined;
+      // The intent we verify must be the one this pledge's balance flow
+      // created. The client-supplied id used to win, so any succeeded $1
+      // intent from anywhere on the platform could clear an arbitrary balance.
+      if (storedDcPaymentId && paymentIntentId && storedDcPaymentId !== paymentIntentId) {
+        payBalanceConfirmLogger.warn({ pledgeId: pledge.id, storedDcPaymentId, paymentIntentId }, "[Balance Confirm] client intent id does not match the stored one");
+        return NextResponse.json({ error: "Payment reference does not match this balance" }, { status: 400 });
+      }
+      const dcIntentId = storedDcPaymentId || paymentIntentId;
+      if (!dcIntentId) {
+        payBalanceConfirmLogger.warn({ pledgeId: pledge.id }, "[Balance Confirm] No DC payment ID to verify");
+        return NextResponse.json({ error: "Payment not verified — missing payment reference" }, { status: 400 });
+      }
+      try {
+        const verifyResult = await callDivinityCoinAPI("verify-payment", { paymentIntentId: dcIntentId });
+        if (!verifyResult.success || verifyResult.data?.status !== "succeeded") {
+          payBalanceConfirmLogger.warn({ pledgeId: pledge.id, dcIntentId }, "[Balance Confirm] DC payment not succeeded");
+          return NextResponse.json({ error: "Payment not completed. Please try again." }, { status: 400 });
+        }
+        const a = (verifyResult.data as { amount?: unknown } | undefined)?.amount;
+        if (typeof a === "number") verifiedAmount = a;
+      } catch (dcErr) {
+        payBalanceConfirmLogger.error({ err: String(dcErr) }, "[Balance Confirm] DC verify error:");
+        return NextResponse.json({ error: "Could not verify payment. Please try again." }, { status: 500 });
+      }
+      paymentReference = dcIntentId;
+    } else if (paymentProcessor === "WHOP") {
+      // The checkout configuration /api/pay/balance created for this
+      // balance; a paid Whop payment against it is the proof.
+      const checkoutId = typeof meta.balanceWhopCheckoutId === "string" ? meta.balanceWhopCheckoutId : null;
+      if (!checkoutId) {
+        payBalanceConfirmLogger.warn({ pledgeId: pledge.id }, "[Balance Confirm] No Whop checkout id to verify");
+        return NextResponse.json({ error: "Payment not verified — missing payment reference" }, { status: 400 });
+      }
+      const verify = await verifyWhopUpchargePayment(checkoutId);
+      if (!verify.paid) {
+        payBalanceConfirmLogger.warn({ pledgeId: pledge.id, checkoutId }, "[Balance Confirm] Whop payment not found as paid");
         return NextResponse.json({ error: "Payment not completed. Please try again." }, { status: 400 });
       }
-      const a = (verifyResult.data as { amount?: unknown } | undefined)?.amount;
-      if (typeof a === "number") verifiedAmount = a;
-    } catch (dcErr) {
-      payBalanceConfirmLogger.error({ err: String(dcErr) }, "[Balance Confirm] DC verify error:");
-      return NextResponse.json({ error: "Could not verify payment. Please try again." }, { status: 500 });
+      paymentReference = verify.paymentId || checkoutId;
+    } else {
+      return NextResponse.json(
+        { error: "This campaign's payment processor cannot take balance payments" },
+        { status: 400 }
+      );
     }
 
     // Calculate balance due — prefer the stored value (set by order edits or balance adjustments)
@@ -126,7 +145,8 @@ export async function POST(req: NextRequest) {
           metadata: {
             ...currentMeta,
             balancePaymentCompletedAt: new Date().toISOString(),
-            balancePaymentIntentId: paymentIntentId || currentMeta.balancePaymentIntentId,
+            balancePaymentIntentId: paymentReference || paymentIntentId || currentMeta.balancePaymentIntentId,
+            balancePaymentProcessor: paymentProcessor,
             balanceAmountPaid: balanceDue,
             // The stored balance is what IndieKit reads as "still owes";
             // it never came down after payment, so paid orders kept
