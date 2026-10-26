@@ -56,6 +56,7 @@ export default function BalancePaymentPage() {
   const [stripePromise, setStripePromise] = useState<Promise<Stripe | null> | null>(null);
   const [dcStripePromise, setDcStripePromise] = useState<Promise<Stripe | null> | null>(null);
   const [whopSession, setWhopSession] = useState<WhopSession | null>(null);
+  const [verifying, setVerifying] = useState(false);
 
   const fetchDetails = useCallback(async () => {
     try {
@@ -155,21 +156,67 @@ export default function BalancePaymentPage() {
     }
   };
 
-  const handlePaymentSuccess = async () => {
+  // Ask our server to verify with the processor and record the payment.
+  // Returns true when recorded. "Pending" means the processor hasn't
+  // reported success to us yet; the webhook and the five-minute sweep
+  // will record it, so the page says "verifying" rather than "paid".
+  const confirmWithServer = useCallback(async (): Promise<"confirmed" | "pending" | "failed"> => {
     try {
-      // Confirm the balance payment on our backend
-      await apiFetch("/api/pay/balance/confirm", {
+      const res = await apiFetch("/api/pay/balance/confirm", {
         method: "POST",
-        headers: { "Content-Type": "application/json", },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ token }),
       });
-      setPaymentSuccess(true);
+      if (res.ok) return "confirmed";
+      const data = await res.json().catch(() => ({}));
+      return data.pending ? "pending" : "failed";
     } catch {
-      // Payment went through with Stripe but our confirm failed
-      // This is OK - webhook will handle it
-      setPaymentSuccess(true);
+      return "pending";
     }
+  }, [token]);
+
+  const handlePaymentSuccess = async () => {
+    setIsProcessing(true);
+    // The processor just told the browser the card was charged. Give our
+    // verification a few tries before falling back to "verifying".
+    for (let attempt = 0; attempt < 4; attempt++) {
+      const r = await confirmWithServer();
+      if (r === "confirmed") {
+        setPaymentSuccess(true);
+        setIsProcessing(false);
+        return;
+      }
+      if (r === "failed") break;
+      await new Promise((res) => setTimeout(res, 2500));
+    }
+    setIsProcessing(false);
+    setVerifying(true);
   };
+
+  // Back from a redirect-style payment (3-D Secure, wallets): the form is
+  // not mounted, so nothing else would call confirm.
+  useEffect(() => {
+    if (!details || paymentSuccess || verifying) return;
+    const qs = new URLSearchParams(window.location.search);
+    const cameBack = qs.get("success") === "true" || qs.get("status") === "success" || qs.get("redirect_status") === "succeeded";
+    if (!cameBack) return;
+    let cancelled = false;
+    (async () => {
+      for (let attempt = 0; attempt < 4 && !cancelled; attempt++) {
+        const r = await confirmWithServer();
+        if (r === "confirmed") {
+          setPaymentSuccess(true);
+          return;
+        }
+        if (r === "failed") break;
+        await new Promise((res) => setTimeout(res, 2500));
+      }
+      if (!cancelled) setVerifying(true);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [details, paymentSuccess, verifying, confirmWithServer]);
 
   const handlePaymentError = (message: string) => {
     setError(message);
@@ -216,6 +263,25 @@ export default function BalancePaymentPage() {
             </p>
             <p className="text-sm text-muted-foreground">
               You can close this page. A confirmation will be sent to your email.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (verifying) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
+        <Card className="max-w-md w-full">
+          <CardContent className="pt-6 text-center">
+            <Loader2 className="h-12 w-12 animate-spin text-teal-600 mx-auto mb-4" />
+            <h2 className="text-2xl font-bold mb-2">Payment received, confirming…</h2>
+            <p className="text-muted-foreground mb-4">
+              Your card has been charged for <strong>{details?.projectTitle}</strong>. We are confirming it with the payment processor, which can take a few minutes.
+            </p>
+            <p className="text-sm text-muted-foreground">
+              You will get an email receipt once it is recorded. You can close this page; you do not need to pay again.
             </p>
           </CardContent>
         </Card>
@@ -352,7 +418,13 @@ export default function BalancePaymentPage() {
                 isProcessing={isProcessing}
                 setIsProcessing={setIsProcessing}
                 onSuccess={() => setPaymentSuccess(true)}
-                onError={handlePaymentError}
+                onError={(message) => {
+                  // The embed completed but our confirm said "not yet":
+                  // the webhook / sweep will record it; don't make the
+                  // backer pay twice.
+                  if (/not completed/i.test(message)) setVerifying(true);
+                  else handlePaymentError(message);
+                }}
                 total={details.balanceDue}
                 confirmUrl={`/api/pay/balance/confirm?token=${encodeURIComponent(token)}`}
                 returnUrl={`${window.location.origin}/pay/balance/${token}?status=success`}

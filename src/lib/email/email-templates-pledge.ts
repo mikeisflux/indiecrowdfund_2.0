@@ -881,3 +881,54 @@ export async function sendPledgeConfirmationRevokedEmail(
   const result = await sendEmail({ to: email, subject, html, text, skipUnsubscribeCheck: true });
   return { ...result, subject, html };
 }
+
+/**
+ * Receipt for a balance or shipping payment made through the pay link.
+ * The pay page promises "a confirmation will be sent to your email"; this
+ * is it. Sent from confirmBalancePayment whichever path confirmed it.
+ */
+export async function sendBalancePaidEmail(
+  email: string,
+  backerName: string,
+  projectTitle: string,
+  amount: number,
+  reason: string | null,
+  projectUrlPath?: string,
+  currency: string = "USD"
+) {
+  const projectUrl = projectUrlPath ? `${APP_URL}${projectUrlPath}` : `${APP_URL}/dashboard/pledges`;
+  const sym = currency === "USD" ? "$" : currency;
+  const what = reason === "shipping" ? "shipping" : "balance";
+  const html = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Payment received</title>
+      </head>
+      <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f5f5f5;">
+        <div style="background: linear-gradient(135deg, #0d9488 0%, #0f766e 100%); padding: 30px; border-radius: 12px 12px 0 0; text-align: center;">
+          <h1 style="color: white; margin: 0; font-size: 24px;">Payment received</h1>
+          <p style="color: rgba(255,255,255,0.9); margin: 8px 0 0; font-size: 14px;">&ldquo;${escapeHtml(projectTitle)}&rdquo;</p>
+        </div>
+        <div style="background: white; padding: 30px; border-radius: 0 0 12px 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+          <p style="font-size: 16px;">Hi ${escapeHtml(backerName || "there")},</p>
+          <p>Thank you. Your ${what} payment of <strong>${sym}${amount.toFixed(2)}</strong> for &ldquo;${escapeHtml(projectTitle)}&rdquo; has been received and recorded on your order.</p>
+          ${reason === "shipping" ? `<p>Your rewards will ship to the address on your survey. You will get another email with tracking when they go out.</p>` : `<p>Your order is up to date; nothing further is owed.</p>`}
+          <div style="text-align: center; margin-top: 25px;">
+            <a href="${projectUrl}" style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; text-decoration: none; padding: 12px 30px; border-radius: 8px; font-weight: bold;">View the campaign</a>
+          </div>
+        </div>
+        <div style="text-align: center; color: #999; font-size: 12px; margin-top: 30px;">
+          <p>You received this email because of a payment on your ${APP_NAME} account.</p>
+          <p>&copy; ${new Date().getFullYear()} ${APP_NAME}. All rights reserved.</p>
+        </div>
+      </body>
+    </html>
+  `;
+  const subject = `Payment received: ${sym}${amount.toFixed(2)} ${what} for "${projectTitle.replace(/[\r\n]/g, " ")}"`;
+  const text = `Hi ${backerName || "there"},\n\nYour ${what} payment of ${sym}${amount.toFixed(2)} for "${projectTitle}" has been received and recorded on your order.\n\n${reason === "shipping" ? "Your rewards will ship to the address on your survey; you will get tracking by email when they go out." : "Your order is up to date; nothing further is owed."}\n\n${projectUrl}`;
+  const result = await sendEmail({ to: email, subject, html, text, skipUnsubscribeCheck: true });
+  return { ...result, subject, html };
+}

@@ -16,6 +16,7 @@ import { commitDcPledge } from "./commit-pledge";
 // re-exports this file, so going through it would close a cycle.
 import { MAX_DC_RETRIES } from "./charge-attempts";
 import { formatDeclineReason } from "./decline-reasons";
+import { confirmBalancePayment } from "@/lib/indiekit/balance-confirm";
 import type {
   DivinityCoinWebhookRequest,
   RefundRequestResponse,
@@ -522,6 +523,21 @@ export async function handlePaymentSucceeded(
     paymentsDivinitycoinLogger.warn(`[DivinityCoin] Webhook payload missing payment references. Keys received: ${Object.keys(data).join(", ")}`);
   }
 
+  // A balance / shipping payment made through /pay/balance. It is created
+  // with purchaseId "balance_<token>" and metadata.balancePayment, and
+  // belongs to an already-COMPLETED pledge. It used to fall into the
+  // marketplace branch below ("Purchase not found") and was dropped; the
+  // backer had paid and IndieKit kept showing the balance as owed.
+  const webhookMeta = (data as Record<string, unknown>).metadata;
+  const isBalancePayment =
+    (typeof purchaseId === "string" && purchaseId.startsWith("balance_")) ||
+    (!!webhookMeta && typeof webhookMeta === "object" && (webhookMeta as Record<string, unknown>).balancePayment === true);
+  if (isBalancePayment && pledgeId) {
+    const r = await confirmBalancePayment({ pledgeId, source: "dc-webhook", webhookIntentId: stripePI || paymentId || null });
+    paymentsDivinitycoinLogger.info({ pledgeId, status: r.status, amount: r.amount }, "[DivinityCoin] Balance payment webhook");
+    return r.status === "error" ? { success: false, error: r.error || "Balance confirmation failed" } : { success: true, message: `Balance payment ${r.status}` };
+  }
+
   // Handle marketplace purchase if purchaseId is provided
   if (purchaseId) {
     return handleMarketplacePaymentSucceeded(data, purchaseId);
@@ -619,6 +635,14 @@ export async function handlePaymentSucceeded(
     // was captured at DC and the backer saw "Payment complete" while the
     // pledge here said failed. DC is the authority on whether it was paid.
     if (pledge.status !== "PENDING" && pledge.status !== "FAILED") {
+      // The intent the pay page opened for this pledge's balance, arriving
+      // without the balance markers (older DC payload shapes).
+      const metaBal = (typeof pledge.metadata === "object" && pledge.metadata !== null ? (pledge.metadata as Record<string, unknown>) : {}).balanceDivinityCoinPaymentId;
+      const incoming = stripePI || paymentId;
+      if (pledge.status === "COMPLETED" && typeof metaBal === "string" && incoming && metaBal === incoming) {
+        const r = await confirmBalancePayment({ pledgeId, source: "dc-webhook", webhookIntentId: incoming });
+        return { success: r.status !== "error", message: `Balance payment ${r.status}` };
+      }
       paymentsDivinitycoinLogger.info(`[DivinityCoin] Pledge ${pledgeId} already ${pledge.status}, skipping`);
       return { success: true, message: `Pledge already ${pledge.status}` };
     }

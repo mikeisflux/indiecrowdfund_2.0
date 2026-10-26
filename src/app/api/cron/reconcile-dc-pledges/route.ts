@@ -3,6 +3,7 @@ import { logger } from "@/lib/logger";
 import { db } from "@/lib/db";
 import { alertAdmins } from "@/lib/admin-alerts";
 import { lookupDcPledgePayment } from "@/lib/payments/divinitycoin/saved-cards";
+import { confirmBalancePayment, findUnconfirmedBalancePayments } from "@/lib/indiekit/balance-confirm";
 import {
   verifyDcPayment,
   getDcCheckoutSession,
@@ -257,6 +258,31 @@ export async function GET(req: NextRequest) {
       }
     }
 
+    // Balance / shipping payments made through the pay link. Only the
+    // browser's confirm call recorded these until the webhook learned to;
+    // anything it missed is verified with the processor here.
+    let balancesChecked = 0;
+    let balancesConfirmed = 0;
+    const balanceLines: string[] = [];
+    try {
+      const ids = await findUnconfirmedBalancePayments(100);
+      for (const id of ids) {
+        balancesChecked++;
+        const r = await confirmBalancePayment({ pledgeId: id, source: "sweep" });
+        if (r.status === "confirmed") {
+          balancesConfirmed++;
+          balanceLines.push(`${id} · $${(r.amount ?? 0).toFixed(2)}`);
+        } else if (r.status === "error") {
+          errored++;
+        }
+      }
+    } catch (err) {
+      log.error({ err: err instanceof Error ? err.message : String(err) }, "[Reconcile DC] balance sweep failed");
+    }
+    if (balancesConfirmed > 0) {
+      log.info({ balancesConfirmed, balanceLines }, "[Reconcile DC] Confirmed balance payments the browser never reported");
+    }
+
     // Tell a human. A pledge that needed the sweeper after an hour means
     // the backer saw "Payment complete. Returning…" hang and has probably
     // already written in; one DC says failed needs eyes.
@@ -296,6 +322,8 @@ export async function GET(req: NextRequest) {
       autoFailed,
       alreadyFailed,
       stillPending,
+      balancesChecked,
+      balancesConfirmed,
       errored,
     });
   } catch (err) {
