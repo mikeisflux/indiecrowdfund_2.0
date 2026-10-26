@@ -32,6 +32,9 @@ const MAX_AGE_HOURS = 24 * 30;
 // Anything PENDING this long with a successful payment is a backer who
 // has been waiting; say so loudly when it's finally committed.
 const LATE_COMMIT_MINUTES = 60;
+// How long a FAILED pledge stays in the sweep (a decline followed by a
+// successful retry in the same checkout happens within minutes).
+const FAILED_RECHECK_HOURS = 48;
 
 // Reconcile DC pledges stuck in PENDING because the user's iframe never
 // delivered the "complete" postMessage AND the webhook also failed to
@@ -69,32 +72,51 @@ export async function GET(req: NextRequest) {
     // FAILED is included: a decline followed by a successful retry inside
     // the same hosted checkout leaves the row FAILED with the money taken.
     // DC's verify-payment is the authority; a genuinely failed one stays put.
+    // A FAILED row is only worth re-asking about while a retry inside the
+    // same hosted checkout is still plausible. After two days it is a
+    // decline, and re-verifying it every five minutes for a month would
+    // eat the per-tick budget that PENDING rows need.
+    const failedRecheckSince = new Date(Date.now() - FAILED_RECHECK_HOURS * 60 * 60 * 1000);
     const stuck = await db.pledge.findMany({
       where: {
-        status: { in: ["PENDING", "FAILED"] },
         paymentProcessor: "DIVINITYCOIN",
         deletedAt: null,
         createdAt: { lt: newerThan, gte: olderThan },
-        OR: [
-          { NOT: { divinityCoinPaymentId: null } },
-          { NOT: { divinityCoinCheckoutSessionId: null } },
+        AND: [
+          {
+            OR: [
+              { status: "PENDING" },
+              { status: "FAILED", updatedAt: { gte: failedRecheckSince } },
+            ],
+          },
+          {
+            OR: [
+              { NOT: { divinityCoinPaymentId: null } },
+              { NOT: { divinityCoinCheckoutSessionId: null } },
+            ],
+          },
         ],
       },
       select: {
         id: true,
+        status: true,
         createdAt: true,
         amount: true,
+        confirmationEmailSent: true,
         divinityCoinPaymentId: true,
         divinityCoinCheckoutSessionId: true,
         user: { select: { email: true } },
         project: { select: { title: true } },
       },
+      orderBy: { createdAt: "asc" },
       take: MAX_PLEDGES_PER_TICK,
     });
 
     let checked = 0;
     let committed = 0;
     let failedAtGateway = 0;
+    let autoFailed = 0;
+    let alreadyFailed = 0;
     let stillPending = 0;
     let errored = 0;
     const lateCommits: string[] = [];
@@ -116,6 +138,10 @@ export async function GET(req: NextRequest) {
         // whichever of its sessions or intents did it. Prefer that over
         // the intent stamped on our row, which may be a dead sibling.
         const record = await lookupDcPledgePayment(p.id);
+        // DC affirmatively says no attempt on this pledge ever succeeded
+        // (it reads live processor status per attempt). Only with that in
+        // hand is "failed" below allowed to mean anything.
+        const dcSaysUnpaid = record.success && record.paid === false;
         if (record.success && record.paid && record.paymentIntentId) {
           if (record.paymentIntentId !== paymentIntentId) {
             paymentIntentId = record.paymentIntentId;
@@ -179,14 +205,44 @@ export async function GET(req: NextRequest) {
             lateCommits.push(`${p.user?.email ?? p.id} · $${Number(p.amount).toFixed(2)} · "${p.project?.title ?? "?"}" · stuck ${ageMin >= 120 ? `${Math.round(ageMin / 60)}h` : `${ageMin}m`}`);
           }
         } else if (verified.status === "failed") {
-          // Genuinely failed at the gateway but still PENDING locally.
-          // Don't auto-flip to FAILED from the cron — the stats rollback
-          // is delicate and we want eyes on a real decline that slipped
-          // past our webhook handler. Surface loudly for admin review.
+          if (p.status === "FAILED") {
+            // We already knew. DC agreeing is not news and not a decision.
+            alreadyFailed++;
+            continue;
+          }
+          // PENDING here, failed/expired at DC. Once DC's expiry sweep
+          // started cancelling abandoned sessions, every abandoned hosted
+          // checkout of the last month verified as "failed" at once and
+          // this branch paged the admins about 37 carts nobody needed to
+          // look at. An uncounted PENDING pledge with no successful
+          // attempt on DC's books is an abandoned cart: mark it FAILED
+          // (reversible — handlePaymentSucceeded accepts FAILED if the
+          // backer does come back and pay) and move on. Nothing to roll
+          // back: it was never added to the campaign.
+          if (!p.confirmationEmailSent && dcSaysUnpaid) {
+            const cas = await db.pledge.updateMany({
+              where: { id: p.id, status: "PENDING", deletedAt: null },
+              data: {
+                status: "FAILED",
+                lastFailureReason: "Checkout was not completed (payment failed or expired at DivinityCoin)",
+              },
+            });
+            if (cas.count > 0) {
+              autoFailed++;
+              log.info({ pledgeId: p.id, paymentIntentId }, "[Reconcile DC] Abandoned checkout marked FAILED");
+            } else {
+              stillPending++;
+            }
+            continue;
+          }
+          // Counted PENDING pledge (money was expected) or DC's records
+          // were unreachable: a human needs to look.
           failedAtGateway++;
-          gatewayFailures.push(`${p.user?.email ?? p.id} · $${Number(p.amount).toFixed(2)} · "${p.project?.title ?? "?"}"`);
+          gatewayFailures.push(
+            `${p.user?.email ?? p.id} · $${Number(p.amount).toFixed(2)} · "${p.project?.title ?? "?"}"${p.confirmationEmailSent ? " · COUNTED in campaign total" : ""}${dcSaysUnpaid ? "" : " · DC records unreachable"}`
+          );
           log.warn(
-            { pledgeId: p.id, paymentIntentId },
+            { pledgeId: p.id, paymentIntentId, counted: p.confirmationEmailSent, dcSaysUnpaid },
             "[Reconcile DC] DC reports failed for stuck pledge — needs manual review"
           );
         } else {
@@ -215,7 +271,7 @@ export async function GET(req: NextRequest) {
     if (gatewayFailures.length > 0) {
       await alertAdmins({
         title: `${gatewayFailures.length} pledge${gatewayFailures.length === 1 ? "" : "s"} failed at DivinityCoin but still PENDING`,
-        message: `DivinityCoin reports the payment failed, but the pledge is still PENDING here and needs a decision:\n\n${gatewayFailures.join("\n")}`,
+        message: `DivinityCoin reports the payment failed, but the pledge is still PENDING here and was either already counted in the campaign total or could not be checked against DivinityCoin's records. Each needs a decision (Admin → Reconcile):\n\n${gatewayFailures.join("\n")}`,
         actionUrl: "/admin/reconcile",
         email: true,
         throttleKey: "reconcile-gateway-failed",
@@ -237,6 +293,8 @@ export async function GET(req: NextRequest) {
       checked,
       committed,
       failedAtGateway,
+      autoFailed,
+      alreadyFailed,
       stillPending,
       errored,
     });
