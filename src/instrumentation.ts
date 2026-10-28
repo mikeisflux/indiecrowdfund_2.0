@@ -39,30 +39,35 @@ export async function onRequestError(
   request: { path: string; method: string; headers: Record<string, string | string[] | undefined> },
   context: { routerKind: string; routePath: string; routeType: string; renderSource?: string; revalidateReason?: string }
 ) {
-  if (process.env.NEXT_RUNTIME !== "nodejs") return;
-  try {
-    const { captureError } = await import("@/lib/error-tracker");
-    const error = err instanceof Error ? err : new Error(String(err));
-    const ua = request.headers["user-agent"];
-    await captureError({
-      error,
-      level: "ERROR",
-      source: context.routeType === "route" ? "API" : "SERVER",
-      endpoint: context.routePath || request.path,
-      url: request.path,
-      method: request.method,
-      statusCode: 500,
-      userAgent: Array.isArray(ua) ? ua[0] : ua,
-      metadata: {
-        uncaught: true,
-        routerKind: context.routerKind,
-        routeType: context.routeType,
-        renderSource: context.renderSource,
-        revalidateReason: context.revalidateReason,
-      },
-    });
-  } catch {
-    // Never let error reporting throw inside the error path.
+  // The import must sit inside this exact `if`: this file is also compiled
+  // for the edge runtime, where NEXT_RUNTIME is a build-time constant, and
+  // only a dead `if` branch lets webpack drop Prisma (and pg's fs/path)
+  // from that bundle. An early return does not.
+  if (process.env.NEXT_RUNTIME === "nodejs") {
+    try {
+      const { captureError } = await import("@/lib/error-tracker");
+      const error = err instanceof Error ? err : new Error(String(err));
+      const ua = request.headers["user-agent"];
+      await captureError({
+        error,
+        level: "ERROR",
+        source: context.routeType === "route" ? "API" : "SERVER",
+        endpoint: context.routePath || request.path,
+        url: request.path,
+        method: request.method,
+        statusCode: 500,
+        userAgent: Array.isArray(ua) ? ua[0] : ua,
+        metadata: {
+          uncaught: true,
+          routerKind: context.routerKind,
+          routeType: context.routeType,
+          renderSource: context.renderSource,
+          revalidateReason: context.revalidateReason,
+        },
+      });
+    } catch {
+      // Never let error reporting throw inside the error path.
+    }
   }
 }
 

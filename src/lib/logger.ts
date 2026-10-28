@@ -49,10 +49,14 @@ type TrackerModule = typeof import("@/lib/error-tracker");
 let trackerPromise: Promise<TrackerModule | null> | null = null;
 function loadTracker(): Promise<TrackerModule | null> {
   if (!trackerPromise) {
-    trackerPromise =
-      typeof process !== "undefined" && process.env.NEXT_RUNTIME !== "edge" && typeof window === "undefined"
-        ? import("@/lib/error-tracker").catch(() => null)
-        : Promise.resolve(null);
+    // Same rule as instrumentation.ts: the import lives inside a branch
+    // that is a build-time constant per runtime, so the edge and browser
+    // bundles never pull in Prisma.
+    if (process.env.NEXT_RUNTIME === "nodejs") {
+      trackerPromise = import("@/lib/error-tracker").catch(() => null);
+    } else {
+      trackerPromise = Promise.resolve(null);
+    }
   }
   return trackerPromise;
 }
