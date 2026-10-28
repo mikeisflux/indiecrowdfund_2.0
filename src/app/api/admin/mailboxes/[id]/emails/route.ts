@@ -120,14 +120,38 @@ export async function GET(
           receivedAt: true,
           createdAt: true,
           threadId: true,
-          // Don't include body in list for performance
+          openedAt: true,
+          // The provider's delivery events (bounce reason, code, time)
+          // are stored in attachments by the events webhook. Not the
+          // body: that stays out of the list for performance.
+          attachments: true,
         },
       }),
       db.adminEmail.count({ where }),
     ]);
 
+    // Slim the delivery trail down to what the list shows: "Sent" means
+    // our provider accepted it, DELIVERED/FAILED/BOUNCED come from the
+    // provider's webhook. Without this, "sent" read as "arrived" and a
+    // reset email that Yahoo rejected looked identical to one that
+    // landed.
+    const slim = (emails as Array<Record<string, unknown>>).map((e) => {
+      const a = (e.attachments && typeof e.attachments === "object" && !Array.isArray(e.attachments) ? (e.attachments as Record<string, unknown>) : {}) as Record<string, unknown>;
+      const { attachments: _drop, ...rest } = e;
+      void _drop;
+      return {
+        ...rest,
+        delivery: {
+          reason: typeof a.bounceReason === "string" ? a.bounceReason : null,
+          code: a.bounceCode != null ? String(a.bounceCode) : null,
+          at: typeof a.bounceTimestamp === "string" ? a.bounceTimestamp : typeof a.deliveredAt === "string" ? a.deliveredAt : null,
+          spamReported: a.spamReported === true,
+        },
+      };
+    });
+
     return NextResponse.json({
-      emails,
+      emails: slim,
       pagination: {
         page,
         limit,

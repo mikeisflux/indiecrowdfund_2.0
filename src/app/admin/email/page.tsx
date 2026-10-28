@@ -66,6 +66,42 @@ import {
   formatFileSize,
 } from "./components";
 
+/**
+ * Where a sent message actually got to. "Sent" only means our provider
+ * accepted it; Delivered / Failed / Bounced come from the provider's
+ * webhook with its reason. Without this, a reset email Yahoo threw away
+ * looked exactly like one that arrived.
+ */
+function DeliveryBadge({ email, detailed }: { email: Email; detailed?: boolean }) {
+  const d = email.delivery;
+  const when = d?.at ? new Date(d.at).toLocaleString() : null;
+  if (email.status === "DELIVERED") {
+    return (
+      <span className="inline-flex items-center gap-1 text-xs text-emerald-700" title={when ? `Delivered ${when}` : "Delivered"}>
+        <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" /> Delivered{detailed && when ? ` · ${when}` : ""}{detailed && email.openedAt ? ` · opened ${new Date(email.openedAt).toLocaleString()}` : ""}
+        {d?.spamReported && <span className="ml-1 text-red-700">· marked as spam</span>}
+      </span>
+    );
+  }
+  if (email.status === "BOUNCED" || email.status === "FAILED") {
+    const reason = d?.reason ? `${d.code ? `${d.code} ` : ""}${d.reason}` : "no reason given";
+    return (
+      <span className="inline-flex items-center gap-1 text-xs text-red-700" title={reason}>
+        <span className="h-1.5 w-1.5 rounded-full bg-red-500" /> {email.status === "BOUNCED" ? "Bounced" : "Not delivered"}
+        {detailed ? ` · ${reason}${when ? ` · ${when}` : ""}` : ""}
+      </span>
+    );
+  }
+  if (email.status === "SENT") {
+    return (
+      <span className="inline-flex items-center gap-1 text-xs text-muted-foreground" title="Handed to the mail provider; no delivery report received yet">
+        <span className="h-1.5 w-1.5 rounded-full bg-zinc-400" /> Sent to provider{detailed ? " · no delivery report yet" : ""}
+      </span>
+    );
+  }
+  return <span className="text-xs text-muted-foreground">{email.status.toLowerCase()}</span>;
+}
+
 export default function EmailPage() {
   const [mailboxes, setMailboxes] = useState<Mailbox[]>([]);
   const [selectedMailbox, setSelectedMailbox] = useState<Mailbox | null>(null);
@@ -812,6 +848,7 @@ export default function EmailPage() {
                           <p className={`text-sm truncate ${!email.isRead ? "font-medium" : "text-muted-foreground dark:text-muted-foreground"}`}>
                             {email.subject}
                           </p>
+                          {selectedFolder === "SENT" && <DeliveryBadge email={email} />}
                         </div>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
@@ -912,6 +949,12 @@ export default function EmailPage() {
                   <p><span className="font-medium">From:</span> {selectedEmail.fromName || selectedEmail.fromEmail}</p>
                   <p><span className="font-medium">To:</span> {selectedEmail.toEmail}</p>
                   <p><span className="font-medium">Date:</span> {new Date(selectedEmail.sentAt || selectedEmail.createdAt).toLocaleString()}</p>
+                  {selectedEmail.folder === "SENT" && (
+                    <div className="flex items-center gap-2 pt-1">
+                      <span className="font-medium">Delivery:</span>
+                      <DeliveryBadge email={emails.find((e) => e.id === selectedEmail.id) ?? selectedEmail} detailed />
+                    </div>
+                  )}
                 </div>
                 {/* Action Buttons */}
                 <div className="flex items-center gap-1 mt-3 pt-3 border-t">

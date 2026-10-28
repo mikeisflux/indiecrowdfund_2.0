@@ -50,10 +50,22 @@ export interface Email {
   sentAt?: string;
   receivedAt?: string;
   createdAt: string;
+  openedAt?: string | null;
   attachments?: {
     count: number;
     files?: EmailAttachment[];
   };
+  /**
+   * What the mail provider reported after we handed the message over.
+   * status SENT = accepted by the provider; DELIVERED / FAILED / BOUNCED
+   * come from its webhook, with the reason here.
+   */
+  delivery?: {
+    reason: string | null;
+    code: string | null;
+    at: string | null;
+    spamReported: boolean;
+  } | null;
 }
 
 export interface EmailSettings {

@@ -166,6 +166,47 @@ function mapEventToStatus(event: MailgunEventType): string | null {
   }
 }
 
+/**
+ * Stamp a SendGrid event onto the most recent sent copy for that
+ * recipient so the admin mailbox shows Delivered / Failed / Bounced with
+ * the provider's reason, the way the Mailgun branch already does.
+ */
+async function recordDeliveryOnSentCopy(email: string, ev: SendGridEventData): Promise<void> {
+  const status =
+    ev.event === "delivered" ? "DELIVERED"
+    : ev.event === "bounce" ? "BOUNCED"
+    : ev.event === "dropped" || ev.event === "blocked" || ev.event === "deferred" ? "FAILED"
+    : null;
+  if (!status && ev.event !== "open" && ev.event !== "spamreport") return;
+  try {
+    const recent = await db.adminEmail.findFirst({
+      where: { toEmail: email, folder: "SENT", sentAt: { gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) } },
+      orderBy: { sentAt: "desc" },
+      select: { id: true, attachments: true },
+    });
+    if (!recent) return;
+    const existing = (recent.attachments && typeof recent.attachments === "object" && !Array.isArray(recent.attachments) ? recent.attachments : {}) as Record<string, unknown>;
+    const at = new Date((ev.timestamp || Math.floor(Date.now() / 1000)) * 1000).toISOString();
+    const data: Record<string, unknown> = {};
+    if (status) data.status = status;
+    if (ev.event === "open") data.openedAt = new Date(at);
+    if (ev.event === "delivered") data.attachments = { ...existing, deliveredAt: at };
+    if (status === "BOUNCED" || status === "FAILED") {
+      data.attachments = {
+        ...existing,
+        bounceReason: ev.reason || ev.status || ev.event,
+        bounceCode: ev.status,
+        bounceSeverity: ev.event === "deferred" ? "temporary" : ev.bounce_classification || ev.type || ev.event,
+        bounceTimestamp: at,
+      };
+    }
+    if (ev.event === "spamreport") data.attachments = { ...existing, spamReported: true, spamReportTimestamp: at };
+    if (Object.keys(data).length > 0) await db.adminEmail.update({ where: { id: recent.id }, data });
+  } catch (err) {
+    webhooksEmailEventsLogger.warn({ err: String(err), email, event: ev.event }, "[SendGrid] could not record delivery on sent copy");
+  }
+}
+
 // Add email to blocklist and update all related records
 async function handleBounce(email: string, reason?: string, source?: string) {
   const normalizedEmail = email.toLowerCase().trim();
@@ -445,6 +486,11 @@ export async function POST(request: NextRequest) {
 
         webhooksEmailEventsLogger.info(`[SendGrid] Event ${sgEvent.event}: ${email}`);
 
+        // Record the fate on the sent copy, same as the Mailgun branch
+        // below does — this branch used to return without touching it,
+        // so SendGrid-delivered mail stayed "SENT" forever.
+        await recordDeliveryOnSentCopy(email, sgEvent);
+
         switch (sgEvent.event) {
           case "bounce":
             // Only blocklist on hard bounces (invalid/non-existent addresses)
@@ -557,6 +603,13 @@ export async function POST(request: NextRequest) {
     switch (eventType) {
       case "opened":
         updateData.openedAt = new Date(eventData.timestamp * 1000);
+        break;
+
+      case "delivered":
+        updateData.attachments = {
+          ...(adminEmail.attachments as Record<string, unknown> || {}),
+          deliveredAt: new Date(eventData.timestamp * 1000).toISOString(),
+        };
         break;
 
       case "permanent_fail":
