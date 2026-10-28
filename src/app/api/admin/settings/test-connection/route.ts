@@ -5,7 +5,7 @@ import { decryptSecret } from "@/lib/vault";
 import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 import { getTwitterCredentials, verifyTwitterCredentials } from "@/lib/social/twitter";
-import { getAnthropic } from "@/lib/ai/anthropic-client";
+import { testClaudeConnection } from "@/lib/ai/connection-test";
 
 const testConnectionLogger = logger.child({ module: "admin-settings-test-connection" });
 
@@ -61,18 +61,19 @@ export async function POST(req: NextRequest) {
     }
 
     if (provider === "anthropic") {
-      try {
-        const anthropic = await getAnthropic();
-        // Cheapest authenticated call there is — lists models, no tokens.
-        await anthropic.models.list({ limit: 1 });
-        return NextResponse.json({ ok: true, message: "Anthropic API key is valid" });
-      } catch (e) {
-        const msg = e instanceof Error ? e.message : String(e);
-        return NextResponse.json(
-          { ok: false, message: `Anthropic rejected the key: ${msg.slice(0, 200)}` },
-          { status: 400 }
-        );
-      }
+      // A real message on the support chat's model, not just a key check:
+      // "list models" passed while the support bot 401'd.
+      const result = await testClaudeConnection();
+      return NextResponse.json(
+        {
+          ok: result.ok,
+          message: result.ok
+            ? `Claude answered "${result.reply}" on ${result.model} in ${result.latencyMs} ms (key ${result.keyHint}, from ${result.keySource})`
+            : `${result.error}. ${result.advice}`,
+          result,
+        },
+        { status: result.ok ? 200 : 400 }
+      );
     }
 
     if (provider === "facebook") {

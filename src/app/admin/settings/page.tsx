@@ -584,8 +584,11 @@ export default function SettingsPage() {
     anthropic: "idle",
   });
 
+  const [aiTestMessage, setAiTestMessage] = useState<string | null>(null);
+
   const testAnthropic = async () => {
     setAiTestResults((prev) => ({ ...prev, anthropic: "testing" }));
+    setAiTestMessage("Sending a test message to Claude…");
     try {
       const res = await apiFetch("/api/admin/settings/test-connection", {
         method: "POST",
@@ -597,9 +600,11 @@ export default function SettingsPage() {
         if (data.ok) toast.success(data.message);
         else toast.error(data.message);
       }
+      setAiTestMessage(data.message ? `${new Date().toLocaleTimeString()} — ${data.message}` : null);
       setAiTestResults((prev) => ({ ...prev, anthropic: data.ok ? "success" : "error" }));
     } catch {
       toast.error("Connection test failed");
+      setAiTestMessage("Connection test failed before reaching the server.");
       setAiTestResults((prev) => ({ ...prev, anthropic: "error" }));
     }
   };
@@ -970,6 +975,7 @@ export default function SettingsPage() {
           onSettingsChange={setAiSettings}
           onSave={handleSave}
           onTestAnthropic={testAnthropic}
+          lastTestMessage={aiTestMessage}
         />
 
         <SecuritySettings

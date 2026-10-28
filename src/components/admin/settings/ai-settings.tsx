@@ -30,6 +30,8 @@ interface AiSettingsProps {
   testResults: {
     anthropic: "idle" | "testing" | "success" | "error";
   };
+  /** What the last test said, shown under the key so it outlives the toast. */
+  lastTestMessage?: string | null;
   onSettingsChange: (settings: AiSettingsProps["settings"]) => void;
   onSave: () => void;
   onTestAnthropic: () => void;
@@ -38,6 +40,7 @@ interface AiSettingsProps {
 export function AiSettings({
   settings,
   testResults,
+  lastTestMessage,
   onSettingsChange,
   onSave,
   onTestAnthropic,
@@ -103,7 +106,7 @@ export function AiSettings({
               variant="outline"
               onClick={onTestAnthropic}
               disabled={testResults.anthropic === "testing"}
-              title="Runs a real authenticated request against the Anthropic API"
+              title="Sends one real message to Claude with the saved key and reports the reply"
             >
               {testResults.anthropic === "testing" ? (
                 <RefreshCw className="h-4 w-4 animate-spin" />
@@ -114,8 +117,14 @@ export function AiSettings({
               ) : (
                 <TestTube className="h-4 w-4" />
               )}
+              <span className="ml-2 hidden sm:inline">Test Claude</span>
             </Button>
           </div>
+          {lastTestMessage && (
+            <p className={`mt-3 text-sm ${testResults.anthropic === "success" ? "text-emerald-700" : testResults.anthropic === "error" ? "text-red-700" : "text-muted-foreground"}`}>
+              {lastTestMessage}
+            </p>
+          )}
         </CardContent>
       </Card>
 

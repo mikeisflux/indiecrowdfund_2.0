@@ -8,22 +8,13 @@ import { logger } from "@/lib/logger";
 import { sendEmail } from "@/lib/email";
 import { rateLimiter } from "@/lib/rate-limiter";
 import { searchKnowledgeBase, formatKbContext } from "@/lib/support/knowledge-base";
+// The shared client decrypts the stored key. This route had its own copy
+// that read the column raw, so once Settings started encrypting the key
+// the support bot sent ciphertext as the API key and got 401 on every
+// message, while every other AI feature kept working.
+import { getAnthropic } from "@/lib/ai/anthropic-client";
 
 const log = logger.child({ module: "support-chat" });
-
-// Anthropic SDK is shared across the app — see src/lib/ai/anthropic.ts.
-// Reusing its key-resolution logic here so the support bot picks up the
-// same admin-managed API key as auto-tag, marketing-copy, etc.
-async function getAnthropic(): Promise<Anthropic> {
-  const settings = await db.platformSettings.findFirst({
-    select: { anthropicApiKey: true },
-  });
-  const apiKey = settings?.anthropicApiKey || process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) {
-    throw new Error("Anthropic API key not configured. Set it in Admin Settings > AI.");
-  }
-  return new Anthropic({ apiKey });
-}
 
 const messageSchema = z.object({
   role: z.enum(["user", "assistant"]),

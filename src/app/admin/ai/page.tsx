@@ -453,6 +453,28 @@ export default function AIControlPage() {
     });
   };
 
+  // One real message to Claude with the saved key: proves the whole chain
+  // the support chat and every AI feature depends on, and says exactly
+  // what is wrong when it isn't.
+  const [claudeTest, setClaudeTest] = useState<{ state: "idle" | "testing" | "ok" | "error"; message: string | null }>({ state: "idle", message: null });
+  const testClaude = async () => {
+    setClaudeTest({ state: "testing", message: "Sending a test message to Claude…" });
+    try {
+      const res = await apiFetch("/api/admin/settings/test-connection", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ provider: "anthropic" }),
+      });
+      const data = await res.json().catch(() => ({}));
+      const message = data.message || (data.ok ? "Claude responded" : "Test failed");
+      setClaudeTest({ state: data.ok ? "ok" : "error", message: `${new Date().toLocaleTimeString()} — ${message}` });
+      if (data.ok) toast.success("Claude connection is working");
+      else toast.error(message);
+    } catch {
+      setClaudeTest({ state: "error", message: "Connection test failed before reaching the server." });
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-96">
@@ -552,6 +574,32 @@ export default function AIControlPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Claude connection */}
+      <Card className={claudeTest.state === "ok" ? "border-emerald-200" : claudeTest.state === "error" ? "border-red-200" : ""}>
+        <CardContent className="p-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="min-w-0">
+              <p className="font-semibold flex items-center gap-2">
+                <Brain className="h-4 w-4 text-violet-600" />
+                Claude connection
+              </p>
+              <p className="text-sm text-muted-foreground">
+                Sends one real message to Claude with the saved API key, the same way the support chat and every AI service does.
+              </p>
+              {claudeTest.message && (
+                <p className={`mt-2 text-sm break-words ${claudeTest.state === "ok" ? "text-emerald-700" : claudeTest.state === "error" ? "text-red-700" : "text-muted-foreground"}`}>
+                  {claudeTest.message}
+                </p>
+              )}
+            </div>
+            <Button onClick={testClaude} disabled={claudeTest.state === "testing"} className="bg-violet-600 hover:bg-violet-700 shrink-0">
+              {claudeTest.state === "testing" ? <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> : claudeTest.state === "ok" ? <CheckCircle className="h-4 w-4 mr-2" /> : claudeTest.state === "error" ? <AlertTriangle className="h-4 w-4 mr-2" /> : null}
+              Test Claude connection
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
       <Tabs defaultValue="services">
         <div className="overflow-x-auto pb-1">
