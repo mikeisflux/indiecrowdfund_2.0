@@ -31,7 +31,7 @@ declare module "@prisma/client" {
     $disconnect(): Promise<void>;
     $executeRaw(query: any, ...values: any[]): Promise<number>;
     $queryRaw<T = any>(query: any, ...values: any[]): Promise<T>;
-    $transaction<T>(fn: (prisma: PrismaClient) => Promise<T>): Promise<T>;
+    $transaction<T>(fn: (prisma: PrismaClient) => Promise<T>, options?: { maxWait?: number; timeout?: number; isolationLevel?: string }): Promise<T>;
     $transaction<T extends any[]>(promises: [...T]): Promise<T>;
 
     // Model accessors

@@ -92,6 +92,9 @@ export async function POST(req: NextRequest) {
     });
   } catch (error) {
     log.error({ err: formatError(error) }, "merge failed");
-    return NextResponse.json({ error: "Merge failed — nothing was changed" }, { status: 500 });
+    // Super admins only reach this route; the database's reason is more
+    // useful to them than a generic line, and it's in the error log anyway.
+    const reason = error instanceof Error ? error.message.split("\n").slice(-1)[0].slice(0, 300) : String(error).slice(0, 300);
+    return NextResponse.json({ error: `Merge failed — nothing was changed. ${reason}` }, { status: 500 });
   }
 }

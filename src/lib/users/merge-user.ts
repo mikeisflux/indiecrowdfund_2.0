@@ -3,12 +3,33 @@ import { logger } from "@/lib/logger";
 
 const log = logger.child({ module: "merge-user" });
 
+
+type RawTx = { $executeRawUnsafe: (query: string, ...values: unknown[]) => Promise<number> };
+
+/**
+ * Move rows of a table with a (userColumn, otherColumn) unique pair from the
+ * old user to the keeper: rows the keeper doesn't already have are
+ * re-pointed, rows the keeper already has are dropped. A plain updateMany
+ * here hits the unique constraint the moment both accounts follow the same
+ * creator / hold the same badge / accepted the same terms, and the whole
+ * merge rolls back. Table and column names are code constants, never input.
+ */
+async function moveUniquePair(tx: RawTx, table: string, userColumn: string, otherColumn: string, oldUserId: string, keeperUserId: string) {
+  await tx.$executeRawUnsafe(
+    `UPDATE "${table}" o SET "${userColumn}" = $1 WHERE o."${userColumn}" = $2 AND NOT EXISTS (SELECT 1 FROM "${table}" k WHERE k."${userColumn}" = $1 AND k."${otherColumn}" = o."${otherColumn}")`,
+    keeperUserId,
+    oldUserId
+  );
+  await tx.$executeRawUnsafe(`DELETE FROM "${table}" WHERE "${userColumn}" = $1`, oldUserId);
+}
+
 /**
  * Transfer all data from oldUserId to keeperUserId, then soft-delete the old user.
  */
 export async function mergeUserInto(oldUserId: string, keeperUserId: string) {
   // Use a transaction for atomicity
   await db.$transaction(async (tx) => {
+    const raw = tx as unknown as RawTx;
     // --- Many-to-one relations (just update the foreign key) ---
 
     // Pledges
@@ -69,11 +90,8 @@ export async function mergeUserInto(oldUserId: string, keeperUserId: string) {
       data: { uploaderId: keeperUserId },
     });
 
-    // Achievements
-    await tx.userAchievement.updateMany({
-      where: { userId: oldUserId },
-      data: { userId: keeperUserId },
-    });
+    // Achievements (unique per badge)
+    await moveUniquePair(raw, "UserAchievement", "userId", "badgeType", oldUserId, keeperUserId);
 
     // DivinityCoin transactions
     await tx.divinityCoinTransaction.updateMany({
@@ -87,11 +105,8 @@ export async function mergeUserInto(oldUserId: string, keeperUserId: string) {
       data: { userId: keeperUserId },
     });
 
-    // Redemption bonus ledgers
-    await tx.redemptionBonusLedger.updateMany({
-      where: { userId: oldUserId },
-      data: { userId: keeperUserId },
-    });
+    // Redemption bonus ledgers (unique per month)
+    await moveUniquePair(raw, "RedemptionBonusLedger", "userId", "month", oldUserId, keeperUserId);
 
     // Redemption bonus applications
     await tx.redemptionBonusApplication.updateMany({
@@ -123,21 +138,24 @@ export async function mergeUserInto(oldUserId: string, keeperUserId: string) {
       data: { userId: keeperUserId },
     });
 
-    // Project notification preferences
-    await tx.projectNotificationPreference.updateMany({
-      where: { userId: oldUserId },
-      data: { userId: keeperUserId },
-    });
+    // Project notification preferences (unique per project)
+    await moveUniquePair(raw, "ProjectNotificationPreference", "userId", "projectId", oldUserId, keeperUserId);
 
-    // Creator follows (both directions)
-    await tx.creatorFollow.updateMany({
-      where: { followerId: oldUserId },
-      data: { followerId: keeperUserId },
-    });
-    await tx.creatorFollow.updateMany({
-      where: { creatorId: oldUserId },
-      data: { creatorId: keeperUserId },
-    });
+    // Project follows (unique per project)
+    await moveUniquePair(raw, "ProjectFollower", "userId", "projectId", oldUserId, keeperUserId);
+
+    // Creator follows, both directions (unique per follower+creator)
+    await moveUniquePair(raw, "CreatorFollow", "followerId", "creatorId", oldUserId, keeperUserId);
+    await moveUniquePair(raw, "CreatorFollow", "creatorId", "followerId", oldUserId, keeperUserId);
+
+    // Chat room memberships (unique per room)
+    await moveUniquePair(raw, "ChatRoomMember", "userId", "roomId", oldUserId, keeperUserId);
+
+    // Terms acceptances (unique per version) — keep the keeper's own.
+    await moveUniquePair(raw, "TermsAcceptance", "userId", "version", oldUserId, keeperUserId);
+
+    // Connected social accounts (unique per platform)
+    await moveUniquePair(raw, "CreatorSocialAccount", "userId", "platform", oldUserId, keeperUserId);
 
     // Email list subscribers
     await tx.emailListSubscriber.updateMany({
@@ -221,13 +239,10 @@ export async function mergeUserInto(oldUserId: string, keeperUserId: string) {
       await tx.userInterestProfile.updateMany({ where: { userId: oldUserId }, data: { userId: keeperUserId } });
     }
 
-    // ChatPresence
-    const keeperPresence = await tx.chatPresence.findUnique({ where: { userId: keeperUserId } });
-    if (keeperPresence) {
-      await tx.chatPresence.deleteMany({ where: { userId: oldUserId } });
-    } else {
-      await tx.chatPresence.updateMany({ where: { userId: oldUserId }, data: { userId: keeperUserId } });
-    }
+    // ChatPresence is unique per (user, room), not per user. The old
+    // findUnique({ userId }) was not a valid selector and threw, which is
+    // what made every merge fail with "nothing was changed".
+    await moveUniquePair(raw, "ChatPresence", "userId", "roomId", oldUserId, keeperUserId);
 
     // StripeConfig
     const keeperStripe = await tx.stripeConfig.findUnique({ where: { userId: keeperUserId } });
@@ -306,5 +321,5 @@ export async function mergeUserInto(oldUserId: string, keeperUserId: string) {
     });
 
     log.info({ oldUserId, keeperUserId }, "[MergeAccounts] merged user");
-  });
+  }, { timeout: 120_000, maxWait: 15_000 });
 }
