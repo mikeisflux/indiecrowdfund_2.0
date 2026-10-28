@@ -28,6 +28,44 @@
  * know? If yes, it belongs in THROTTLED.
  */
 
+/**
+ * Uncaught errors in route handlers, server components and server
+ * actions. Next hands these here after it has already sent the 500; the
+ * browser reports "HTTP 500" with nothing else, and until now nothing on
+ * the server side recorded what actually threw.
+ */
+export async function onRequestError(
+  err: unknown,
+  request: { path: string; method: string; headers: Record<string, string | string[] | undefined> },
+  context: { routerKind: string; routePath: string; routeType: string; renderSource?: string; revalidateReason?: string }
+) {
+  if (process.env.NEXT_RUNTIME !== "nodejs") return;
+  try {
+    const { captureError } = await import("@/lib/error-tracker");
+    const error = err instanceof Error ? err : new Error(String(err));
+    const ua = request.headers["user-agent"];
+    await captureError({
+      error,
+      level: "ERROR",
+      source: context.routeType === "route" ? "API" : "SERVER",
+      endpoint: context.routePath || request.path,
+      url: request.path,
+      method: request.method,
+      statusCode: 500,
+      userAgent: Array.isArray(ua) ? ua[0] : ua,
+      metadata: {
+        uncaught: true,
+        routerKind: context.routerKind,
+        routeType: context.routeType,
+        renderSource: context.renderSource,
+        revalidateReason: context.revalidateReason,
+      },
+    });
+  } catch {
+    // Never let error reporting throw inside the error path.
+  }
+}
+
 export async function register() {
   if (process.env.NEXT_RUNTIME === "nodejs") {
     const { captureError } = await import("@/lib/error-tracker");

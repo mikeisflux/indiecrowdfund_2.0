@@ -67,18 +67,38 @@ export function TransitionLink({ href, onClick, children, ...props }: Transition
         }
         e.preventDefault();
         const target = typeof href === "string" ? href : href.toString();
-        document.startViewTransition(
+        const transition = document.startViewTransition(
           () =>
             new Promise<void>((resolve) => {
               // Replace, never stack: if a second navigation starts before the
               // first commits, release the old transition immediately.
               pendingResolve?.();
               pendingResolve = resolve;
+              // The browser gives the DOM update about four seconds before it
+              // abandons the transition with "timeout in DOM update". A slow
+              // phone on a slow connection can miss that while the new route
+              // is still loading. Let the transition finish on its own after
+              // three seconds; the navigation carries on without the morph.
+              const giveUp = window.setTimeout(() => {
+                if (pendingResolve === resolve) pendingResolve = null;
+                resolve();
+              }, 3000);
+              pendingResolve = () => {
+                window.clearTimeout(giveUp);
+                resolve();
+              };
               startReactTransition(() => {
                 router.push(target);
               });
             })
         );
+        // An abandoned or skipped transition rejects these three promises.
+        // Nothing here needs them, and unhandled they surface as
+        // "Unhandled Promise Rejection: Transition was aborted…" in the
+        // error log on every slow phone.
+        transition.ready.catch(() => {});
+        transition.updateCallbackDone.catch(() => {});
+        transition.finished.catch(() => {});
       }}
     >
       {children}

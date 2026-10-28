@@ -715,9 +715,20 @@ export async function POST(req: NextRequest) {
       const errorMessage = error.issues.map(issue => `${issue.path.join('.')}: ${issue.message}`).join(', ');
       return NextResponse.json({ error: errorMessage }, { status: 400 });
     }
-    backersLogger.error({ err: error instanceof Error ? error.message : String(error) }, "IndieKit backers bulk action error");
+    // The message alone ("Failed to perform bulk action") reached the
+    // error log with no action, no stack and no count — undiagnosable.
+    const bodyHint = await req.clone().json().catch(() => ({})) as { action?: unknown; projectId?: unknown; pledgeIds?: unknown };
+    backersLogger.error(
+      {
+        err: error instanceof Error ? { message: error.message, name: error.name, stack: error.stack } : String(error),
+        action: typeof bodyHint.action === "string" ? bodyHint.action : undefined,
+        projectId: typeof bodyHint.projectId === "string" ? bodyHint.projectId : undefined,
+        pledgeCount: Array.isArray(bodyHint.pledgeIds) ? bodyHint.pledgeIds.length : undefined,
+      },
+      "IndieKit backers bulk action error"
+    );
     return NextResponse.json(
-      { error: "Failed to perform bulk action" },
+      { error: `Failed to perform bulk action${typeof bodyHint.action === "string" ? ` (${bodyHint.action})` : ""}` },
       { status: 500 }
     );
   }

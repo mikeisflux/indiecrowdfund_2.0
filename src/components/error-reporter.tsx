@@ -260,7 +260,16 @@ export function ErrorReporter() {
       if (isBrowserNoise(message, stack)) return;
       if (error instanceof Error && error.name === "ChunkLoadError") return;
       if (isInjectedReferenceError(message, stack)) return;
-      reportError(`Unhandled Promise Rejection: ${message}`, stack);
+      // A bare "Error: No response" / "Transition was aborted" with no
+      // stack tells nobody anything. Record what kind of thing rejected
+      // and where the page was, so the next one can be traced.
+      const reason = error instanceof Error ? { name: error.name, cause: error.cause != null ? String(error.cause).slice(0, 300) : undefined } : { typeofReason: typeof error, value: String(error).slice(0, 300) };
+      reportError(`Unhandled Promise Rejection: ${message}`, stack, {
+        reason,
+        path: window.location.pathname,
+        online: navigator.onLine,
+        visibility: document.visibilityState,
+      });
     };
 
     // Intercept fetch to report HTTP 4xx/5xx errors to admin error logs.

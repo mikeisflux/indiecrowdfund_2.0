@@ -38,6 +38,59 @@ const LOG_LEVELS: Record<LogLevel, number> = {
 const currentLevel = (process.env.LOG_LEVEL as LogLevel) || (process.env.NODE_ENV === "production" ? "info" : "debug");
 const currentLevelNum = LOG_LEVELS[currentLevel] || 30;
 
+// Every logger.error / logger.fatal on the server also lands in the
+// error tracker (Admin → Error Logs). Until now only console.error and
+// client reports got there; every API route that caught its failure,
+// logged it here and answered 500 left the tracker with nothing but the
+// browser's "HTTP 500" and no server-side cause. Fire-and-forget, Node
+// runtime only (the edge bundle must not pull in Prisma), and the
+// tracker's own rate limit keeps a storm from flooding the table.
+type TrackerModule = typeof import("@/lib/error-tracker");
+let trackerPromise: Promise<TrackerModule | null> | null = null;
+function loadTracker(): Promise<TrackerModule | null> {
+  if (!trackerPromise) {
+    trackerPromise =
+      typeof process !== "undefined" && process.env.NEXT_RUNTIME !== "edge" && typeof window === "undefined"
+        ? import("@/lib/error-tracker").catch(() => null)
+        : Promise.resolve(null);
+  }
+  return trackerPromise;
+}
+
+function forwardToErrorTracker(entry: Record<string, unknown>, level: LogLevel): void {
+  try {
+    if (typeof window !== "undefined") return;
+    // The tracker logs its own failures through console.error, never
+    // through this logger, so there is no loop; still, never forward the
+    // error-report mirror line (it was captured as a CLIENT error already).
+    if (entry.module === "error-report") return;
+    const moduleName = typeof entry.module === "string" ? entry.module : undefined;
+    const msg = typeof entry.msg === "string" && entry.msg ? entry.msg : "Server error";
+    const errField = entry.err as { message?: string; name?: string; stack?: string } | string | undefined;
+    const errMessage = typeof errField === "string" ? errField : errField?.message;
+    const combined = errMessage && !msg.includes(errMessage) ? `${msg} ${errMessage}`.trim() : msg;
+    const error = new Error(combined.slice(0, 1000));
+    if (errField && typeof errField === "object" && typeof errField.stack === "string") error.stack = errField.stack;
+    if (errField && typeof errField === "object" && typeof errField.name === "string") error.name = errField.name;
+    const { time: _t, level: _l, service: _s, msg: _m, err: _e, module: _mod, ...rest } = entry;
+    void _t; void _l; void _s; void _m; void _e; void _mod;
+    const source = moduleName?.startsWith("cron") ? "CRON" : moduleName?.includes("webhook") ? "API" : "SERVER";
+    loadTracker()
+      .then((tracker) =>
+        tracker?.captureError({
+          error,
+          level: level === "fatal" ? "FATAL" : "ERROR",
+          source,
+          endpoint: moduleName,
+          metadata: Object.keys(rest).length > 0 ? JSON.parse(JSON.stringify(rest)) : undefined,
+        })
+      )
+      .catch(() => {});
+  } catch {
+    // Logging must never throw.
+  }
+}
+
 function createLogger(bindings: Record<string, unknown> = {}): Logger {
   function makeLogFn(level: LogLevel): LogFn {
     const levelNum = LOG_LEVELS[level];
@@ -76,6 +129,7 @@ function createLogger(bindings: Record<string, unknown> = {}): Logger {
 
       if (levelNum >= LOG_LEVELS.error) {
         process.stderr.write(output + "\n");
+        forwardToErrorTracker(entry, level);
       } else {
         process.stdout.write(output + "\n");
       }
