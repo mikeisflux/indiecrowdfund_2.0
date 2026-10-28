@@ -651,6 +651,8 @@ export default function UsersPage() {
         onEditUser={handleEditUser}
         onZeroWalletBalance={(userId) => handleZeroWalletBalance(userId, users)}
         zeroingWallet={zeroingWallet}
+        canMerge
+        onMerged={() => fetchUsers()}
       />
 
       <EmailPreviewDialog

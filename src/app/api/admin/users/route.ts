@@ -373,9 +373,20 @@ export async function PATCH(req: NextRequest) {
           const emailResult = await sendPasswordResetEmail(resetEmail, token);
 
           if (!emailResult.success) {
+            // A blocklisted address (an earlier bounce or spam report) is
+            // dropped silently by sendEmail. That is the right call for
+            // marketing mail and the wrong message for an admin trying to
+            // get a backer back into their account: say so, and where to
+            // lift it.
+            const blocked = (emailResult as { blocked?: boolean }).blocked === true;
             return NextResponse.json(
-              { error: "Failed to send reset email. Email may not be configured." },
-              { status: 500 }
+              {
+                error: blocked
+                  ? `${user.email} is on the email blocklist (${emailResult.error || "bounced or reported"}), so no mail reaches it. Lift the block under Admin → Email → Blocklist, or set a password for them directly.`
+                  : `Failed to send reset email: ${emailResult.error || "email may not be configured"}`,
+                blocked,
+              },
+              { status: blocked ? 409 : 500 }
             );
           }
 

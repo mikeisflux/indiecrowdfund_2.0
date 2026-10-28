@@ -487,8 +487,15 @@ export async function requestPasswordReset(formData: FormData) {
     const emailResult = await sendPasswordResetEmail(normalizedEmail, token);
 
     if (!emailResult.success) {
-      authActionsLogger.error({ err: emailResult.error }, "Failed to send password reset email:");
-      // Still return success to prevent email enumeration, but log the error
+      // Still return success to prevent email enumeration, but say in the
+      // log WHY nothing went out. A blocklisted address (earlier bounce or
+      // spam report) is the usual reason behind "I never get the reset
+      // email", and it was indistinguishable here from a mail outage.
+      const blocked = (emailResult as { blocked?: boolean }).blocked === true;
+      authActionsLogger.error(
+        { userId: user.id, email: normalizedEmail, err: emailResult.error, blocked },
+        blocked ? "Password reset email suppressed: address is on the email blocklist" : "Failed to send password reset email:"
+      );
     }
 
     return { success: true };

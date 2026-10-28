@@ -27,8 +27,112 @@ import {
   Loader2,
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
+import { useState } from "react";
+import { Input } from "@/components/ui/input";
+import { toast } from "sonner";
+import { apiFetch } from "@/lib/fetch-utils";
 import { User, UserPledge, EmailLogEntry } from "../types";
 import { getRoleBadge } from "../utils";
+
+interface MergePreviewUser {
+  id: string;
+  email: string;
+  name: string | null;
+  role: string;
+  createdAt: string;
+  _count: { pledges: number; createdProjects: number; sessions: number };
+}
+
+/**
+ * Fold another account into this one. For the backer whose history ended
+ * up split across two addresses: everything on the other account (pledges,
+ * messages, follows, wallet) moves here and the other login is retired.
+ */
+function MergeAccountSection({ user, onMerged }: { user: User; onMerged?: () => void }) {
+  const [other, setOther] = useState("");
+  const [preview, setPreview] = useState<{ merge: MergePreviewUser | null; problems: string[] } | null>(null);
+  const [busy, setBusy] = useState<"preview" | "merge" | null>(null);
+
+  const lookUp = async () => {
+    setBusy("preview");
+    setPreview(null);
+    try {
+      const res = await fetch(`/api/admin/users/merge?keep=${encodeURIComponent(user.id)}&merge=${encodeURIComponent(other.trim())}`);
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Lookup failed");
+      setPreview({ merge: data.merge, problems: data.problems || [] });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Lookup failed");
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const merge = async () => {
+    if (!preview?.merge) return;
+    if (!window.confirm(`Move everything from ${preview.merge.email} into ${user.email} and retire ${preview.merge.email}? This cannot be undone.`)) return;
+    setBusy("merge");
+    try {
+      const res = await apiFetch("/api/admin/users/merge", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ keep: user.id, merge: preview.merge.id }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Merge failed");
+      toast.success(`Merged ${data.merged?.email}: ${data.merged?.pledgesMoved ?? 0} pledge(s) moved to ${user.email}`);
+      setPreview(null);
+      setOther("");
+      onMerged?.();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Merge failed");
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  return (
+    <div className="mt-6 rounded-lg border p-4 space-y-3">
+      <div>
+        <p className="font-medium">Merge another account into this one</p>
+        <p className="text-sm text-muted-foreground">
+          Enter the other account&apos;s email or id. Its pledges, messages, follows and wallet move to <strong>{user.email}</strong>, and the other login is retired.
+          This account keeps its password and settings.
+        </p>
+      </div>
+      <div className="flex gap-2">
+        <Input value={other} onChange={(e) => setOther(e.target.value)} placeholder="other-address@example.com" className="font-mono" />
+        <Button variant="outline" onClick={lookUp} disabled={busy !== null || !other.trim()}>
+          {busy === "preview" ? <Loader2 className="h-4 w-4 animate-spin" /> : "Look up"}
+        </Button>
+      </div>
+      {preview && (
+        <div className="rounded-md bg-muted/50 p-3 text-sm space-y-2">
+          {preview.merge ? (
+            <p>
+              <strong>{preview.merge.name || "No name"}</strong> · {preview.merge.email} · {preview.merge.role} · joined{" "}
+              {formatDistanceToNow(new Date(preview.merge.createdAt), { addSuffix: true })} · {preview.merge._count.pledges} pledge(s),{" "}
+              {preview.merge._count.createdProjects} project(s)
+            </p>
+          ) : (
+            <p className="text-muted-foreground">No active account found.</p>
+          )}
+          {preview.problems.map((p, i) => (
+            <p key={i} className="text-red-600">
+              {p}
+            </p>
+          ))}
+          {preview.merge && preview.problems.length === 0 && (
+            <Button onClick={merge} disabled={busy !== null} className="bg-red-600 hover:bg-red-700">
+              {busy === "merge" ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+              Merge {preview.merge.email} into {user.email}
+            </Button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
 
 interface UserDetailsDialogProps {
   open: boolean;
@@ -52,6 +156,10 @@ interface UserDetailsDialogProps {
   onEditUser: (user: User) => void;
   onZeroWalletBalance?: (userId: string) => void;
   zeroingWallet?: boolean;
+  /** Called after another account was merged into this one, so the list refreshes. */
+  onMerged?: () => void;
+  /** Only super admins see the merge tool. */
+  canMerge?: boolean;
 }
 
 export function UserDetailsDialog({
@@ -76,6 +184,8 @@ export function UserDetailsDialog({
   onEditUser,
   onZeroWalletBalance,
   zeroingWallet,
+  onMerged,
+  canMerge,
 }: UserDetailsDialogProps) {
   if (!user) return null;
 
@@ -176,6 +286,16 @@ export function UserDetailsDialog({
                 </a>
               </Button>
             </div>
+
+            {canMerge && (
+              <MergeAccountSection
+                user={user}
+                onMerged={() => {
+                  onOpenChange(false);
+                  onMerged?.();
+                }}
+              />
+            )}
           </TabsContent>
 
           {/* Backer History Tab */}
