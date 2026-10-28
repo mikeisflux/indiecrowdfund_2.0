@@ -382,6 +382,26 @@ export const PROJECT_CATEGORIES = [
   //   ],
   // },
   {
+    value: "tech",
+    label: "Tech",
+    subcategories: [
+      { value: "gadgets", label: "Gadgets" },
+      { value: "smart-devices", label: "Smart & App-Controlled Devices" },
+      { value: "wearables", label: "Wearables" },
+      { value: "hardware", label: "Hardware" },
+      { value: "diy-electronics", label: "DIY Electronics & Kits" },
+      { value: "robotics", label: "Robotics" },
+      { value: "3d-printing", label: "3D Printing" },
+      { value: "audio", label: "Audio" },
+      { value: "camera-gear", label: "Camera Gear" },
+      { value: "gaming-hardware", label: "Gaming Hardware" },
+      { value: "apps-software", label: "Apps & Software" },
+      { value: "health-wellness-devices", label: "Health & Wellness Devices" },
+      { value: "adult-wellness-devices", label: "Adult Wellness Devices (18+)" },
+      { value: "tech-accessories", label: "Accessories" },
+    ],
+  },
+  {
     value: "film",
     label: "Film & Video",
     subcategories: [
