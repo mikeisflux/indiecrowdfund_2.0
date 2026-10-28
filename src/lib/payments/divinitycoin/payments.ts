@@ -404,6 +404,16 @@ export async function handleRefundRequest(
  * Handle payment.succeeded for marketplace purchases
  * Confirms the purchase, increments purchase count, and delivers the book.
  */
+/**
+ * purchaseId is DC's idempotency key for create-payment-intent, so pledge
+ * flows that need a unique key per attempt send one too: balance_ (pay
+ * link), modify_ (order edit upcharge), addon_ (survey add-ons). Only a
+ * purchaseId without those prefixes is a marketplace purchase.
+ */
+function isMarketplacePurchaseId(purchaseId: string): boolean {
+  return !/^(balance_|modify_|addon_)/.test(purchaseId);
+}
+
 async function handleMarketplacePaymentSucceeded(
   data: NonNullable<DivinityCoinWebhookRequest["data"]>,
   purchaseId: string
@@ -538,8 +548,12 @@ export async function handlePaymentSucceeded(
     return r.status === "error" ? { success: false, error: r.error || "Balance confirmation failed" } : { success: true, message: `Balance payment ${r.status}` };
   }
 
+  // Pledge upcharges (order edits, survey add-ons) now carry a per-attempt
+  // purchaseId so DC does not dedupe them against each other. They are
+  // pledge events, not marketplace purchases; fall through to the pledge
+  // handling below, where the `upcharge` type records the transaction.
   // Handle marketplace purchase if purchaseId is provided
-  if (purchaseId) {
+  if (purchaseId && isMarketplacePurchaseId(purchaseId)) {
     return handleMarketplacePaymentSucceeded(data, purchaseId);
   }
 
@@ -821,7 +835,7 @@ export async function handlePaymentFailed(
   }
 
   // Handle marketplace purchase failure
-  if (purchaseId) {
+  if (purchaseId && isMarketplacePurchaseId(purchaseId)) {
     paymentsDivinitycoinLogger.info(`[DivinityCoin] Marketplace payment failed: purchase=${purchaseId}, payment=${paymentId}, reason=${reason}`);
 
     try {
@@ -1364,7 +1378,7 @@ export async function handleRefundCompleted(
   const purchaseId = data.purchaseId as string | undefined;
 
   // Handle marketplace purchase refund
-  if (purchaseId) {
+  if (purchaseId && isMarketplacePurchaseId(purchaseId)) {
     paymentsDivinitycoinLogger.info(`[DivinityCoin] Marketplace refund completed: purchase=${purchaseId}, refund=${refundId}, amount=${amount}`);
 
     try {

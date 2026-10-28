@@ -842,12 +842,17 @@ export async function PATCH(
                 projectId: pledge.projectId,
                 type: "upcharge",
                 originalPaymentId: pledge.divinityCoinPaymentId,
+                // DC keys create-payment-intent on purchaseId. Without one,
+                // a second upcharge on the same pledge collides with the
+                // first (or hands back the already-paid intent), so a
+                // backer could edit their order exactly once.
+                purchaseId: `modify_${pledge.id}_${Date.now()}`,
               }),
             });
 
             const dcResult = await dcResponse.json();
             if (!dcResponse.ok || !dcResult.success) {
-              pledgesLogger.error({ err: String(dcResult) }, "[DivinityCoin Modify] Failed to create upcharge payment intent:");
+              pledgesLogger.error({ pledgeId: pledge.id, status: dcResponse.status, dcResult }, "[DivinityCoin Modify] Failed to create upcharge payment intent:");
               return NextResponse.json(
                 { error: dcResult.error || "Failed to initialize upcharge payment" },
                 { status: 502 }

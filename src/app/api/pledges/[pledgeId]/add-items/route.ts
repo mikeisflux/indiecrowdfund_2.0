@@ -479,12 +479,16 @@ export async function POST(
             projectId: pledge.projectId,
             type: "upcharge",
             originalPaymentId: pledge.divinityCoinPaymentId,
+            // Unique per attempt: DC keys create-payment-intent on
+            // purchaseId and a repeat add-on purchase on one pledge
+            // otherwise collides with the first.
+            purchaseId: `addon_${pledge.id}_${Date.now()}`,
           }),
         });
 
         const dcResult = await dcResponse.json();
         if (!dcResponse.ok || !dcResult.success) {
-          pledgesAddItemsLogger.error({ err: String(dcResult) }, "[AddItems DC] Failed to create payment intent:");
+          pledgesAddItemsLogger.error({ pledgeId: pledge.id, status: dcResponse.status, dcResult }, "[AddItems DC] Failed to create payment intent:");
           return NextResponse.json(
             { error: dcResult.error || "Failed to initialize payment" },
             { status: 502 }
