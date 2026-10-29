@@ -7,7 +7,8 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { releaseAddonSlots } from "@/lib/payments/rewards";
 import { reconcileStretchGoalsForPledge } from "@/lib/rewards/stretch-goals";
-import { callDivinityCoinAPI, getDivinityCoinConfig } from "@/lib/payments/divinitycoin";
+import { getDivinityCoinConfig } from "@/lib/payments/divinitycoin";
+import { refundDcPledge } from "@/lib/payments/divinitycoin/pledge-refunds";
 import { notifyPledgeModified, notifyPledgeCancelled } from "@/lib/notifications/pledge-notifications";
 import { getPayPalConfig, getPayPalAccessToken } from "@/lib/payments/paypal";
 import { getWhopClient } from "@/lib/payments/whop";
@@ -400,22 +401,49 @@ export async function PATCH(
             return NextResponse.json({ error: "DivinityCoin payment ID not found for this pledge" }, { status: 400 });
           }
           try {
-            const dcResult = await callDivinityCoinAPI("refund", {
-              pledgeId: pledge.id,
-              paymentId: pledge.divinityCoinPaymentId,
-              amount: Math.round(Number(pledge.amount) * 100),
+            // An edited pledge is paid across several DC charges (original
+            // + one per upcharge); refund every one of them, not just the
+            // original intent.
+            const dcResult = await refundDcPledge({
+              pledge,
+              amountCents: Math.round(Number(pledge.amount) * 100),
               reason: body.reason || "Cancelled by backer",
               requestedBy: "user",
+              description: `Refund for cancelled pledge on "${pledge.project.title}"`,
+              ledgerMetadata: { userId: session.user.id, projectId: pledge.projectId, source: "pledge_cancellation" },
             });
 
             if (!dcResult.success) {
+              if (dcResult.refundedCents > 0) {
+                // Money moved for part of it. Don't leave the pledge looking
+                // fully paid: shrink it by what came back and tell the
+                // backer the rest needs a human.
+                await db.pledge.update({
+                  where: { id: pledgeId },
+                  data: { amount: { decrement: dcResult.refundedCents / 100 } },
+                });
+                if (pledge.confirmationEmailSent) {
+                  await db.project.update({
+                    where: { id: pledge.projectId },
+                    data: { currentAmount: { decrement: dcResult.refundedCents / 100 } },
+                  });
+                }
+                pledgesLogger.error(
+                  { pledgeId, refundedCents: dcResult.refundedCents, refunds: dcResult.refunds, err: dcResult.error },
+                  "[Cancel] DivinityCoin refund only partially succeeded"
+                );
+                return NextResponse.json(
+                  { error: `${dcResult.error}. Your pledge has been reduced by the amount refunded so far; please contact support to finish the cancellation.` },
+                  { status: 502 }
+                );
+              }
               return NextResponse.json(
                 { error: dcResult.error || "Refund failed" },
                 { status: 400 }
               );
             }
           } catch (dcError) {
-            pledgesLogger.error({ err: String(dcError) }, "DivinityCoin refund error:");
+            pledgesLogger.error({ err: dcError instanceof Error ? dcError : String(dcError), pledgeId }, "DivinityCoin refund error:");
             return NextResponse.json(
               { error: "Failed to process refund" },
               { status: 500 }
@@ -982,48 +1010,59 @@ export async function PATCH(
             return NextResponse.json({ error: "DivinityCoin payment ID not found for this pledge" }, { status: 400 });
           }
           try {
-            const dcResult = await callDivinityCoinAPI("refund", {
-              pledgeId: pledge.id,
-              paymentId: pledge.divinityCoinPaymentId,
-              amount: Math.round(refundAmount * 100),
+            // The decrease comes out of whichever DC charges still hold
+            // money, newest upcharge first. Refunding only the original
+            // intent broke the moment a backer had edited their order a
+            // couple of times: the original no longer held enough, DC
+            // rejected it, and the backer could not change their order
+            // again. The helper also writes the ledger rows.
+            const dcResult = await refundDcPledge({
+              pledge,
+              amountCents: Math.round(refundAmount * 100),
               reason: "Pledge modification - price decreased",
               requestedBy: "user",
-              partial: true,
+              description: `Partial refund ($${refundAmount.toFixed(2)}) from pledge modification on "${pledge.project.title}"`,
+              ledgerMetadata: {
+                userId: session.user.id,
+                projectId: pledge.projectId,
+                oldAmount,
+                newAmount: effectiveNewAmount,
+                source: "pledge_modification",
+              },
+              excludeBalanceCharges: true,
             });
 
             if (!dcResult.success) {
+              if (dcResult.refundedCents > 0) {
+                // Part of the money came back but the order change can't
+                // be applied as asked. Reflect what was refunded on the
+                // pledge total and hand the rest to support.
+                await db.pledge.update({
+                  where: { id: pledgeId },
+                  data: { amount: { decrement: dcResult.refundedCents / 100 } },
+                });
+                if (pledge.confirmationEmailSent) {
+                  await db.project.update({
+                    where: { id: pledge.projectId },
+                    data: { currentAmount: { decrement: dcResult.refundedCents / 100 } },
+                  });
+                }
+                pledgesLogger.error(
+                  { pledgeId, refundedCents: dcResult.refundedCents, refunds: dcResult.refunds, err: dcResult.error },
+                  "[Modify] DivinityCoin refund only partially succeeded"
+                );
+                return NextResponse.json(
+                  { error: `${dcResult.error}. Your order was not changed; please contact support to finish this change.` },
+                  { status: 502 }
+                );
+              }
               return NextResponse.json(
                 { error: dcResult.error || "Refund failed" },
                 { status: 400 }
               );
             }
-
-            // Log the refund to DivinityCoinTransaction so it's auditable in-platform.
-            // Without this row, the only record of the refund is on Stripe and admins
-            // can't see it in the backer/pledge views.
-            await db.divinityCoinTransaction.create({
-              data: {
-                userId: pledge.userId,
-                pledgeId: pledge.id,
-                amount: -refundAmount,
-                type: "REFUND",
-                description: `Partial refund ($${refundAmount.toFixed(2)}) from pledge modification on "${pledge.project.title}"`,
-                metadata: JSON.stringify({
-                  requestedBy: "user",
-                  userId: session.user.id,
-                  projectId: pledge.projectId,
-                  divinityCoinPaymentId: pledge.divinityCoinPaymentId,
-                  dcRefundResult: dcResult.data ?? null,
-                  refundAmount,
-                  oldAmount,
-                  newAmount: effectiveNewAmount,
-                  source: "pledge_modification",
-                  processedAt: new Date().toISOString(),
-                }),
-              },
-            });
           } catch (dcError) {
-            pledgesLogger.error({ err: String(dcError) }, "DivinityCoin partial refund error:");
+            pledgesLogger.error({ err: dcError instanceof Error ? dcError : String(dcError), pledgeId }, "DivinityCoin partial refund error:");
             return NextResponse.json(
               { error: "Failed to process refund" },
               { status: 500 }

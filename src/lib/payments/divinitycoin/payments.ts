@@ -1531,23 +1531,35 @@ export async function handleRefundCompleted(
       return { success: true, message: "Pledge already refunded by concurrent webhook" };
     }
 
+    // Refunds we issued ourselves (cancel, order edit, creator/admin refund)
+    // already wrote their ledger row with this refundId; the webhook still
+    // flips the status and unwinds stats but must not add a second row.
+    const alreadyLedgered = refundId
+      ? await db.divinityCoinTransaction.findFirst({
+          where: { pledgeId: pledge.id, type: "REFUND", metadata: { contains: refundId } },
+          select: { id: true },
+        })
+      : null;
+
     await db.$transaction(async (tx) => {
       // Record the refund transaction
-      await tx.divinityCoinTransaction.create({
-        data: {
-          userId: pledge.userId,
-          pledgeId: pledge.id,
-          amount: -(amount || Number(pledge.amount)),
-          type: "REFUND",
-          description: `Refund completed via DivinityCoin`,
-          metadata: JSON.stringify({
-            paymentId,
-            refundId,
-            processedAt: new Date().toISOString(),
-            source: "divinitycoin_webhook",
-          }),
-        },
-      });
+      if (!alreadyLedgered) {
+        await tx.divinityCoinTransaction.create({
+          data: {
+            userId: pledge.userId,
+            pledgeId: pledge.id,
+            amount: -(amount || Number(pledge.amount)),
+            type: "REFUND",
+            description: `Refund completed via DivinityCoin`,
+            metadata: JSON.stringify({
+              paymentId,
+              refundId,
+              processedAt: new Date().toISOString(),
+              source: "divinitycoin_webhook",
+            }),
+          },
+        });
+      }
 
       // Only decrement project stats if stats were previously counted
       if (pledge.confirmationEmailSent) {
