@@ -14,6 +14,7 @@ import {
   useCategoryGroups,
 } from "@/components/rewards/category-filter";
 import { LockedStamp } from "@/components/rewards/locked-stamp";
+import { RewardDetails } from "@/components/rewards/reward-details";
 import { isRewardLocked } from "@/lib/rewards/unlock";
 import { AddonData } from "../types";
 
@@ -183,27 +184,14 @@ export function AddonGrid({
                 </p>
                 <p className="font-semibold leading-snug">{addon.title}</p>
 
-                {addon.description && (
-                  <p className="line-clamp-3 text-sm text-muted-foreground">
-                    {addon.description}
-                  </p>
-                )}
-
-                {addon.includes.length > 0 && (
-                  <div className="space-y-1">
-                    {addon.includes.slice(0, 3).map((item, i) => (
-                      <div key={i} className="flex items-start gap-1.5 text-xs">
-                        <CheckCircle className="mt-0.5 h-3 w-3 shrink-0 text-[#05ce78]" />
-                        <span className="min-w-0">{item}</span>
-                      </div>
-                    ))}
-                    {addon.includes.length > 3 && (
-                      <p className="pl-[18px] text-xs text-muted-foreground">
-                        +{addon.includes.length - 3} more
-                      </p>
-                    )}
-                  </div>
-                )}
+                {/* Same expandable block as the reward cards. A backer asked
+                    in Discord what a "bling" metal cover was because the
+                    three-line clamp here cut the description off with no way
+                    to read the rest. */}
+                <RewardDetails
+                  description={addon.description}
+                  items={addon.includes.map((title) => ({ title }))}
+                />
 
                 {remaining !== null && !isSoldOut && remaining <= 25 && (
                   <Badge

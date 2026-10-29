@@ -5,6 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import Image from "next/image";
+import { RewardDetails } from "@/components/rewards/reward-details";
 import { SurveyData } from "./types";
 
 interface SurveyAddonsStepProps {
@@ -71,9 +72,11 @@ export function SurveyAddonsStep({
                 )}
                 <div className="flex-1 min-w-0">
                   <h3 className="font-semibold">{addon.title}</h3>
-                  {addon.description && (
-                    <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{addon.description}</p>
-                  )}
+                  <RewardDetails
+                    description={addon.description}
+                    descriptionClassName="text-sm text-muted-foreground mt-1"
+                    clampLines={2}
+                  />
                   <p className="text-lg font-semibold text-emerald-600 mt-2">
                     ${addon.price.toFixed(2)}
                   </p>
