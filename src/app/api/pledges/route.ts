@@ -655,8 +655,10 @@ export async function POST(req: NextRequest) {
             const returnUrl = `${pledgePageBase}?success=true&pledgeId=${pledge.id}`;
             const partnerLogoUrl = process.env.NEXT_PUBLIC_BRAND_LOGO_URL;
 
-            const dcSession = await createDcCheckoutSession({
-              mode: useSavedCardFlow ? "setup" : "payment",
+            const sessionMode = useSavedCardFlow ? "setup" : "payment";
+            const amountCents = Math.round(data.amount * 100);
+            const sessionInput = {
+              mode: sessionMode as "setup" | "payment",
               platformUserId: pledge.userId,
               email: userRecord?.email || "",
               returnUrl,
@@ -668,18 +670,47 @@ export async function POST(req: NextRequest) {
               // control. The "complete" postMessage still fires and
               // we transition the wizard inline.
               disableAutoRedirect: true,
-              // One session per pledge: a remount, a retry or a second
-              // visit gets the same session back instead of a new intent.
-              idempotencyKey: pledge.id,
               ...(useSavedCardFlow
                 ? {}
                 : {
-                    amount: Math.round(data.amount * 100),
+                    amount: amountCents,
                     currency: "usd",
                     pledgeId: pledge.id,
                     projectId: data.projectId,
                   }),
+            };
+
+            // One session per CART: a remount or a plain retry gets the
+            // same session back instead of a new intent. The key used to
+            // be the bare pledge id, which broke abandoned-cart reclaim: a
+            // backer who came back with a different reward reused the
+            // same pledge id, DC matched the old session under that key
+            // (different amount, or already expired) and refused, and
+            // every retry hit the same wall. Mode and amount in the key
+            // give a changed cart a fresh session; a dead or refused
+            // session gets one more try under a one-off key.
+            let dcSession = await createDcCheckoutSession({
+              ...sessionInput,
+              idempotencyKey: `${pledge.id}:${sessionMode}:${useSavedCardFlow ? 0 : amountCents}`,
             });
+            const deadReuse =
+              dcSession.success &&
+              dcSession.reused &&
+              (dcSession.status === "expired" || dcSession.status === "canceled" || dcSession.status === "failed");
+            if (!dcSession.success || deadReuse) {
+              pledgeLogger.warn(
+                {
+                  correlationId,
+                  pledgeId: pledge.id,
+                  err: dcSession.success ? `reused ${dcSession.status} session` : dcSession.error,
+                },
+                "DC checkout session unusable under the cart key; retrying with a fresh key"
+              );
+              dcSession = await createDcCheckoutSession({
+                ...sessionInput,
+                idempotencyKey: `${pledge.id}:${Date.now()}`,
+              });
+            }
 
             if (!dcSession.success) {
               pledgeLogger.error(
