@@ -168,6 +168,13 @@ model PlatformSettings {
   aiQuietHoursStart      String  @default("22:00")
   aiQuietHoursEnd        String  @default("08:00")
   aiCronSchedules        String? @db.Text // JSON string for cron job schedules
+  // Standing instructions from the admins to the marketing AI, in plain
+  // English ("push the Tech category this month", "never use exclamation
+  // marks", "mention the Shopify store"). Fed into every marketing prompt
+  // (campaign emails, creator newsletter, social posts, marketing copy) as
+  // operator guidance. Set in /admin/ai-marketing or through the Agent API.
+  // Added by migrations/add_ai_marketing_directives.sql.
+  aiMarketingDirectives  String? @db.Text
 
   // Behavior Tracking Settings
   aiTrackPageViews         Boolean @default(true)

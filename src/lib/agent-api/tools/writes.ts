@@ -50,46 +50,89 @@ defineTool({
 defineTool({
   name: "add_newsletter_subscribers",
   description:
-    "Add addresses to the platform newsletter list (or re-activate them), with optional tags and a source label. Addresses on the blocklist or belonging to accounts that unsubscribed site-wide are skipped and reported, never added.",
+    "Import or re-activate newsletter subscribers in bulk, e.g. a Shopify or eBay customer export. Pass `subscribers` as objects with email and optional name and per-row tags (up to 5000 per call), or `emails` as bare strings. `tags` applies to every row; `source` labels where they came from (shopify, ebay, csv…). Existing subscribers get the new tags merged and a missing name filled in. Addresses on the blocklist, accounts that unsubscribed site-wide, and anyone who unsubscribed from the newsletter are skipped and listed in the result, never added.",
   scope: SCOPE_AGENT_WRITE,
   mutating: true,
   input: z.object({
-    emails: z.array(z.string().email()).min(1).max(500),
+    subscribers: z
+      .array(z.object({ email: z.string().email(), name: z.string().max(120).optional(), tags: z.array(z.string().min(1).max(40)).max(10).optional() }))
+      .max(5000)
+      .optional(),
+    emails: z.array(z.string().email()).max(5000).optional(),
     tags: z.array(z.string().min(1).max(40)).max(10).default([]),
     source: z.string().max(60).default("agent"),
     confirm: Confirm,
   }),
   handler: async (a, ctx) => {
-    const emails = [...new Set(a.emails.map((e) => e.trim().toLowerCase()))];
+    const incoming = new Map<string, { name: string | null; tags: string[] }>();
+    for (const s of a.subscribers ?? []) {
+      const email = s.email.trim().toLowerCase();
+      const prev = incoming.get(email);
+      incoming.set(email, { name: s.name?.trim() || prev?.name || null, tags: [...new Set([...(prev?.tags ?? []), ...(s.tags ?? []), ...a.tags])] });
+    }
+    for (const e of a.emails ?? []) {
+      const email = e.trim().toLowerCase();
+      if (!incoming.has(email)) incoming.set(email, { name: null, tags: [...a.tags] });
+    }
+    if (incoming.size === 0) throw new ToolError("Pass subscribers or emails.", "invalid_arguments");
+    const emails = [...incoming.keys()];
     const domains = [...new Set(emails.map((e) => e.split("@")[1]))];
-    const [blocked, optedOut] = await Promise.all([
-      db.emailBlocklist.findMany({ where: { isActive: true, OR: [{ type: "EMAIL", value: { in: emails } }, { type: "DOMAIN", value: { in: domains } }] }, select: { type: true, value: true } }),
-      db.user.findMany({ where: { email: { in: emails }, emailUnsubscribedAt: { not: null } }, select: { email: true } }),
-    ]);
+
+    // One round of lookups for the whole batch, then per-row decisions in memory.
+    const chunk = <T,>(arr: T[], n: number) => Array.from({ length: Math.ceil(arr.length / n) }, (_, i) => arr.slice(i * n, i * n + n));
     type BlockRow = { type: string; value: string };
-    const blockedEmails = new Set((blocked as BlockRow[]).filter((b) => b.type === "EMAIL").map((b) => b.value));
-    const blockedDomains = new Set((blocked as BlockRow[]).filter((b) => b.type === "DOMAIN").map((b) => b.value));
+    type ExistingRow = { id: string; email: string; name: string | null; tags: string[]; unsubscribedAt: Date | null };
+    const blocked: BlockRow[] = [];
+    const optedOut: { email: string }[] = [];
+    const existing: ExistingRow[] = [];
+    for (const part of chunk(emails, 1000)) {
+      const [b, u, ex] = await Promise.all([
+        db.emailBlocklist.findMany({ where: { isActive: true, OR: [{ type: "EMAIL", value: { in: part } }, { type: "DOMAIN", value: { in: domains } }] }, select: { type: true, value: true } }),
+        db.user.findMany({ where: { email: { in: part }, emailUnsubscribedAt: { not: null } }, select: { email: true } }),
+        db.newsletterSubscriber.findMany({ where: { email: { in: part } }, select: { id: true, email: true, name: true, tags: true, unsubscribedAt: true } }),
+      ]);
+      blocked.push(...(b as BlockRow[]));
+      optedOut.push(...(u as { email: string }[]));
+      existing.push(...(ex as ExistingRow[]));
+    }
+    const blockedEmails = new Set(blocked.filter((b) => b.type === "EMAIL").map((b) => b.value));
+    const blockedDomains = new Set(blocked.filter((b) => b.type === "DOMAIN").map((b) => b.value));
     const unsub = new Set(optedOut.map((u) => u.email.toLowerCase()));
+    const existingByEmail = new Map(existing.map((e) => [e.email.toLowerCase(), e]));
 
     const skipped: { email: string; reason: string }[] = [];
-    let added = 0;
+    const toCreate: { email: string; name: string | null; source: string; tags: string[]; isActive: boolean }[] = [];
     let updated = 0;
-    for (const email of emails) {
+    for (const [email, row] of incoming) {
       if (blockedEmails.has(email)) { skipped.push({ email, reason: "blocklisted" }); continue; }
       if (blockedDomains.has(email.split("@")[1])) { skipped.push({ email, reason: "domain blocklisted" }); continue; }
       if (unsub.has(email)) { skipped.push({ email, reason: "unsubscribed site-wide" }); continue; }
-      const existing = await db.newsletterSubscriber.findFirst({ where: { email }, select: { id: true, tags: true, isActive: true, unsubscribedAt: true } });
-      if (existing) {
-        if (existing.unsubscribedAt) { skipped.push({ email, reason: "unsubscribed from newsletter" }); continue; }
-        await db.newsletterSubscriber.update({ where: { id: existing.id }, data: { isActive: true, tags: [...new Set([...existing.tags, ...a.tags])] } });
+      const ex = existingByEmail.get(email);
+      if (ex) {
+        if (ex.unsubscribedAt) { skipped.push({ email, reason: "unsubscribed from newsletter" }); continue; }
+        await db.newsletterSubscriber.update({
+          where: { id: ex.id },
+          data: { isActive: true, tags: [...new Set([...ex.tags, ...row.tags])], ...(ex.name ? {} : row.name ? { name: row.name } : {}) },
+        });
         updated += 1;
       } else {
-        await db.newsletterSubscriber.create({ data: { email, source: a.source, tags: a.tags, isActive: true } });
-        added += 1;
+        toCreate.push({ email, name: row.name, source: a.source, tags: row.tags, isActive: true });
       }
     }
-    log.info({ added, updated, skipped: skipped.length, keyId: ctx.key.id }, "agent added newsletter subscribers");
-    return { added, updated, skipped };
+    let added = 0;
+    for (const part of chunk(toCreate, 500)) {
+      const res = await db.newsletterSubscriber.createMany({ data: part, skipDuplicates: true });
+      added += res.count;
+    }
+    log.info({ added, updated, skipped: skipped.length, source: a.source, keyId: ctx.key.id }, "agent imported newsletter subscribers");
+    return {
+      received: incoming.size,
+      added,
+      updated,
+      skippedCount: skipped.length,
+      skipped: skipped.slice(0, 200),
+      note: skipped.length > 200 ? `${skipped.length - 200} more skipped rows not shown` : undefined,
+    };
   },
 });
 

@@ -14,6 +14,8 @@ import "./tools/people";
 import "./tools/email";
 import "./tools/ops";
 import "./tools/writes";
+import "./tools/marketing";
+import "./tools/box";
 
 export { toolCatalog, runTool, listTools, getTool } from "./registry";
 export { authenticateAgentRequest, SCOPE_AGENT_READ, SCOPE_AGENT_WRITE } from "./auth";

@@ -3,8 +3,10 @@ import { authenticateAgentRequest, runTool } from "@/lib/agent-api";
 import { checkRateLimit, rateLimitHeaders } from "@/lib/api/respond";
 
 export const dynamic = "force-dynamic";
-// Backer exports and log searches can take a few seconds; well under this.
-export const maxDuration = 60;
+// Most tools answer in seconds. run_ai_service (the daily automation) and a
+// full-audience send_email_campaign can run for minutes; the AI run route
+// itself allows 300.
+export const maxDuration = 300;
 
 /**
  * Run one tool. Body is the tool's arguments as a JSON object; the response

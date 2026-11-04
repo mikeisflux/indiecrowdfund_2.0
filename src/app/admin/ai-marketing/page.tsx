@@ -6,6 +6,7 @@ import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Dialog,
@@ -273,6 +274,10 @@ export default function AIMarketingPage() {
     quietHoursStart: "22:00",
     quietHoursEnd: "08:00",
   });
+  // Standing plain-English instructions to the marketing AI; injected into
+  // every campaign / newsletter / social / copy prompt. Separate from the
+  // toggles object because the settings tab components type that shape.
+  const [marketingDirectives, setMarketingDirectives] = useState("");
 
   // Behavior tracking settings
   const [trackingSettings, setTrackingSettings] = useState({
@@ -325,6 +330,7 @@ export default function AIMarketingPage() {
             quietHoursStart: s.aiQuietHoursStart ?? prev.quietHoursStart,
             quietHoursEnd: s.aiQuietHoursEnd ?? prev.quietHoursEnd,
           }));
+          setMarketingDirectives(s.aiMarketingDirectives ?? "");
           setTrackingSettings(prev => ({
             ...prev,
             trackPageViews: s.aiTrackPageViews ?? prev.trackPageViews,
@@ -417,6 +423,7 @@ export default function AIMarketingPage() {
             aiDailyEmailLimit: aiSettings.dailyEmailLimit,
             aiQuietHoursStart: aiSettings.quietHoursStart,
             aiQuietHoursEnd: aiSettings.quietHoursEnd,
+            aiMarketingDirectives: marketingDirectives,
             aiTrackPageViews: trackingSettings.trackPageViews,
             aiTrackScrollDepth: trackingSettings.trackScrollDepth,
             aiTrackTimeOnPage: trackingSettings.trackTimeOnPage,
@@ -904,6 +911,25 @@ export default function AIMarketingPage() {
         </TabsContent>
         {/* AI Settings Tab */}
         <TabsContent value="settings">
+          <Card className="mb-6">
+            <CardContent className="space-y-3 p-5">
+              <div>
+                <h3 className="font-semibold">Standing instructions for the marketing AI</h3>
+                <p className="text-sm text-muted-foreground">
+                  Plain English. Added to every prompt the AI uses for campaign emails, the creator newsletter, social posts and
+                  marketing copy. Examples: &ldquo;This month lead with the Tech category.&rdquo; &ldquo;Always mention the Shopify
+                  store.&rdquo; &ldquo;No exclamation marks.&rdquo; Saved with the Save button above. The Agent API can set this too.
+                </p>
+              </div>
+              <Textarea
+                value={marketingDirectives}
+                onChange={(e) => setMarketingDirectives(e.target.value.slice(0, 4000))}
+                placeholder="e.g. Push the Panzer Girl and GI Hoes campaigns this week. Keep subject lines under 50 characters. Mention that backers can pay with a saved card."
+                rows={5}
+              />
+              <p className="text-xs text-muted-foreground">{marketingDirectives.length}/4000</p>
+            </CardContent>
+          </Card>
           <AISettingsTab
             aiSettings={aiSettings}
             setAiSettings={setAiSettings}

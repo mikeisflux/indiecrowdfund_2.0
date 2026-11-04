@@ -9,6 +9,13 @@ vi.mock("@/lib/db", () => ({
   },
 }));
 vi.mock("@/lib/stats", () => ({ getBatchProjectStats: vi.fn().mockResolvedValue(new Map()) }));
+// The marketing tools call the admin AI run route in-process; that module
+// drags in NextAuth, which needs a request scope. Stub it: only the
+// registry behaviour is under test here.
+vi.mock("@/app/api/admin/ai-marketing/run/route", () => ({ POST: vi.fn() }));
+vi.mock("@/lib/auth", () => ({ auth: vi.fn() }));
+vi.mock("@/lib/social/twitter", () => ({ getTwitterCredentials: vi.fn(), postTweet: vi.fn(), uploadTwitterMedia: vi.fn() }));
+vi.mock("@/lib/social/publicist", () => ({ generateSocialPosts: vi.fn() }));
 
 import { toolCatalog, runTool, getTool, listTools } from "@/lib/agent-api";
 import { defineTool, SCOPE_AGENT_READ, SCOPE_AGENT_WRITE } from "@/lib/agent-api/registry";
@@ -44,6 +51,10 @@ describe("agent API registry", () => {
       "email_engagement", "user_email_history", "email_campaigns", "newsletter_stats", "email_deliverability",
       "sentinel_errors", "sentinel_error_detail", "search_logs", "agent_call_log",
       "extend_campaign", "set_campaign_goal", "add_newsletter_subscribers", "create_email_campaign_draft",
+      "match_emails", "create_email_campaign", "preview_email_campaign", "send_email_campaign",
+      "run_ai_service", "ai_status", "ai_run_history", "update_ai_settings", "get_marketing_directives", "set_marketing_directives",
+      "smart_segments", "generate_marketing_copy", "social_posts", "create_social_post", "publish_social_post", "generate_social_posts",
+      "run_sql", "server_status",
     ]) {
       expect(names, `missing tool ${expected}`).toContain(expected);
     }

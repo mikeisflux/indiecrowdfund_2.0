@@ -53,7 +53,7 @@ of dollars (`93.00` → `93`), never cents.
 Use this on startup to fail fast on bad credentials.
 
 ```json
-{ "ok": true, "version": "1.0", "key": { "name": "NAS MCP server", "scopes": ["agent:read"] }, "tools": 24, "catalog": "/api/agent/v1/tools" }
+{ "ok": true, "version": "1.0", "key": { "name": "NAS MCP server", "scopes": ["agent:read"] }, "tools": 42, "catalog": "/api/agent/v1/tools" }
 ```
 
 ### `GET /api/agent/v1/tools` — tool catalog
@@ -108,12 +108,19 @@ Failure:
 | 429 | `rate_limited` | Over 120 calls/minute for this key. Back off until `X-RateLimit-Reset` (unix seconds). |
 | 500 | `tool_error` | Server-side failure; already logged in Sentinel. Retry once, then surface. |
 
+Mutating tools also return their own codes in the 400 range (`already_sent`,
+`sending`, `conflict`, `no_content` from `send_email_campaign`, for example).
+The message is always written to be shown to the user as-is.
+
 Every call, successful or not, is written to the Agent API call log that admins
 see in `/admin/agent-api`: key, tool, arguments (anything named like a secret is
 redacted), outcome, duration, and response size.
 
-**Timeouts.** Tools return within a few seconds; `project_backers` with
-`limit: 1000` and `search_logs` can take up to ~10 s. Use a 60 s client timeout.
+**Timeouts.** Most tools return within a few seconds; `project_backers` with
+`limit: 1000`, `search_logs` and `smart_segments` can take ~10 s. `run_ai_service`
+with `runAutomation`, and `send_email_campaign` to a large audience, can run for
+minutes: the server allows 300 s. Use a 300 s client timeout for those two and
+60 s for everything else.
 
 ## 3. The tools
 
@@ -168,11 +175,94 @@ together and cannot collide with Shopify/eBay names.
 |---|---|---|
 | `extend_campaign` | `project*`, `days*` (1–90), `confirm*` | Moves a LIVE/FUNDED campaign's end date out. Refuses FAILED/CANCELLED. |
 | `set_campaign_goal` | `project*`, `goal*`, `confirm*` | Changes the funding goal. |
-| `add_newsletter_subscribers` | `emails*` (≤500), `tags`, `source`="agent", `confirm*` | Adds/re-activates newsletter subscribers. Blocklisted and opted-out addresses are skipped and listed in the result. |
+| `add_newsletter_subscribers` | `subscribers*` (objects: `email`, `name`, `tags`; ≤5000) or `emails` (strings), `tags`, `source`="agent", `confirm*` | Bulk import, e.g. a Shopify customer export: creates new subscribers with names, merges tags into existing ones, re-activates. Blocklisted and opted-out addresses are skipped and listed in the result. |
 | `create_email_campaign_draft` | `name*`, `subject*`, `html*`, `targetAudience`="all", `confirm*` | Creates a DRAFT in Admin → Email. Never sends. |
 
-There are deliberately **no** tools that refund, charge, pay out, edit a pledge,
-or send email. Those stay behind the admin UI.
+### Cross-system matching (Shopify / eBay → IndieCrowdfund)
+
+| Tool | Arguments | Returns |
+|---|---|---|
+| `match_emails` | `emails*` (≤5000), `include`=all / not_on_platform / account_never_backed / never_backed / backers, `format`=json/csv | Per address: `status` (backer / account_never_backed / not_on_platform), name, pledges, total, last pledge, newsletter state, unsubscribed, blocklisted, `reachable`. Plus a summary. |
+
+### Email campaigns, end to end — `agent:write`, `confirm: true`
+
+| Tool | Arguments | Effect |
+|---|---|---|
+| `create_email_campaign` | `name*`, `mode*` (ai / html), ai: `subjectHint`, `introMessage`, `projectCategory`, `projectSlugs`, `includeProjectCards`; html: `subject`, `html`, `preheader`, `wrapInBrandShell`; `audience`=subscriber / backer / creator / retailer / all, `segmentTags`, `scheduleFor`, `confirm*` | Creates the campaign (DRAFT, or SCHEDULED with `scheduleFor`) using the same AI writer and branded template as Admin → AI Marketing. Returns the id, subject, live recipient count and a text preview. |
+| `preview_email_campaign` *(read)* | `campaignId*`, `includeHtml`=false | Subject, status, audience, live recipient count, sample recipients, text rendering, stats. |
+| `send_email_campaign` | `campaignId*`, `testTo`, `resend`=false, `confirm*` | With `testTo`: one `[TEST]` copy to that address, nothing else changes. Without: queues to the whole audience through the same path as the admin Send button and marks it SENT. |
+
+Audiences map to the same lists the admin UI uses. `segmentTags` narrows
+`subscriber` / `all` to newsletter subscribers carrying those tags, which is how
+an arbitrary outreach list is targeted: `add_newsletter_subscribers` with a tag,
+then `create_email_campaign` with `segmentTags: [thatTag]`.
+
+### Driving the built-in AI marketing
+
+| Tool | Arguments | Effect |
+|---|---|---|
+| `ai_status` *(read)* | — | Feature toggles, limits, quiet hours, standing directives, last automated campaign and recent automation performance. |
+| `ai_run_history` *(read)* | `serviceId`, `limit`=30 | Run log for every AI service (manual, cron, agent). |
+| `smart_segments` *(read)* | — | The AI's behaviour-based segments with sizes. |
+| `generate_marketing_copy` *(read)* | `project*` | Tagline, subtitle, email subject, social posts and CTA for one campaign. Returns text; publishes nothing. |
+| `get_marketing_directives` *(read)* | — | The standing instructions the marketing AI follows. |
+| `set_marketing_directives` | `directives*` (≤4000 chars), `mode`=replace / append, `confirm*` | Plain-English instructions injected into every marketing prompt from then on: campaign emails, the creator newsletter, social posts, marketing copy. "Lead with the Tech category this month", "always mention the Shopify store", "no exclamation marks". |
+| `update_ai_settings` | any of `emailPersonalization`, `predictiveAnalytics`, `smartSegmentation`, `sendTimeOptimization`, `contentOptimization`, `abTesting`, `autoTagging`, `emailFrequencyCap`, `dailyEmailLimit`, `quietHoursStart`, `quietHoursEnd`; `confirm*` | Flip features and limits. Only passed fields change. |
+| `run_ai_service` | `action*` (runAutomation / runSegmentation / runPredictiveAnalytics / runSendTimeOptimization / runAutoTagging / runUserProfiling / testEmailPersonalization / testContentOptimization), `params`, `confirm*` | Runs the service exactly as the Run Now buttons do, logged in the AI run history. `runAutomation` is the daily orchestrator and **sends** a campaign when eligible. Can take minutes. |
+
+### Social publicist (X)
+
+| Tool | Arguments | Effect |
+|---|---|---|
+| `social_posts` *(read)* | `status` (array), `limit`=25 | The queue: pending, posted, failed, rejected. |
+| `create_social_post` | `content*` (≤280), `imageUrl`, `project`, `confirm*` | Queues a hand-written post as PENDING. |
+| `publish_social_post` | `postId*`, `confirm*` | Posts a pending/approved post to X now. Irreversible. |
+| `generate_social_posts` | `confirm*` | Runs the publicist's generation pass (launches, milestones, ending soon, weekly roundup). |
+
+### The box
+
+| Tool | Arguments | Returns |
+|---|---|---|
+| `run_sql` *(read)* | `sql*`, `maxRows`=200 (≤500) | Rows from a single read-only SELECT / WITH / EXPLAIN, inside a READ ONLY transaction with a 15 s timeout. Write keywords and secret-bearing columns are refused. Table and column names are quoted CamelCase as in the Prisma schema. |
+| `server_status` *(read)* | — | pm2 workers, memory, disk, uptime, database reachability, email queue depth, last AI run, unresolved errors in 24 h. |
+
+There are deliberately **no** tools that refund, charge, pay out, or edit a
+pledge, and no open shell. Money stays behind the admin UI where a human
+clicks; `run_sql` is the "run a command on the box" tool, scoped to reading.
+
+## 3a. Worked example: "find Shopify customers who haven't backed us, and email them"
+
+This is the end-to-end flow the server exists for. The NAS MCP server already
+has the Shopify tools; the IndieCrowdfund tools close the loop.
+
+1. **Pull the customers** with the existing Shopify tools (`shopify_list_customers`
+   or a GraphQL customers query), collecting email addresses.
+2. **Compare**: `icf_match_emails { emails: [...], include: "never_backed", format: "csv" }`.
+   The summary says how many are backers already, how many have an account but
+   never pledged, how many are unknown to the platform. `reachable: false`
+   rows are blocklisted or opted out; leave them out.
+3. **Import them**: `icf_add_newsletter_subscribers { subscribers: [{ email, name }, …
+   the reachable ones], tags: ["shopify-not-backer"], source: "shopify", confirm: true }`.
+   Up to 5000 per call; names carry over so the email can say "Hi Mike". Blocklisted
+   and opted-out addresses are skipped server-side even if passed. The same call
+   with every Shopify customer (no filter) is a plain "import the store list".
+4. **Write the email**: `icf_create_email_campaign { name: "Shopify customers →
+   first pledge", mode: "ai", introMessage: "You've bought from our store; here's
+   what's funding right now…", audience: "subscriber", segmentTags:
+   ["shopify-not-backer"], confirm: true }`. Or `mode: "html"` with your own copy.
+   The response includes the live recipient count.
+5. **Check it**: `icf_preview_email_campaign`, then `icf_send_email_campaign
+   { campaignId, testTo: "you@…", confirm: true }` and read the test copy.
+6. **Send**: show the user the recipient count and subject, get a yes, then
+   `icf_send_email_campaign { campaignId, confirm: true }`.
+7. **Watch it**: `icf_email_campaigns` for opens and clicks over the next days;
+   `icf_match_emails` again in a month to see who converted.
+
+To make this a standing behaviour of the built-in AI rather than a one-off,
+`icf_set_marketing_directives { directives: "Subscribers tagged shopify-not-backer
+are store customers who have never backed a campaign; when featuring campaigns,
+remind them their store purchases and pledges share one account.", mode: "append",
+confirm: true }`, then let `runAutomation` do its daily pass.
 
 ## 4. Wrapping it in the MCP server
 

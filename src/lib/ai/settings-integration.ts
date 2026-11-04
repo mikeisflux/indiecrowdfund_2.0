@@ -33,6 +33,8 @@ export interface AISettings {
   dailyEmailLimit: number;
   quietHoursStart: string;
   quietHoursEnd: string;
+  /** Standing plain-English instructions from the admins to the marketing AI. */
+  marketingDirectives: string;
 }
 
 /**
@@ -59,6 +61,7 @@ export async function getAISettings(): Promise<AISettings> {
       aiDailyEmailLimit: true,
       aiQuietHoursStart: true,
       aiQuietHoursEnd: true,
+      aiMarketingDirectives: true,
     },
   });
 
@@ -79,6 +82,7 @@ export async function getAISettings(): Promise<AISettings> {
     dailyEmailLimit: settings?.aiDailyEmailLimit ?? 500,
     quietHoursStart: settings?.aiQuietHoursStart ?? "22:00",
     quietHoursEnd: settings?.aiQuietHoursEnd ?? "08:00",
+    marketingDirectives: (settings?.aiMarketingDirectives ?? "").trim(),
   };
 
   settingsCache = aiSettings;
