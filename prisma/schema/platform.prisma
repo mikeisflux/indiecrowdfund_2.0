@@ -705,11 +705,43 @@ model ApiKey {
   lastUsedIp  String?
   revokedById String?
 
+  agentCalls AgentApiCall[] @relation("AgentApiCalls")
+
   @@index([key])
   @@index([prefix])
   @@index([status])
   @@index([createdById])
   @@index([userId])
+}
+
+// ============================================
+// AGENT API CALL LOG
+// ============================================
+//
+// One row per tool call made through /api/agent/v1 — the API the NAS-hosted
+// MCP server uses to give Claude read (and a few guarded write) access to
+// the platform. Every call is logged, including rejected ones, so an admin
+// can see exactly what an agent asked for and what it got back.
+// Added by migrations/add_agent_api_calls.sql.
+model AgentApiCall {
+  id       String  @id @default(cuid())
+  apiKeyId String?
+  apiKey   ApiKey? @relation("AgentApiCalls", fields: [apiKeyId], references: [id], onDelete: SetNull)
+
+  tool       String
+  args       Json? // As received, after redaction of anything secret-shaped
+  ok         Boolean
+  statusCode Int
+  durationMs Int
+  error      String?
+  resultSize Int? // bytes of JSON returned, for spotting runaway pulls
+  ip         String?
+
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([apiKeyId, createdAt])
+  @@index([tool])
 }
 
 enum ApiEnvironment {

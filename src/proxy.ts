@@ -40,6 +40,10 @@ const csrfExemptRoutes = [
   // sweep had a full log of nothing but 403s. Jobs invoked with GET were
   // unaffected, which is why this stayed hidden.
   "/api/cron",
+  // Agent API (NAS-hosted MCP server). Same reasoning as /api/cron: every
+  // call authenticates with an API key + secret in headers, never with a
+  // session cookie, so there is no ambient credential for CSRF to ride on.
+  "/api/agent/",
   "/api/admin/pledges/recover-dc", // Payment recovery; authed by CRON_SECRET bearer or SUPER_ADMIN session in-route
   "/api/admin/grant-agreement-request", // Same: bearer or admin session in-route
   "/api/admin/chargebacks/notify", // Same: bearer or admin session in-route
