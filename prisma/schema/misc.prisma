@@ -633,3 +633,31 @@ model RedemptionBonusApplication {
   @@index([bonusLedgerId])
   @@index([redemptionId])
 }
+
+// ============================================
+// SUPPORT CHAT IDENTITY VERIFICATION
+// ============================================
+//
+// Before the support bot shows or escalates anything personal (orders,
+// downloads, email history) it emails a 6-digit code to the account's
+// address and the SERVER checks it — the model never sees the code and
+// cannot skip the step. One row per code issued; a chat is "verified"
+// while a row for its chatToken has verifiedAt within the last 30 minutes.
+// Added by migrations/add_support_verification.sql.
+model SupportVerification {
+  id        String  @id @default(cuid())
+  chatToken String // random id the chat widget keeps for the browser session
+  email     String // normalised; the address the code was sent to
+  userId    String? // account that owns the email, if any
+  codeHash  String // sha256(code + chatToken); never the code itself
+  attempts  Int     @default(0)
+
+  expiresAt  DateTime
+  verifiedAt DateTime?
+  ip         String?
+
+  createdAt DateTime @default(now())
+
+  @@index([chatToken, createdAt])
+  @@index([email, createdAt])
+}

@@ -23,6 +23,23 @@ interface ChatMessage {
 const GREETING =
   "Thank you for contacting ICF Support! I will be your buffer between our disgruntled and grumpy web developer!\n\nWhat can I help you with?";
 
+// Per-browser-session id for the support verification flow. sessionStorage
+// so it dies with the tab; a fresh tab means a fresh verification.
+function getChatToken(): string | undefined {
+  if (typeof window === "undefined") return undefined;
+  try {
+    const key = "icf-support-chat-token";
+    let token = window.sessionStorage.getItem(key);
+    if (!token) {
+      token = typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      window.sessionStorage.setItem(key, token);
+    }
+    return token;
+  } catch {
+    return undefined;
+  }
+}
+
 export function SupportChatWidget() {
   // Hide on admin routes — admins have other tools and don't need a
   // customer-facing chatbot popping up over their dashboards.
@@ -82,6 +99,9 @@ function SupportChatWidgetInner() {
         body: JSON.stringify({
           messages: apiMessages,
           pageUrl: typeof window !== "undefined" ? window.location.href : undefined,
+          // Ties the email-code identity check to this browser session so a
+          // verified chat stays verified across messages.
+          chatToken: getChatToken(),
         }),
       });
       const data = await res.json().catch(() => ({}));

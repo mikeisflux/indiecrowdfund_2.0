@@ -118,12 +118,15 @@ export async function runTool(name: string, rawArgs: unknown, ctx: ToolContext):
         resultSize = null;
       }
     }
+    // Internal callers (the support chatbot) have no ApiKey row; their
+    // calls are logged with the caller name in place of a key.
+    const isInternal = ctx.key.id.startsWith("internal:");
     void db.agentApiCall
       .create({
         data: {
-          apiKeyId: ctx.key.id,
+          apiKeyId: isInternal ? null : ctx.key.id,
           tool: name,
-          args: redactArgs(rawArgs) as object,
+          args: { ...(redactArgs(rawArgs) as object), ...(isInternal ? { _caller: ctx.key.name } : {}) },
           ok: res.ok,
           statusCode: res.status,
           durationMs,
