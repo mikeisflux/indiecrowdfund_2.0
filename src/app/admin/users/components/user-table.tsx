@@ -48,6 +48,7 @@ interface UserTableProps {
   onDeleteUser: (user: User) => void;
   onBanUser: (user: User) => void;
   onUnbanUser: (user: User) => void;
+  onReverseChargebacks: (user: User) => void;
 }
 
 type ActionHandlers = Omit<UserTableProps, "users" | "isLoading" | "pagination" | "currentPage" | "onPageChange">;
@@ -98,6 +99,7 @@ function UserActionsMenu({ user, handlers }: { user: User; handlers: ActionHandl
     onDeleteUser,
     onBanUser,
     onUnbanUser,
+    onReverseChargebacks,
   } = handlers;
 
   return (
@@ -179,13 +181,23 @@ function UserActionsMenu({ user, handlers }: { user: User; handlers: ActionHandl
             Unban User
           </DropdownMenuItem>
         ) : (
-          <DropdownMenuItem
-            className="text-orange-600 focus:text-orange-700 focus:bg-orange-50"
-            onClick={(e) => { e.stopPropagation(); onBanUser(user); }}
-          >
-            <Ban className="mr-2 h-4 w-4" />
-            Ban User &amp; Block IP
-          </DropdownMenuItem>
+          <>
+            {/* For a backer unbanned before unbanning swept recoups: refund
+                the creators who were charged for their withdrawn disputes. */}
+            <DropdownMenuItem
+              onClick={(e) => { e.stopPropagation(); onReverseChargebacks(user); }}
+            >
+              <UserCheck className="mr-2 h-4 w-4" />
+              Refund Chargeback Fees
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              className="text-orange-600 focus:text-orange-700 focus:bg-orange-50"
+              onClick={(e) => { e.stopPropagation(); onBanUser(user); }}
+            >
+              <Ban className="mr-2 h-4 w-4" />
+              Ban User &amp; Block IP
+            </DropdownMenuItem>
+          </>
         )}
         <DropdownMenuItem
           className="text-red-600 focus:text-red-700 focus:bg-red-50"
@@ -216,6 +228,7 @@ export function UserTable({
   onDeleteUser,
   onBanUser,
   onUnbanUser,
+  onReverseChargebacks,
 }: UserTableProps) {
   const handlers: ActionHandlers = {
     onViewUser,
@@ -229,6 +242,7 @@ export function UserTable({
     onDeleteUser,
     onBanUser,
     onUnbanUser,
+    onReverseChargebacks,
   };
 
   const startEntry = (pagination.page - 1) * pagination.limit + 1;

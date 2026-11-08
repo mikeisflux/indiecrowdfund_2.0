@@ -137,6 +137,29 @@ defineTool({
 });
 
 defineTool({
+  name: "reverse_backer_chargebacks",
+  description:
+    "For a backer whose disputes were withdrawn or won by the platform: refund every creator who was charged a chargeback recoup (disputed amount + dispute fee) for that backer's pledges, and waive any still uncollected. Optionally restore the pledges from CHARGEBACK to COMPLETED when the money stayed with the campaign. Run with dryRun first; it lists each creator and amount. This also runs automatically when an admin unbans the backer.",
+  scope: SCOPE_AGENT_WRITE,
+  mutating: true,
+  input: z.object({
+    email: z.string().email().describe("The backer's account email."),
+    restorePledges: z.boolean().default(false).describe("Also reinstate their CHARGEBACK pledges. Only when the disputes were withdrawn and the money stayed."),
+    dryRun: z.boolean().default(false).describe("Preview only; nothing changes."),
+    reason: z.string().max(300).default("Disputes resolved in the backer's favour"),
+    confirm: Confirm,
+  }),
+  handler: async (a, ctx) => {
+    const user = await db.user.findFirst({ where: { email: { equals: a.email, mode: "insensitive" } }, select: { id: true } });
+    if (!user) throw new ToolError(`No account with email "${a.email}".`, "not_found", 404);
+    const { reverseChargebacksForBacker } = await import("@/lib/payments/chargeback-reversal");
+    const result = await reverseChargebacksForBacker({ userId: user.id, adminId: `agent:${ctx.key.name}`, reason: a.reason, restorePledges: a.restorePledges, dryRun: a.dryRun });
+    log.info({ userId: user.id, dryRun: a.dryRun, summary: result.summary, keyId: ctx.key.id }, "agent reversed backer chargebacks");
+    return result;
+  },
+});
+
+defineTool({
   name: "create_email_campaign_draft",
   description:
     "Create a marketing email campaign as a DRAFT in Admin → Email. It is never sent by this tool: an admin reviews and sends it from the dashboard. targetAudience is a free label the admin picks from in the UI (e.g. all, backers, creators).",

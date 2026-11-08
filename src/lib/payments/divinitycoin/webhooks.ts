@@ -23,6 +23,8 @@ import {
 } from "./payments";
 import { db } from "@/lib/db";
 import { applyChargeback, findPledgeForDispute } from "@/lib/payments/chargebacks";
+import { resolveDisputeForPledge } from "@/lib/payments/chargeback-reversal";
+import { alertAdmins } from "@/lib/admin-alerts";
 
 /**
  * Verify webhook signature from DivinityCoin
@@ -277,6 +279,57 @@ export async function handleDivinityCoinWebhook(
         evidenceDueBy: request.data.evidenceDueBy,
       });
       return { success: true, message: result.message };
+    }
+
+    // The dispute ended. Only an outcome in our favour reverses anything:
+    // the creator who was charged the recoup gets it back, the pledge comes
+    // back to life, and the backer's chargeback ban lifts once none of their
+    // disputes remain open. A loss changes nothing (the chargeback stands);
+    // an unknown status is logged and left for an admin.
+    case "dispute.closed":
+    case "dispute.updated":
+    case "dispute.won":
+    case "dispute.withdrawn":
+    case "chargeback.closed":
+    case "chargeback.reversed": {
+      if (!request.data) {
+        return { success: false, error: "Dispute data is required" };
+      }
+      const status = String(request.data.status || "").toLowerCase();
+      const outcome: "withdrawn" | "won" | null =
+        request.event === "dispute.withdrawn" || request.event === "chargeback.reversed" || ["withdrawn", "warning_closed", "charge_refunded", "canceled", "cancelled"].includes(status)
+          ? "withdrawn"
+          : request.event === "dispute.won" || status === "won"
+            ? "won"
+            : null;
+      if (!outcome) {
+        if (status === "lost") {
+          return { success: true, message: "Dispute lost; chargeback stands" };
+        }
+        // dispute.updated with a mid-flight status (needs_response, under_review…)
+        return { success: true, message: `Dispute status "${status || "unknown"}" noted; no reversal` };
+      }
+      const pledgeId = await findPledgeForDispute({
+        pledgeId: request.data.pledgeId,
+        paymentIntentId: request.data.stripePaymentIntentId || request.data.paymentIntentId,
+        paymentId: request.data.paymentId,
+      });
+      if (!pledgeId) {
+        return { success: true, message: "No pledge matched this closed dispute" };
+      }
+      const resolved = await resolveDisputeForPledge({
+        pledgeId,
+        outcome,
+        processor: "DivinityCoin",
+        disputeId: request.data.disputeId,
+      });
+      await alertAdmins({
+        title: `Dispute ${outcome}: creator refunded ${resolved.refundedTotal > 0 ? `$${resolved.refundedTotal.toFixed(2)}` : "nothing owed"}`,
+        message: `${resolved.message}\nPledge ${pledgeId}.`,
+        actionUrl: "/admin/payouts",
+        email: false,
+      }).catch(() => {});
+      return { success: true, message: resolved.message };
     }
 
     case "checkout.completed":

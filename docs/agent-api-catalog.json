@@ -816,6 +816,48 @@
     }
   },
   {
+    "name": "reverse_backer_chargebacks",
+    "description": "For a backer whose disputes were withdrawn or won by the platform: refund every creator who was charged a chargeback recoup (disputed amount + dispute fee) for that backer's pledges, and waive any still uncollected. Optionally restore the pledges from CHARGEBACK to COMPLETED when the money stayed with the campaign. Run with dryRun first; it lists each creator and amount. This also runs automatically when an admin unbans the backer.",
+    "scope": "agent:write",
+    "mutating": true,
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "email": {
+          "type": "string",
+          "format": "email",
+          "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$",
+          "description": "The backer's account email."
+        },
+        "restorePledges": {
+          "default": false,
+          "description": "Also reinstate their CHARGEBACK pledges. Only when the disputes were withdrawn and the money stayed.",
+          "type": "boolean"
+        },
+        "dryRun": {
+          "default": false,
+          "description": "Preview only; nothing changes.",
+          "type": "boolean"
+        },
+        "reason": {
+          "default": "Disputes resolved in the backer's favour",
+          "type": "string",
+          "maxLength": 300
+        },
+        "confirm": {
+          "type": "boolean",
+          "const": true,
+          "description": "Must be true. Send only after the user has approved the change."
+        }
+      },
+      "required": [
+        "email",
+        "confirm"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
     "name": "create_email_campaign_draft",
     "description": "Create a marketing email campaign as a DRAFT in Admin → Email. It is never sent by this tool: an admin reviews and sends it from the dashboard. targetAudience is a free label the admin picks from in the UI (e.g. all, backers, creators).",
     "scope": "agent:write",

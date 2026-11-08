@@ -261,6 +261,12 @@ export default function UsersPage() {
 
     try {
       const removeIPBlock = confirm("Also remove the IP block so they can create new accounts?");
+      // Unbanning sweeps the backer's chargeback recoups and refunds the
+      // creators who were charged. Whether the pledges themselves come back
+      // depends on where the money ended up, which only the admin knows.
+      const restorePledges = confirm(
+        "Were their disputes withdrawn (the money stayed with the campaigns)?\n\nOK = refund creators' chargeback fees AND restore the pledges to Completed.\nCancel = refund the creators' chargeback fees only; pledges stay marked as chargebacks."
+      );
 
       const response = await apiFetch("/api/admin/users", {
         method: "PATCH",
@@ -268,13 +274,17 @@ export default function UsersPage() {
         body: JSON.stringify({
           userId: user.id,
           action: "UNBAN_USER",
-          data: { removeIPBlock },
+          data: { removeIPBlock, restorePledges },
         }),
       });
 
       if (response.ok) {
+        const result = await response.json().catch(() => ({}));
         fetchUsers();
         toast.success(`${user.name || user.email} has been unbanned`);
+        if (result?.chargebackReversal?.summary) {
+          toast.info(`Chargebacks: ${result.chargebackReversal.summary}`, { duration: 12000 });
+        }
       } else {
         const error = await response.json();
         toast.error(error.error || "Failed to unban user");
@@ -282,6 +292,47 @@ export default function UsersPage() {
     } catch (error) {
       console.error("Error unbanning user:", error);
       toast.error("Failed to unban user");
+    }
+  };
+
+  // Dry run first so the admin sees exactly which creators get what back,
+  // then the real sweep. For backers unbanned before unbanning did this.
+  const handleReverseChargebacks = async (user: User) => {
+    const run = async (dryRun: boolean, restorePledges: boolean) => {
+      const response = await apiFetch("/api/admin/users", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: user.id, action: "REVERSE_CHARGEBACKS", data: { dryRun, restorePledges } }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error || "Failed to reverse chargebacks");
+      return data.chargebackReversal as {
+        summary: string;
+        recoups: { projectTitle: string; creatorEmail: string | null; amount: number; action: string; error?: string }[];
+        pledges: { projectTitle: string; amount: number; action: string }[];
+      };
+    };
+    try {
+      const preview = await run(true, false);
+      if (preview.recoups.length === 0 && preview.pledges.length === 0) {
+        toast.info(`${user.name || user.email} has no chargeback recoups or disputed pledges.`);
+        return;
+      }
+      const lines = preview.recoups
+        .filter((r) => r.action !== "skipped")
+        .map((r) => `• $${r.amount.toFixed(2)} → ${r.creatorEmail || "creator"} (${r.projectTitle}) [${r.action.replace("would_", "")}]`);
+      const pledgeLine = preview.pledges.length ? `\n${preview.pledges.length} pledge(s) currently marked CHARGEBACK.` : "";
+      if (!confirm(`Refund chargeback fees for ${user.name || user.email}?\n\n${lines.join("\n") || "Nothing to refund."}${pledgeLine}\n\nContinue?`)) return;
+      const restorePledges =
+        preview.pledges.length > 0 &&
+        confirm("Were the disputes withdrawn (money stayed with the campaigns)?\n\nOK = also restore those pledges to Completed.\nCancel = refund fees only.");
+      const result = await run(false, restorePledges);
+      fetchUsers();
+      toast.success(result.summary, { duration: 12000 });
+      const failed = result.recoups.filter((r) => r.action === "failed");
+      if (failed.length) toast.error(`${failed.length} refund(s) failed: ${failed.map((f) => f.error).join("; ")}`, { duration: 15000 });
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to reverse chargebacks");
     }
   };
 
@@ -605,6 +656,7 @@ export default function UsersPage() {
             onDeleteUser={handleDeleteUser}
             onBanUser={handleBanUser}
             onUnbanUser={handleUnbanUser}
+            onReverseChargebacks={handleReverseChargebacks}
           />
         </TabsContent>
 

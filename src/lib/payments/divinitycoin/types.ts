@@ -34,7 +34,18 @@ export type DivinityCoinEventType =
   // now so the handler is live the moment they start sending them, rather
   // than a dispute arriving to a switch that silently ignores it.
   | "dispute.created"
-  | "chargeback.created";
+  | "chargeback.created"
+  // The dispute ended. `status` in the payload says how: won / warning_closed
+  // / withdrawn mean the money stayed with us; lost means it did not. On a
+  // win or withdrawal the creator's recoup is refunded, the pledge is
+  // reinstated and the backer's chargeback ban lifts once they have no
+  // other open dispute (lib/payments/chargeback-reversal.ts).
+  | "dispute.closed"
+  | "dispute.updated"
+  | "dispute.won"
+  | "dispute.withdrawn"
+  | "chargeback.closed"
+  | "chargeback.reversed";
 
 // Webhook request structure from DivinityCoin
 export interface DivinityCoinWebhookRequest {

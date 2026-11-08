@@ -176,6 +176,7 @@ together and cannot collide with Shopify/eBay names.
 | `extend_campaign` | `project*`, `days*` (1–90), `confirm*` | Moves a LIVE/FUNDED campaign's end date out. Refuses FAILED/CANCELLED. |
 | `set_campaign_goal` | `project*`, `goal*`, `confirm*` | Changes the funding goal. |
 | `add_newsletter_subscribers` | `subscribers*` (objects: `email`, `name`, `tags`; ≤5000) or `emails` (strings), `tags`, `source`="agent", `confirm*` | Bulk import, e.g. a Shopify customer export: creates new subscribers with names, merges tags into existing ones, re-activates. Blocklisted and opted-out addresses are skipped and listed in the result. |
+| `reverse_backer_chargebacks` | `email*`, `restorePledges`=false, `dryRun`=false, `reason`, `confirm*` | For a backer whose disputes were withdrawn/won: refunds every creator charged a chargeback recoup for that backer's pledges, waives uncollected ones, optionally reinstates the pledges. Run with dryRun first. Also runs automatically on unban and hourly for anyone found unbanned. |
 | `create_email_campaign_draft` | `name*`, `subject*`, `html*`, `targetAudience`="all", `confirm*` | Creates a DRAFT in Admin → Email. Never sends. |
 
 ### Cross-system matching (Shopify / eBay → IndieCrowdfund)

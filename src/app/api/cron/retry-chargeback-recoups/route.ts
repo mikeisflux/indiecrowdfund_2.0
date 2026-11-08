@@ -3,6 +3,8 @@ import { db } from "@/lib/db";
 import { logger } from "@/lib/logger";
 import { formatError } from "@/lib/errors";
 import { attemptRecoupCharge, recoverAllProjects } from "@/lib/payments/chargeback-recoup";
+import { findUnbannedBackersWithRecoups, reverseChargebacksForBacker } from "@/lib/payments/chargeback-reversal";
+import { alertAdmins } from "@/lib/admin-alerts";
 
 const log = logger.child({ module: "cron-retry-chargeback-recoups" });
 
@@ -66,8 +68,45 @@ export async function GET(req: NextRequest) {
       };
     }
 
-    log.info({ ...results, scan }, "Chargeback recoup retry tick");
-    return NextResponse.json({ ok: true, ...results, scan });
+    // Reverse sweep, every tick: a backer who is no longer banned but whose
+    // pledges still carry a charged or open recoup was unbanned by some path
+    // that did not run the reversal (direct SQL, an older build, the unlock
+    // action before it swept). The unban is the admin's decision that the
+    // disputes are resolved, so the creators get their recoups back now
+    // rather than never. Pledges are not reinstated here — only the admin
+    // knows whether the money stayed — so this is the "refund the creator"
+    // half, which is the half that is always right once the ban is lifted.
+    const reversal = { backers: 0, refunded: 0, refundedTotal: 0, waived: 0, failed: 0 };
+    try {
+      const candidates = await findUnbannedBackersWithRecoups(25);
+      for (const c of candidates) {
+        const r = await reverseChargebacksForBacker({
+          userId: c.userId,
+          adminId: "system:unban-sweep",
+          reason: "Backer is no longer banned; disputes treated as resolved (hourly sweep)",
+        });
+        reversal.backers += 1;
+        reversal.refunded += r.recoups.filter((x) => x.action === "refunded").length;
+        reversal.refundedTotal += r.refundedTotal;
+        reversal.waived += r.recoups.filter((x) => x.action === "waived").length;
+        reversal.failed += r.recoups.filter((x) => x.action === "failed").length;
+      }
+      if (reversal.backers > 0) {
+        await alertAdmins({
+          title: `Chargeback sweep: $${reversal.refundedTotal.toFixed(2)} refunded to creators`,
+          message: `${reversal.backers} unbanned backer(s) still had recoups on their pledges. Refunded ${reversal.refunded} charged recoup(s), waived ${reversal.waived} uncollected${reversal.failed ? `, ${reversal.failed} FAILED (see Sentinel)` : ""}. Their pledges remain marked CHARGEBACK; use Refund Chargeback Fees on the user to restore them if the money stayed.`,
+          actionUrl: "/admin/users",
+          email: reversal.failed > 0,
+          throttleKey: "chargeback-unban-sweep",
+          throttleMinutes: 55,
+        }).catch(() => {});
+      }
+    } catch (err) {
+      log.error({ err: formatError(err) }, "unban reversal sweep failed");
+    }
+
+    log.info({ ...results, scan, reversal }, "Chargeback recoup retry tick");
+    return NextResponse.json({ ok: true, ...results, scan, reversal });
   } catch (error) {
     log.error({ err: formatError(error) }, "retry-chargeback-recoups failed");
     return NextResponse.json({ error: "Cron failed" }, { status: 500 });

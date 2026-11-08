@@ -10,6 +10,7 @@ import { TERMS_VERSION } from "@/components/legal/terms-of-service";
 import bcrypt from "bcryptjs";
 import { sendPasswordResetEmail } from "@/lib/email";
 import { auditLog } from "@/lib/audit";
+import { reverseChargebacksForBacker } from "@/lib/payments/chargeback-reversal";
 
 // Force dynamic - this route uses auth/headers
 export const dynamic = "force-dynamic";
@@ -519,6 +520,38 @@ export async function PATCH(req: NextRequest) {
         }
         break;
 
+      case "REVERSE_CHARGEBACKS": {
+        // Sweep a backer's chargeback recoups without touching the ban
+        // state: for people unbanned before this existed, or a dry run to
+        // see what an unban would refund. SUPER_ADMIN only — it moves money
+        // back to creators' cards.
+        if (authResult.role !== "SUPER_ADMIN") {
+          return NextResponse.json({ error: "Only super admins can reverse chargebacks" }, { status: 403 });
+        }
+        const reversal = await reverseChargebacksForBacker({
+          userId,
+          adminId: authResult.user.id,
+          reason: data?.reason || "Disputes resolved in the backer's favour (admin sweep)",
+          restorePledges: data?.restorePledges === true,
+          dryRun: data?.dryRun === true,
+        });
+        if (!reversal.dryRun) {
+          try {
+            auditLog({
+              action: "USER_UNBAN",
+              actorId: authResult.user.id,
+              actorEmail: authResult.user.email || undefined,
+              targetId: userId,
+              targetType: "USER",
+              details: { action, reason: data?.reason, summary: reversal.summary, refundedTotal: reversal.refundedTotal },
+            });
+          } catch (auditErr: unknown) {
+            adminUsersLogger.error({ correlationId, err: String(auditErr) }, "Failed to log audit event");
+          }
+        }
+        return NextResponse.json({ success: true, chargebackReversal: reversal }, { headers: { [CORRELATION_HEADER]: correlationId } });
+      }
+
       case "UNBAN_USER":
         // Only SUPER_ADMIN can unban users
         if (authResult.role !== "SUPER_ADMIN") {
@@ -570,6 +603,27 @@ export async function PATCH(req: NextRequest) {
       }
     });
 
+    // Lifting a ban is the admin's word that the backer's disputes were
+    // resolved in their favour. Sweep their chargeback recoups so creators
+    // who were charged the disputed amount + fee get it back; otherwise the
+    // creator stays out of pocket for a dispute that cost the platform
+    // nothing. Pledges are only reinstated when the admin says the money
+    // stayed with the campaign (data.restorePledges).
+    let chargebackReversal: Awaited<ReturnType<typeof reverseChargebacksForBacker>> | null = null;
+    const liftedBan = action === "UNBAN_USER" || (action === "UNLOCK_ACCOUNT" && !!user.bannedAt);
+    if (liftedBan) {
+      try {
+        chargebackReversal = await reverseChargebacksForBacker({
+          userId,
+          adminId: authResult.user.id,
+          reason: data?.reason || "Account unbanned by administrator; disputes resolved",
+          restorePledges: data?.restorePledges === true,
+        });
+      } catch (err) {
+        adminUsersLogger.error({ correlationId, err: formatError(err), userId }, "Chargeback reversal after unban failed");
+      }
+    }
+
     // Audit log for sensitive actions
     const auditActionMap: Record<string, Parameters<typeof auditLog>[0]["action"]> = {
       UPDATE_ROLE: "USER_ROLE_CHANGE",
@@ -590,7 +644,7 @@ export async function PATCH(req: NextRequest) {
           actorEmail: authResult.user.email || undefined,
           targetId: userId,
           targetType: "USER",
-          details: { action, role: data?.role, reason: data?.reason },
+          details: { action, role: data?.role, reason: data?.reason, ...(chargebackReversal ? { chargebackReversal: chargebackReversal.summary } : {}) },
         });
       } catch (auditErr: unknown) {
         adminUsersLogger.error({ correlationId, err: String(auditErr) }, "Failed to log audit event");
@@ -599,7 +653,8 @@ export async function PATCH(req: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      user: updatedUser
+      user: updatedUser,
+      ...(chargebackReversal ? { chargebackReversal } : {}),
     }, {
       headers: { [CORRELATION_HEADER]: correlationId },
     });

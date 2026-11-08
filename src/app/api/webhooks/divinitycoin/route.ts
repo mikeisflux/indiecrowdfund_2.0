@@ -188,6 +188,19 @@ export async function GET() {
           },
         },
         {
+          event: "dispute.closed",
+          description:
+            "The dispute ended. status 'won', 'warning_closed' or 'withdrawn' (cardholder dropped it) reverses the chargeback: the creator's recoup is refunded, the pledge reinstated, and the backer's ban lifted once they have no other open dispute. status 'lost' changes nothing. 'dispute.won', 'dispute.withdrawn', 'dispute.updated', 'chargeback.closed' and 'chargeback.reversed' are accepted as aliases.",
+          payloadRequired: true,
+          payloadFormat: {
+            disputeId: "string (DC/Stripe dispute id)",
+            status: "string ('won' | 'lost' | 'warning_closed' | 'withdrawn' | 'under_review' …)",
+            stripePaymentIntentId: "string (REQUIRED if pledgeId is absent)",
+            pledgeId: "string (optional)",
+            paymentId: "string (DC payment ID, optional)",
+          },
+        },
+        {
           event: "checkout.completed",
           description: "White-label hosted checkout session reached terminal success. PAYMENT mode also fires payment.succeeded; SETUP mode only fires this event.",
           payloadRequired: true,
