@@ -2,6 +2,7 @@
 
 import { apiFetch } from "@/lib/fetch-utils";
 import { TopUpDialog } from "./components/TopUpDialog";
+import { RewardDetails } from "@/components/rewards/reward-details";
 import { TrackingLink } from "@/components/fulfillment/tracking-link";
 
 import { useState, useEffect } from "react";
@@ -69,6 +70,40 @@ interface RewardOption {
   type: "TIER" | "ADDON";
   quantityAvailable: number | null;
   quantityClaimed: number;
+  imageUrl?: string | null;
+}
+
+// The reward / add-on tile used in the modify panel. Backers were opening
+// the campaign page in a second window to see which cover "GIH1-12" was,
+// because this list showed titles only. Same artwork and description as
+// the campaign page, so they can pick without leaving the dashboard.
+function OptionTile({ option, current }: { option: RewardOption; current?: boolean }) {
+  return (
+    <div className="flex min-w-0 flex-1 items-start gap-3">
+      <div className="relative h-20 w-14 shrink-0 overflow-hidden rounded-md bg-muted">
+        {option.imageUrl ? (
+          <Image src={option.imageUrl} alt={option.title} fill sizes="56px" className="object-cover" />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center">
+            <Package className="h-5 w-5 text-muted-foreground/50" />
+          </div>
+        )}
+      </div>
+      <div className="min-w-0 flex-1">
+        <div className="flex flex-wrap items-center gap-2">
+          <p className="text-sm font-medium">{option.title}</p>
+          {current && (
+            <Badge variant="secondary" className="h-5 px-1.5 text-[10px] uppercase tracking-wide">
+              Current
+            </Badge>
+          )}
+        </div>
+        {option.description && (
+          <RewardDetails description={option.description} descriptionClassName="mt-0.5 text-xs text-muted-foreground" clampLines={2} />
+        )}
+      </div>
+    </div>
+  );
 }
 
 interface PledgeDetails {
@@ -1285,18 +1320,18 @@ function ModifyPanel({
                 <div
                   key={r.id}
                   onClick={() => !soldOut && setSelectedRewardId(r.id)}
-                  className={`flex items-center justify-between p-3 rounded-lg border transition-all ${
+                  className={`flex items-start justify-between p-3 rounded-lg border transition-all ${
                     soldOut ? "opacity-50 cursor-not-allowed" :
                     selectedRewardId === r.id
                       ? "border-primary bg-primary/5 cursor-pointer"
                       : "border-muted hover:border-muted-foreground/50 cursor-pointer"
                   }`}
                 >
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">{r.title}</p>
-                    {soldOut && <p className="text-xs text-red-500">Sold out</p>}
+                  <div className="min-w-0 flex-1">
+                    <OptionTile option={r} current={r.id === pledge.reward?.id} />
+                    {soldOut && <p className="mt-1 text-xs text-red-500">Sold out</p>}
                   </div>
-                  <div className="flex items-center gap-2 ml-2 shrink-0">
+                  <div className="ml-2 flex shrink-0 flex-col items-end gap-1">
                     <span className="text-sm font-semibold">${r.amount.toFixed(2)}</span>
                     {selectedRewardId === r.id && <CheckCircle className="h-4 w-4 text-primary" />}
                   </div>
@@ -1315,12 +1350,17 @@ function ModifyPanel({
             {availableAddons.map(a => {
               const qty = selectedAddons.get(a.id) ?? 0;
               return (
-                <div key={a.id} className="flex items-center justify-between p-3 rounded-lg border">
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">{a.title}</p>
-                    <p className="text-xs text-muted-foreground">${a.amount.toFixed(2)} each</p>
+                <div
+                  key={a.id}
+                  className={`flex items-start justify-between gap-2 rounded-lg border p-3 transition-all ${
+                    qty > 0 ? "border-primary/60 bg-primary/5" : ""
+                  }`}
+                >
+                  <div className="min-w-0 flex-1">
+                    <OptionTile option={a} current={pledge.addons.some((x) => x.id === a.id)} />
+                    <p className="mt-1 text-xs text-muted-foreground">${a.amount.toFixed(2)} each</p>
                   </div>
-                  <div className="flex items-center gap-2 ml-2 shrink-0">
+                  <div className="ml-2 flex shrink-0 items-center gap-2 self-center">
                     <Button
                       variant="outline" size="icon"
                       className="h-7 w-7"
