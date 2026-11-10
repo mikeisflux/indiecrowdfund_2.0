@@ -375,8 +375,11 @@ model AnnouncementBar {
 model PromoPopup {
   id String @id @default(cuid())
 
-  // Settings
-  isActive      Boolean @default(true)
+  // Settings. Off by default: the slideshow interrupted every visitor's first
+  // page view and the owner asked for it gone. Admin → Promo Popup can turn
+  // it back on deliberately. migrations/disable_promo_popup.sql switched
+  // existing rows off.
+  isActive      Boolean @default(false)
   showFrequency String  @default("once_per_session") // once_per_session, once_per_login, once_per_day, every_visit
 
   // Slides stored as JSON array

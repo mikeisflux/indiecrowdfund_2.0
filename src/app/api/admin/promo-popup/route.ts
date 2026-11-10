@@ -142,9 +142,11 @@ export async function GET() {
         await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('seed-promo-popup'))`;
         const existing = await tx.promoPopup.findFirst();
         if (existing) return existing;
+        // Seeded OFF. The default slideshow used to go live the first time an
+        // admin merely opened this page; it should only show when switched on.
         return tx.promoPopup.create({
           data: {
-            isActive: true,
+            isActive: false,
             showFrequency: "once_per_session",
             slides: defaultSlides,
           },
@@ -216,7 +218,7 @@ export async function POST() {
       }
       return tx.promoPopup.create({
         data: {
-          isActive: true,
+          isActive: false,
           showFrequency: "once_per_session",
           slides: defaultSlides,
         },
