@@ -227,6 +227,78 @@ function DiscoverContent() {
     router.push(`/crowdfunds?${params.toString()}`, { scroll: false });
   };
 
+  // Type / category / sort selects, rendered inline on desktop and inside the
+  // Filters sheet on phones. One definition so the two never drift.
+  const renderFilterSelects = (layout: "desktop" | "mobile") => {
+    const w = (desktop: string) => (layout === "desktop" ? desktop : "w-full");
+    return (
+      <>
+        <Select
+          value={projectType}
+          onValueChange={(value) => {
+            setProjectType(value);
+            updateFilters({
+              prelaunch: value === "upcoming" ? "true" : null,
+              scope: value === "all" ? "all" : null,
+            });
+          }}
+        >
+          <SelectTrigger className={w("w-[170px]")}>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {PROJECT_TYPE_OPTIONS.map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                {option.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <Select
+          value={category || "all"}
+          onValueChange={(value) => {
+            const newValue = value === "all" ? "" : value;
+            setCategory(newValue);
+            updateFilters({ category: newValue || null });
+          }}
+        >
+          <SelectTrigger className={w("w-[180px]")}>
+            <SelectValue placeholder="All Categories" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Categories</SelectItem>
+            {PROJECT_CATEGORIES.map((cat) => (
+              <SelectItem key={cat.value} value={cat.value}>
+                {cat.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <Select
+          value={sort}
+          onValueChange={(value) => {
+            setSort(value);
+            updateFilters({ sort: value });
+          }}
+        >
+          <SelectTrigger className={w("w-[160px]")}>
+            <ArrowUpDown className="mr-2 h-4 w-4" />
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {SORT_OPTIONS.map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                {option.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </>
+    );
+  };
+
   const clearFilters = () => {
     setSearch("");
     setCategory("");
@@ -289,8 +361,8 @@ function DiscoverContent() {
 
       {/* Filters Bar */}
       <section className="sticky top-16 z-40 border-b border-border/50 glass-card">
-        <div className="container py-4">
-          <div className="flex flex-wrap items-center gap-4">
+        <div className="container py-2.5 md:py-4">
+          <div className="flex flex-nowrap items-center gap-2 md:flex-wrap md:gap-4">
             {/* Search */}
             <div className="relative flex-1 md:max-w-xs group">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground group-focus-within:text-primary transition-colors" />
@@ -305,76 +377,17 @@ function DiscoverContent() {
               />
             </div>
 
-            {/* Project Type Select (Live vs Upcoming) */}
-            <Select
-              value={projectType}
-              onValueChange={(value) => {
-                setProjectType(value);
-                updateFilters({
-                  prelaunch: value === "upcoming" ? "true" : null,
-                  scope: value === "all" ? "all" : null,
-                });
-              }}
-            >
-              <SelectTrigger className="w-full sm:w-[170px]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {PROJECT_TYPE_OPTIONS.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            {/* Type / category / sort. Desktop: inline next to the search box.
+                Mobile: inside the Filters sheet. They used to render full-width
+                on phones too, which stacked three selects under the search box
+                and, with the active-filter row and the cookie bar, left about
+                a third of the screen for actual campaigns. */}
+            <div className="hidden md:contents">{renderFilterSelects("desktop")}</div>
 
-            {/* Category Select */}
-            <Select
-              value={category || "all"}
-              onValueChange={(value) => {
-                const newValue = value === "all" ? "" : value;
-                setCategory(newValue);
-                updateFilters({ category: newValue || null });
-              }}
-            >
-              <SelectTrigger className="w-full sm:w-[180px]">
-                <SelectValue placeholder="All Categories" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Categories</SelectItem>
-                {PROJECT_CATEGORIES.map((cat) => (
-                  <SelectItem key={cat.value} value={cat.value}>
-                    {cat.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            {/* Sort */}
-            <Select
-              value={sort}
-              onValueChange={(value) => {
-                setSort(value);
-                updateFilters({ sort: value });
-              }}
-            >
-              <SelectTrigger className="w-full sm:w-[160px]">
-                <ArrowUpDown className="mr-2 h-4 w-4" />
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {SORT_OPTIONS.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            {/* More Filters - Mobile */}
+            {/* Filters - Mobile */}
             <Sheet>
               <SheetTrigger asChild>
-                <Button variant="outline" className="md:hidden">
+                <Button variant="outline" className="shrink-0 md:hidden">
                   <Filter className="mr-2 h-4 w-4" />
                   Filters
                   {activeFilterCount > 0 && (
@@ -384,11 +397,12 @@ function DiscoverContent() {
                   )}
                 </Button>
               </SheetTrigger>
-              <SheetContent side="bottom" className="h-auto">
+              <SheetContent side="bottom" className="h-auto max-h-[85dvh] overflow-y-auto">
                 <SheetHeader>
                   <SheetTitle>Filters</SheetTitle>
                 </SheetHeader>
                 <div className="space-y-4 py-4">
+                  <div className="grid gap-3">{renderFilterSelects("mobile")}</div>
                   <div className="flex items-center space-x-2">
                     <Checkbox
                       id="staffPicks-mobile"
@@ -452,10 +466,11 @@ function DiscoverContent() {
             </div>
           </div>
 
-          {/* Active Filters */}
+          {/* Active Filters. One scrollable line on phones so the sticky bar
+              never grows past two rows; wraps freely on desktop. */}
           {activeFilterCount > 0 && (
-            <div className="mt-3 flex flex-wrap items-center gap-2">
-              <span className="text-sm text-muted-foreground">
+            <div className="mt-2 flex items-center gap-2 overflow-x-auto whitespace-nowrap pb-0.5 [scrollbar-width:none] md:mt-3 md:flex-wrap md:whitespace-normal">
+              <span className="hidden text-sm text-muted-foreground md:inline">
                 Active filters:
               </span>
               {search && (

@@ -152,10 +152,15 @@ export function ConsentBanner() {
   // the "Accept All" button fall below the fold. The redesign pushes
   // all of that detail behind a single tap on "Manage" so the default
   // tap target (Accept) is always reachable in one thumb stroke.
+  // z-[60]: the support chat's floating button is z-50 at bottom-right, which
+  // is exactly where this banner's OK button lands on a phone. The button was
+  // there all along, just underneath the chat bubble, so the banner looked
+  // undismissable. The banner now sits above the bubble until it is accepted,
+  // and keeps clear of it on the right.
   if (!showPreferences) {
     return (
-      <div className="fixed bottom-0 left-0 right-0 z-40 animate-in slide-in-from-bottom duration-500">
-        <div className="mx-auto max-w-3xl px-2 pb-2 sm:px-4 sm:pb-4">
+      <div className="fixed bottom-0 left-0 right-0 z-[60] animate-in slide-in-from-bottom duration-500">
+        <div className="mx-auto max-w-3xl px-2 pb-2 pr-20 sm:px-4 sm:pb-4 sm:pr-4">
           <div className="rounded-lg border border-border bg-background/95 backdrop-blur-lg shadow-lg px-3 py-2 sm:px-4 sm:py-3">
             <div className="flex items-center gap-2 sm:gap-3">
               <p className="flex-1 min-w-0 text-xs sm:text-sm text-muted-foreground leading-snug">
