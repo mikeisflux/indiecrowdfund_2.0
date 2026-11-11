@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Building, AlertCircle, Loader2, Pencil } from "lucide-react";
+import { Building, AlertCircle, Loader2, Pencil, Mail } from "lucide-react";
 import { toast } from "sonner";
 import { apiFetch } from "@/lib/fetch-utils";
 import { Label } from "@/components/ui/label";
@@ -49,6 +49,29 @@ export function BankDetailsDialog({
 }: BankDetailsDialogProps) {
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [reminding, setReminding] = useState(false);
+
+  // Rows saved before the billing address was mandatory. The creator's
+  // dashboard is already locked to the fix-it form; this sends them the
+  // email (and an in-app notification) telling them so.
+  const incomplete = !!bankDetails && !bankDetails.billingLine1;
+  const sendReminder = async () => {
+    if (!bankDetails) return;
+    setReminding(true);
+    try {
+      const res = await apiFetch("/api/admin/payouts/incomplete-bank-accounts", {
+        method: "POST",
+        json: { userId: bankDetails.userId },
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Failed to send reminder");
+      toast.success(`Reminder emailed to ${data.email}`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to send reminder");
+    } finally {
+      setReminding(false);
+    }
+  };
   const [form, setForm] = useState({
     accountHolder: "",
     bankName: "",
@@ -249,7 +272,7 @@ export function BankDetailsDialog({
                   </div>
                 ) : (
                   <p className="font-medium text-amber-600 dark:text-amber-400">
-                    Not on file — legacy account, ask creator to re-save.
+                    Not on file. The creator&apos;s dashboard is locked until they add it.
                   </p>
                 )}
               </div>
@@ -274,6 +297,12 @@ export function BankDetailsDialog({
         )}
 
         <DialogFooter>
+          {incomplete && !editing && (
+            <Button variant="outline" onClick={sendReminder} disabled={reminding} className="border-amber-300 text-amber-800 hover:bg-amber-50 dark:text-amber-300">
+              {reminding ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Mail className="w-4 h-4 mr-2" />}
+              Email creator to fix
+            </Button>
+          )}
           {bankDetails && !editing && (
             <Button variant="outline" onClick={() => setEditing(true)}>
               <Pencil className="w-4 h-4 mr-2" />

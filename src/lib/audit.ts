@@ -39,6 +39,7 @@ export type AuditAction =
   // Creator saved a chargeback card through the DivinityCoin vault.
   | "CHARGEBACK_CARD_VAULTED"
   | "BANK_ACCOUNT_ADMIN_EDIT"
+  | "PAYOUT_DETAILS_REMINDER_SENT"
   | "IP_BLOCK"
   | "IP_UNBLOCK"
   | "SETTINGS_CHANGE"

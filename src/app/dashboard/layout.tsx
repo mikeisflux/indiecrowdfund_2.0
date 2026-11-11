@@ -6,6 +6,8 @@ import { pendingChargebackCards } from "@/lib/chargeback-card";
 import { ChargebackCardGate } from "@/components/chargeback/chargeback-card-gate";
 import { pendingReviewFeedback } from "@/lib/reviews/pending-feedback";
 import { ReviewFeedbackGate } from "@/components/reviews/review-feedback-gate";
+import { pendingPayoutDetails, PAYOUT_PROCESSOR_API } from "@/lib/payouts/payout-details";
+import { PayoutDetailsGate } from "@/components/payouts/payout-details-gate";
 
 export default async function DashboardLayout({
   children,
@@ -36,6 +38,21 @@ export default async function DashboardLayout({
     const pendingCards = await pendingChargebackCards(session.user.id).catch(() => []);
     if (pendingCards.length > 0) {
       return <ChargebackCardGate pending={pendingCards} />;
+    }
+  }
+
+  // Payout accounts missing required information (billing address on rows
+  // saved before it was mandatory, or no account for a launched campaign's
+  // processor). We cannot settle without it, so the dashboard waits until
+  // it is complete. Same shape as the two gates above.
+  if (session.user.id) {
+    const pendingPayout = await pendingPayoutDetails(session.user.id).catch(() => []);
+    if (pendingPayout.length > 0) {
+      return (
+        <PayoutDetailsGate
+          pending={pendingPayout.map((p) => ({ ...p, saveUrl: PAYOUT_PROCESSOR_API[p.processor] }))}
+        />
+      );
     }
   }
 

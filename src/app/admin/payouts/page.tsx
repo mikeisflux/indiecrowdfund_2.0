@@ -10,6 +10,7 @@ import {
   RotateCcw,
   Loader2,
   DollarSign,
+  MailWarning,
 } from "lucide-react";
 import { format } from "date-fns";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -54,6 +55,32 @@ export default function PayoutsPage() {
   const [bankDetails, setBankDetails] = useState<BankAccountDetails | null>(null);
   const [loadingBankDetails, setLoadingBankDetails] = useState(false);
   const [bankDetailsType, setBankDetailsType] = useState<"divinitycoin" | "paypal" | "whop">("divinitycoin");
+  const [remindingAll, setRemindingAll] = useState(false);
+
+  // Every creator whose payout account is missing required information gets
+  // the "finish your payout details" email and in-app notice. Their dashboards
+  // are already locked to the form; this makes sure they hear about it.
+  const remindIncomplete = async () => {
+    setRemindingAll(true);
+    try {
+      const check = await fetch("/api/admin/payouts/incomplete-bank-accounts", { cache: "no-store" });
+      const list = await check.json().catch(() => ({}));
+      const count: number = list.count ?? 0;
+      if (count === 0) {
+        toast.info("Every creator's payout details are complete.");
+        return;
+      }
+      if (!confirm(`${count} creator${count === 1 ? "" : "s"} ${count === 1 ? "has" : "have"} incomplete payout details. Email all of them now?`)) return;
+      const res = await apiFetch("/api/admin/payouts/incomplete-bank-accounts", { method: "POST", json: { all: true } });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Failed to send reminders");
+      toast.success(`Emailed ${data.sent} of ${data.total} creators`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to send reminders");
+    } finally {
+      setRemindingAll(false);
+    }
+  };
   const [bankDetailsId, setBankDetailsId] = useState<string | null>(null);
   const [showCreateSettlement, setShowCreateSettlement] = useState(false);
   const [settlementAmount, setSettlementAmount] = useState("");
@@ -422,6 +449,16 @@ export default function PayoutsPage() {
           >
             {recoveringAll ? <Loader2 className="w-4 h-4 sm:mr-2 animate-spin" /> : <RotateCcw className="w-4 h-4 sm:mr-2" />}
             <span className="hidden sm:inline">Recover Owed Balances</span>
+          </Button>
+          <Button
+            variant="outline"
+            onClick={remindIncomplete}
+            disabled={remindingAll}
+            className="flex-1 sm:flex-none border-amber-300 text-amber-800 hover:bg-amber-50"
+            title="Email every creator whose payout account is missing a billing address or other required details. Their dashboards are already locked until they fix it."
+          >
+            {remindingAll ? <Loader2 className="w-4 h-4 sm:mr-2 animate-spin" /> : <MailWarning className="w-4 h-4 sm:mr-2" />}
+            <span className="hidden sm:inline">Remind Incomplete Payouts</span>
           </Button>
           <Button
             variant="outline"

@@ -93,7 +93,18 @@ export async function POST(req: NextRequest) {
     }
     const country = countryRaw as BankCountry;
 
-    if (!bankName || !accountHolder || !accountNumber || !routingNumber) {
+    // An existing account may be re-saved without the account and routing
+    // numbers: blank keeps the stored ones. Creators completing a legacy row
+    // (adding the billing address the form didn't ask for at the time) should
+    // not have to go find their account number again. Verification is kept
+    // when the numbers don't change.
+    const existing = await db.payPalBankAccount.findUnique({
+      where: { userId: session.user.id },
+      select: { accountNumberEncrypted: true, routingNumberEncrypted: true, accountLastFour: true, isVerified: true, verifiedAt: true },
+    });
+    const keepNumbers = !!existing && !accountNumber && !routingNumber;
+
+    if (!bankName || !accountHolder || (!keepNumbers && (!accountNumber || !routingNumber))) {
       return NextResponse.json(
         { error: "All fields are required" },
         { status: 400 }
@@ -111,21 +122,23 @@ export async function POST(req: NextRequest) {
     // Sanitize per country (US/UK digits-only; IT BIC + IBAN are
     // alphanumeric, uppercased, separators stripped) then run the shared
     // country-specific format validation.
-    const routingValue = sanitizeBankField(country, String(routingNumber));
-    const accountValue = sanitizeBankField(country, String(accountNumber));
-    const validationError = validateBankFields(country, {
-      routingNumber: routingValue,
-      accountNumber: accountValue,
-      payoutPhone,
-    });
-    if (validationError) {
-      return NextResponse.json({ error: validationError }, { status: 400 });
+    const routingValue = keepNumbers ? "" : sanitizeBankField(country, String(routingNumber));
+    const accountValue = keepNumbers ? "" : sanitizeBankField(country, String(accountNumber));
+    if (!keepNumbers) {
+      const validationError = validateBankFields(country, {
+        routingNumber: routingValue,
+        accountNumber: accountValue,
+        payoutPhone,
+      });
+      if (validationError) {
+        return NextResponse.json({ error: validationError }, { status: 400 });
+      }
     }
 
     const encryptedBankName = encrypt(bankName);
     const encryptedAccountHolder = encrypt(accountHolder);
-    const encryptedAccountNumber = encrypt(accountValue);
-    const encryptedRoutingNumber = encrypt(routingValue);
+    const encryptedAccountNumber = keepNumbers && existing ? existing.accountNumberEncrypted : encrypt(accountValue);
+    const encryptedRoutingNumber = keepNumbers && existing ? existing.routingNumberEncrypted : encrypt(routingValue);
     const encryptedPayoutPhone = payoutPhone ? encrypt(String(payoutPhone).trim()) : null;
     const encryptedBillingLine1 = encrypt(String(billingLine1).trim());
     const encryptedBillingLine2 = billingLine2 ? encrypt(String(billingLine2).trim()) : null;
@@ -133,7 +146,7 @@ export async function POST(req: NextRequest) {
     const encryptedBillingState = billingState ? encrypt(String(billingState).trim()) : null;
     const encryptedBillingZip = encrypt(String(billingZip).trim());
     const encryptedBillingCountry = encrypt(String(billingCountry).trim().toUpperCase());
-    const lastFour = getLastDigits(accountValue, 4);
+    const lastFour = keepNumbers && existing ? existing.accountLastFour || "" : getLastDigits(accountValue, 4);
 
     // Atomic upsert on userId @unique — avoids findUnique→create TOCTOU
     // where two concurrent saves both see "not exists" and the second
@@ -156,8 +169,8 @@ export async function POST(req: NextRequest) {
         bankNameDisplay: bankName,
         accountLastFour: lastFour,
         accountType: accountType || "checking",
-        isVerified: false,
-        verifiedAt: null,
+        isVerified: keepNumbers && existing ? existing.isVerified : false,
+        verifiedAt: keepNumbers && existing ? existing.verifiedAt : null,
       },
       create: {
         userId: session.user.id,
