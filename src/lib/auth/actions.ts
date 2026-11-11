@@ -2,6 +2,7 @@
 
 import { db } from "@/lib/db";
 import { checkPasswordPolicy } from "@/lib/auth/password-policy";
+import { suggestEmailCorrection } from "@/lib/email/typo-check";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { checkBanEvasion, BAN_EVASION_MESSAGE } from "@/lib/moderation/ban-evasion";
@@ -121,6 +122,14 @@ export async function register(formData: FormData, callbackUrl?: string | null) 
 
     const { name, email: rawEmail, password } = validatedFields.data;
     const email = rawEmail.toLowerCase();
+
+    // An address like roger@example.comm passes the schema and then every
+    // verification email bounces. Refuse the obvious typos unless the form
+    // says the person looked at the suggestion and confirmed the address.
+    const typo = suggestEmailCorrection(email);
+    if (typo?.hard && formData.get("emailConfirmed") !== "1") {
+      return { error: { email: [`That email looks mistyped (${typo.reason}). Did you mean ${typo.suggestion}?`] } };
+    }
 
     // Admin-configured password policy (Settings > Security).
     const policyError = await checkPasswordPolicy(password);

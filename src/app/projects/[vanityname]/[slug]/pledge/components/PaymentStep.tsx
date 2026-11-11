@@ -4,12 +4,12 @@ import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Loader2, MailCheck } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import type { Stripe } from "@stripe/stripe-js";
 import { ProjectData } from "../types";
 import { WhopPaymentForm } from "./WhopPaymentForm";
-import { apiFetch } from "@/lib/fetch-utils";
 import { DescriptorAcknowledgement } from "@/components/checkout/descriptor-acknowledgement";
+import { VerificationHelp } from "@/components/auth/verification-help";
 
 // Dynamically import the DC/Stripe wrapper so Stripe.js only loads when payment is initiated
 const DCHostedCheckoutFrame = dynamic(() => import("./DCHostedCheckoutFrame"), {
@@ -66,76 +66,6 @@ interface PaymentStepProps {
 
 const isEmailVerificationError = (error: string | null) =>
   !!error && error.toLowerCase().includes("verify your email");
-
-function ResendVerificationButton() {
-  const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
-
-  const handleResend = async () => {
-    setStatus("sending");
-    setErrorMsg(null);
-    try {
-      const res = await apiFetch("/api/user/verify-email", { method: "POST" });
-      if (res.ok) {
-        setStatus("sent");
-        return;
-      }
-      // Pull the real server-side reason ("address is on our blocklist",
-      // "provider down", rate-limit, etc.) so the user knows what to do
-      // — generic "try again" was masking real failures (Jeremy's
-      // verify-email bug, May 2026).
-      let msg = "Failed to send. Please try again.";
-      try {
-        const data = await res.json();
-        if (data?.error && typeof data.error === "string") {
-          msg = data.error;
-        }
-      } catch {
-        // Body wasn't JSON — keep the generic message.
-      }
-      setErrorMsg(msg);
-      setStatus("error");
-    } catch {
-      setErrorMsg("Network error. Please try again.");
-      setStatus("error");
-    }
-  };
-
-  if (status === "sent") {
-    return (
-      <div className="flex flex-col gap-1 mt-2">
-        <div className="flex items-center gap-2 text-sm text-green-600 dark:text-green-400">
-          <MailCheck className="h-4 w-4" />
-          Verification email sent! Check your inbox.
-        </div>
-        <div className="text-xs text-muted-foreground pl-6">
-          Don&apos;t see it? Check spam or promotions. Search Gmail for
-          <span className="font-mono"> from:noreply@indiecrowdfund.com</span>.
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="flex flex-col gap-1 mt-2">
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={handleResend}
-        disabled={status === "sending"}
-      >
-        {status === "sending" ? (
-          <><Loader2 className="h-3 w-3 animate-spin mr-1" />Sending...</>
-        ) : (
-          "Resend verification email"
-        )}
-      </Button>
-      {status === "error" && errorMsg && (
-        <p className="text-xs text-red-600 dark:text-red-400">{errorMsg}</p>
-      )}
-    </div>
-  );
-}
 
 export function PaymentStep({
   project,
@@ -283,7 +213,7 @@ export function PaymentStep({
             <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
               <p className="text-sm text-red-600 dark:text-red-400">{paymentError}</p>
               {isEmailVerificationError(paymentError) ? (
-                <ResendVerificationButton />
+                <VerificationHelp />
               ) : (
                 <Button
                   variant="outline"
@@ -389,7 +319,7 @@ export function PaymentStep({
                   <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
                     <p className="text-sm text-red-600 dark:text-red-400">{paymentError}</p>
                     {isEmailVerificationError(paymentError) ? (
-                      <ResendVerificationButton />
+                      <VerificationHelp />
                     ) : (
                       <Button
                         variant="outline"

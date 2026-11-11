@@ -236,6 +236,62 @@ export async function POST() {
   }
 }
 
+// PATCH - Correct the address on a not-yet-verified account, then resend.
+//
+// The only way to fix a mistyped signup email used to be an admin editing
+// the user by hand. An unverified account is still the person who just
+// typed it, so let them change it themselves; the new address has to be
+// unused and the link is sent to it straight away. Verified accounts change
+// their email through Settings, which re-verifies.
+export async function PATCH(req: NextRequest) {
+  try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    const body = await req.json().catch(() => ({}));
+    const newEmail = typeof body.email === "string" ? body.email.trim().toLowerCase() : "";
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newEmail)) {
+      return NextResponse.json({ error: "Enter a valid email address." }, { status: 400 });
+    }
+    const { suggestEmailCorrection } = await import("@/lib/email/typo-check");
+    const typo = suggestEmailCorrection(newEmail);
+    if (typo?.hard && body.confirmed !== true) {
+      return NextResponse.json(
+        { error: `That address looks mistyped (${typo.reason}). Did you mean ${typo.suggestion}?`, suggestion: typo.suggestion },
+        { status: 400 }
+      );
+    }
+
+    const user = await db.user.findFirst({ where: { id: session.user.id, deletedAt: null }, select: { id: true, email: true, emailVerified: true } });
+    if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
+    if (user.emailVerified) {
+      return NextResponse.json({ error: "This account's email is already verified. Change it from Settings instead." }, { status: 400 });
+    }
+    if (user.email.toLowerCase() === newEmail) {
+      return POST();
+    }
+    const taken = await db.user.findFirst({ where: { email: { equals: newEmail, mode: "insensitive" } }, select: { id: true } });
+    if (taken) {
+      return NextResponse.json({ error: "That email is already registered. Log in with it instead, or use a different address." }, { status: 409 });
+    }
+
+    await db.$transaction([
+      db.verificationToken.deleteMany({ where: { identifier: user.email } }),
+      db.user.update({ where: { id: user.id }, data: { email: newEmail } }),
+    ]);
+    userVerifyEmailLogger.info({ userId: user.id, from: user.email, to: newEmail }, "Unverified user corrected their email");
+
+    // Same send path as the resend button; it reads the fresh email.
+    const sent = await POST();
+    const data = await sent.json().catch(() => ({}));
+    return NextResponse.json({ ...data, email: newEmail }, { status: sent.status });
+  } catch (error) {
+    userVerifyEmailLogger.error({ err: formatError(error) }, "Change unverified email error:");
+    return NextResponse.json({ error: "Failed to change email" }, { status: 500 });
+  }
+}
+
 // GET - Verify email token
 export async function GET(req: NextRequest) {
   try {

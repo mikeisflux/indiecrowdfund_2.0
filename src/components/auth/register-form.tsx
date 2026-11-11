@@ -12,6 +12,7 @@ import { cn } from "@/lib/utils";
 import { Loader2, Check, X as XIcon } from "lucide-react";
 import { Recaptcha } from "./recaptcha";
 import { fetchRecaptchaConfig } from "@/lib/recaptcha-client";
+import { suggestEmailCorrection, type EmailSuggestion } from "@/lib/email/typo-check";
 
 interface PasswordRequirement {
   label: string;
@@ -129,6 +130,14 @@ export function RegisterForm() {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [password, setPassword] = useState("");
+  // "Did you mean …?" for a mistyped address. `hard` typos (a TLD that does
+  // not exist, a misspelled gmail/hotmail) block submit until the person
+  // either takes the fix or says the address really is right; soft ones are
+  // only a hint. A backer who signed up as …@….comm got five bounced
+  // verification emails and never knew why.
+  const [emailValue, setEmailValue] = useState("");
+  const [emailSuggestion, setEmailSuggestion] = useState<EmailSuggestion | null>(null);
+  const [emailConfirmed, setEmailConfirmed] = useState(false);
   const [recaptchaToken, setRecaptchaToken] = useState<string | null>(null);
   const [recaptchaSiteKey, setRecaptchaSiteKey] = useState<string | null>(null);
   const [isRecaptchaEnabled, setIsRecaptchaEnabled] = useState(false);
@@ -182,6 +191,13 @@ export function RegisterForm() {
       setError("Please enter a valid email address.");
       return;
     }
+    const typo = suggestEmailCorrection(emailValue);
+    if (typo?.hard && !emailConfirmed) {
+      setEmailSuggestion(typo);
+      setError(`That email looks mistyped (${typo.reason}). Use the suggested fix, or confirm it's correct.`);
+      return;
+    }
+    if (emailConfirmed) formData.set("emailConfirmed", "1");
 
     // Client-side password strength validation
     const passwordValue = formData.get("password") as string;
@@ -274,7 +290,50 @@ export function RegisterForm() {
             autoComplete="email"
             required
             disabled={isLoading}
+            value={emailValue}
+            onChange={(e) => {
+              setEmailValue(e.target.value);
+              setEmailConfirmed(false);
+              if (emailSuggestion) setEmailSuggestion(null);
+            }}
+            onBlur={(e) => setEmailSuggestion(suggestEmailCorrection(e.target.value))}
+            aria-describedby={emailSuggestion ? "email-suggestion" : undefined}
           />
+          {emailSuggestion && !emailConfirmed && (
+            <div
+              id="email-suggestion"
+              className={cn(
+                "flex flex-wrap items-center gap-2 rounded-md border p-2 text-xs",
+                emailSuggestion.hard
+                  ? "border-amber-300 bg-amber-50 text-amber-900 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-200"
+                  : "border-border bg-muted/40 text-muted-foreground"
+              )}
+            >
+              <span>Did you mean</span>
+              <button
+                type="button"
+                className="font-semibold underline underline-offset-2"
+                onClick={() => {
+                  setEmailValue(emailSuggestion.suggestion);
+                  setEmailSuggestion(null);
+                  setError(null);
+                }}
+              >
+                {emailSuggestion.suggestion}
+              </button>
+              <span>?</span>
+              <button
+                type="button"
+                className="ml-auto text-muted-foreground hover:underline"
+                onClick={() => {
+                  setEmailConfirmed(true);
+                  setError(null);
+                }}
+              >
+                No, {emailValue.trim()} is correct
+              </button>
+            </div>
+          )}
         </div>
 
         <div className="space-y-2">
