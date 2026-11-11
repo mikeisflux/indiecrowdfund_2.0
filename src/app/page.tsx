@@ -129,11 +129,22 @@ const getFeaturedProjects = cache(async () => {
     // Order featured campaigns by MOST RECENTLY BACKED so the top spot
     // rotates as new pledges land — every campaign gets a turn at the top,
     // instead of the biggest-funded one permanently owning it. We take the
-    // latest completed-pledge time per campaign and sort by it, newest first.
+    // latest committed-pledge time per campaign and sort by it, newest first.
+    //
+    // "Committed" means the same thing the campaign totals mean
+    // (lib/stats.ts): COMPLETED, or a counted PENDING pledge. On an
+    // all-or-nothing campaign that hasn't reached its goal, every backer is
+    // PENDING — the card is saved and charged on success — so counting only
+    // COMPLETED meant such a campaign could take thirty pledges in a night
+    // and never move up the list.
     const FEATURED_COUNT = 12;
     const recentlyBacked = await db.pledge.groupBy({
       by: ["projectId"],
-      where: { status: "COMPLETED", project: liveProjectFilter },
+      where: {
+        deletedAt: null,
+        project: liveProjectFilter,
+        OR: [{ status: "COMPLETED" }, { status: "PENDING", confirmationEmailSent: true }],
+      },
       _max: { createdAt: true },
       orderBy: { _max: { createdAt: "desc" } },
       take: FEATURED_COUNT,
