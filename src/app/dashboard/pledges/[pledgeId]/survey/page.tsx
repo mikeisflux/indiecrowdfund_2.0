@@ -8,6 +8,7 @@ import { useParams, useRouter } from "next/navigation";
 import { RefreshCw, Lock } from "lucide-react";
 import { loadStripe, Stripe } from "@stripe/stripe-js";
 
+import { unitKey, unitLabel } from "@/lib/surveys/item-units";
 import { SurveyData, SavedAddress, Step, ShippingAddressForm } from "./components/types";
 import { SurveyErrorState } from "./components/SurveyErrorState";
 import { SurveyLockedState } from "./components/SurveyLockedState";
@@ -245,7 +246,10 @@ export default function BackerSurveyPage() {
 
     // Per-item variants and required custom questions
     for (const itemQ of data.itemQuestions || []) {
-      const itemResponse = itemResponses[itemQ.id] || {};
+     const quantity = Math.max(1, itemQ.quantity || 1);
+     for (let unit = 0; unit < quantity; unit++) {
+      const itemResponse = itemResponses[unitKey(itemQ.id, unit)] || {};
+      const itemName = unitLabel(itemQ.itemName, unit, quantity);
       // Every variant is required server-side ("Please select a <type> for <item>")
       for (const variant of itemQ.variants) {
         // Accept EITHER the variant.id key or the variantType key — this
@@ -259,7 +263,7 @@ export default function BackerSurveyPage() {
           itemResponse.variants?.[variant.id] ||
           itemResponse.variants?.[variant.variantType];
         if (!selected || selected.trim() === "") {
-          return `Please select a ${variant.variantType} for ${itemQ.itemName}.`;
+          return `Please select a ${variant.variantType} for ${itemName}.`;
         }
       }
       // Required custom questions per item
@@ -272,9 +276,10 @@ export default function BackerSurveyPage() {
           (typeof answer === "string" && answer.trim() === "") ||
           (Array.isArray(answer) && answer.length === 0);
         if (empty) {
-          return `Please answer "${customQ.question}" for ${itemQ.itemName}.`;
+          return `Please answer "${customQ.question}" for ${itemName}.`;
         }
       }
+     }
     }
 
     // Shipping address — required when survey collects addresses AND the

@@ -1,5 +1,6 @@
 "use client";
 
+import { listItemUnits, unitLabel } from "@/lib/surveys/item-units";
 import { useState, useEffect, useCallback } from "react";
 import { fetchWithRetry, apiFetch } from "@/lib/fetch-utils";
 import { Button } from "@/components/ui/button";
@@ -991,11 +992,14 @@ export function BackerDialog({ open, onOpenChange, backer, availableAddons = [],
                         {/* Display survey questions and responses */}
                         <div className="space-y-3 pt-2 border-t">
                           {/* Item Questions & Responses */}
-                          {surveyData?.questions?.itemQuestions?.map((item) => {
-                            const itemResponse = surveyData?.response?.itemResponses?.[item.id];
-                            return (
-                              <div key={item.id} className="bg-muted/50 rounded-lg p-4">
-                                <p className="text-sm font-medium mb-2">{item.itemName}</p>
+                          {surveyData?.questions?.itemQuestions?.flatMap((item) => {
+                            // One block per unit held (add-ons bought in quantity
+                            // answer once per unit, keyed "<id>#n").
+                            const units = listItemUnits(surveyData?.response?.itemResponses, item.id);
+                            const blocks = units.length ? units : [{ unit: 0, key: item.id, response: undefined }];
+                            return blocks.map(({ unit, key, response: itemResponse }) => (
+                              <div key={key} className="bg-muted/50 rounded-lg p-4">
+                                <p className="text-sm font-medium mb-2">{unitLabel(item.itemName, unit, blocks.length)}</p>
                                 {item.itemDescription && (
                                   <p className="text-xs text-muted-foreground mb-2">{item.itemDescription}</p>
                                 )}
@@ -1028,7 +1032,7 @@ export function BackerDialog({ open, onOpenChange, backer, availableAddons = [],
                                   );
                                 })}
                               </div>
-                            );
+                            ));
                           })}
 
                           {/* Backer Questions & Responses */}

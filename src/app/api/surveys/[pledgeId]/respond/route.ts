@@ -36,6 +36,7 @@ const responseValueSchema = z.union([z.string().max(10000), z.array(z.string().m
 
 import { getIndiekitSettings } from "@/lib/indiekit-settings";
 import { createNotification } from "@/lib/notifications/core";
+import { itemQuantity, unitKey, unitLabel } from "@/lib/surveys/item-units";
 
 const responseSchema = z.object({
   itemResponses: z.record(
@@ -197,6 +198,22 @@ export async function GET(
       (iq: { rewardId: string }) => addonIds.includes(iq.rewardId)
     );
 
+    // Each item carries how many of it the backer holds (an add-on bought
+    // x10 is asked its questions ten times, see @/lib/surveys/item-units)
+    // and a picture: the creator's item image if they set one, otherwise the
+    // reward/add-on image from the campaign, so the backer can see what
+    // they are choosing options for.
+    const relevantRewardIds = [...relevantItemQuestions, ...addonItemQuestions].map((iq: { rewardId: string }) => iq.rewardId);
+    const rewardImages = relevantRewardIds.length
+      ? await db.reward.findMany({ where: { id: { in: relevantRewardIds } }, select: { id: true, imageUrl: true } })
+      : [];
+    const imageByReward = new Map<string, string | null>(rewardImages.map((r: { id: string; imageUrl: string | null }) => [r.id, r.imageUrl]));
+    const decorateItem = <T extends { rewardId: string; imageUrl: string | null }>(iq: T) => ({
+      ...iq,
+      imageUrl: iq.imageUrl || imageByReward.get(iq.rewardId) || null,
+      quantity: itemQuantity(iq.rewardId, pledge),
+    });
+
     // Filter backer questions based on targeting
     const relevantBackerQuestions = survey.backerQuestions.filter(
       (bq: { targetType: string; targetRewardIds: string[] }) => {
@@ -309,12 +326,13 @@ export async function GET(
         projectSlug: pledge.project.slug,
         paymentProcessor: pledge.project.paymentProcessor || "STRIPE",
         rewardTitle: pledge.reward?.title || "No Reward",
-        addons: pledge.addons.map((a: { addon: { id: string; title: string } }) => ({
+        addons: pledge.addons.map((a: { addon: { id: string; title: string }; quantity: number }) => ({
           id: a.addon.id,
           title: a.addon.title,
+          quantity: a.quantity,
         })),
       },
-      itemQuestions: [...relevantItemQuestions, ...addonItemQuestions],
+      itemQuestions: [...relevantItemQuestions, ...addonItemQuestions].map(decorateItem),
       backerQuestions: relevantBackerQuestions,
       availableAddons: purchasableAddons,
       response: {
@@ -552,27 +570,34 @@ export async function POST(
           // Without this fallback, backers see their picked size in
           // the UI but submission fails with "Please select a Size"
           // -- exact symptom reported by the creator.
-          for (const variant of itemQ.variants) {
-            const variants = data.itemResponses?.[itemQ.id]?.variants;
-            const selection =
-              variants?.[variant.id] || variants?.[variant.variantType];
-            if (!selection) {
-              return NextResponse.json(
-                { error: `Please select a ${variant.variantType} for ${itemQ.itemName}` },
-                { status: 400 }
-              );
-            }
-          }
-
-          // Check required custom questions
-          for (const customQ of itemQ.customQuestions) {
-            if (customQ.isRequired) {
-              const answer = data.itemResponses?.[itemQ.id]?.customAnswers?.[customQ.id];
-              if (!answer || (Array.isArray(answer) && answer.length === 0)) {
+          // One set of answers per unit held: an add-on bought x10 must
+          // answer for all ten (unit 1 under the item id, then "#2".."#10").
+          const quantity = itemQuantity(itemQ.rewardId, pledge);
+          for (let unit = 0; unit < quantity; unit++) {
+            const label = unitLabel(itemQ.itemName, unit, quantity);
+            const unitResp = data.itemResponses?.[unitKey(itemQ.id, unit)];
+            for (const variant of itemQ.variants) {
+              const variants = unitResp?.variants;
+              const selection =
+                variants?.[variant.id] || variants?.[variant.variantType];
+              if (!selection) {
                 return NextResponse.json(
-                  { error: `Required question "${customQ.question}" for ${itemQ.itemName} is not answered` },
+                  { error: `Please select a ${variant.variantType} for ${label}` },
                   { status: 400 }
                 );
+              }
+            }
+
+            // Check required custom questions
+            for (const customQ of itemQ.customQuestions) {
+              if (customQ.isRequired) {
+                const answer = unitResp?.customAnswers?.[customQ.id];
+                if (!answer || (Array.isArray(answer) && answer.length === 0)) {
+                  return NextResponse.json(
+                    { error: `Required question "${customQ.question}" for ${label} is not answered` },
+                    { status: 400 }
+                  );
+                }
               }
             }
           }
@@ -762,17 +787,21 @@ export async function POST(
 
           for (const iq of survey.itemQuestions) {
             if (iq.rewardId !== pledge.rewardId && !emailAddonIds.includes(iq.rewardId)) continue;
-            const resp = finalItems[iq.id];
-            for (const variant of iq.variants) {
-              // Responses are dual-keyed by variant id and variantType (see
-              // SurveyItemsStep); read id first, fall back to type.
-              const val = resp?.variants?.[variant.id] ?? resp?.variants?.[variant.variantType];
-              if (val) selections.push({ label: `${iq.itemName} — ${variant.variantType}`, value: val });
-            }
-            for (const cq of iq.customQuestions) {
-              const answer = resp?.customAnswers?.[cq.id];
-              const value = Array.isArray(answer) ? answer.join(", ") : answer;
-              if (value && value.trim()) selections.push({ label: `${iq.itemName} — ${cq.question}`, value });
+            const quantity = itemQuantity(iq.rewardId, pledge);
+            for (let unit = 0; unit < quantity; unit++) {
+              const resp = finalItems[unitKey(iq.id, unit)];
+              const name = unitLabel(iq.itemName, unit, quantity);
+              for (const variant of iq.variants) {
+                // Responses are dual-keyed by variant id and variantType (see
+                // SurveyItemsStep); read id first, fall back to type.
+                const val = resp?.variants?.[variant.id] ?? resp?.variants?.[variant.variantType];
+                if (val) selections.push({ label: `${name} — ${variant.variantType}`, value: val });
+              }
+              for (const cq of iq.customQuestions) {
+                const answer = resp?.customAnswers?.[cq.id];
+                const value = Array.isArray(answer) ? answer.join(", ") : answer;
+                if (value && value.trim()) selections.push({ label: `${name} — ${cq.question}`, value });
+              }
             }
           }
 

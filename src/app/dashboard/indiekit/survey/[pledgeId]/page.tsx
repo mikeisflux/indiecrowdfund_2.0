@@ -1,5 +1,6 @@
 "use client";
 
+import { listItemUnits, unitLabel } from "@/lib/surveys/item-units";
 import { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
@@ -290,11 +291,14 @@ export default function CreatorSurveyViewPage() {
                 <CardDescription>Variant and option selections for reward items</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                {questions.itemQuestions.map((item) => {
-                  const itemResponse = response?.itemResponses?.[item.id];
-                  return (
-                    <div key={item.id} className="border rounded-lg p-4">
-                      <h4 className="font-medium mb-2">{item.itemName}</h4>
+                {questions.itemQuestions.flatMap((item) => {
+                  // One block per unit held (add-ons bought in quantity answer
+                  // once per unit, keyed "<id>#n").
+                  const units = listItemUnits(response?.itemResponses, item.id);
+                  const blocks = units.length ? units : [{ unit: 0, key: item.id, response: undefined }];
+                  return blocks.map(({ unit, key, response: itemResponse }) => (
+                    <div key={key} className="border rounded-lg p-4">
+                      <h4 className="font-medium mb-2">{unitLabel(item.itemName, unit, blocks.length)}</h4>
                       {item.itemDescription && (
                         <p className="text-sm text-muted-foreground mb-3">{item.itemDescription}</p>
                       )}
@@ -338,7 +342,7 @@ export default function CreatorSurveyViewPage() {
                         </div>
                       )}
                     </div>
-                  );
+                  ));
                 })}
               </CardContent>
             </Card>

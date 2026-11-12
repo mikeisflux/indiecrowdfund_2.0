@@ -1,5 +1,6 @@
 "use client";
 
+import { parseUnitKey, listItemUnits, unitLabel } from "@/lib/surveys/item-units";
 import { apiFetch } from "@/lib/fetch-utils";
 import { toast } from "sonner";
 import { useState, useEffect, useCallback } from "react";
@@ -224,8 +225,11 @@ export default function SurveyResponsesPage() {
   }, [fetchResponses]);
 
   // Helper functions to look up question text by ID
-  const getItemQuestion = (itemId: string) => {
-    return surveyQuestions.itemQuestions.find(q => q.id === itemId);
+  // Response keys may be "<itemId>#n" for the nth unit of an add-on bought
+  // in quantity (see @/lib/surveys/item-units).
+  const getItemQuestion = (itemKey: string) => {
+    const { itemQuestionId } = parseUnitKey(itemKey);
+    return surveyQuestions.itemQuestions.find(q => q.id === itemQuestionId);
   };
 
   const getBackerQuestion = (questionId: string) => {
@@ -677,10 +681,14 @@ export default function SurveyResponsesPage() {
                     <CardContent className="py-4 space-y-4">
                       {Object.entries(selectedResponse.itemResponses).map(([itemId, itemResponse]) => {
                         const itemQuestion = getItemQuestion(itemId);
+                        const { unit } = parseUnitKey(itemId);
+                        const unitCount = itemQuestion
+                          ? listItemUnits(selectedResponse.itemResponses, itemQuestion.id).length
+                          : 1;
                         return (
                           <div key={itemId} className="border-b last:border-0 pb-3 last:pb-0">
                             {itemQuestion && (
-                              <p className="font-medium mb-2">{itemQuestion.itemName}</p>
+                              <p className="font-medium mb-2">{unitLabel(itemQuestion.itemName, unit, unitCount)}</p>
                             )}
                             {itemResponse.variants && Object.entries(itemResponse.variants).map(([variantId, value]) => (
                               <div key={variantId} className="flex items-center justify-between py-1">

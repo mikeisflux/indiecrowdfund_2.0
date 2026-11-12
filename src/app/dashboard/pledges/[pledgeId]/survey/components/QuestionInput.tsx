@@ -134,6 +134,11 @@ export function QuestionInput({
     );
   }
 
+  // Element ids must be unique per question: the same choice list is
+  // rendered once per unit for add-ons bought in quantity, and a bare
+  // option id would make every "01" label toggle the first card's radio.
+  const optId = (opt: string) => `${questionId || "q"}-${opt}`;
+
   if (type === "SINGLE_SELECT") {
     return (
       <RadioGroup
@@ -142,8 +147,8 @@ export function QuestionInput({
       >
         {options.map((opt) => (
           <div key={opt} className="flex items-center space-x-2">
-            <RadioGroupItem value={opt} id={opt} />
-            <Label htmlFor={opt}>{opt}</Label>
+            <RadioGroupItem value={opt} id={optId(opt)} />
+            <Label htmlFor={optId(opt)}>{opt}</Label>
           </div>
         ))}
       </RadioGroup>
@@ -157,7 +162,7 @@ export function QuestionInput({
         {options.map((opt) => (
           <div key={opt} className="flex items-center space-x-2">
             <Checkbox
-              id={opt}
+              id={optId(opt)}
               checked={selected.includes(opt)}
               onCheckedChange={(checked) => {
                 if (checked) {
@@ -167,7 +172,7 @@ export function QuestionInput({
                 }
               }}
             />
-            <Label htmlFor={opt}>{opt}</Label>
+            <Label htmlFor={optId(opt)}>{opt}</Label>
           </div>
         ))}
       </div>

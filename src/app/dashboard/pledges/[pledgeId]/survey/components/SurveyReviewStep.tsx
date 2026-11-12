@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ALL_COUNTRIES } from "@/types";
 import { SurveyData, ShippingAddressForm } from "./types";
+import { unitKey, unitLabel } from "@/lib/surveys/item-units";
 
 interface SurveyReviewStepProps {
   data: SurveyData;
@@ -49,21 +50,36 @@ export function SurveyReviewStep({
         <CardContent className="space-y-4">
           {/* Item Responses */}
           {data.itemQuestions.map((item) => {
-            const response = itemResponses[item.id];
-            if (!response) return null;
-            return (
-              <div key={item.id} className="border-b pb-4">
-                <h4 className="font-medium">{item.itemName}</h4>
-                {response.variants && Object.entries(response.variants).map(([variantId, value]) => {
-                  const variant = item.variants.find((v) => v.id === variantId);
-                  return (
-                    <p key={variantId} className="text-sm text-muted-foreground">
-                      {variant?.variantType}: {value}
-                    </p>
-                  );
-                })}
-              </div>
-            );
+            const quantity = Math.max(1, item.quantity || 1);
+            return Array.from({ length: quantity }, (_, unit) => {
+              const key = unitKey(item.id, unit);
+              const response = itemResponses[key];
+              if (!response) return null;
+              return (
+                <div key={key} className="border-b pb-4">
+                  <h4 className="font-medium">{unitLabel(item.itemName, unit, quantity)}</h4>
+                  {item.variants.map((variant) => {
+                    const value = response.variants?.[variant.id] || response.variants?.[variant.variantType];
+                    if (!value) return null;
+                    return (
+                      <p key={variant.id} className="text-sm text-muted-foreground">
+                        {variant.variantType}: {value}
+                      </p>
+                    );
+                  })}
+                  {item.customQuestions.map((q) => {
+                    const answer = response.customAnswers?.[q.id];
+                    const value = Array.isArray(answer) ? answer.join(", ") : answer;
+                    if (!value) return null;
+                    return (
+                      <p key={q.id} className="text-sm text-muted-foreground">
+                        {q.question}: <span className="text-foreground">{value}</span>
+                      </p>
+                    );
+                  })}
+                </div>
+              );
+            });
           })}
 
           {/* Backer Responses */}

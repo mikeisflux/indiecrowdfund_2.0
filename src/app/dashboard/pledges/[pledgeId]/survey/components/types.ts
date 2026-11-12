@@ -47,14 +47,16 @@ export interface SurveyData {
     projectSlug?: string;
     paymentProcessor: string;
     rewardTitle: string;
-    addons: { id: string; title: string }[];
+    addons: { id: string; title: string; quantity?: number }[];
   };
   itemQuestions: {
     id: string;
     rewardId: string;
     itemName: string;
     itemDescription?: string;
-    imageUrl?: string;
+    imageUrl?: string | null;
+    /** How many of this item the backer holds; questions are asked once per unit. */
+    quantity?: number;
     variants: {
       id: string;
       variantType: string;

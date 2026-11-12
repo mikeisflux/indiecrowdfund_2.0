@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { listItemUnits, joinUnitAnswers } from "@/lib/surveys/item-units";
 import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
@@ -337,14 +338,16 @@ export async function POST(
 
         // Add item responses
         const itemResponses = r.itemResponses as Record<string, { variants?: Record<string, string>; customAnswers?: Record<string, string | string[]> }> | null;
+        // An add-on held in quantity has one answer set per unit
+        // ("#1: 01 | #2: 06 | …"); a single unit exports as before.
         for (const itemQuestion of survey.itemQuestions) {
-          const itemResp = itemResponses?.[itemQuestion.id];
+          const units = listItemUnits(itemResponses, itemQuestion.id);
+          const unitResps = units.length ? units.map((u) => u.response) : [itemResponses?.[itemQuestion.id]];
           for (const variant of itemQuestion.variants) {
-            row.push(itemResp?.variants?.[variant.id] || "");
+            row.push(joinUnitAnswers(unitResps.map((r) => r?.variants?.[variant.id] || r?.variants?.[variant.variantType])));
           }
           for (const customQ of itemQuestion.customQuestions) {
-            const answer = itemResp?.customAnswers?.[customQ.id];
-            row.push(Array.isArray(answer) ? answer.join("; ") : (answer || ""));
+            row.push(joinUnitAnswers(unitResps.map((r) => r?.customAnswers?.[customQ.id])));
           }
         }
 
