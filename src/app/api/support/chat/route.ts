@@ -105,6 +105,8 @@ const TOOLS: Anthropic.Tool[] = [
         },
         category: { type: "string", enum: ["UI_VISUAL", "FUNCTIONALITY", "PERFORMANCE", "SECURITY", "PAYMENT", "ACCOUNT", "PROJECT", "REWARDS", "OTHER"], description: "Best-fit category for the bug." },
         severity: { type: "string", enum: ["LOW", "MEDIUM", "HIGH", "CRITICAL"], description: "LOW for cosmetic, MEDIUM for annoying, HIGH for blocks the user, CRITICAL for payment / data loss / security." },
+        contactEmail: { type: "string", description: "The email address the user wants the resolution sent to. Required when the user is not logged in and not verified; ask them for it before calling." },
+        contactName: { type: "string", description: "The user's name, if they gave one." },
       },
       required: ["title", "description", "category", "severity"],
     },
@@ -142,6 +144,8 @@ const TOOLS: Anthropic.Tool[] = [
         },
         campaign: { type: "string", description: "Campaign slug, required whenever the issue concerns an order, reward, shipment or download." },
         pledgeId: { type: "string", description: "Pledge id, when the issue concerns a specific order." },
+        contactEmail: { type: "string", description: "The email address support should reply to. Required when the user is not logged in and not verified; ask them for it before calling." },
+        contactName: { type: "string", description: "The user's name, if they gave one." },
       },
       required: ["subject", "body"],
     },
@@ -159,6 +163,7 @@ How to answer questions:
    - Account access, account merges, platform billing disputes, policy, a creator who hasn't replied after being messaged, or a creator-side failure the platform must chase → email_support.
    After the tool call returns, tell the user it's been sent and what to expect.
 4. Don't make up policies, fees, refund timelines, or feature behavior. If you'd be guessing, escalate via email_support.
+   - Before submit_bug_report or email_support for a user who is not logged in and not verified, ask for the email address they want the reply at and pass it as contactEmail. Never file a report with no way to reach the person.
 5. Don't promise specific resolution times — say "the team usually replies within 1–2 business days" if asked. Creators reply on their own schedule.
 6. Don't ask the user for sensitive information (full card numbers, SSN, passwords). If they offer it, refuse and tell them never to send that to chat.
 
@@ -523,15 +528,23 @@ async function executeSubmitBugReport(input: Record<string, unknown>, identity: 
   const safeCategory = validCategories.includes(category) ? category : "OTHER";
   const safeSeverity = validSeverities.includes(severity) ? severity : "MEDIUM";
 
-  const email = identity.verified?.email || identity.sessionEmail;
-  const name = identity.verified?.name || identity.sessionName;
+  // The report must carry a real address for the person who filed it: the
+  // resolution email goes there. A report filed under a placeholder
+  // (support-bot@…) sent the "your bug has been fixed" email to our own
+  // inbox and the backer who reported it heard nothing.
+  const contactEmail = typeof input.contactEmail === "string" ? input.contactEmail.trim().toLowerCase() : "";
+  const email = identity.verified?.email || identity.sessionEmail || (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactEmail) ? contactEmail : null);
+  if (!email) {
+    return "Bug report NOT submitted: no email address to send the resolution to. Ask the user for the email address they'd like updates at, then call submit_bug_report again with contactEmail.";
+  }
+  const name = identity.verified?.name || identity.sessionName || (typeof input.contactName === "string" ? input.contactName.trim().slice(0, 100) : "") || null;
   const reporterUserId = identity.verified?.userId || identity.sessionUserId;
 
   // Use the same model the /api/bug-reports endpoint persists to so
   // these reports show up alongside form-submitted ones in /admin.
   const created = await db.bugReport.create({
     data: {
-      email: email || "support-bot@indiecrowdfund.com",
+      email,
       name: name || "(via support chatbot)",
       title,
       description: identity.pageUrl
@@ -620,8 +633,12 @@ async function executeEmailSupport(
     if (!campaign) return "Email NOT sent: this is about an order but no campaign was given. Identify which campaign from lookup_my_orders (ask the user if more than one fits), then call email_support again with the campaign slug in `campaign` and the pledge id in `pledgeId`, stating in the body what the pledge included and what you checked. If the question is really for the creator (shipping, files, reward contents), use message_creator instead.";
   }
 
-  const email = identity.verified?.email || identity.sessionEmail;
-  const name = identity.verified?.name || identity.sessionName;
+  const contactEmail = typeof input.contactEmail === "string" ? input.contactEmail.trim().toLowerCase() : "";
+  const email = identity.verified?.email || identity.sessionEmail || (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactEmail) ? contactEmail : null);
+  if (!email) {
+    return "Email NOT sent: support would have no way to reply. Ask the user for the email address they want the reply at, then call email_support again with contactEmail.";
+  }
+  const name = identity.verified?.name || identity.sessionName || (typeof input.contactName === "string" ? input.contactName.trim().slice(0, 100) : "") || null;
   const orders = identity.verified?.userId ? formatBackerSupportContext(await loadOrders(identity)) : "";
 
   // Last 10 turns of the chat so support has context. Trimmed per turn

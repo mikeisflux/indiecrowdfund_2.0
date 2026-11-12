@@ -237,7 +237,11 @@ export async function PATCH(req: NextRequest) {
     });
 
     // Send resolution email when status is RESOLVED or CLOSED and resolution notes exist
-    if ((status === "RESOLVED" || status === "CLOSED") && bugReport.email && bugReport.resolution) {
+    // Never send the resolution to our own placeholder address (older
+    // chatbot reports with no reporter email); it only lands in the
+    // support inbox and tells nobody.
+    const reporterReachable = !!bugReport.email && !/^support-bot@/i.test(bugReport.email) && !/^(noreply|no-reply)@/i.test(bugReport.email);
+    if ((status === "RESOLVED" || status === "CLOSED") && reporterReachable && bugReport.resolution) {
       try {
         await sendBugReportResolutionEmail(
           bugReport.email,
