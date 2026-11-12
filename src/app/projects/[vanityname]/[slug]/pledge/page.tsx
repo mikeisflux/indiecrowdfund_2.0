@@ -159,6 +159,16 @@ export default function PledgePage() {
               />
             )}
 
+            {/* A declined or cancelled hosted checkout sends the backer back
+                to the rewards step; the reason must be visible there, not
+                only on the payment step's own error box. */}
+            {pledge.paymentError && pledge.step !== "payment" && (
+              <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg flex items-start gap-2">
+                <AlertTriangle className="h-4 w-4 text-red-600 dark:text-red-400 mt-0.5 shrink-0" />
+                <p className="text-sm text-red-700 dark:text-red-300">{pledge.paymentError}</p>
+              </div>
+            )}
+
             {pledge.step === "payment" && (
               <PaymentStep
                 project={pledge.project}
@@ -184,6 +194,7 @@ export default function PledgePage() {
                 intentType={pledge.intentType}
                 dcCheckoutUrl={pledge.dcCheckoutUrl}
                 dcSessionId={pledge.dcSessionId}
+                dcCheckoutSurface={pledge.dcCheckoutSurface}
               />
             )}
           </div>

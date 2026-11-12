@@ -107,6 +107,10 @@ export function usePledge() {
   // confirm route as the session lookup key.
   const [dcCheckoutUrl, setDcCheckoutUrl] = useState<string | null>(null);
   const [dcSessionId, setDcSessionId] = useState<string | null>(null);
+  // "embed" mounts DC's page in an iframe; "redirect" shows a button that
+  // navigates the whole browser to DC (phones and in-app browsers, where
+  // the iframe's card field can't take keyboard focus).
+  const [dcCheckoutSurface, setDcCheckoutSurface] = useState<"embed" | "redirect">("embed");
 
   const creatingPaymentRef = useRef(false);
 
@@ -224,7 +228,22 @@ export function usePledge() {
                 headers: { "Content-Type": "application/json" },
               });
             }
-            if (!res.ok) console.error("Failed to confirm pledge after redirect");
+            if (!res.ok) {
+              console.error("Failed to confirm pledge after redirect");
+              // A phone coming back from DC's top-level page with a declined
+              // or cancelled session must not be shown the success screen.
+              // 202 = DC still settling / webhook race; that is a success
+              // from the backer's point of view and the cron finishes it.
+              if (dcSessionIdParam && res.status !== 202) {
+                const data = await res.json().catch(() => ({}));
+                setPaymentError(
+                  (data.message || data.error || "Your payment didn't go through.") +
+                    " Your card was not charged. Pick your reward again to retry."
+                );
+                setStep("rewards");
+                return;
+              }
+            }
           } catch (error) {
             console.error("Error confirming pledge after redirect:", error);
           }
@@ -438,6 +457,7 @@ export function usePledge() {
         // origin; no full-page redirect.
         setDcCheckoutUrl(result.checkoutUrl);
         setDcSessionId(result.sessionId);
+        setDcCheckoutSurface(result.checkoutSurface === "redirect" ? "redirect" : "embed");
       } else {
         if (!result.clientSecret) throw new Error("Invalid payment response - missing client secret");
         if (result.publishableKey && !dcStripePromise) setDcStripePromise(loadStripe(result.publishableKey));
@@ -658,6 +678,9 @@ export function usePledge() {
   const handleSelectReward = (reward: RewardData) => {
     setSelectedReward(reward);
     setPledgeWithoutReward(false);
+    // Starting over after a declined/cancelled checkout: the stale error
+    // would otherwise block pledge creation on the payment step.
+    setPaymentError(null);
     setStep("addons");
   };
 
@@ -721,7 +744,7 @@ export function usePledge() {
     // Whop
     whopSessionId, whopPlanId, whopEnvironment,
     // DivinityCoin white-label hosted checkout (iframe on this page)
-    dcCheckoutUrl, dcSessionId,
+    dcCheckoutUrl, dcSessionId, dcCheckoutSurface,
     // Totals
     totalShipping, addonsShipping, total, addItemsTotal,
     // Handlers

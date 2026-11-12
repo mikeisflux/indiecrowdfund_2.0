@@ -10,6 +10,7 @@ import { ProjectData } from "../types";
 import { WhopPaymentForm } from "./WhopPaymentForm";
 import { DescriptorAcknowledgement } from "@/components/checkout/descriptor-acknowledgement";
 import { VerificationHelp } from "@/components/auth/verification-help";
+import { DCHostedCheckoutRedirect } from "./DCHostedCheckoutRedirect";
 
 // Dynamically import the DC/Stripe wrapper so Stripe.js only loads when payment is initiated
 const DCHostedCheckoutFrame = dynamic(() => import("./DCHostedCheckoutFrame"), {
@@ -62,6 +63,9 @@ interface PaymentStepProps {
   // page is mounted in an iframe via DCHostedCheckoutFrame.
   dcCheckoutUrl: string | null;
   dcSessionId: string | null;
+  // "redirect": don't embed; hand the browser to DC's page (mobile WebKit,
+  // in-app browsers). DC returns it to the pledge page with ?session_id.
+  dcCheckoutSurface?: "embed" | "redirect";
 }
 
 const isEmailVerificationError = (error: string | null) =>
@@ -91,6 +95,7 @@ export function PaymentStep({
   intentType,
   dcCheckoutUrl,
   dcSessionId,
+  dcCheckoutSurface = "embed",
 }: PaymentStepProps) {
   // Hard acknowledgement: the backer must type the statement descriptor
   // (recorded server-side with IP + browser) before any payment surface
@@ -281,6 +286,9 @@ export function PaymentStep({
                  owns the card capture surface inside the frame. */
             dcCheckoutUrl && dcSessionId && currentPledgeId ? (
               agreedToTerms ? (
+                dcCheckoutSurface === "redirect" ? (
+                  <DCHostedCheckoutRedirect checkoutUrl={dcCheckoutUrl} total={displayTotal} />
+                ) : (
                 <DCHostedCheckoutFrame
                   checkoutUrl={dcCheckoutUrl}
                   pledgeId={currentPledgeId}
@@ -288,6 +296,7 @@ export function PaymentStep({
                   onSuccess={handlePaymentSuccess}
                   onFailure={handlePaymentError}
                 />
+                )
               ) : (
                 // Same gate as the Stripe/Whop forms: the Grant Program
                 // acknowledgment has to be ticked before a payment surface

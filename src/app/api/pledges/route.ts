@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { getCustomerOrigin, withStoredOrigin } from "@/lib/payments/customer-origin";
 import { z } from "zod";
+import { dcCheckoutSurfaceFor } from "@/lib/payments/divinitycoin/checkout-surface";
 import {
   commitDcPledge,
   createDcCheckoutSession,
@@ -56,6 +57,11 @@ const createPledgeSchema = z.object({
     country: z.string().max(10),
     phone: z.string().max(30).optional(),
   }).optional(),
+  // DivinityCoin hosted checkout surface the browser wants. The client
+  // decides (it can see iPadOS touch screens; the server only sees the
+  // User-Agent); the server falls back to the header when it's absent.
+  // See @/lib/payments/divinitycoin/checkout-surface.
+  dcCheckoutSurface: z.enum(["embed", "redirect"]).optional(),
 });
 
 export async function POST(req: NextRequest) {
@@ -657,6 +663,13 @@ export async function POST(req: NextRequest) {
 
             const sessionMode = useSavedCardFlow ? "setup" : "payment";
             const amountCents = Math.round(data.amount * 100);
+            // Mobile WebKit and in-app browsers go to DC's page top-level
+            // and are sent back to returnUrl; everything else embeds the
+            // page in an iframe. The surface decides disableAutoRedirect:
+            // the iframe must NOT be navigated away (our React handler
+            // owns the transition), the redirect flow MUST be.
+            const checkoutSurface =
+              data.dcCheckoutSurface ?? dcCheckoutSurfaceFor(req.headers.get("user-agent"));
             const sessionInput = {
               mode: sessionMode as "setup" | "payment",
               platformUserId: pledge.userId,
@@ -669,7 +682,7 @@ export async function POST(req: NextRequest) {
               // our React handler in DCHostedCheckoutFrame stays in
               // control. The "complete" postMessage still fires and
               // we transition the wizard inline.
-              disableAutoRedirect: true,
+              disableAutoRedirect: checkoutSurface === "embed",
               ...(useSavedCardFlow
                 ? {}
                 : {
@@ -691,7 +704,10 @@ export async function POST(req: NextRequest) {
             // session gets one more try under a one-off key.
             let dcSession = await createDcCheckoutSession({
               ...sessionInput,
-              idempotencyKey: `${pledge.id}:${sessionMode}:${useSavedCardFlow ? 0 : amountCents}`,
+              // The surface is part of the key: an embed session (no auto
+              // redirect) reused by a phone would strand the backer on DC's
+              // success page.
+              idempotencyKey: `${pledge.id}:${sessionMode}:${useSavedCardFlow ? 0 : amountCents}${checkoutSurface === "redirect" ? ":redirect" : ""}`,
             });
             const deadReuse =
               dcSession.success &&
@@ -742,12 +758,17 @@ export async function POST(req: NextRequest) {
             }
             metrics.dcHostedCheckoutSessions.inc({ state: dcSession.reused ? "reused" : "created" });
             metrics.pledgesByDcFlow.inc({ flow: "hosted_checkout" });
+            pledgeLogger.info(
+              { correlationId, pledgeId: pledge.id, sessionId: dcSession.sessionId, checkoutSurface },
+              "DC hosted-checkout session ready"
+            );
 
             return NextResponse.json({
               paymentMethod: "DIVINITYCOIN",
               type: "hosted_checkout",
               checkoutUrl: dcSession.checkoutUrl,
               sessionId: dcSession.sessionId,
+              checkoutSurface,
               pledgeId: pledge.id,
               chargedImmediately: !useSavedCardFlow,
             });

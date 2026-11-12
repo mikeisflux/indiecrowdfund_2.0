@@ -1,4 +1,5 @@
 import { apiFetch } from "@/lib/fetch-utils";
+import { dcCheckoutSurfaceFor } from "@/lib/payments/divinitycoin/checkout-surface";
 
 // Helper function to get shipping cost for a country
 export function getShippingCost(
@@ -179,6 +180,10 @@ export async function createPledgeForPayment(
   // it up to dispatch /confirm-dc-checkout.
   checkoutUrl?: string;
   sessionId?: string;
+  // "embed" (iframe on our page) or "redirect" (top-level nav to DC's
+  // page; DC sends the browser back to returnUrl). Mobile WebKit and
+  // in-app browsers get "redirect" — see @/lib/payments/divinitycoin/checkout-surface.
+  checkoutSurface?: "embed" | "redirect";
 }> {
   const addonsWithQuantity = Object.entries(selectedAddons).map(([id, quantity]) => ({
     id,
@@ -207,6 +212,10 @@ export async function createPledgeForPayment(
         amount: total,
         shippingAmount: totalShipping,
         shippingCountry,
+        dcCheckoutSurface: dcCheckoutSurfaceFor(
+          typeof navigator !== "undefined" ? navigator.userAgent : "",
+          typeof navigator !== "undefined" ? navigator.maxTouchPoints : 0
+        ),
       }),
       signal: controller.signal,
     });
@@ -235,6 +244,7 @@ export async function createPledgeForPayment(
     whopSessionId: data.whopSessionId,
     checkoutUrl: data.checkoutUrl,
     sessionId: data.sessionId,
+    checkoutSurface: data.checkoutSurface,
   };
 }
 
