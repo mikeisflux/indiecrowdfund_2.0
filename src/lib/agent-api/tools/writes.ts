@@ -180,3 +180,30 @@ defineTool({
     return { ...c, adminUrl: `${process.env.NEXT_PUBLIC_APP_URL || "https://indiecrowdfund.com"}/admin/email` };
   },
 });
+
+defineTool({
+  name: "sentinel_update_errors",
+  description:
+    "Resolve, ignore, reopen or mark in-progress Sentinel error groups. Pick them by id (from sentinel_errors) or by a title substring. Use after the cause has been fixed and deployed, or when a group is confirmed noise (scanner probes, scraper browsers).",
+  scope: SCOPE_AGENT_WRITE,
+  input: z.object({
+    groupIds: z.array(z.string()).max(100).optional(),
+    titleContains: z.string().min(3).max(200).optional().describe("Case-insensitive substring of the group title; combine with status to limit scope."),
+    currentStatus: z.array(z.enum(["UNRESOLVED", "IN_PROGRESS", "RESOLVED", "IGNORED"])).optional().describe("Only touch groups currently in these statuses (default UNRESOLVED and IN_PROGRESS)."),
+    status: z.enum(["RESOLVED", "IGNORED", "IN_PROGRESS", "UNRESOLVED"]),
+    confirm: Confirm,
+  }),
+  handler: async (a, ctx) => {
+    if (!a.groupIds?.length && !a.titleContains) throw new ToolError("Give groupIds or titleContains.", "invalid_arguments");
+    const where = {
+      ...(a.groupIds?.length ? { id: { in: a.groupIds } } : {}),
+      ...(a.titleContains ? { title: { contains: a.titleContains, mode: "insensitive" as const } } : {}),
+      status: { in: a.currentStatus?.length ? a.currentStatus : ["UNRESOLVED", "IN_PROGRESS"] },
+    };
+    const matched = await db.errorGroup.findMany({ where, select: { id: true, title: true, status: true, eventCount: true }, take: 100 });
+    if (matched.length === 0) return { updated: 0, groups: [] };
+    const res = await db.errorGroup.updateMany({ where: { id: { in: matched.map((g: { id: string }) => g.id) } }, data: { status: a.status } });
+    log.info({ keyId: ctx.key.id, status: a.status, count: res.count, titles: matched.map((g: { title: string }) => g.title) }, "Sentinel groups updated via agent API");
+    return { updated: res.count, status: a.status, groups: matched.map((g: { id: string; title: string; status: string; eventCount: number }) => ({ id: g.id, title: g.title, was: g.status, events: g.eventCount })) };
+  },
+});

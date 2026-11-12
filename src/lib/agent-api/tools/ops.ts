@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { execFile } from "child_process";
 import { promisify } from "util";
-import { existsSync } from "fs";
+import { existsSync, readdirSync, statSync } from "fs";
 import { db } from "@/lib/db";
 import { defineTool, SCOPE_AGENT_READ, ToolError } from "../registry";
 import { Limit } from "../shared";
@@ -53,7 +53,46 @@ defineTool({
 });
 
 const LOG_DIR = process.env.AGENT_LOG_DIR || "/var/log/pm2";
-const LOG_FILES = ["indiecrowdfund-combined.log", "indiecrowdfund-out.log", "indiecrowdfund-error.log"];
+
+// pm2 names and places its log files per host config (pm2 start flags,
+// logrotate suffixes like indiecrowdfund-out-0.log or
+// indiecrowdfund-combined__2026-11-12_00-00-00.log, ~/.pm2/logs on a
+// default install). A fixed list of three names found nothing on the
+// production box. Ask pm2 where the app's logs are, then fall back to
+// scanning the usual directories for anything named after the app.
+async function discoverLogFiles(): Promise<string[]> {
+  const found = new Set<string>();
+  try {
+    const res = await run("pm2", ["jlist"], { timeout: 8000, maxBuffer: 8 * 1024 * 1024 });
+    const list = JSON.parse(res.stdout) as { name?: string; pm2_env?: { pm_out_log_path?: string; pm_err_log_path?: string; pm_log_path?: string } }[];
+    for (const proc of list) {
+      if (proc.name && !/indiecrowdfund/i.test(proc.name)) continue;
+      for (const f of [proc.pm2_env?.pm_log_path, proc.pm2_env?.pm_out_log_path, proc.pm2_env?.pm_err_log_path]) {
+        if (f && existsSync(f)) found.add(f);
+      }
+    }
+  } catch {
+    // pm2 not on PATH for this process, or not JSON; scan directories.
+  }
+  const dirs = [LOG_DIR, `${process.env.HOME || "/root"}/.pm2/logs`, "/root/.pm2/logs", "/var/log/pm2"];
+  for (const dir of dirs) {
+    if (!existsSync(dir)) continue;
+    let names: string[] = [];
+    try {
+      names = readdirSync(dir);
+    } catch {
+      continue;
+    }
+    const candidates = names
+      .filter((n) => /^indiecrowdfund.*\.log$/i.test(n))
+      .map((n) => `${dir}/${n}`)
+      .map((f) => ({ f, mtime: (() => { try { return statSync(f).mtimeMs; } catch { return 0; } })() }))
+      .sort((a, b) => b.mtime - a.mtime)
+      .slice(0, 6);
+    for (const c of candidates) found.add(c.f);
+  }
+  return [...found];
+}
 
 defineTool({
   name: "search_logs",
@@ -66,8 +105,14 @@ defineTool({
     maxLineLength: z.number().int().min(100).max(5000).default(1200),
   }),
   handler: async (a) => {
-    const files = LOG_FILES.map((f) => `${LOG_DIR}/${f}`).filter((f) => existsSync(f));
-    if (files.length === 0) throw new ToolError(`No log files found in ${LOG_DIR}.`, "not_found", 404);
+    const files = await discoverLogFiles();
+    if (files.length === 0) {
+      throw new ToolError(
+        `No pm2 log files found (looked at pm2 jlist, ${LOG_DIR} and ~/.pm2/logs). Set AGENT_LOG_DIR to the directory pm2 writes to.`,
+        "not_found",
+        404
+      );
+    }
     // execFile with an argument array: the query is passed as data, never
     // interpolated into a shell, so it cannot inject commands.
     let out = "";
