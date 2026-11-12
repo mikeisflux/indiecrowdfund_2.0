@@ -45,14 +45,25 @@ defineTool({
     if (SECRET_COLUMNS.test(sql)) throw new ToolError("That query names a secret-bearing column (password, hash, token, card or bank data) and was refused.", "invalid_arguments");
 
     const started = Date.now();
-    const rows = await db.$transaction(
-      async (tx) => {
-        await tx.$executeRawUnsafe("SET TRANSACTION READ ONLY");
-        await tx.$executeRawUnsafe("SET LOCAL statement_timeout = 15000");
-        return tx.$queryRawUnsafe(sql);
-      },
-      { timeout: 20_000, maxWait: 5_000 }
-    );
+    let rows: unknown;
+    try {
+      rows = await db.$transaction(
+        async (tx) => {
+          await tx.$executeRawUnsafe("SET TRANSACTION READ ONLY");
+          await tx.$executeRawUnsafe("SET LOCAL statement_timeout = 15000");
+          return tx.$queryRawUnsafe(sql);
+        },
+        { timeout: 20_000, maxWait: 5_000 }
+      );
+    } catch (err) {
+      // Hand the Postgres message back ("column p.foo does not exist",
+      // "canceling statement due to statement timeout") instead of a
+      // generic failure, so the caller can fix the query.
+      const raw = err instanceof Error ? err.message : String(err);
+      const m = raw.match(/Message: `([^`]+)`/);
+      const code = raw.match(/Code: `([^`]+)`/)?.[1];
+      throw new ToolError(`Query failed${code ? ` (${code})` : ""}: ${m ? m[1] : raw.split("\n").filter(Boolean).pop() || raw}`, "invalid_arguments");
+    }
     const list = (Array.isArray(rows) ? rows : []) as Record<string, unknown>[];
     const limited = list.slice(0, a.maxRows).map((r) => Object.fromEntries(Object.entries(r).map(([k, v]) => [k, serialize(v)])));
     return { rowCount: list.length, returned: limited.length, truncated: list.length > a.maxRows, durationMs: Date.now() - started, rows: limited };

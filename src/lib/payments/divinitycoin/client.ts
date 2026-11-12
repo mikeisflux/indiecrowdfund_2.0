@@ -27,7 +27,7 @@ function dcErrorMessage(body: Record<string, unknown>): string | null {
 export async function callDivinityCoinAPI(
   action: string,
   payload: Record<string, unknown>
-): Promise<{ success: boolean; data?: Record<string, unknown>; error?: string }> {
+): Promise<{ success: boolean; data?: Record<string, unknown>; error?: string; code?: string }> {
   try {
     const config = await getDivinityCoinConfig();
 
@@ -55,15 +55,18 @@ export async function callDivinityCoinAPI(
 
     if (!response.ok) {
       const message = dcErrorMessage(result) || rawBody.slice(0, 300) || `DC API ${action} failed with status ${response.status}`;
+      const code = typeof result.code === "string" ? result.code : undefined;
       // The error text goes in the log MESSAGE, not just the attached
       // object: Sentinel showed "[DivinityCoin API] refund failed:" with
       // nothing after it, because DC's reason was in a body field the
       // logger didn't render.
-      paymentsDivinitycoinLogger.error(
-        { action, status: response.status, dcBody: rawBody.slice(0, 2000), payloadKeys: Object.keys(payload) },
-        `[DivinityCoin API] ${action} failed (${response.status}): ${message}`
-      );
-      return { success: false, error: message };
+      // idempotency_key_in_use means our earlier request is still being
+      // processed; the caller reconciles. Warn so Sentinel doesn't page.
+      const logDetail = { action, status: response.status, dcBody: rawBody.slice(0, 2000), payloadKeys: Object.keys(payload) };
+      const logMessage = `[DivinityCoin API] ${action} failed (${response.status}): ${message}`;
+      if (code === "idempotency_key_in_use") paymentsDivinitycoinLogger.warn(logDetail, logMessage);
+      else paymentsDivinitycoinLogger.error(logDetail, logMessage);
+      return { success: false, error: message, code };
     }
 
     // DC returns HTTP 200 with { success: false } for payload-level

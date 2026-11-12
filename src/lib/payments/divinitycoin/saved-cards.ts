@@ -171,6 +171,9 @@ export async function chargeDcSavedPaymentMethod(
       success: false,
       status: "failed",
       error: result.error || "Charge failed",
+      // DC's machine code on a refused call (idempotency_key_in_use,
+      // card_declined…) so callers can tell "still in flight" from "no".
+      code: result.code,
     };
   }
   const data = result.data as Record<string, unknown>;

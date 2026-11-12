@@ -93,6 +93,15 @@ export async function POST(request: Request) {
       ...(result.error && { error: result.error }),
     });
   } catch (error) {
+    // "aborted" / ECONNRESET: the browser closed the connection (tab
+    // closed, navigated away, upload cancelled) while we were still
+    // reading the body or rendering. Nothing to fix on our side.
+    const msg = error instanceof Error ? error.message : String(error);
+    const clientGone = /\baborted\b|ECONNRESET|socket hang up/i.test(msg);
+    if (clientGone) {
+      backerDigitalFilesExtractCoverLogger.warn({ err: formatError(error) }, "Cover extraction cancelled by client");
+      return NextResponse.json({ error: "Request cancelled" }, { status: 499 });
+    }
     backerDigitalFilesExtractCoverLogger.error({ err: formatError(error) }, "Cover extraction error:");
     return NextResponse.json(
       { error: "Internal server error" },

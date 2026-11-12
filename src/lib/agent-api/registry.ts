@@ -164,7 +164,14 @@ export async function runTool(name: string, rawArgs: unknown, ctx: ToolContext):
     const result = await tool.handler(parsed.data, ctx);
     return finish({ ok: true, status: 200, result });
   } catch (err) {
-    log.error({ err: formatError(err), tool: name, keyId: ctx.key.id }, `agent tool ${name} failed`);
+    // A ToolError is the tool refusing or rejecting the call on purpose
+    // (bad SQL, unknown id, invalid arguments): the caller gets the
+    // message and fixes their request. Only unexpected failures page.
+    if (err instanceof ToolError) {
+      log.warn({ err: err.message, code: err.code, tool: name, keyId: ctx.key.id }, `agent tool ${name} rejected the call`);
+    } else {
+      log.error({ err: formatError(err), tool: name, keyId: ctx.key.id }, `agent tool ${name} failed`);
+    }
     const message = err instanceof ToolError ? err.message : "The tool failed while running. The error has been logged.";
     return finish({ ok: false, status: err instanceof ToolError ? err.status : 500, code: err instanceof ToolError ? err.code : "tool_error", error: message });
   }

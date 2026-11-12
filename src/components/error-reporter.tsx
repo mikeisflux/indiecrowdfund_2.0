@@ -135,6 +135,11 @@ export function ErrorReporter() {
       /TypeError: Failed to fetch/,
       /TypeError: NetworkError/,
       /Load failed/,
+      // Safari: a dynamic import() for a route chunk was cancelled because
+      // the user navigated away (or hit back) before it finished loading.
+      /Importing a module script is canceled/,
+      // Headless scrapers (Lightpanda, ShapBot) choking on our bundle.
+      /^Unhandled Promise Rejection: failed to parse$/,
       // Zotero Connector + similar research-tool extensions throw
       // "Failed to send message X to background page" when their
       // background service-worker dies and the content-script can't

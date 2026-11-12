@@ -250,6 +250,12 @@ const SCANNER_PATHS = [
   "/cgi-bin",
 ];
 
+// Server-side script extensions and scanner dictionary paths. Anchored on
+// the extension so a legitimately named upload like /uploads/x.php.png is
+// unaffected (uploads are served from /api/uploads anyway).
+const SCANNER_PATH_PATTERN =
+  /\.(php[0-9]?|phtml|asp|aspx|ashx|jsp|jspx|cgi|pl|cfm)$|^\/(vendor|wp-includes|wp-json|administrator|joomla|typo3|magento|owa|autodiscover|solr|jenkins|manager\/html|\.aws|\.ssh|\.svn|\.hg|\.DS_Store|server-status|telescope|_ignition|\.well-known\/(?!security\.txt|change-password|assetlinks\.json|apple-app-site-association))/i;
+
 // Track last sync/cleanup time
 let lastDbSync = 0;
 let isInitialized = false;
@@ -808,7 +814,12 @@ export async function proxy(req: NextRequest) {
   // block localhost — internal self-fetches (bot-blocker sync, health
   // checks, crons) hit these same paths and would otherwise poison the
   // blocklist with 127.0.0.1.
-  if (SCANNER_PATHS.some((p) => pathname.startsWith(p))) {
+  // Nothing on this site is served from .php/.asp/.cgi/.jsp. A POST to
+  // "/index.php?option=com_jce" (Joomla upload exploit) reached the app,
+  // where Next read the multipart body as a form action and threw
+  // "Failed to find Server Action" into Sentinel. Also paths of the
+  // common scanner dictionaries the list above doesn't spell out.
+  if (SCANNER_PATHS.some((p) => pathname.startsWith(p)) || SCANNER_PATH_PATTERN.test(pathname)) {
     if (isLocalhostIP(clientIP)) {
       return rewriteToBlocked("Forbidden", 403);
     }

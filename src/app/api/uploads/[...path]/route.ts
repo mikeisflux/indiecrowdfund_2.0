@@ -4,7 +4,8 @@ import { logger } from "@/lib/logger";
 
 const uploadsLogger = logger.child({ module: "uploads" });
 import { readFile, stat } from "fs/promises";
-import { existsSync } from "fs";
+import { existsSync, createReadStream } from "fs";
+import { Readable } from "stream";
 import path from "path";
 import sharp from "sharp";
 
@@ -108,6 +109,24 @@ export async function GET(
       });
     }
 
+    // Large files (PDF previews, videos without a Range header) are
+    // streamed. readFile() on a multi-hundred-MB preview PDF was failing
+    // with a bare 500 for a visitor opening a campaign from Facebook, and
+    // a dozen such requests at once could exhaust the heap.
+    const STREAM_THRESHOLD = 8 * 1024 * 1024;
+    if (fileSize > STREAM_THRESHOLD && !(ext === ".webp" && req.nextUrl.searchParams.get("format") === "jpeg")) {
+      const nodeStream = createReadStream(/*turbopackIgnore: true*/ finalPath);
+      const webStream = Readable.toWeb(nodeStream) as unknown as ReadableStream;
+      return new NextResponse(webStream, {
+        headers: {
+          "Content-Type": mimeType,
+          "Content-Length": String(fileSize),
+          "Accept-Ranges": isVideo ? "bytes" : "none",
+          "Cache-Control": "public, max-age=31536000",
+        },
+      });
+    }
+
     // Read the file
     const fileBuffer = await readFile(/*turbopackIgnore: true*/ finalPath);
 
@@ -166,7 +185,19 @@ export async function GET(
       },
     });
   } catch (error) {
-    uploadsLogger.error({ err: formatError(error) }, "Error serving upload:");
+    // A file that vanished between the existence check and the read, or
+    // a path that is a directory, is a 404, not a server fault.
+    const code = (error as NodeJS.ErrnoException)?.code;
+    const relative = decodeURIComponent(req.nextUrl.pathname.replace(/^\/api\/uploads\//, ""));
+    if (code === "ENOENT" || code === "EISDIR" || code === "ENOTDIR") {
+      uploadsLogger.warn({ code, path: relative }, "[Uploads] File not readable");
+      return NextResponse.json({ error: "File not found" }, { status: 404 });
+    }
+    if (code === "EACCES" || code === "EPERM") {
+      uploadsLogger.error({ code, path: relative }, "[Uploads] Permission denied reading upload");
+      return NextResponse.json({ error: "File not accessible" }, { status: 403 });
+    }
+    uploadsLogger.error({ err: formatError(error), code, path: relative }, "Error serving upload:");
     return NextResponse.json({ error: "Failed to serve file" }, { status: 500 });
   }
 }

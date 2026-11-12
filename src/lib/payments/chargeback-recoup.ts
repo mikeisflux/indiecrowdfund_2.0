@@ -221,6 +221,35 @@ export async function attemptRecoupCharge(
     return { status: "HELD_BACK", error: "Retries exhausted; amount is withheld from payouts" };
   }
 
+  // Claim the row before talking to DC. A lease older than five minutes is
+  // a crashed attempt and may be taken over; anything fresher is another
+  // tick mid-charge, and DC would only refuse the duplicate anyway.
+  const leaseCutoff = new Date(Date.now() - 5 * 60 * 1000);
+  const claimed = await db.chargebackRecoup.updateMany({
+    where: {
+      id: recoupId,
+      status: { in: ["PENDING", "FAILED", "HELD_BACK"] },
+      OR: [{ lockedAt: null }, { lockedAt: { lt: leaseCutoff } }],
+    },
+    data: { lockedAt: new Date() },
+  });
+  if (claimed.count === 0) {
+    log.info({ recoupId }, "Recoup charge already in progress; skipping");
+    return { status: "IN_PROGRESS", error: "Another attempt is in progress" };
+  }
+
+  try {
+    return await chargeClaimedRecoup(recoup, opts);
+  } finally {
+    await db.chargebackRecoup.updateMany({ where: { id: recoupId }, data: { lockedAt: null } }).catch(() => {});
+  }
+}
+
+async function chargeClaimedRecoup(
+  recoup: NonNullable<Awaited<ReturnType<typeof db.chargebackRecoup.findUnique>>>,
+  opts: { actorId?: string; force?: boolean }
+): Promise<{ status: string; error?: string }> {
+  const recoupId = recoup.id;
   const amountCents = Math.round(Number(recoup.amount) * 100);
   const ctx = await loadContext(recoup.projectId, recoup.pledgeId);
 
@@ -270,6 +299,15 @@ export async function attemptRecoupCharge(
       log.info({ recoupId, actorId: opts.actorId }, "Recoup charged by admin");
     }
     return { status: "CHARGED" };
+  }
+
+  // DC still has an earlier request for this key in flight (a parallel
+  // tick that beat the lease, or DC's own retry). Not a card failure: no
+  // backoff, no attempt counted, no creator notification. The next tick
+  // finds the succeeded charge through lookupDcPayment above.
+  if (result.code === "idempotency_key_in_use") {
+    log.warn({ recoupId }, "DC reports this recoup charge already in flight; will reconcile next tick");
+    return { status: "IN_PROGRESS", error: result.error };
   }
 
   const reason =

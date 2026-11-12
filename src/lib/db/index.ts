@@ -227,6 +227,11 @@ function getPrismaClient(): PrismaClient {
         // but the engine-level log still emits through the $on("error")
         // hook. Suppress — benign.
         "An operation failed because it depends on one or more records that were required but not found. No record was found for a delete.",
+        // Ad-hoc SELECTs from the Agent API's run_sql tool (the NAS MCP
+        // server). A mistyped column or table name comes back to the
+        // caller as the Postgres message; Postgres class 42 is "syntax
+        // error or access rule violation", never a server fault.
+        "Raw query failed. Code: `42",
       ];
 
        

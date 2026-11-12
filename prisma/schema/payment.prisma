@@ -642,6 +642,12 @@ model ChargebackRecoup {
   attempts      Int                    @default(0)
   nextAttemptAt DateTime?
   lastError     String?
+  // Lease taken while a charge is in flight. Two overlapping cron ticks
+  // (hourly retry + the daily scan, or a manual "Recover" during either)
+  // used to send the same recoup to DC twice; DC refused the second with
+  // idempotency_key_in_use and we recorded that as a card failure.
+  // Added by add_recoup_locked_at.sql.
+  lockedAt      DateTime?
 
   // Reused on every retry so a network-uncertain attempt never double-charges.
   idempotencyKey        String  @unique
