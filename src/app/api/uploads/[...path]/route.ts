@@ -82,22 +82,37 @@ export async function GET(
     const fileStat = await stat(/*turbopackIgnore: true*/ finalPath);
     const fileSize = fileStat.size;
 
-    // Check if this is a video and if Range header is present
-    const isVideo = mimeType.startsWith("video/");
+    // Range requests for every file type, streamed from disk. Video
+    // players need them for seeking; pdf.js uses them to fetch pages on
+    // demand instead of downloading the whole book first. A 22 MB preview
+    // PDF served as one buffered response failed with an empty 500 for a
+    // visitor arriving from Facebook; served in ranges, the viewer shows
+    // the first page after a few hundred KB.
     const rangeHeader = req.headers.get("range");
+    const rangeMatch = rangeHeader?.match(/^bytes=(\d*)-(\d*)$/);
 
-    if (isVideo && rangeHeader) {
-      // Parse Range header (e.g., "bytes=0-1024")
-      const parts = rangeHeader.replace(/bytes=/, "").split("-");
-      const start = parseInt(parts[0], 10);
-      const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
+    if (rangeMatch && (rangeMatch[1] || rangeMatch[2])) {
+      let start: number;
+      let end: number;
+      if (rangeMatch[1]) {
+        start = parseInt(rangeMatch[1], 10);
+        end = rangeMatch[2] ? Math.min(parseInt(rangeMatch[2], 10), fileSize - 1) : fileSize - 1;
+      } else {
+        // Suffix range: the last N bytes (pdf.js reads the xref trailer this way).
+        const suffix = Math.min(parseInt(rangeMatch[2], 10), fileSize);
+        start = fileSize - suffix;
+        end = fileSize - 1;
+      }
+      if (!Number.isFinite(start) || !Number.isFinite(end) || start > end || start >= fileSize) {
+        return new NextResponse(null, {
+          status: 416,
+          headers: { "Content-Range": `bytes */${fileSize}`, "Accept-Ranges": "bytes" },
+        });
+      }
       const chunkSize = end - start + 1;
-
-      // Read the specific chunk
-      const fileBuffer = await readFile(/*turbopackIgnore: true*/ finalPath);
-      const chunk = fileBuffer.subarray(start, end + 1);
-
-      return new NextResponse(chunk, {
+      const nodeStream = createReadStream(/*turbopackIgnore: true*/ finalPath, { start, end });
+      const webStream = Readable.toWeb(nodeStream) as unknown as ReadableStream;
+      return new NextResponse(webStream, {
         status: 206, // Partial Content
         headers: {
           "Content-Type": mimeType,
@@ -110,9 +125,8 @@ export async function GET(
     }
 
     // Large files (PDF previews, videos without a Range header) are
-    // streamed. readFile() on a multi-hundred-MB preview PDF was failing
-    // with a bare 500 for a visitor opening a campaign from Facebook, and
-    // a dozen such requests at once could exhaust the heap.
+    // streamed rather than read into memory; a dozen concurrent 20 MB
+    // reads could exhaust the heap.
     const STREAM_THRESHOLD = 8 * 1024 * 1024;
     if (fileSize > STREAM_THRESHOLD && !(ext === ".webp" && req.nextUrl.searchParams.get("format") === "jpeg")) {
       const nodeStream = createReadStream(/*turbopackIgnore: true*/ finalPath);
@@ -121,7 +135,7 @@ export async function GET(
         headers: {
           "Content-Type": mimeType,
           "Content-Length": String(fileSize),
-          "Accept-Ranges": isVideo ? "bytes" : "none",
+          "Accept-Ranges": "bytes",
           "Cache-Control": "public, max-age=31536000",
         },
       });
@@ -180,7 +194,7 @@ export async function GET(
       headers: {
         "Content-Type": mimeType,
         "Content-Length": String(fileSize),
-        "Accept-Ranges": isVideo ? "bytes" : "none",
+        "Accept-Ranges": "bytes",
         "Cache-Control": "public, max-age=31536000",
       },
     });
