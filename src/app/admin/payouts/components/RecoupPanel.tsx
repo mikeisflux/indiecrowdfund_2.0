@@ -72,7 +72,7 @@ export function RecoupPanel({
   const [refunding, setRefunding] = useState<string | null>(null);
   const [refundReason, setRefundReason] = useState("");
 
-  const refund = async (recoupId: string) => {
+  const refund = async (recoupId: string, force = false) => {
     if (!refundReason.trim()) {
       toast.error("Give a reason for the refund — the creator is told why");
       return;
@@ -82,9 +82,19 @@ export function RecoupPanel({
       const res = await apiFetch("/api/admin/chargeback-recoups", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "refund", recoupId, reason: refundReason.trim() }),
+        body: JSON.stringify({ action: "refund", recoupId, reason: refundReason.trim(), force }),
       });
       const data = await res.json().catch(() => ({}));
+      if (res.status === 409 && data.uncertain && !force) {
+        // An earlier attempt got no clear answer from DC. Sending again
+        // blind can pay the creator twice, so the admin confirms they
+        // looked at the payment first.
+        if (confirm(`${data.error}\n\nYou checked the DC dashboard and the refund is NOT there. Send it again?`)) {
+          setBusy(null);
+          return refund(recoupId, true);
+        }
+        throw new Error("Refund not sent. Check the payment in DC first.");
+      }
       if (!res.ok) throw new Error(data.error || "Refund failed");
       toast.success("Refunded to the creator's card");
       setRefunding(null);

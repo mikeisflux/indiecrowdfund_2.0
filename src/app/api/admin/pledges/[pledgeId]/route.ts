@@ -5,7 +5,8 @@ import { logger } from "@/lib/logger";
 const adminPledgesLogger = logger.child({ module: "admin-pledges" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { callDivinityCoinAPI, handlePaymentSucceeded, verifyDcPayment, getDcCheckoutSession } from "@/lib/payments/divinitycoin";
+import { handlePaymentSucceeded, verifyDcPayment, getDcCheckoutSession } from "@/lib/payments/divinitycoin";
+import { requestDcRefund } from "@/lib/payments/divinitycoin/refunds";
 import { getPayPalConfig, getPayPalAccessToken } from "@/lib/payments/paypal";
 import { sendPledgeConfirmationEmail } from "@/lib/email";
 import { isAdmin } from "@/lib/auth-helpers";
@@ -376,19 +377,23 @@ export async function PATCH(
         try {
           const refundAmount = Number(pledge.amount);
 
-          const dcResult = await callDivinityCoinAPI("refund", {
+          const dcResult = await requestDcRefund({
             pledgeId: pledge.id,
             paymentId: pledge.divinityCoinPaymentId,
-            amount: Math.round(refundAmount * 100), // cents
+            amountCents: Math.round(refundAmount * 100),
             reason: reason || "Refunded by admin",
             requestedBy: "admin",
+            purpose: "admin-pledge-refund",
+            idempotencyKey: `admin-pledge-refund:${pledge.id}:${pledge.divinityCoinPaymentId}`,
+            chargedCents: Math.round(refundAmount * 100),
+            force: body.force === true,
           });
 
           if (!dcResult.success) {
-            adminPledgesLogger.error({ err: String(dcResult.error) }, `[Admin DivinityCoin Refund] DC API refund failed for pledge ${pledgeId}:`);
+            adminPledgesLogger.error({ err: String(dcResult.error), blocked: dcResult.blocked }, `[Admin DivinityCoin Refund] DC API refund failed for pledge ${pledgeId}:`);
             return NextResponse.json(
-              { error: dcResult.error || "DivinityCoin refund failed" },
-              { status: 400 }
+              { error: dcResult.error || "DivinityCoin refund failed", uncertain: !!dcResult.uncertain, blocked: dcResult.blocked },
+              { status: dcResult.uncertain || dcResult.blocked === "uncertain" || dcResult.blocked === "in_flight" ? 409 : 400 }
             );
           }
 

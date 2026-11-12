@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import { callDivinityCoinAPI } from "./client";
+import { requestDcRefund } from "./refunds";
 import { lookupDcPayment } from "./saved-cards";
 import { paymentsDivinitycoinLogger as log } from "./config";
 
@@ -38,6 +38,8 @@ export interface RefundDcPledgeInput {
   amountCents: number;
   reason: string;
   requestedBy: "user" | "creator" | "admin";
+  /** Tag recorded on each DcRefundAttempt ("pledge-cancel", "pledge-decrease"); defaults to "pledge-refund". */
+  purpose?: string;
   /** Ledger row description; "(part N)" is appended when split. */
   description: string;
   /** Extra audit fields merged into every ledger row's metadata. */
@@ -58,6 +60,8 @@ export type RefundDcPledgeResult =
       /** Refunds that DID go through before the failure. Never zero-length silently: callers must account for this money. */
       refundedCents: number;
       refunds: DcRefundAllocation[];
+      /** DC gave no decision on the last charge: it may be refunding. Nothing else was attempted. */
+      uncertain?: boolean;
     };
 
 interface Charge {
@@ -165,17 +169,6 @@ async function collectCharges(input: RefundDcPledgeInput): Promise<{ charges: Ch
   return { charges, refundedByIntent };
 }
 
-function extractRefundId(data: Record<string, unknown> | undefined): string | null {
-  if (!data) return null;
-  if (typeof data.refundId === "string") return data.refundId;
-  if (typeof data.id === "string") return data.id;
-  const nested = data.refund;
-  if (nested && typeof nested === "object" && typeof (nested as { id?: unknown }).id === "string") {
-    return (nested as { id: string }).id;
-  }
-  return null;
-}
-
 export async function refundDcPledge(input: RefundDcPledgeInput): Promise<RefundDcPledgeResult> {
   const { pledge } = input;
   const requested = Math.round(input.amountCents);
@@ -200,17 +193,30 @@ export async function refundDcPledge(input: RefundDcPledgeInput): Promise<Refund
     const take = Math.min(remaining, cap);
     const isPartial = charge.chargedCents === null || take < charge.chargedCents - alreadyRefunded || alreadyRefunded > 0;
 
-    const dcResult = await callDivinityCoinAPI("refund", {
+    const dcResult = await requestDcRefund({
       pledgeId: pledge.id,
       paymentId: charge.paymentIntentId,
-      amount: take,
+      amountCents: take,
       reason: input.reason.slice(0, 200),
       requestedBy: input.requestedBy,
       partial: isPartial,
+      purpose: input.purpose ?? "pledge-refund",
+      // Deterministic for this exact state of the pledge, so a retried
+      // cancel after a dropped response reuses the recorded refund rather
+      // than sending another, while a later, different decrease gets its
+      // own key.
+      idempotencyKey: `${input.purpose ?? "pledge-refund"}:${pledge.id}:${charge.paymentIntentId}:${take}:${alreadyRefunded}`,
+      chargedCents: charge.chargedCents,
     });
 
     if (!dcResult.success) {
       lastError = dcResult.error || "DivinityCoin refund failed";
+      if (dcResult.uncertain || dcResult.blocked === "uncertain" || dcResult.blocked === "in_flight") {
+        // Do not move on to another charge: the money may already be on
+        // its way back from this one.
+        log.error({ pledgeId: pledge.id, paymentIntentId: charge.paymentIntentId, take, err: lastError }, "[DC refund] stopped: outcome unknown");
+        return { success: false, error: lastError, refundedCents: requested - remaining, refunds, uncertain: true };
+      }
       log.warn(
         { pledgeId: pledge.id, paymentIntentId: charge.paymentIntentId, take, cap, err: lastError },
         "[DC refund] intent rejected; trying the next charge"
@@ -218,7 +224,7 @@ export async function refundDcPledge(input: RefundDcPledgeInput): Promise<Refund
       continue;
     }
 
-    const refundId = extractRefundId(dcResult.data);
+    const refundId = dcResult.refundId;
     refunds.push({ paymentIntentId: charge.paymentIntentId, amountCents: take, refundId });
     remaining -= take;
 

@@ -3,7 +3,7 @@ import { formatError } from "@/lib/errors";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { logger } from "@/lib/logger";
-import { callDivinityCoinAPI } from "@/lib/payments/divinitycoin";
+import { requestDcRefund } from "@/lib/payments/divinitycoin/refunds";
 import { getPayPalConfig, getPayPalAccessToken } from "@/lib/payments/paypal";
 import { getWhopClient } from "@/lib/payments/whop";
 import { notifyRefundRequestDecision } from "@/lib/notifications/pledge-notifications";
@@ -164,15 +164,21 @@ export async function PATCH(
     // Process the refund per processor
     try {
       if (processor === "DIVINITYCOIN") {
-        const dcResult = await callDivinityCoinAPI("refund", {
+        const dcResult = await requestDcRefund({
           pledgeId: pledge.id,
           paymentId: pledge.divinityCoinPaymentId,
-          amount: Math.round(Number(pledge.amount) * 100),
+          amountCents: Math.round(Number(pledge.amount) * 100),
           reason: refundRequest.reason,
           requestedBy: "creator",
+          purpose: "refund-request",
+          idempotencyKey: `refund-request:${requestId}`,
+          chargedCents: Math.round(Number(pledge.amount) * 100),
         });
         if (!dcResult.success) {
-          return NextResponse.json({ error: dcResult.error || "DivinityCoin refund failed." }, { status: 400 });
+          return NextResponse.json(
+            { error: dcResult.error || "DivinityCoin refund failed.", uncertain: !!dcResult.uncertain },
+            { status: dcResult.uncertain || dcResult.blocked === "uncertain" || dcResult.blocked === "in_flight" ? 409 : 400 }
+          );
         }
       } else if (processor === "PAYPAL") {
         const ppConfig = await getPayPalConfig();

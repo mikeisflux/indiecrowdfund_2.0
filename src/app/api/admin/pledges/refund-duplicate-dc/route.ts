@@ -3,7 +3,7 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { logger } from "@/lib/logger";
 import { formatError } from "@/lib/errors";
-import { callDivinityCoinAPI } from "@/lib/payments/divinitycoin";
+import { requestDcRefund } from "@/lib/payments/divinitycoin/refunds";
 import { verifyDcPayment } from "@/lib/payments/divinitycoin/saved-cards";
 import { sendDuplicateChargeRefundedEmail } from "@/lib/email/email-templates-pledge";
 
@@ -131,21 +131,25 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const dcResult = await callDivinityCoinAPI("refund", {
+    const dcResult = await requestDcRefund({
       pledgeId: pledge.id,
       paymentId: strayIntent,
-      amount: refundCents,
+      amountCents: refundCents,
       reason: `Duplicate charge refunded by admin: ${reason}`.slice(0, 200),
       requestedBy: "admin",
+      purpose: "duplicate-charge",
+      idempotencyKey: `duplicate-charge:${pledge.id}:${strayIntent}`,
+      chargedCents: refundCents,
+      force: body.force === true,
     });
     if (!dcResult.success) {
-      log.error({ pledgeId: pledge.id, strayIntent, err: dcResult.error }, "Duplicate-charge refund failed at DivinityCoin");
-      return NextResponse.json({ error: dcResult.error || "DivinityCoin refund failed" }, { status: 400 });
+      log.error({ pledgeId: pledge.id, strayIntent, err: dcResult.error, blocked: dcResult.blocked }, "Duplicate-charge refund failed at DivinityCoin");
+      return NextResponse.json(
+        { error: dcResult.error || "DivinityCoin refund failed", uncertain: !!dcResult.uncertain, blocked: dcResult.blocked },
+        { status: dcResult.uncertain || dcResult.blocked === "uncertain" || dcResult.blocked === "in_flight" ? 409 : 400 }
+      );
     }
-    const refundId =
-      (dcResult.data && typeof dcResult.data.refundId === "string" && dcResult.data.refundId) ||
-      (dcResult.data && typeof dcResult.data.id === "string" && dcResult.data.id) ||
-      null;
+    const refundId = dcResult.refundId;
 
     const refundDollars = refundCents / 100;
     const existingMeta = typeof pledge.metadata === "object" && pledge.metadata !== null ? (pledge.metadata as Record<string, unknown>) : {};

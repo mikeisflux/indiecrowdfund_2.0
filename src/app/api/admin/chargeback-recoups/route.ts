@@ -189,8 +189,8 @@ export async function POST(req: NextRequest) {
       if (!recoupId || !reason) {
         return NextResponse.json({ error: "recoupId and reason are required" }, { status: 400 });
       }
-      const res = await refundRecoup(recoupId, admin.id, reason);
-      if (!res.ok) return NextResponse.json({ error: res.error }, { status: 400 });
+      const res = await refundRecoup(recoupId, admin.id, reason, { force: body.force === true });
+      if (!res.ok) return NextResponse.json({ error: res.error, uncertain: !!res.uncertain }, { status: res.uncertain ? 409 : 400 });
       return NextResponse.json({ ok: true, status: "REFUNDED", refundId: res.refundId });
     }
 

@@ -6,7 +6,7 @@ const creatorPledgesLogger = logger.child({ module: "creator-pledges" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { unwindCountedPledge } from "@/lib/payments/unwind-counted-pledge";
-import { callDivinityCoinAPI } from "@/lib/payments/divinitycoin";
+import { requestDcRefund } from "@/lib/payments/divinitycoin/refunds";
 import {
   isCampaignClosedForRefunds,
   CLOSED_CAMPAIGN_REFUND_MESSAGE,
@@ -284,19 +284,26 @@ export async function PATCH(
         // DivinityCoin refund - call DC API to process Stripe refund on their end
         try {
           // Call DC's refund API - this processes the Stripe refund on DC's account
-          const dcResult = await callDivinityCoinAPI("refund", {
+          if (!typedPledge.divinityCoinPaymentId) {
+            return NextResponse.json({ error: "No DivinityCoin payment is recorded for this pledge" }, { status: 400 });
+          }
+          const dcResult = await requestDcRefund({
             pledgeId: typedPledge.id,
             paymentId: typedPledge.divinityCoinPaymentId,
-            amount: refundAmountCents, // cents
+            amountCents: refundAmountCents,
             reason: reason || "Refunded by creator",
             requestedBy: "creator",
+            purpose: "creator-pledge-refund",
+            idempotencyKey: `creator-pledge-refund:${typedPledge.id}:${typedPledge.divinityCoinPaymentId}:${refundAmountCents}`,
+            partial: isPartialRefund,
+            chargedCents: Math.round(totalPaid * 100),
           });
 
           if (!dcResult.success) {
-            creatorPledgesLogger.error({ err: String(dcResult.error) }, `[DivinityCoin Refund] DC API refund failed for pledge ${pledgeId}:`);
+            creatorPledgesLogger.error({ err: String(dcResult.error), blocked: dcResult.blocked }, `[DivinityCoin Refund] DC API refund failed for pledge ${pledgeId}:`);
             return NextResponse.json(
-              { error: dcResult.error || "DivinityCoin refund failed" },
-              { status: 400 }
+              { error: dcResult.error || "DivinityCoin refund failed", uncertain: !!dcResult.uncertain },
+              { status: dcResult.uncertain || dcResult.blocked === "uncertain" || dcResult.blocked === "in_flight" ? 409 : 400 }
             );
           }
 

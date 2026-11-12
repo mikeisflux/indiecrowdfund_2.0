@@ -28,6 +28,7 @@ import { ProjectsTable } from "./components/ProjectsTable";
 import { CreatorBalancesTable } from "./components/CreatorBalancesTable";
 import { ProjectDetailDialog } from "./components/ProjectDetailDialog";
 import { RecoupPanel } from "./components/RecoupPanel";
+import { UncertainRefundsPanel } from "./components/UncertainRefundsPanel";
 import { BankDetailsDialog } from "./components/BankDetailsDialog";
 import { CreateSettlementDialog } from "./components/CreateSettlementDialog";
 import { CreatorBalancePayoutDialog } from "./components/CreatorBalancePayoutDialog";
@@ -486,6 +487,8 @@ export default function PayoutsPage() {
         </div>
         <RecoupPanel formatCurrency={formatCurrency} />
       </div>
+
+      <UncertainRefundsPanel formatCurrency={formatCurrency} />
 
       {/* Refund/Overpaid Alert */}
       {(stats.totalRefunded > 0 || stats.overpaidPayouts > 0) && (

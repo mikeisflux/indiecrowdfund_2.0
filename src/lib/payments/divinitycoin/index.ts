@@ -41,6 +41,7 @@ export { commitDcPledge } from "./commit-pledge";
 export type { CommitDcPledgeInput, CommitDcPledgeResult } from "./commit-pledge";
 
 export { callDivinityCoinAPI } from "./client";
+export { requestDcRefund, reconcileDcRefundAttempt, dcRefundedCents } from "./refunds";
 
 export { handleCardValidate, handleCardRedeem } from "./cards";
 

@@ -409,6 +409,7 @@ export async function PATCH(
               amountCents: Math.round(Number(pledge.amount) * 100),
               reason: body.reason || "Cancelled by backer",
               requestedBy: "user",
+              purpose: "pledge-cancel",
               description: `Refund for cancelled pledge on "${pledge.project.title}"`,
               ledgerMetadata: { userId: session.user.id, projectId: pledge.projectId, source: "pledge_cancellation" },
             });
@@ -1021,6 +1022,7 @@ export async function PATCH(
               amountCents: Math.round(refundAmount * 100),
               reason: "Pledge modification - price decreased",
               requestedBy: "user",
+              purpose: "pledge-decrease",
               description: `Partial refund ($${refundAmount.toFixed(2)}) from pledge modification on "${pledge.project.title}"`,
               ledgerMetadata: {
                 userId: session.user.id,

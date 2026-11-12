@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import { requestDcRefund } from "./divinitycoin/refunds";
 import { logger } from "@/lib/logger";
 import { formatError } from "@/lib/errors";
 import {
@@ -6,7 +7,6 @@ import {
   lookupDcPayment,
 } from "@/lib/payments/divinitycoin/saved-cards";
 import { createNotification } from "@/lib/notifications/core";
-import { callDivinityCoinAPI } from "@/lib/payments/divinitycoin";
 import { loadDcProjectBalance } from "@/lib/payouts/project-balance";
 import { isValidCustomerIp, type CustomerOrigin } from "@/lib/payments/customer-origin";
 import {
@@ -470,34 +470,41 @@ export async function retryOpenRecoupsForProject(projectId: string): Promise<num
 export async function refundRecoup(
   recoupId: string,
   adminId: string,
-  reason: string
-): Promise<{ ok: boolean; error?: string; refundId?: string | null }> {
+  reason: string,
+  opts: { force?: boolean } = {}
+): Promise<{ ok: boolean; error?: string; refundId?: string | null; uncertain?: boolean }> {
   const recoup = await db.chargebackRecoup.findUnique({ where: { id: recoupId } });
   if (!recoup) return { ok: false, error: "Recoup not found" };
   if (recoup.status !== "CHARGED") return { ok: false, error: `Only a charged recoup can be refunded (this one is ${recoup.status})` };
   if (!recoup.divinityCoinPaymentId) return { ok: false, error: "No DivinityCoin payment is recorded for this recoup" };
 
   const amountCents = Math.round(Number(recoup.amount) * 100);
-  const dcResult = await callDivinityCoinAPI("refund", {
+  // requestDcRefund records the attempt and refuses to send while an
+  // earlier refund of this payment is in flight or unanswered; `force` is
+  // the admin saying they checked DC's dashboard.
+  const dcResult = await requestDcRefund({
     pledgeId: dcPledgeKeyForRecoup(recoup),
     paymentId: recoup.divinityCoinPaymentId,
-    amount: amountCents,
+    amountCents,
     reason: `Recoup refunded by admin: ${reason}`.slice(0, 200),
     requestedBy: "admin",
+    purpose: "recoup-refund",
+    idempotencyKey: `recoup-refund:${recoupId}`,
+    chargedCents: amountCents,
+    force: opts.force,
   });
   if (!dcResult.success) {
-    log.error({ recoupId, err: dcResult.error }, "Recoup refund failed at DivinityCoin");
-    return { ok: false, error: dcResult.error || "DivinityCoin refund failed" };
+    const uncertain = !!dcResult.uncertain || dcResult.blocked === "uncertain" || dcResult.blocked === "in_flight";
+    log.error({ recoupId, err: dcResult.error, blocked: dcResult.blocked }, "Recoup refund failed at DivinityCoin");
+    return { ok: false, error: dcResult.error, uncertain };
   }
-  const refundId =
-    (dcResult.data && typeof dcResult.data.refundId === "string" && dcResult.data.refundId) ||
-    (dcResult.data && typeof dcResult.data.id === "string" && dcResult.data.id) ||
-    null;
+  const refundId = dcResult.refundId;
 
   await db.chargebackRecoup.update({
     where: { id: recoupId },
     data: {
       status: "REFUNDED",
+      lastError: null,
       refundedAt: new Date(),
       refundedById: adminId,
       divinityCoinRefundId: refundId,

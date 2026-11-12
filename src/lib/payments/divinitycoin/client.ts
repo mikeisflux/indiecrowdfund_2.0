@@ -55,7 +55,12 @@ export async function callDivinityCoinAPI(
 
     if (!response.ok) {
       const message = dcErrorMessage(result) || rawBody.slice(0, 300) || `DC API ${action} failed with status ${response.status}`;
-      const code = typeof result.code === "string" ? result.code : undefined;
+      // DC's refund endpoint spells its machine code `errorCode`
+      // (ALREADY_PROCESSED, INSUFFICIENT_BALANCE…); the card endpoints use
+      // `code`. Either one means DC made a decision; no code at all means
+      // it fell over before deciding.
+      const code =
+        typeof result.code === "string" ? result.code : typeof result.errorCode === "string" ? result.errorCode : undefined;
       // The error text goes in the log MESSAGE, not just the attached
       // object: Sentinel showed "[DivinityCoin API] refund failed:" with
       // nothing after it, because DC's reason was in a body field the
