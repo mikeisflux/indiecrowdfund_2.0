@@ -252,10 +252,16 @@ export function ErrorReporter() {
       if (isBrowserNoise(event.message, event.error?.stack)) return;
       if (event.error?.name === "ChunkLoadError") return;
       if (isInjectedReferenceError(event.message, event.error?.stack)) return;
-      reportError(
-        event.message || "Unhandled error",
-        event.error?.stack
-      );
+      // Where it came from. A worker's uncaught error reaches window with no
+      // stack, so without the script URL a report like "Module scripts don't
+      // support importScripts()" cannot be traced to pdf.js, hls.js or an
+      // extension-injected script.
+      reportError(event.message || "Unhandled error", event.error?.stack, {
+        filename: event.filename || undefined,
+        line: event.lineno || undefined,
+        col: event.colno || undefined,
+        errorName: event.error?.name,
+      });
     };
 
     const handleRejection = (event: PromiseRejectionEvent) => {
