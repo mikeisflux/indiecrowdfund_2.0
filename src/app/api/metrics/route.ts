@@ -26,6 +26,6 @@ export async function GET(req: Request) {
       },
     });
   } catch (error) {
-    return NextResponse.json({ error: "Failed to serialize metrics", details: String(error) }, { status: 500 });
+    return NextResponse.json({ error: "Failed to serialize metrics" }, { status: 500 });
   }
 }

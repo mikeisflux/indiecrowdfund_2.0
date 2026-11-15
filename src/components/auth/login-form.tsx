@@ -3,7 +3,7 @@
 import { useState, useCallback, useEffect } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { login } from "@/lib/auth/actions";
+import { login, verifyMfaLogin } from "@/lib/auth/actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -69,6 +69,31 @@ export function LoginForm() {
     setRecaptchaToken(null);
   }, []);
 
+  // Second factor step: the password was accepted and the server is holding
+  // the sign-in until a code from the authenticator app arrives.
+  const [mfaStep, setMfaStep] = useState(false);
+
+  async function handleMfaSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setError(null);
+    const formData = new FormData(e.currentTarget);
+    setIsLoading(true);
+    try {
+      const result = await verifyMfaLogin(formData, callbackUrl);
+      if ("success" in result && result.success && result.redirectTo) {
+        window.location.href = result.redirectTo;
+        return;
+      }
+      const msg = ("error" in result && result.error?._form?.[0]) || "Invalid code";
+      setError(msg);
+      if ("expired" in result && result.expired) setMfaStep(false);
+    } catch {
+      setError("Something went wrong. Please refresh the page and try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
@@ -104,13 +129,18 @@ export function LoginForm() {
     try {
       const result = await login(formData, callbackUrl);
 
-      if (result?.success && result?.redirectTo) {
+      if (result && "success" in result && result.success && result.redirectTo) {
         // Use hard navigation to ensure cookie is sent with request
         window.location.href = result.redirectTo;
         return;
       }
 
-      if (result?.error) {
+      if (result && "mfaRequired" in result && result.mfaRequired) {
+        setMfaStep(true);
+        return;
+      }
+
+      if (result && "error" in result && result.error) {
         const errorObj = result.error as Record<string, string[] | undefined>;
         if (errorObj._form) {
           setError(errorObj._form[0]);
@@ -121,7 +151,7 @@ export function LoginForm() {
         } else {
           setError("Invalid email or password");
         }
-      } else if (!result?.success) {
+      } else {
         // No result or unexpected response
         setError("Something went wrong. Please refresh the page and try again.");
       }
@@ -143,6 +173,33 @@ export function LoginForm() {
         </Alert>
       )}
 
+      {mfaStep ? (
+        <form onSubmit={handleMfaSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="code">Two-factor code</Label>
+            <Input
+              id="code"
+              name="code"
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              placeholder="123456"
+              autoFocus
+              required
+              disabled={isLoading}
+            />
+            <p className="text-xs text-muted-foreground">
+              Enter the 6-digit code from your authenticator app, or one of your backup codes.
+            </p>
+          </div>
+          <Button type="submit" className="w-full" disabled={isLoading}>
+            {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Verify
+          </Button>
+          <Button type="button" variant="ghost" className="w-full" onClick={() => { setMfaStep(false); setError(null); }}>
+            Back to password
+          </Button>
+        </form>
+      ) : (
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="space-y-2">
           <Label htmlFor="email">Email</Label>
@@ -206,6 +263,7 @@ export function LoginForm() {
           Sign in
         </Button>
       </form>
+      )}
 
       <p className="text-center text-sm text-muted-foreground">
         Don&apos;t have an account?{" "}

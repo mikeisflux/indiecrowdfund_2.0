@@ -45,3 +45,19 @@ jobs:
 
       - name: Type check
         run: npx tsc --noEmit
+
+  secret-scan:
+    # Repository history and the working tree are scanned for committed
+    # credentials on every push and pull request. The repo is public; a
+    # leaked key is compromised the moment it lands.
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

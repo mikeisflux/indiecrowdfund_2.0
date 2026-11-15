@@ -12,6 +12,7 @@ import { logger } from "@/lib/logger";
 const internalBlockedIpsLogger = logger.child({ module: "internal-blocked-ips" });
 import { db } from "@/lib/db";
 import { appendFile } from "fs/promises";
+import { alertAdmins } from "@/lib/admin-alerts";
 
 export const dynamic = "force-dynamic";
 
@@ -108,7 +109,7 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json();
-    const { ip, reason, actionId, path, userAgent, block } = body;
+    const { ip, reason, actionId, path, userAgent, block, alert } = body;
 
     if (!ip) {
       return NextResponse.json({ error: "IP required" }, { status: 400 });
@@ -124,6 +125,19 @@ export async function POST(req: NextRequest) {
         userAgent,
       },
     });
+
+    // Something an admin should look at now (record enumeration by a
+    // signed-in account, an anonymous client blocked for it). Throttled per
+    // address so a persistent crawler produces one notice an hour.
+    if (alert || (block && typeof reason === "string" && reason.startsWith("Record enumeration"))) {
+      alertAdmins({
+        title: `Security: ${String(reason || "suspicious activity").split(":")[0]} from ${ip}`,
+        message: `${reason}${path ? `\nPath: ${path}` : ""}${userAgent ? `\nUser agent: ${userAgent}` : ""}${block ? "\nThe address has been blocked." : "\nNot blocked (signed-in client). Check Admin → Users for who was signed in from this address and review Login Events."}`,
+        actionUrl: "/admin/security",
+        throttleKey: `security-event:${ip}`,
+        throttleMinutes: 60,
+      }).catch(() => {});
+    }
 
     // If block flag is set, add to blocked IPs
     if (block) {

@@ -252,6 +252,18 @@ BUILD_EXIT_CODE=$?
 if [ $BUILD_EXIT_CODE -eq 0 ]; then
     echo -e "${GREEN}✅ Build successful!${NC}"
 
+    # Step 6a: Refuse to ship client JavaScript that carries a secret.
+    # Anything under .next-new/static goes to every visitor. See
+    # scripts/scan-client-bundle.cjs (FBI FLASH-20261113-001: hardcoded
+    # credentials in SPA bundles are an observed initial-access route).
+    echo "🔎 Step 6a: Scanning client bundle for secrets..."
+    if ! node scripts/scan-client-bundle.cjs .next-new; then
+        echo -e "${RED}❌ Client bundle contains a secret-like string. Not swapping.${NC}"
+        echo -e "${GREEN}   Site is still running with old build (nothing was swapped).${NC}"
+        rm -rf .next-new
+        exit 1
+    fi
+
     # Step 6b: Apply database migrations BEFORE the swap.
     #
     # The Sept 2026 sitewide outage: code selecting Project."preOrdersEnabled"

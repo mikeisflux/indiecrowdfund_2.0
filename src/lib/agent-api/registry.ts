@@ -121,6 +121,7 @@ export async function runTool(name: string, rawArgs: unknown, ctx: ToolContext):
     // Internal callers (the support chatbot) have no ApiKey row; their
     // calls are logged with the caller name in place of a key.
     const isInternal = ctx.key.id.startsWith("internal:");
+    noteCallVolume(ctx.key.id, ctx.key.name, tool?.scope === SCOPE_AGENT_WRITE);
     void db.agentApiCall
       .create({
         data: {
@@ -178,6 +179,39 @@ export async function runTool(name: string, rawArgs: unknown, ctx: ToolContext):
 }
 
 /** Throw from a handler to send the caller a specific, safe message. */
+// Volume guardrail. The FBI's ARTEX FLASH: "alert when application operates
+// materially outside normal volume". This API is itself an LLM-driven agent
+// surface; a leaked key, or an agent gone into a loop, shows up as a burst.
+// Per-key counts over a rolling hour; one admin alert per key per hour.
+const HOURLY_CALL_ALERT = 400;
+const HOURLY_WRITE_ALERT = 25;
+const callVolume = new Map<string, { windowStart: number; calls: number; writes: number; alerted: boolean }>();
+
+function noteCallVolume(keyId: string, keyName: string, isWrite: boolean): void {
+  const now = Date.now();
+  let v = callVolume.get(keyId);
+  if (!v || now - v.windowStart > 60 * 60 * 1000) {
+    v = { windowStart: now, calls: 0, writes: 0, alerted: false };
+    callVolume.set(keyId, v);
+  }
+  v.calls += 1;
+  if (isWrite) v.writes += 1;
+  if (v.alerted) return;
+  if (v.calls >= HOURLY_CALL_ALERT || v.writes >= HOURLY_WRITE_ALERT) {
+    v.alerted = true;
+    log.warn({ keyId, keyName, calls: v.calls, writes: v.writes }, "Agent API key volume anomaly");
+    void import("@/lib/admin-alerts").then(({ alertAdmins }) =>
+      alertAdmins({
+        title: `Agent API volume: ${keyName}`,
+        message: `Key "${keyName}" has made ${v!.calls} calls (${v!.writes} writes) in the last hour. If no one is running a big job right now, revoke the key in Admin → Agent API and check its call log.`,
+        actionUrl: "/admin/agent-api",
+        throttleKey: `agent-volume:${keyId}`,
+        throttleMinutes: 60,
+      })
+    ).catch(() => {});
+  }
+}
+
 export class ToolError extends Error {
   constructor(
     message: string,

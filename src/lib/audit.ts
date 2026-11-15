@@ -4,6 +4,7 @@
  */
 
 import { logger } from "@/lib/logger";
+import { db } from "@/lib/db";
 
 const auditLogger = logger.child({ _type: "AUDIT" });
 
@@ -57,7 +58,11 @@ export type AuditAction =
   // canConfigurePledgeManager fields on ProjectCollaborator).
   | "COLLABORATOR_INVITE"
   | "COLLABORATOR_REMOVE"
-  | "COLLABORATOR_PERMS_CHANGE";
+  | "COLLABORATOR_PERMS_CHANGE"
+  // Two-factor lifecycle on an account.
+  | "MFA_ENABLED"
+  | "MFA_DISABLED"
+  | "MFA_BACKUP_CODES_REGENERATED";
 
 // Fields that should have their values masked in audit logs
 const SENSITIVE_FIELDS = new Set([
@@ -116,6 +121,24 @@ export function auditLog(entry: AuditEntry): void {
     details: entry.details,
     changes: maskedChanges,
   }, `${entry.action}${entry.targetId ? ` on ${entry.targetType}:${entry.targetId}` : ""}`);
+
+  // Durable copy. Log files rotate away; the table is what an investigation
+  // reads months later (who changed which payout, who unbanned whom, from
+  // where). Fire-and-forget so an audit write can never fail the action it
+  // describes; a failed write is itself logged.
+  void db.adminAuditLog
+    .create({
+      data: {
+        action: entry.action,
+        actorId: entry.actorId,
+        actorEmail: entry.actorEmail ?? null,
+        targetId: entry.targetId ?? null,
+        targetType: entry.targetType ?? null,
+        details: entry.details ? (JSON.parse(JSON.stringify(entry.details)) as object) : undefined,
+        changes: maskedChanges ? (maskedChanges as object) : undefined,
+      },
+    })
+    .catch((err: unknown) => auditLogger.warn({ err: String(err), action: entry.action }, "audit row write failed"));
 }
 
 /**

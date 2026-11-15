@@ -9,6 +9,7 @@ import { checkBanEvasion, BAN_EVASION_MESSAGE } from "@/lib/moderation/ban-evasi
 import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import { createSession, deleteSession } from "./session";
+import { createMfaChallenge, resolveMfaChallenge, recordLoginEvent, alertAdminNewLocation } from "./mfa";
 import {
   checkLoginRateLimit,
   recordLoginAttempt,
@@ -302,12 +303,13 @@ export async function login(formData: FormData, callbackUrl?: string) {
   // (e.g. failedLoginAttempts before migration is run)
   const user = await db.user.findFirst({
     where: { email: { equals: email, mode: "insensitive" }, deletedAt: null },
-    select: { id: true, password: true, role: true, lockedAt: true, accountDeletedAt: true },
+    select: { id: true, email: true, name: true, password: true, role: true, lockedAt: true, accountDeletedAt: true, totpEnabledAt: true },
   });
 
   if (!user || !user.password) {
     // Record failed attempt (even for non-existent users to prevent enumeration timing attacks)
     await recordLoginAttempt(clientIP, email, false);
+    await recordLoginEvent({ userId: null, email, success: false, reason: "unknown_account" });
     return { error: { _form: ["Invalid email or password"] } };
   }
 
@@ -326,6 +328,7 @@ export async function login(formData: FormData, callbackUrl?: string) {
 
   // Check if account is locked
   if (user.lockedAt) {
+    await recordLoginEvent({ userId: user.id, email, success: false, reason: "locked" });
     return { error: { _form: ["Your account has been locked. Please contact support."] } };
   }
 
@@ -343,6 +346,8 @@ export async function login(formData: FormData, callbackUrl?: string) {
       },
     }).catch(() => {}); // Non-fatal — don't break login flow
 
+    await recordLoginEvent({ userId: user.id, email, success: false, reason: "password_invalid" });
+
     // Calculate remaining attempts for user feedback
     const updatedCheck = await checkLoginRateLimit(clientIP, email);
     const remainingMsg = updatedCheck.remainingAttempts > 0
@@ -359,8 +364,26 @@ export async function login(formData: FormData, callbackUrl?: string) {
     data: { failedLoginAttempts: 0, lastFailedLoginAt: null },
   }).catch(() => {}); // Non-fatal
 
+  // Second factor: the password is right but the session is not created
+  // until a code from the authenticator app arrives (verifyMfaLogin).
+  if (user.totpEnabledAt) {
+    await createMfaChallenge(user.id);
+    await recordLoginEvent({ userId: user.id, email, success: false, reason: "mfa_pending" });
+    return { mfaRequired: true as const };
+  }
+
+  return finishLogin(user, callbackUrl, "password");
+}
+
+async function finishLogin(
+  user: { id: string; email: string; name: string | null; role: string },
+  callbackUrl: string | undefined,
+  reason: string
+) {
   // Create session
   await createSession(user.id);
+  await recordLoginEvent({ userId: user.id, email: user.email, success: true, reason });
+  await alertAdminNewLocation(user);
 
   // Determine redirect destination based on role
   const safeCallbackUrl = sanitizeRedirectUrl(callbackUrl, "");
@@ -373,7 +396,25 @@ export async function login(formData: FormData, callbackUrl?: string) {
 
   // Return success with redirect URL - let client handle navigation
   // This ensures the Set-Cookie header is properly sent before redirect
-  return { success: true, redirectTo };
+  return { success: true as const, redirectTo };
+}
+
+/** Second step of sign-in for accounts with two-factor enabled. */
+export async function verifyMfaLogin(formData: FormData, callbackUrl?: string) {
+  const code = String(formData.get("code") || "").trim();
+  if (!code) return { error: { _form: ["Enter the code from your authenticator app."] } };
+  const res = await resolveMfaChallenge(code);
+  if (!res.ok) {
+    return { error: { _form: [res.error] }, expired: !!res.expired };
+  }
+  const user = await db.user.findFirst({
+    where: { id: res.userId, deletedAt: null },
+    select: { id: true, email: true, name: true, role: true, lockedAt: true, accountDeletedAt: true },
+  });
+  if (!user || user.lockedAt || user.accountDeletedAt) {
+    return { error: { _form: ["This account can't sign in. Please contact support."] } };
+  }
+  return finishLogin(user, callbackUrl, res.method === "backup" ? "backup_code" : "mfa_ok");
 }
 
 export async function logout() {

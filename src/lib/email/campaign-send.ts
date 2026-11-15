@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import { alertAdmins } from "@/lib/admin-alerts";
 import { logger } from "@/lib/logger";
 import { queueEmail, sendEmail, EMAIL_PRIORITY, getUnsubscribeUrl, hasVisibleEmailContent } from "@/lib/email/email-config";
 import { MARKETING_RECIPIENT_WHERE } from "@/lib/email/marketing-eligibility";
@@ -180,6 +181,22 @@ export async function sendCampaignNow(campaignId: string, opts: { resend?: boole
   try {
     const recipients = await resolveCampaignRecipients(campaign);
     log.info({ campaignId, name: campaign.name, recipients: recipients.length }, "queueing campaign");
+
+    // "Mass notification/email broadcasts from compromised applications" is
+    // on the FBI's list of ARTEX attack characteristics. A large send, or
+    // several sends inside an hour, gets an admin notice as it starts. It
+    // does not block: the sender is an admin or the Agent API with a
+    // confirmed write, and the notice is what makes a surprise visible.
+    const recentSends = await db.emailCampaign.count({ where: { sentAt: { gte: new Date(Date.now() - 60 * 60 * 1000) } } }).catch(() => 0);
+    if (recipients.length >= 2500 || recentSends >= 3) {
+      alertAdmins({
+        title: `Email broadcast: "${campaign.name}" to ${recipients.length.toLocaleString()} recipients`,
+        message: `Campaign "${campaign.name}" is being sent to ${recipients.length.toLocaleString()} addresses${recentSends >= 3 ? ` and ${recentSends} other campaigns went out in the last hour` : ""}. If you didn't expect this, stop the email queue in Admin → Email Queue and revoke any Agent API keys.`,
+        actionUrl: "/admin/email-queue",
+        throttleKey: "campaign-broadcast",
+        throttleMinutes: 30,
+      }).catch(() => {});
+    }
 
     let queued = 0;
     let failed = 0;

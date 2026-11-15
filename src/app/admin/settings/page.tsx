@@ -298,6 +298,7 @@ export default function SettingsPage() {
     loginRateLimitWindow: "300",
     passwordResetRateLimit: "3",
     passwordResetRateLimitWindow: "900",
+    twoFactorRequired: false,
   });
 
   const [aiSettings, setAiSettings] = useState({
@@ -457,6 +458,7 @@ export default function SettingsPage() {
         loginRateLimitWindow: String(settings.loginRateLimitWindow || 300),
         passwordResetRateLimit: String(settings.passwordResetRateLimitRequests || 3),
         passwordResetRateLimitWindow: String(settings.passwordResetRateLimitWindow || 900),
+        twoFactorRequired: settings.twoFactorRequired === true,
       }));
 
       setAiSettings((prev) => ({
@@ -753,6 +755,7 @@ export default function SettingsPage() {
             loginRateLimitWindow: parseInt(securitySettings.loginRateLimitWindow),
             passwordResetRateLimitRequests: parseInt(securitySettings.passwordResetRateLimit),
             passwordResetRateLimitWindow: parseInt(securitySettings.passwordResetRateLimitWindow),
+            twoFactorRequired: securitySettings.twoFactorRequired,
           };
           break;
         case "idverify":

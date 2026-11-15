@@ -31,6 +31,7 @@ interface SecuritySettingsProps {
     loginRateLimitWindow: string;
     passwordResetRateLimit: string;
     passwordResetRateLimitWindow: string;
+    twoFactorRequired: boolean;
   };
   onSettingsChange: (settings: SecuritySettingsProps["settings"]) => void;
 }
@@ -38,6 +39,30 @@ interface SecuritySettingsProps {
 export function SecuritySettings({ settings, onSettingsChange }: SecuritySettingsProps) {
   return (
     <TabsContent value="security" className="mt-6 space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle>Admin Sign-in</CardTitle>
+          <CardDescription>
+            Second factor for ADMIN and SUPER_ADMIN accounts. Each admin enrols an authenticator app at
+            Admin → Security → Two-factor; with this on, the admin area stays locked until they have.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-between rounded-lg border p-4">
+            <div className="space-y-0.5">
+              <Label>Require two-factor for admin accounts</Label>
+              <p className="text-sm text-muted-foreground">
+                Turn this on after you have enrolled your own device, or you will be sent to the enrollment page on your next admin request.
+              </p>
+            </div>
+            <Switch
+              checked={settings.twoFactorRequired}
+              onCheckedChange={(checked) => onSettingsChange({ ...settings, twoFactorRequired: checked })}
+            />
+          </div>
+        </CardContent>
+      </Card>
+
       <Card>
         <CardHeader>
           <CardTitle>Password Policy</CardTitle>

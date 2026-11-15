@@ -328,15 +328,22 @@ function refreshMaintenance(): Promise<void> {
 // Is the caller an admin? Cached per session token, and only ever consulted
 // while maintenance is on, so it costs nothing in normal operation.
 const ADMIN_CACHE_MS = 30_000;
-const adminSessionCache = new Map<string, { isAdmin: boolean; checkedAt: number }>();
+const adminSessionCache = new Map<string, { isAdmin: boolean; mfaSetupRequired: boolean; checkedAt: number }>();
 
 async function isAdminSession(req: NextRequest): Promise<boolean> {
+  return (await adminSessionInfo(req)).isAdmin;
+}
+
+// Admin session facts the proxy needs: is this an admin, and must they
+// enrol a second factor before the admin area opens. Cached per token for
+// 30s so the admin UI's many API calls cost one internal lookup.
+async function adminSessionInfo(req: NextRequest): Promise<{ isAdmin: boolean; mfaSetupRequired: boolean }> {
   const token = req.cookies.get("session_token")?.value;
-  if (!token) return false;
+  if (!token) return { isAdmin: false, mfaSetupRequired: false };
 
   const cached = adminSessionCache.get(token);
   if (cached && Date.now() - cached.checkedAt < ADMIN_CACHE_MS) {
-    return cached.isAdmin;
+    return { isAdmin: cached.isAdmin, mfaSetupRequired: cached.mfaSetupRequired };
   }
 
   const headers: Record<string, string> = { "Content-Type": "application/json" };
@@ -354,18 +361,19 @@ async function isAdminSession(req: NextRequest): Promise<boolean> {
       // not be able to hang on an internal call.
       signal: AbortSignal.timeout(2_000),
     });
-    if (!res.ok) return false;
+    if (!res.ok) return { isAdmin: false, mfaSetupRequired: false };
     const data = await res.json();
     const isAdmin = data.role === "ADMIN" || data.role === "SUPER_ADMIN";
+    const mfaSetupRequired = isAdmin && data.mfaSetupRequired === true;
 
     // Bounded so a stream of stale tokens cannot grow this without limit.
     if (adminSessionCache.size > 500) adminSessionCache.clear();
-    adminSessionCache.set(token, { isAdmin, checkedAt: Date.now() });
-    return isAdmin;
+    adminSessionCache.set(token, { isAdmin, mfaSetupRequired, checkedAt: Date.now() });
+    return { isAdmin, mfaSetupRequired };
   } catch {
     // Fails closed: an unreachable check means "not an admin", so a visitor
     // never slips past maintenance because an internal call timed out.
-    return false;
+    return { isAdmin: false, mfaSetupRequired: false };
   }
 }
 
@@ -657,6 +665,70 @@ function recordSuspiciousRequest(
   return false;
 }
 
+// ── Record enumeration ───────────────────────────────────────────────────
+// The FBI's ARTEX FLASH: "alert on sequential lookups and unusually high
+// numbers of records accessed per session … apply rate limits to affected
+// endpoints." An agent walking /api/projects/<id>, /api/pledges/<id>,
+// /api/users/<id> stays under the per-minute rate limit while touching
+// hundreds of records. So count DISTINCT record ids per client over ten
+// minutes, not requests. Anonymous clients are blocked at the threshold;
+// signed-in clients are reported but not blocked (a compromised account is
+// still a real person's account, and an admin paging through records is
+// legitimate), so an admin gets the alert and decides.
+const ENUM_WINDOW_MS = 10 * 60 * 1000;
+const ENUM_ANON_THRESHOLD = 120;
+const ENUM_SESSION_THRESHOLD = 500;
+const enumCounters = new Map<string, { ids: Set<string>; windowStart: number; reported: boolean }>();
+const RECORD_ID_SEGMENT = /^(c[a-z0-9]{24}|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}|\d{4,})$/i;
+
+function trackRecordEnumeration(
+  clientKey: string,
+  pathname: string,
+  hasSession: boolean,
+  userAgent: string
+): "ok" | "block" {
+  if (!pathname.startsWith("/api/")) return "ok";
+  const segs = pathname.split("/");
+  const ids = segs.filter((seg) => RECORD_ID_SEGMENT.test(seg));
+  if (ids.length === 0) return "ok";
+  const now = Date.now();
+  let entry = enumCounters.get(clientKey);
+  if (!entry || now - entry.windowStart > ENUM_WINDOW_MS) {
+    entry = { ids: new Set(), windowStart: now, reported: false };
+    enumCounters.set(clientKey, entry);
+    if (enumCounters.size > 5000) {
+      for (const [k, v] of enumCounters) if (now - v.windowStart > ENUM_WINDOW_MS) enumCounters.delete(k);
+    }
+  }
+  // Key on the collection too, so 50 projects and 50 pledges are 100 records.
+  const collection = segs.slice(0, 3).join("/");
+  for (const id of ids) entry.ids.add(`${collection}:${id}`);
+  const threshold = hasSession ? ENUM_SESSION_THRESHOLD : ENUM_ANON_THRESHOLD;
+  if (entry.ids.size < threshold || entry.reported) return "ok";
+  entry.reported = true;
+  const ip = clientKey.replace(/^(anon|sess):/, "");
+  const reason = `Record enumeration: ${entry.ids.size} distinct records in ${Math.round((now - entry.windowStart) / 60000) || 1} min (${hasSession ? "signed-in" : "anonymous"}), latest ${pathname}`;
+  if (hasSession) {
+    reportSecurityEvent(ip, reason, { path: pathname, userAgent });
+    return "ok";
+  }
+  blockedIPCache.set(ip, { expiresAt: now + BLOCK_DURATION_MS });
+  console.log(`[Bot Blocker] ENUMERATION BLOCK: ${ip} - ${reason}`);
+  persistBlockedIP(ip, reason, { path: pathname, userAgent });
+  return "block";
+}
+
+/** Tell the app about something worth an admin's attention without blocking. */
+function reportSecurityEvent(ip: string, reason: string, metadata?: { path?: string; userAgent?: string }): void {
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (process.env.INTERNAL_API_SECRET) headers["x-internal-secret"] = process.env.INTERNAL_API_SECRET;
+  fetch(`${getInternalApiUrl()}/api/internal/blocked-ips`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({ ip, reason, block: false, alert: true, ...metadata }),
+  }).catch(() => {});
+}
+
 // Generate a CSRF token
 function generateCSRFToken(): string {
   const array = new Uint8Array(32);
@@ -827,6 +899,14 @@ export async function proxy(req: NextRequest) {
     blockedIPCache.set(clientIP, { expiresAt: Date.now() + SCANNER_BLOCK_DURATION_MS });
     persistBlockedIP(clientIP, `Scanner probe: ${pathname}`, { path: pathname, userAgent });
     return rewriteToBlocked("Forbidden", 403);
+  }
+
+  // Distinct-record enumeration across /api/* (see trackRecordEnumeration).
+  if (!pathname.startsWith("/api/internal/") && !isLocalhostIP(clientIP)) {
+    const verdict = trackRecordEnumeration(`${hasSessionCookie ? "sess" : "anon"}:${clientIP}`, pathname, hasSessionCookie, userAgent);
+    if (verdict === "block") {
+      return rewriteToBlocked("Forbidden", 403);
+    }
   }
 
   // General rate limiter — catches scrapers hammering pages/API before server action checks
@@ -1000,6 +1080,22 @@ export async function proxy(req: NextRequest) {
       loginUrl.searchParams.set("callbackUrl", pathname);
       loginUrl.searchParams.set("error", "SessionRequired");
       return NextResponse.redirect(loginUrl);
+    }
+
+    // Admins must hold a second factor when Settings → Security requires
+    // it. Until they enrol, the only admin page that opens is the
+    // enrollment page (its API lives under /api/user/mfa, outside this
+    // guard). A password alone on an account that can read every backer's
+    // address and move payouts is the "weak administrative credentials"
+    // route in the FBI's ARTEX FLASH.
+    if (isAdminRoute && pathname !== "/admin/security/mfa") {
+      const info = await adminSessionInfo(req);
+      if (info.mfaSetupRequired) {
+        if (pathname.startsWith("/api/")) {
+          return NextResponse.json({ error: "Two-factor authentication must be set up before using the admin API.", code: "mfa_setup_required" }, { status: 403 });
+        }
+        return NextResponse.redirect(new URL("/admin/security/mfa", req.url));
+      }
     }
   }
 

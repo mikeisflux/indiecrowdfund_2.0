@@ -1,6 +1,6 @@
 # IndieCrowdfund — Information Security Policy
 
-**Document version:** 1.2
+**Document version:** 1.3
 **Effective date:** 2026-04-29
 **Next scheduled review:** 2027-04-29
 **Policy owner:** Director (Mike Wheeler)
@@ -43,6 +43,8 @@ Cardholder data (PAN, full track data, CVV, PIN/PIN block) is **out of scope** f
 ## 5. Authentication and Access Control
 
 - Passwords for IndieCrowdfund accounts must be at least 12 characters, unique, and stored only in a reputable password manager.
+- Platform admin accounts (ADMIN, SUPER_ADMIN) use two-factor authentication (authenticator app, TOTP) in addition to their password. Enrollment is at Admin → Security → Two-factor; Settings → Security → "Require two-factor for admin accounts" keeps the admin area closed to any admin who has not enrolled. Backup codes are stored hashed and each works once.
+- Every sign-in attempt is recorded (`LoginEvent`: address, user agent, outcome). An admin signing in from an address that account has never used is notified by email. Admin actions are recorded in `AdminAuditLog` and viewable at Admin → Audit Log.
 - MFA is required for: GitHub repository, Cloudflare DNS/R2, PaymentCloud merchant portal, the production server SSH (key-based authentication only — no passwords).
 - Accounts are deactivated within 24 hours of personnel departure, role change, or contract end.
 - Service accounts (database, third-party API keys) are stored encrypted at rest in `PlatformSettings` via the application's `vault.ts` helper, with a fallback to plaintext only for legacy values pending migration.
@@ -156,6 +158,7 @@ The Policy Owner reviews and updates this matrix during the annual TPSP review (
 - All personnel review this policy on onboarding and after every revision.
 - The Policy Owner sends an annual reminder summarizing recent threats relevant to the platform (phishing, credential stuffing, supply-chain attacks, NMI-specific risks like skimming kits and chargeback fraud).
 - Personnel are expected to report suspected phishing attempts, leaked credentials, or unusual system behavior to the Policy Owner immediately.
+- Government and vendor advisories relevant to the platform are reviewed against the codebase and the response recorded under `docs/security/` (most recent: FBI FLASH-20261113-001 on the ARTEX autonomous intrusion framework, see `ARTEX-FLASH-20261113-response.md`).
 
 ## 11. Incident Response Plan
 

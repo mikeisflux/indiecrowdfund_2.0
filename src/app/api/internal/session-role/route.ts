@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { validateSessionToken } from "@/lib/auth/session";
+import { db } from "@/lib/db";
+import { isAdminRole, mfaSetupRequiredFor } from "@/lib/auth/mfa";
 import { logger } from "@/lib/logger";
 import { formatError } from "@/lib/errors";
 
@@ -37,11 +39,19 @@ export async function POST(req: NextRequest) {
     }
 
     const session = await validateSessionToken(token);
-    return NextResponse.json({ role: session?.role ?? null });
+    if (!session) return NextResponse.json({ role: null, mfaSetupRequired: false });
+    // Admins must enrol a second factor when Settings → Security requires
+    // it; the proxy keeps them on the enrollment page until they do.
+    let mfaSetupRequired = false;
+    if (isAdminRole(session.role)) {
+      const u = await db.user.findUnique({ where: { id: session.id }, select: { role: true, totpEnabledAt: true } });
+      mfaSetupRequired = u ? await mfaSetupRequiredFor(u) : false;
+    }
+    return NextResponse.json({ role: session.role, mfaSetupRequired });
   } catch (error) {
     sessionRoleLogger.error({ err: formatError(error) }, "Failed to resolve session role");
     // Treated as "not an admin" by the caller, which fails safe: the worst
     // outcome is an admin seeing the maintenance page they themselves enabled.
-    return NextResponse.json({ role: null });
+    return NextResponse.json({ role: null, mfaSetupRequired: false });
   }
 }

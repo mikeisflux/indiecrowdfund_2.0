@@ -62,6 +62,7 @@ import {
   Newspaper,
   Calendar,
   Copyright,
+  ScrollText,
 } from "lucide-react";
 import { LucideIcon } from "lucide-react";
 import { fetchWithRetry } from "@/lib/fetch-utils";
@@ -165,6 +166,7 @@ const navigation: NavSection[] = [
     items: [
       { name: "Settings", href: "/admin/settings", icon: Settings },
       { name: "Security", href: "/admin/security", icon: Lock },
+      { name: "Audit Log", href: "/admin/audit-log", icon: ScrollText },
       { name: "Link Sanitizer", href: "/admin/link-sanitizer", icon: Link2 },
       { name: "Error Logs", href: "/admin/error-logs", icon: AlertCircle, badgeKey: "errorLogs" },
       { name: "Agent API", href: "/admin/agent-api", icon: Bot },

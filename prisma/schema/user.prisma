@@ -185,6 +185,19 @@ model User {
   @@index([lockedAt]) // For locked account filtering
   @@index([bannedAt]) // For banned account filtering + ban-evasion lookups
   @@index([accountDeletedAt]) // For filtering deleted accounts from search/listing
+
+  // Multi-factor authentication (TOTP). Secret is encrypted at rest with
+  // encryptCredential; backup codes are stored as SHA-256 hashes. A pending
+  // secret lives in totpPendingSecretEncrypted until the first code is
+  // confirmed, so an abandoned enrollment never locks anyone out.
+  // Added by add_mfa_login_events_audit.sql.
+  totpSecretEncrypted        String?
+  totpPendingSecretEncrypted String?
+  totpEnabledAt              DateTime?
+  totpLastUsedStep           Int?
+  totpBackupCodes            String[]  @default([])
+  loginEvents                LoginEvent[]
+  mfaChallenges              MfaChallenge[]
 }
 
 // Account deletion requests from creators who have ever taken a campaign
@@ -303,4 +316,41 @@ model PasswordResetToken {
 
   @@index([email])
   @@index([token])
+}
+
+// A password-verified sign-in waiting for its second factor. The id is the
+// cookie value; it is unguessable, short-lived and single-use.
+model MfaChallenge {
+  id        String   @id @default(cuid())
+  userId    String
+  attempts  Int      @default(0)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+// Every sign-in attempt, success or failure, with where it came from. The
+// FBI's ARTEX FLASH asks for exactly this when an intrusion is investigated
+// (IP, user agent, timestamps, authentication from previously unseen
+// infrastructure); it also drives the new-location alert for admins.
+model LoginEvent {
+  id        String   @id @default(cuid())
+  userId    String?
+  email     String
+  ip        String?
+  userAgent String?
+  success   Boolean
+  reason    String? // password_invalid, locked, mfa_pending, mfa_failed, mfa_ok, backup_code
+  createdAt DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId, createdAt])
+  @@index([ip, createdAt])
+  @@index([email, createdAt])
+  @@index([createdAt])
 }
