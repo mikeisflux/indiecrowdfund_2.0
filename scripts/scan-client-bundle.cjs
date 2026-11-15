@@ -58,12 +58,32 @@ if (files.length === 0) {
   process.exit(0);
 }
 
+// Placeholder text in form fields ("whsec_xxxxxxxxxxxxxxxx", "sk_live_your_key_here")
+// has the shape of a key but no entropy. A real key is never one repeated
+// character or a word like "example".
+function isPlaceholder(match) {
+  const body = match.replace(/^[A-Za-z_-]+?[_-]/, "");
+  if (/(.)\1{5,}/.test(body)) return true;
+  if (/x{6,}|0{8,}|example|placeholder|your[_-]|xxxx|yyyy|1234567890/i.test(match)) return true;
+  const distinct = new Set(body.replace(/[^0-9A-Za-z]/g, "").toLowerCase()).size;
+  return distinct < 6;
+}
+
 const findings = [];
 for (const file of files) {
   const text = fs.readFileSync(file, "utf8");
   for (const { name, re } of PATTERNS) {
-    const m = re.exec(text);
-    if (!m) continue;
+    const global = new RegExp(re.source, re.flags.includes("g") ? re.flags : re.flags + "g");
+    let m = null;
+    let hit = null;
+    while ((m = global.exec(text)) !== null) {
+      if (!isPlaceholder(m[0])) {
+        hit = m;
+        break;
+      }
+    }
+    if (!hit) continue;
+    m = hit;
     const at = m.index;
     const excerpt = text.slice(Math.max(0, at - 40), at + Math.min(m[0].length, 24)).replace(/\s+/g, " ");
     findings.push({ file: path.relative(process.cwd(), file), name, excerpt: excerpt.replace(m[0], m[0].slice(0, 8) + "…[redacted]") });
