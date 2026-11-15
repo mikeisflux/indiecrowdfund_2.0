@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Users, Ban, AlertTriangle, Shield, Settings, RefreshCw } from "lucide-react";
+import { Users, Ban, AlertTriangle, Shield, Settings, RefreshCw, Smartphone } from "lucide-react";
 
 /**
  * Security overview.
@@ -86,6 +86,32 @@ export default function SecurityPage() {
           Refresh
         </Button>
       </div>
+
+      {/* Your own account's second factor. The enrollment page is the one
+          admin page the proxy always allows, so this card is how you reach it
+          before the requirement is switched on. */}
+      <Card className="border-emerald-300 dark:border-emerald-800">
+        <CardContent className="flex flex-col gap-4 p-6 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-start gap-4">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300">
+              <Smartphone className="h-6 w-6" />
+            </div>
+            <div>
+              <p className="font-semibold">Two-factor authentication for your account</p>
+              <p className="text-sm text-muted-foreground">
+                Scan a QR code with Google Authenticator, Authy, 1Password or iOS Passwords; sign-ins then need a 6-digit code as well as your password.
+                Once you&apos;re enrolled, switch on &ldquo;Require two-factor for admin accounts&rdquo; in Settings → Security to make it mandatory for every admin.
+              </p>
+            </div>
+          </div>
+          <Button asChild className="shrink-0">
+            <Link href="/admin/security/mfa">
+              <Smartphone className="mr-2 h-4 w-4" />
+              Set up two-factor
+            </Link>
+          </Button>
+        </CardContent>
+      </Card>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         {statCards.map((card) => (
