@@ -17,10 +17,11 @@ the numbers again after the print run was sized.
 ## How it works now
 
 1. **Mark the add-on as an upgrade** — IndieKit → Pre-Fulfillment →
-   **Production** → *Upgrade add-ons*. Switch it on, give it a SKU suffix
-   (`-F`), and optionally tick which items it may apply to. Nothing ticked
-   means any physical item in the order (the tier and every shipped add-on;
-   digital items are never eligible).
+   **Production** → *Upgrade add-ons*. Switch it on and optionally tick which
+   items it may apply to. Nothing ticked means any physical item in the order
+   (the tier and every shipped add-on; digital items are never eligible). The
+   SKU suffix defaults from the name ("Upgrade to foil" → `-F`, "Raised
+   Metal" → `-RM`); change it if your codes differ.
 2. **Give items SKUs** — same tab, *Item SKUs*. "Fill blanks from item names"
    reads codes out of titles (`SW3-18 (Add-on)` → `SW3-18`). A SKU mapped in
    Setup → SKU Mapping always wins over this field.
@@ -32,10 +33,12 @@ the numbers again after the print run was sized.
    automatically and shown as a confirmation. Each pick is a
    `PledgeModifierAssignment` row (`pledgeId, modifierAddonId, unitIndex →
    rewardId`, `source = AUTO | SURVEY | CREATOR`).
-4. **Production counts** — Production tab, per SKU: confirmed (survey done
-   or order locked) vs pending, with upgraded copies on their own line
-   (`SW3-18-F`) and still-unassigned copies called out. CSV export. Sizes and
-   other survey choices are counted below it.
+4. **Production counts** — Production tab, one line per SKU: a cover sold as
+   a tier and again as an add-on is one line (`SW3-01` = both), an upgraded
+   copy moves off the base line onto its upgraded SKU (`SW3-18-F`), and
+   still-unassigned copies are called out. Confirmed (survey done or order
+   locked) vs pending. CSV export. Sizes and other survey choices are counted
+   below it.
 5. **Resolving the rest** — backers whose upgrade has no item yet are listed
    on the Production tab with whatever they wrote in the old free-text
    question and a suggested match parsed from it. Confirm and save, or open
@@ -57,7 +60,7 @@ SKU resolution order (shared by counts and push, `src/lib/fulfillment/production
 | Item | SKU |
 | --- | --- |
 | Base item | `ShopifySkuMapping` row for the reward, else `Reward.sku` |
-| Upgraded item | `ModifierSkuMapping` row for the exact combination, else base SKU + `Reward.modifierSkuSuffix` |
+| Upgraded item | `ModifierSkuMapping` row for the exact combination, else base SKU + `Reward.modifierSkuSuffix` (defaulting to the upgrade name's initials) |
 
 ## Server setup
 
@@ -75,9 +78,9 @@ assignment unique key becomes `(pledgeId, modifierAddonId, unitIndex)`.
 
 All in the UI, no SQL:
 
-1. Production → *Upgrade add-ons*: switch on each "Upgrade to …" add-on,
-   set its suffix, save. Backers with only one possible target are assigned
-   on the spot.
+1. Production → *Upgrade add-ons*: switch on each "Upgrade to …" add-on.
+   Backers with only one possible target are assigned on the spot. The
+   suffix is derived from the name; override it if needed.
 2. Production → *Item SKUs* → "Fill blanks from item names".
 3. Production → *Upgrades that need an item*: the remaining backers appear
    with their old answer and a suggestion. Confirm each.

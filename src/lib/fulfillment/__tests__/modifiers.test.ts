@@ -7,7 +7,7 @@ import {
   validateSelections,
   type ModifierRewardShape,
 } from "../modifiers";
-import { computeProductionCounts, resolvePledgeLines, type SkuContext } from "../production-counts";
+import { comboSku, computeProductionCounts, defaultModifierSuffix, resolvePledgeLines, type SkuContext } from "../production-counts";
 
 const R = (
   id: string,
@@ -110,6 +110,31 @@ describe("resolvePledgeLines / computeProductionCounts", () => {
     expect(byKey["unassigned:foil"]).toMatchObject({ kind: "unassigned_upgrade", quantity: 1 });
   });
 
+  it("derives the suffix from the upgrade's name when none is set", () => {
+    const noSuffix = new Map(rewards);
+    noSuffix.set("foil", { ...rewards.get("foil")!, modifierSkuSuffix: null });
+    noSuffix.set("rm", R("rm", "Upgrade to Raised Metal", "ADDON", { isModifier: true }));
+    noSuffix.set("gitd", R("gitd", "Upgrade to glow in the dark", "ADDON", { isModifier: true }));
+    const c = { ...ctx, rewardsById: noSuffix };
+    expect(comboSku("t18", "foil", c).sku).toBe("SW3-18-F");
+    expect(comboSku("t18", "rm", c).sku).toBe("SW3-18-RM");
+    expect(comboSku("t18", "gitd", c).sku).toBe("SW3-18-GD");
+    expect(defaultModifierSuffix("Upgrade")).toBeNull();
+  });
+
+  it("merges tier and add-on copies of one SKU into a single production line", () => {
+    const a = { id: "a", rewardId: "t24", addons: [{ addonId: "a24", quantity: 2 }], modifierAssignments: [], surveyComplete: true };
+    const b = { id: "b", rewardId: "t24", addons: [{ addonId: "foil", quantity: 1 }], modifierAssignments: [{ rewardId: "t24", modifierAddonId: "foil", unitIndex: 0 }], surveyComplete: true };
+    const c = { id: "c", rewardId: "t18", addons: [{ addonId: "a24", quantity: 1 }, { addonId: "foil", quantity: 1 }], modifierAssignments: [{ rewardId: "a24", modifierAddonId: "foil", unitIndex: 0 }], surveyComplete: true };
+    const lines = computeProductionCounts([a, b, c], ctx);
+    const base = lines.find((l) => l.sku === "SW3-24")!;
+    expect(base).toMatchObject({ total: 3, backers: 1, kind: "tier" });
+    expect(base.titles.sort()).toEqual(["SW3-24", "SW3-24 (Add-on)"]);
+    const foil = lines.find((l) => l.sku === "SW3-24-F")!;
+    expect(foil).toMatchObject({ total: 2, backers: 2, kind: "upgrade", label: "SW3-24 + Upgrade to foil" });
+    expect(lines.filter((l) => l.sku === "SW3-24-F")).toHaveLength(1);
+  });
+
   it("prefers an explicit modifier SKU mapping over the derived code", () => {
     const mapped: SkuContext = { ...ctx, modifierSkuMappings: [{ baseRewardId: "t18", modifierAddonId: "foil", shopifySku: "SW3-18-FOIL-LTD" }] };
     const pledge = { id: "p", rewardId: "t18", addons: [{ addonId: "foil", quantity: 1 }], modifierAssignments: [{ rewardId: "t18", modifierAddonId: "foil", unitIndex: 0 }] };
@@ -120,8 +145,8 @@ describe("resolvePledgeLines / computeProductionCounts", () => {
     const done = { id: "a", rewardId: "t18", addons: [], modifierAssignments: [], surveyComplete: true };
     const open = { id: "b", rewardId: "t18", addons: [{ addonId: "coin", quantity: 2 }], modifierAssignments: [], surveyComplete: false };
     const lines = computeProductionCounts([done, open], ctx);
-    expect(lines.find((l) => l.key === "t18")).toMatchObject({ confirmed: 1, pending: 1, total: 2, backers: 2 });
-    expect(lines.find((l) => l.key === "coin")).toMatchObject({ confirmed: 0, pending: 2, total: 2 });
+    expect(lines.find((l) => l.sku === "SW3-18")).toMatchObject({ confirmed: 1, pending: 1, total: 2, backers: 2 });
+    expect(lines.find((l) => l.sku === "SW3-COIN")).toMatchObject({ confirmed: 0, pending: 2, total: 2 });
   });
 });
 

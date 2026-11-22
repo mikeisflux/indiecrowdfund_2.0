@@ -33,6 +33,7 @@ interface ProductionLine {
   key: string;
   kind: "tier" | "addon" | "upgrade" | "unassigned_upgrade";
   label: string;
+  titles: string[];
   sku: string | null;
   skuDerived: boolean;
   confirmed: number;
@@ -80,6 +81,8 @@ interface RewardRow {
   isModifier: boolean;
   modifiesRewardIds: string[];
   modifierSkuSuffix: string | null;
+  /** Suffix in use: the saved one, else the default derived from the name. */
+  effectiveSuffix?: string | null;
   shippingType: string | null;
 }
 
@@ -283,7 +286,12 @@ export function ProductionTab({ projectId }: { projectId: string }) {
                           <span className="text-amber-600 text-xs">no SKU</span>
                         )}
                       </TableCell>
-                      <TableCell>{l.label}</TableCell>
+                      <TableCell>
+                        {l.label}
+                        {l.titles.length > 1 && (
+                          <span className="block text-xs text-muted-foreground">{l.titles.join(" · ")}</span>
+                        )}
+                      </TableCell>
                       <TableCell>
                         <Badge variant="outline" className={l.kind === "upgrade" ? "border-purple-300 text-purple-700" : l.kind === "unassigned_upgrade" ? "border-amber-300 text-amber-700" : ""}>
                           {KIND_LABEL[l.kind]}
@@ -597,12 +605,15 @@ function UpgradeSettings({
                 <div className="space-y-1">
                   <Label className="text-xs">SKU suffix</Label>
                   <Input
-                    placeholder="-F"
+                    placeholder={a.effectiveSuffix || "-F"}
                     value={d.suffix}
                     onChange={(e) => setDrafts((p) => ({ ...p, [a.id]: { ...d, suffix: e.target.value } }))}
                     className="h-9 font-mono"
                   />
-                  <p className="text-[11px] text-muted-foreground">Base SKU + suffix names the upgraded product (SW3-18 + -F = SW3-18-F). A mapping in SKU Mapping overrides it.</p>
+                  <p className="text-[11px] text-muted-foreground">
+                    Base SKU + suffix names the upgraded product (SW3-18 + {a.effectiveSuffix || "-F"} = SW3-18{a.effectiveSuffix || "-F"}).
+                    {!a.modifierSkuSuffix && a.effectiveSuffix ? " Using the default from the name until you set one." : ""} A mapping in SKU Mapping overrides it.
+                  </p>
                 </div>
                 <div className="space-y-1">
                   <Label className="text-xs">Eligible items <span className="text-muted-foreground">(none ticked = any physical item)</span></Label>

@@ -24,10 +24,10 @@ th{background:#f3f4f6}
 
 <h2>How it works now</h2>
 <ol>
-<li><b>Mark the add-on as an upgrade</b> — IndieKit → Pre-Fulfillment → <b>Production</b> → <i>Upgrade add-ons</i>. Switch it on, give it a SKU suffix (<code>-F</code>), and optionally tick which items it may apply to. Nothing ticked means any physical item in the order (the tier and every shipped add-on; digital items are never eligible).</li>
+<li><b>Mark the add-on as an upgrade</b> — IndieKit → Pre-Fulfillment → <b>Production</b> → <i>Upgrade add-ons</i>. Switch it on and optionally tick which items it may apply to. Nothing ticked means any physical item in the order (the tier and every shipped add-on; digital items are never eligible). The SKU suffix defaults from the name (“Upgrade to foil” → <code>-F</code>, “Raised Metal” → <code>-RM</code>); change it if your codes differ.</li>
 <li><b>Give items SKUs</b> — same tab, <i>Item SKUs</i>. “Fill blanks from item names” reads codes out of titles (<code>SW3-18 (Add-on)</code> → <code>SW3-18</code>). A SKU mapped in Setup → SKU Mapping always wins over this field.</li>
 <li><b>The survey asks the structured question</b> — the backer gets an “Apply Your Upgrades” step: one dropdown per copy of the upgrade, listing only their own eligible items, with quantities enforced (one SW3-18 can’t be upgraded twice). When there is only one way to apply it (one cover + one upgrade; four add-on covers + four foil upgrades) it is assigned automatically and shown as a confirmation. Each pick is a <code>PledgeModifierAssignment</code> row (<code>pledgeId, modifierAddonId, unitIndex → rewardId</code>, <code>source = AUTO | SURVEY | CREATOR</code>).</li>
-<li><b>Production counts</b> — Production tab, per SKU: confirmed (survey done or order locked) vs pending, with upgraded copies on their own line (<code>SW3-18-F</code>) and still-unassigned copies called out. CSV export. Sizes and other survey choices are counted below it.</li>
+<li><b>Production counts</b> — Production tab, one line per SKU: a cover sold as a tier and again as an add-on is one line (<code>SW3-01</code> = both), an upgraded copy moves off the base line onto its upgraded SKU (<code>SW3-18-F</code>), and still-unassigned copies are called out. Confirmed (survey done or order locked) vs pending. CSV export. Sizes and other survey choices are counted below it.</li>
 <li><b>Resolving the rest</b> — backers whose upgrade has no item yet are listed on the Production tab with whatever they wrote in the old free-text question and a suggested match parsed from it. Confirm and save, or open “Fill survey” to enter the whole survey for them. The same picker is in the backer dialog’s Overview.</li>
 <li><b>Shopify push</b> uses the same resolver, so a draft order carries <code>SW3-18-F</code> for an assigned upgrade and <code>SW3-18</code> for an unupgraded copy. Unassigned upgrades go on the order as a custom line so nothing is lost.</li>
 <li><b>Automatic reminders</b> — Surveys → Sent Surveys → <i>Automatic reminders</i>. Backers with an unfinished survey are emailed every N days (default 7), up to a cap (default 4), with exactly what is still missing (an upgrade that needs an item, a shipping address). Set a due date and they get one final overdue notice when it passes. Honors the backer’s “Survey reminders” preference and the per-project survey mute. Counters reset when a survey is sent or an update is requested.</li>
@@ -36,7 +36,7 @@ th{background:#f3f4f6}
 <p>SKU resolution order (shared by counts and push, <code>src/lib/fulfillment/production-counts.ts</code>):</p>
 <table><tr><th>Item</th><th>SKU</th></tr>
 <tr><td>Base item</td><td><code>ShopifySkuMapping</code> row for the reward, else <code>Reward.sku</code></td></tr>
-<tr><td>Upgraded item</td><td><code>ModifierSkuMapping</code> row for the exact combination, else base SKU + <code>Reward.modifierSkuSuffix</code></td></tr></table>
+<tr><td>Upgraded item</td><td><code>ModifierSkuMapping</code> row for the exact combination, else base SKU + <code>Reward.modifierSkuSuffix</code> (defaulting to the upgrade name’s initials)</td></tr></table>
 
 <h2>Server setup</h2>
 <p>Daily reminder run (add to root’s crontab on the app server):</p>
@@ -46,7 +46,7 @@ th{background:#f3f4f6}
 <h2>Converting a campaign that already ran</h2>
 <p>For a campaign that used free-text upgrade questions. All in the UI, no SQL:</p>
 <div class="box"><ol>
-<li>Production → <i>Upgrade add-ons</i>: switch on each “Upgrade to …” add-on, set its suffix, save. Backers with only one possible target are assigned on the spot.</li>
+<li>Production → <i>Upgrade add-ons</i>: switch on each “Upgrade to …” add-on. Backers with only one possible target are assigned on the spot. The suffix is derived from the name; override it if needed.</li>
 <li>Production → <i>Item SKUs</i> → “Fill blanks from item names”.</li>
 <li>Production → <i>Upgrades that need an item</i>: the remaining backers appear with their old answer and a suggestion. Confirm each.</li>
 <li>Surveys → Sent Surveys → <i>Automatic reminders</i>: set a due date.</li>

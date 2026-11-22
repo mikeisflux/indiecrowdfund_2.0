@@ -71,6 +71,31 @@ function baseSku(rewardId: string, ctx: SkuContext): { sku: string | null; varia
   return { sku: reward?.sku?.trim() || null, variantId: null, unitsPerItem: 1 };
 }
 
+const SUFFIX_STOPWORDS = new Set(["to", "the", "a", "an", "of", "in", "with", "and", "edition", "version", "cover", "upgrade", "upgraded"]);
+
+/**
+ * A SKU suffix implied by an upgrade's name, for when the creator hasn't set
+ * one: "Upgrade to foil" → "-F", "Upgrade to Raised Metal" → "-RM",
+ * "Glow in the dark" → "-GD". Initials of the meaningful words. Null when
+ * nothing is left ("Upgrade").
+ */
+export function defaultModifierSuffix(title: string | null | undefined): string | null {
+  if (!title) return null;
+  const words = title
+    .replace(/\(.*?\)/g, " ")
+    .split(/[^A-Za-z0-9]+/)
+    .map((w) => w.trim())
+    .filter((w) => w && !SUFFIX_STOPWORDS.has(w.toLowerCase()));
+  if (words.length === 0) return null;
+  return "-" + words.map((w) => w[0].toUpperCase()).join("");
+}
+
+/** The suffix an upgrade actually uses: the creator's, else the derived default. */
+export function effectiveModifierSuffix(modifier: Pick<ModifierRewardShape, "title" | "modifierSkuSuffix"> | undefined): string | null {
+  if (!modifier) return null;
+  return modifier.modifierSkuSuffix?.trim() || defaultModifierSuffix(modifier.title);
+}
+
 /** SKU for an item with a modifier applied. */
 export function comboSku(
   baseRewardId: string,
@@ -80,7 +105,7 @@ export function comboSku(
   const mapped = ctx.modifierSkuMappings.find((m) => m.baseRewardId === baseRewardId && m.modifierAddonId === modifierAddonId);
   if (mapped) return { sku: mapped.shopifySku, variantId: mapped.shopifyVariantId ?? null, derived: false };
   const base = baseSku(baseRewardId, ctx);
-  const suffix = ctx.rewardsById.get(modifierAddonId)?.modifierSkuSuffix?.trim();
+  const suffix = effectiveModifierSuffix(ctx.rewardsById.get(modifierAddonId));
   if (base.sku && suffix) return { sku: `${base.sku}${suffix}`, variantId: null, derived: true };
   return { sku: null, variantId: null, derived: true };
 }
@@ -184,11 +209,14 @@ export function resolvePledgeLines(pledge: ModifierPledgeShape, ctx: SkuContext)
 }
 
 export interface ProductionLine {
+  /** "sku:<SKU>" when the line has a SKU (tier and add-on copies of one product merge), else the per-reward key. */
   key: string;
   kind: LineKind;
   rewardId: string;
   modifierAddonId: string | null;
   label: string;
+  /** Every reward title that fed this line ("SW3-01", "SW3-01 (Add-on)"). */
+  titles: string[];
   sku: string | null;
   skuDerived: boolean;
   /** Units from pledges whose survey is complete (or that have nothing to answer). */
@@ -204,19 +232,27 @@ export interface ProductionPledgeInput extends ModifierPledgeShape {
   surveyComplete: boolean;
 }
 
-/** Totals across the campaign. Sorted: tiers, add-ons, upgrades, then unassigned. */
+/**
+ * Totals across the campaign, one line per SKU. A cover sold as a tier and
+ * again as an add-on is one product to print, so lines with the same SKU
+ * merge ("SW3-01" + "SW3-01 (Add-on)" → SW3-01); so do upgraded copies
+ * from either source (→ SW3-01-F). Lines without a SKU stay per reward.
+ * Sorted: base items, then upgrades, then unassigned.
+ */
 export function computeProductionCounts(pledges: ProductionPledgeInput[], ctx: SkuContext): ProductionLine[] {
-  const byKey = new Map<string, ProductionLine & { backerIds: Set<string> }>();
+  const byKey = new Map<string, ProductionLine & { backerIds: Set<string>; titleSet: Set<string> }>();
   for (const pledge of pledges) {
     for (const line of resolvePledgeLines(pledge, ctx)) {
-      let agg = byKey.get(line.key);
+      const key = line.sku && line.kind !== "unassigned_upgrade" ? `sku:${line.sku.toUpperCase()}` : line.key;
+      let agg = byKey.get(key);
       if (!agg) {
         agg = {
-          key: line.key,
+          key,
           kind: line.kind,
           rewardId: line.rewardId,
           modifierAddonId: line.modifierAddonId,
           label: line.label,
+          titles: [],
           sku: line.sku,
           skuDerived: line.skuDerived,
           confirmed: 0,
@@ -224,9 +260,13 @@ export function computeProductionCounts(pledges: ProductionPledgeInput[], ctx: S
           total: 0,
           backers: 0,
           backerIds: new Set<string>(),
+          titleSet: new Set<string>(),
         };
-        byKey.set(line.key, agg);
+        byKey.set(key, agg);
       }
+      // A merged line is "tier" if any of its sources is the tier.
+      if (line.kind === "tier" && agg.kind === "addon") agg.kind = "tier";
+      agg.titleSet.add(line.label);
       const units = line.quantity * line.unitsPerItem;
       if (pledge.surveyComplete) agg.confirmed += units;
       else agg.pending += units;
@@ -234,9 +274,20 @@ export function computeProductionCounts(pledges: ProductionPledgeInput[], ctx: S
       agg.backerIds.add(pledge.id);
     }
   }
-  const rank: Record<LineKind, number> = { tier: 0, addon: 1, upgrade: 2, unassigned_upgrade: 3 };
+  const rank: Record<LineKind, number> = { tier: 0, addon: 0, upgrade: 1, unassigned_upgrade: 2 };
   return Array.from(byKey.values())
-    .map(({ backerIds, ...line }) => ({ ...line, backers: backerIds.size }))
+    .map(({ backerIds, titleSet, ...line }) => {
+      const titles = Array.from(titleSet);
+      // Merged base lines read as the SKU; an upgrade line keeps
+      // "<item> + <upgrade>" with the item named once.
+      const label =
+        titles.length === 1
+          ? titles[0]
+          : line.modifierAddonId
+            ? `${baseSku(line.rewardId, ctx).sku ?? titles[0].split(" + ")[0]} + ${itemLabel(line.modifierAddonId, ctx)}`
+            : line.sku ?? titles[0];
+      return { ...line, label, titles, backers: backerIds.size };
+    })
     .sort((a, b) => rank[a.kind] - rank[b.kind] || (a.sku || a.label).localeCompare(b.sku || b.label, undefined, { numeric: true }));
 }
 

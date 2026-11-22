@@ -15,6 +15,8 @@ import { autoAssignPledge, loadProjectRewardMap, writeAssignments } from "@/lib/
 import {
   computeProductionCounts,
   computeVariantCounts,
+  defaultModifierSuffix,
+  effectiveModifierSuffix,
   guessSkuFromTitle,
   productionCsv,
   comboSku,
@@ -208,6 +210,8 @@ export async function GET(req: NextRequest) {
         isModifier: !!r.isModifier,
         modifiesRewardIds: r.modifiesRewardIds ?? [],
         modifierSkuSuffix: r.modifierSkuSuffix ?? null,
+        // What the counts and push actually use when no suffix was typed.
+        effectiveSuffix: r.isModifier ? effectiveModifierSuffix(r) : null,
         shippingType: r.shippingType ?? null,
       }));
 
@@ -342,12 +346,16 @@ export async function POST(req: NextRequest) {
         const count = await db.reward.count({ where: { id: { in: modifiesRewardIds }, projectId } });
         if (count !== new Set(modifiesRewardIds).size) return NextResponse.json({ error: "Eligible items must belong to this campaign" }, { status: 400 });
       }
+      // No suffix typed → the one implied by the name ("Upgrade to foil" →
+      // "-F"), persisted so it is visible and editable, never silently
+      // missing from the SKU.
+      const suffix = body.isModifier ? body.modifierSkuSuffix?.trim() || defaultModifierSuffix(addon.title) : null;
       await db.reward.update({
         where: { id: addon.id },
         data: {
           isModifier: body.isModifier,
           modifiesRewardIds: body.isModifier ? modifiesRewardIds : [],
-          modifierSkuSuffix: body.isModifier ? body.modifierSkuSuffix?.trim() || null : null,
+          modifierSkuSuffix: suffix,
         },
       });
       auditLog({
@@ -384,6 +392,17 @@ export async function POST(req: NextRequest) {
         const guess = guessSkuFromTitle(r.title);
         if (!guess) continue;
         await db.reward.update({ where: { id: r.id }, data: { sku: guess } });
+        filled++;
+      }
+      // Upgrades marked before a suffix existed get the derived one.
+      const bareModifiers = await db.reward.findMany({
+        where: { projectId, isModifier: true, OR: [{ modifierSkuSuffix: null }, { modifierSkuSuffix: "" }] },
+        select: { id: true, title: true },
+      });
+      for (const m of bareModifiers) {
+        const suffix = defaultModifierSuffix(m.title);
+        if (!suffix) continue;
+        await db.reward.update({ where: { id: m.id }, data: { modifierSkuSuffix: suffix } });
         filled++;
       }
       return NextResponse.json({ success: true, filled });
