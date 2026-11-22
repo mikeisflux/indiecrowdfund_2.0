@@ -140,6 +140,13 @@ model Pledge {
   // Modifier addon assignments
   needsModifierAssignment Boolean @default(false) // True if backer has ambiguous modifier addon assignments
 
+  // Automated survey reminders (cron/survey-reminders). How many nudges this
+  // pledge has had since the survey went out, and when the last one went.
+  // Reset when the creator re-sends / requests an update. Added by
+  // migrations/add_modifier_units_and_survey_reminders.sql.
+  surveyReminderCount  Int       @default(0)
+  surveyReminderSentAt DateTime?
+
   // Email tracking
   confirmationEmailSent Boolean @default(false)
   metadata              Json?
@@ -185,25 +192,38 @@ model PledgeAddon {
   @@index([pledgeId])
 }
 
-// Tracks which modifier addon is assigned to which base reward for each pledge
+// Tracks which modifier addon is assigned to which base item for each pledge.
 // Example: Backer has Cover A, Cover B + Upgrade to Metal, Upgrade to Foil
 // This table stores: Cover A -> Metal, Cover B -> Foil
+//
+// One row per UNIT of the modifier: "Upgrade to foil" x4 is four rows
+// (unitIndex 0..3), each naming the item that copy applies to. rewardId may
+// be the pledge's tier OR an add-on reward in the pledge (a backer who added
+// four covers as add-ons upgrades those, not the tier). Written by the
+// backer's survey, by auto-assignment when there is only one possible
+// target, or by the creator from IndieKit. See
+// src/lib/fulfillment/modifiers.ts; per-unit columns added by
+// migrations/add_modifier_units_and_survey_reminders.sql.
 model PledgeModifierAssignment {
   id              String @id @default(cuid())
   pledgeId        String
-  rewardId        String // The base reward being modified (e.g., Cover A)
+  rewardId        String // The base item being modified (tier or add-on reward)
   modifierAddonId String // The modifier addon being applied (e.g., Upgrade to Metal)
+  unitIndex       Int    @default(0) // Which copy of the modifier this row is (0-based)
 
   // Whether this was auto-assigned (simple case) or manually assigned
   isAutoAssigned Boolean @default(false)
   assignedBy     String? // User ID if manually assigned by creator
+  // "AUTO" (only one possible target), "SURVEY" (backer chose), "CREATOR"
+  // (entered from IndieKit). Null on rows from before the survey flow.
+  source         String?
 
   pledge Pledge @relation(fields: [pledgeId], references: [id], onDelete: Cascade)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@unique([pledgeId, modifierAddonId]) // Each modifier can only be assigned once per pledge
+  @@unique([pledgeId, modifierAddonId, unitIndex])
   @@index([pledgeId])
   @@index([rewardId])
 }

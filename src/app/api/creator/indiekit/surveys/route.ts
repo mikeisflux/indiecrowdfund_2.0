@@ -311,6 +311,12 @@ export async function PATCH(req: NextRequest) {
           );
         }
 
+        // Automatic reminders count from this send.
+        await db.pledge.updateMany({
+          where: { projectId },
+          data: { surveyReminderCount: 0, surveyReminderSentAt: null },
+        });
+
         // Surveys go ONLY to backers whose pledge is fully COMPLETED.
         // PENDING/FAILED/REFUNDED/CANCELLED/CHARGEBACK pledges must not receive surveys.
         const backers = await db.pledge.findMany({
@@ -470,13 +476,14 @@ export async function PATCH(req: NextRequest) {
           data: { isComplete: false, completedAt: null },
         });
 
-        // Also reset surveyCompleted on pledges
+        // Also reset surveyCompleted on pledges, and restart the automatic
+        // reminder cadence for the re-opened survey.
         await db.pledge.updateMany({
           where: {
             projectId,
             status: "COMPLETED",
           },
-          data: { surveyCompleted: false },
+          data: { surveyCompleted: false, surveyReminderCount: 0, surveyReminderSentAt: null },
         });
 
         // Get all backers with completed pledges to send notifications
@@ -522,6 +529,33 @@ export async function PATCH(req: NextRequest) {
         });
 
         break;
+      }
+
+      case "reminder_settings": {
+        // Automatic reminder cadence + deadline (cron/survey-reminders).
+        const settings = z
+          .object({
+            autoRemind: z.boolean().optional(),
+            reminderIntervalDays: z.number().int().min(1).max(60).optional(),
+            maxReminders: z.number().int().min(0).max(20).optional(),
+            dueAt: z.string().datetime().nullable().optional(),
+          })
+          .safeParse(body.settings ?? {});
+        if (!settings.success) {
+          return NextResponse.json({ error: "Invalid reminder settings" }, { status: 400 });
+        }
+        const s = settings.data;
+        const updated = await db.survey.update({
+          where: { id: survey.id },
+          data: {
+            ...(s.autoRemind !== undefined ? { autoRemind: s.autoRemind } : {}),
+            ...(s.reminderIntervalDays !== undefined ? { reminderIntervalDays: s.reminderIntervalDays } : {}),
+            ...(s.maxReminders !== undefined ? { maxReminders: s.maxReminders } : {}),
+            ...(s.dueAt !== undefined ? { dueAt: s.dueAt ? new Date(s.dueAt) : null } : {}),
+          },
+          select: { autoRemind: true, reminderIntervalDays: true, maxReminders: true, dueAt: true },
+        });
+        return NextResponse.json({ success: true, settings: updated });
       }
 
       case "remind": {

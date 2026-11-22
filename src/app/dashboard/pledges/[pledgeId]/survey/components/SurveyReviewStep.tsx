@@ -4,12 +4,13 @@ import { CheckCircle, ShoppingBag, ChevronLeft, CreditCard, Trash2 } from "lucid
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ALL_COUNTRIES } from "@/types";
-import { SurveyData, ShippingAddressForm } from "./types";
+import { SurveyData, ShippingAddressForm, ModifierSelections } from "./types";
 import { unitKey, unitLabel } from "@/lib/surveys/item-units";
 
 interface SurveyReviewStepProps {
   data: SurveyData;
   itemResponses: Record<string, { variants?: Record<string, string>; customAnswers?: Record<string, string | string[]> }>;
+  modifierSelections?: ModifierSelections;
   backerResponses: Record<string, string | string[]>;
   selectedAddons: Record<string, number>;
   setSelectedAddons: React.Dispatch<React.SetStateAction<Record<string, number>>>;
@@ -25,6 +26,7 @@ interface SurveyReviewStepProps {
 export function SurveyReviewStep({
   data,
   itemResponses,
+  modifierSelections = {},
   backerResponses,
   selectedAddons,
   setSelectedAddons,
@@ -80,6 +82,22 @@ export function SurveyReviewStep({
                 </div>
               );
             });
+          })}
+
+          {/* Upgrade add-ons: which item each copy applies to */}
+          {(data.modifierQuestions || []).map((q) => {
+            const picks = modifierSelections[q.modifierAddonId] ?? q.selections;
+            return (
+              <div key={q.modifierAddonId} className="border-b pb-4">
+                <h4 className="font-medium">{q.title}{q.quantity > 1 ? ` × ${q.quantity}` : ""}</h4>
+                {picks.map((p, unit) => (
+                  <p key={unit} className="text-sm text-muted-foreground">
+                    {q.quantity > 1 ? `#${unit + 1}: ` : "Applies to: "}
+                    <span className="text-foreground">{q.targets.find((t) => t.rewardId === p)?.title || "Not chosen"}</span>
+                  </p>
+                ))}
+              </div>
+            );
           })}
 
           {/* Backer Responses */}

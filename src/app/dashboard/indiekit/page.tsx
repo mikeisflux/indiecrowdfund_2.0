@@ -66,6 +66,7 @@ import {
   FormInput,
   Lock,
   ReceiptText,
+  Factory,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -127,6 +128,7 @@ import { EmailMarketingTab } from "./components/tabs/EmailMarketingTab";
 import { SetupTab } from "./components/tabs/SetupTab";
 import { SurveysTab } from "./components/tabs/SurveysTab";
 import { FinalizeTab } from "./components/tabs/FinalizeTab";
+import { ProductionTab } from "./components/tabs/production-tab";
 import { OrderLockTab } from "./components/tabs/OrderLockTab";
 import { PaymentsTab } from "./components/tabs/PaymentsTab";
 import { ShippingChargesTab } from "./components/tabs/ShippingChargesTab";
@@ -153,6 +155,7 @@ const PRE_FULFILLMENT_TABS: { id: PhaseTab; label: string; icon: React.ElementTy
   { id: "setup", label: "Setup", icon: FormInput },
   { id: "surveys", label: "Surveys", icon: ClipboardCheck },
   { id: "order-lock", label: "Order Lock", icon: PackageCheck },
+  { id: "production", label: "Production", icon: Factory },
   { id: "finalize", label: "Finalize", icon: Lock },
   { id: "teaser-pages", label: "Teaser Pages", icon: FileText },
 ];
@@ -183,6 +186,7 @@ const TAB_TIPS: Record<string, string> = {
   "setup": "Configure items, SKUs, and shipping options before surveys go out.",
   "surveys": "Build and send the backer survey that collects addresses and add-on picks.",
   "order-lock": "Ask backers to confirm & lock their orders early so you can charge and ship sooner.",
+  "production": "Units to make by SKU, with upgrade add-ons applied to the item each backer chose, and anything still unassigned.",
   "finalize": "Close out surveys and freeze the final order list for production.",
   "teaser-pages": "Public coming-soon pages that collect interest for your next campaign.",
   "payments": "Charge cards on file — survey balances, shipping differences, and extra items.",
@@ -939,6 +943,10 @@ export default function IndieKitPage() {
                   backers={backers}
                   onOpenBackerDetail={openBackerDetail}
                 />
+              )}
+
+              {activeSection === "phase" && activePhaseTab === "production" && (
+                <ProductionTab projectId={selectedProjectId} />
               )}
 
               {activeSection === "phase" && activePhaseTab === "finalize" && (

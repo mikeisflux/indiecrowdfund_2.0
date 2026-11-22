@@ -50,9 +50,20 @@ model Reward {
   isEnded Boolean   @default(false)
   endedAt DateTime?
 
+  // The creator's own product code for this item ("SW3-18"). Production
+  // counts, exports and the Shopify push key on it; a ShopifySkuMapping row
+  // for the item overrides it. Many creators already name tiers by SKU —
+  // this makes that a real field instead of a title convention. Added by
+  // migrations/add_modifier_units_and_survey_reminders.sql.
+  sku String?
+
   // Modifier addon settings (for ADDON type rewards that modify base rewards)
   isModifier        Boolean  @default(false) // True if this addon modifies a base reward instead of being standalone
-  modifiesRewardIds String[] // Which reward IDs this can modify (empty = all tiers in project)
+  modifiesRewardIds String[] // Which reward IDs this can modify (empty = every physical item in the pledge)
+  // Appended to the base item's SKU to name the upgraded product
+  // ("SW3-18" + "-F" = "SW3-18-F"). A ModifierSkuMapping row for the exact
+  // combination overrides the derived code.
+  modifierSkuSuffix String?
 
   // Survey integration - whether this addon appears in the IndieKit survey
   showInSurvey Boolean @default(false)

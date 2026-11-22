@@ -5,7 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { toast } from "sonner";
-import { ArrowLeft, ClipboardPen, Loader2, Package, MapPin, Save, User } from "lucide-react";
+import { ArrowLeft, ArrowUpCircle, ClipboardPen, Loader2, Package, MapPin, Save, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -15,6 +15,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { apiFetch, fetchWithRetry } from "@/lib/fetch-utils";
 import { ALL_COUNTRIES } from "@/types";
 import { QuestionInput } from "@/app/dashboard/pledges/[pledgeId]/survey/components/QuestionInput";
+import { SurveyUpgradesStep } from "@/app/dashboard/pledges/[pledgeId]/survey/components/SurveyUpgradesStep";
+import type { ModifierQuestionView, ModifierSelections } from "@/app/dashboard/pledges/[pledgeId]/survey/components/types";
 import { unitKey, unitLabel, type ItemResponses } from "@/lib/surveys/item-units";
 
 interface Data {
@@ -38,6 +40,7 @@ interface Data {
     backerQuestions: { id: string; question: string; description?: string; questionType: string; displayType?: string | null; options: string[]; isRequired?: boolean }[];
   };
   relevantItemQuestions?: { id: string; quantity: number; imageUrl: string | null }[];
+  modifierQuestions?: ModifierQuestionView[];
   response: {
     itemResponses?: ItemResponses;
     backerResponses?: Record<string, string | string[]>;
@@ -73,6 +76,7 @@ export default function FillSurveyForBackerPage() {
   const [saving, setSaving] = useState(false);
   const [itemResponses, setItemResponses] = useState<ItemResponses>({});
   const [backerResponses, setBackerResponses] = useState<Record<string, string | string[]>>({});
+  const [modifierSelections, setModifierSelections] = useState<ModifierSelections>({});
   const [address, setAddress] = useState<Required<Address>>(EMPTY_ADDRESS);
   const [includeAddress, setIncludeAddress] = useState(true);
   const [notifyBacker, setNotifyBacker] = useState(true);
@@ -86,6 +90,9 @@ export default function FillSurveyForBackerPage() {
       setData(d);
       setItemResponses(d.response?.itemResponses || {});
       setBackerResponses(d.response?.backerResponses || {});
+      const picks: ModifierSelections = {};
+      for (const q of d.modifierQuestions || []) picks[q.modifierAddonId] = [...q.selections];
+      setModifierSelections(picks);
       const addr = d.response?.shippingAddress || d.pledge.pledgeShippingAddress || null;
       if (addr) setAddress({ ...EMPTY_ADDRESS, ...Object.fromEntries(Object.entries(addr).filter(([, v]) => typeof v === "string")) });
     } catch (err) {
@@ -108,6 +115,7 @@ export default function FillSurveyForBackerPage() {
         json: {
           itemResponses,
           backerResponses,
+          modifierSelections,
           shippingAddress: includeAddress && address.line1.trim() ? address : null,
           notifyBacker,
         },
@@ -244,6 +252,27 @@ export default function FillSurveyForBackerPage() {
                     );
                   });
                 })}
+              </CardContent>
+            </Card>
+          )}
+
+          {(data.modifierQuestions || []).length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <ArrowUpCircle className="h-5 w-5 text-purple-600" /> Upgrades
+                </CardTitle>
+                <CardDescription>
+                  Which item each upgrade add-on applies to. This is what sets the production SKU.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <SurveyUpgradesStep
+                  embedded
+                  questions={data.modifierQuestions || []}
+                  selections={modifierSelections}
+                  setSelections={setModifierSelections}
+                />
               </CardContent>
             </Card>
           )}

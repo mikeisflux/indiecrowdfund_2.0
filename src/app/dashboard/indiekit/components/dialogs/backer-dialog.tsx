@@ -47,7 +47,6 @@ import {
   ClipboardList,
   Loader2,
   Layers,
-  ArrowRight,
   Send,
   Copy,
   Trash2, ClipboardPen,
@@ -66,13 +65,7 @@ import { NotesPanel } from "./notes-panel";
 import { EmailComposerDialog } from "./email-composer-dialog";
 import { CancelOrderDialog } from "./confirm-dialog";
 import { PackingSlipDialog } from "./packing-slip-dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { UpgradeAssigner, type UpgradeQuestion } from "../tabs/production-tab";
 
 interface BackerDialogProps {
   open: boolean;
@@ -246,9 +239,11 @@ export function BackerDialog({ open, onOpenChange, backer, availableAddons = [],
   const [surveyLoading, setSurveyLoading] = useState(false);
   const [surveyError, setSurveyError] = useState<string | null>(null);
 
-  // Modifier assignment state
-  const [modifierAssignmentSaving, setModifierAssignmentSaving] = useState(false);
-  const [pendingAssignments, setPendingAssignments] = useState<Record<string, string>>({});
+  // Upgrade add-on assignments: fetched per pledge from the production API
+  // (eligible items, per-copy picks, suggestion parsed from any old
+  // free-text answer) and saved one modifier at a time.
+  const [upgradeQuestions, setUpgradeQuestions] = useState<UpgradeQuestion[] | null>(null);
+  const [upgradeBusy, setUpgradeBusy] = useState<string | null>(null);
 
 
   // Fetch survey data when switching to survey tab
@@ -303,6 +298,28 @@ export function BackerDialog({ open, onOpenChange, backer, availableAddons = [],
       .then((data) => setEmailHistory(data?.emails ?? []))
       .catch(() => setEmailHistory([]));
   }, [activeTab, backer, emailHistory]);
+
+  // Get modifier addons from the backer's addons
+  const modifierAddons = backer?.addons?.filter(addon => addon.isModifier) || [];
+  const hasModifierAddons = modifierAddons.length > 0;
+
+  const backerProjectId = backer?.projectId;
+  const backerId = backer?.id;
+  const loadUpgradeQuestions = useCallback(async () => {
+    if (!backerProjectId || !backerId || !hasModifierAddons) return;
+    try {
+      const res = await fetchWithRetry(`/api/creator/indiekit/production?projectId=${backerProjectId}&pledgeId=${backerId}`);
+      if (!res.ok) throw new Error("Could not load upgrade assignments");
+      const out = await res.json();
+      setUpgradeQuestions(out.questions || []);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not load upgrade assignments");
+    }
+  }, [backerProjectId, backerId, hasModifierAddons]);
+
+  useEffect(() => {
+    if (open) loadUpgradeQuestions();
+  }, [open, loadUpgradeQuestions]);
 
   if (!backer) return null;
 
@@ -441,44 +458,25 @@ export function BackerDialog({ open, onOpenChange, backer, availableAddons = [],
     }
   };
 
-  const handleSaveModifierAssignment = async (modifierAddonId: string, rewardId: string) => {
+  const saveUpgradeAssignment = async (modifierAddonId: string, picks: (string | null)[]) => {
     if (!backer?.projectId) return;
-
-    setModifierAssignmentSaving(true);
+    const key = `assign:${backer.id}:${modifierAddonId}`;
+    setUpgradeBusy(key);
     try {
-      const res = await apiFetch("/api/creator/indiekit/modifiers", {
+      const res = await apiFetch("/api/creator/indiekit/production", {
         method: "POST",
-        headers: { "Content-Type": "application/json", },
-        body: JSON.stringify({
-          projectId: backer.projectId,
-          action: "manual_assign",
-          pledgeId: backer.id,
-          rewardId,
-          modifierAddonId,
-        }),
+        json: { projectId: backer.projectId, action: "assign_units", pledgeId: backer.id, modifierAddonId, picks },
       });
-      if (!res.ok) throw new Error("Failed to save modifier assignment");
-      toast.success("Modifier assignment saved");
-      // Update pending assignments to show the saved value
-      setPendingAssignments(prev => ({ ...prev, [modifierAddonId]: rewardId }));
+      const out = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(out.error || "Failed to save upgrade assignment");
+      toast.success("Upgrade assigned");
+      await loadUpgradeQuestions();
     } catch (error) {
-      toast.error("Failed to save modifier assignment");
-      console.error("Modifier assignment error:", error);
+      toast.error(error instanceof Error ? error.message : "Failed to save upgrade assignment");
     } finally {
-      setModifierAssignmentSaving(false);
+      setUpgradeBusy(null);
     }
   };
-
-  // Get modifier addons from the backer's addons
-  const modifierAddons = backer?.addons?.filter(addon => addon.isModifier) || [];
-  const hasModifierAddons = modifierAddons.length > 0;
-
-  // The pledge's base reward tier — manual_assign requires the real
-  // Reward id (the old code sent the item SKU/name, so every assignment
-  // 404'd server-side).
-  const baseRewardOptions = backer?.rewardId
-    ? [{ id: backer.rewardId, name: backer.reward }]
-    : [];
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -838,74 +836,36 @@ export function BackerDialog({ open, onOpenChange, backer, availableAddons = [],
                 </div>
               </div>
 
-              {/* Modifier Assignment Section - only show if backer has modifier addons */}
+              {/* Upgrade add-ons: which item each copy applies to. Shared
+                  picker with the Production tab; the backer's own survey
+                  writes the same rows. */}
               {hasModifierAddons && (
                 <div className="rounded-lg border p-4">
                   <div className="flex items-center gap-2 mb-3">
                     <Layers className="h-5 w-5 text-purple-600" />
-                    <h4 className="font-medium">Modifier Assignments</h4>
+                    <h4 className="font-medium">Upgrades</h4>
                     {backer.needsModifierAssignment && (
                       <Badge className="bg-amber-100 text-amber-700">Needs Assignment</Badge>
                     )}
                   </div>
                   <p className="text-xs text-muted-foreground mb-4">
-                    Assign which item each upgrade/modifier addon applies to. This determines the final SKU for fulfillment.
+                    Which item each upgrade add-on applies to. This sets the production SKU for that copy.
                   </p>
-                  <div className="space-y-3">
-                    {modifierAddons.map((addon) => {
-                      // Find existing assignment for this modifier
-                      const existingAssignment = backer.modifierAssignments?.find(
-                        (a) => a.modifierAddonId === addon.id
-                      );
-                      const currentValue = pendingAssignments[addon.id] || existingAssignment?.rewardId || "";
-
-                      return (
-                        <div key={addon.id} className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
-                          <div className="flex-1">
-                            <p className="text-sm font-medium flex items-center gap-2">
-                              {addon.name}
-                              {addon.quantity > 1 && (
-                                <Badge variant="secondary" className="text-xs">
-                                  x{addon.quantity}
-                                </Badge>
-                              )}
-                            </p>
-                            {existingAssignment && (
-                              <p className="text-xs text-muted-foreground">
-                                {existingAssignment.isAutoAssigned ? "Auto-assigned" : "Manually assigned"}
-                                {existingAssignment.rewardTitle && ` to: ${existingAssignment.rewardTitle}`}
-                              </p>
-                            )}
-                          </div>
-                          <ArrowRight className="h-4 w-4 text-muted-foreground" />
-                          <div className="w-48">
-                            <Select
-                              value={currentValue}
-                              onValueChange={(value) => {
-                                handleSaveModifierAssignment(addon.id, value);
-                              }}
-                              disabled={modifierAssignmentSaving}
-                            >
-                              <SelectTrigger className="h-8 text-xs">
-                                <SelectValue placeholder="Select item to modify" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {baseRewardOptions.map((item) => (
-                                  <SelectItem key={item.id} value={item.id}>
-                                    {item.name}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                  {modifierAssignmentSaving && (
-                    <div className="flex items-center gap-2 mt-3 text-xs text-muted-foreground">
-                      <Loader2 className="h-3 w-3 animate-spin" />
-                      Saving assignment...
+                  {upgradeQuestions === null ? (
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <Loader2 className="h-3 w-3 animate-spin" /> Loading…
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {upgradeQuestions.map((q) => (
+                        <UpgradeAssigner
+                          key={q.modifierAddonId}
+                          question={q}
+                          busy={upgradeBusy}
+                          busyKey={`assign:${backer.id}:${q.modifierAddonId}`}
+                          onAssign={(picks) => saveUpgradeAssignment(q.modifierAddonId, picks)}
+                        />
+                      ))}
                     </div>
                   )}
                 </div>

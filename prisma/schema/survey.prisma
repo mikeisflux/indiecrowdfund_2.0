@@ -15,6 +15,16 @@ model Survey {
   sentAt   DateTime?
   lockedAt DateTime?
 
+  // Automated reminders (cron/survey-reminders). While autoRemind is on,
+  // every backer with an unfinished survey is nudged every
+  // reminderIntervalDays after the send (or their last nudge), up to
+  // maxReminders times, plus one final notice when dueAt passes. Added by
+  // migrations/add_modifier_units_and_survey_reminders.sql.
+  dueAt                DateTime?
+  autoRemind           Boolean   @default(true)
+  reminderIntervalDays Int       @default(7)
+  maxReminders         Int       @default(4)
+
   // Address settings
   collectAddresses Boolean @default(true)
   addressesLocked  Boolean @default(false)

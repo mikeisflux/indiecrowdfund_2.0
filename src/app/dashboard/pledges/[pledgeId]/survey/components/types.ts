@@ -80,6 +80,12 @@ export interface SurveyData {
     options: string[];
     isRequired: boolean;
   }[];
+  /**
+   * Upgrade add-ons in this pledge ("Upgrade to foil" x2): one pick per
+   * copy, from the backer's own items. `auto` = only one way to apply it,
+   * shown as a confirmation. See @/lib/fulfillment/modifiers.
+   */
+  modifierQuestions?: ModifierQuestionView[];
   availableAddons?: AvailableAddon[];
   response: {
     itemResponses?: Record<string, { variants?: Record<string, string>; customAnswers?: Record<string, string | string[]> }>;
@@ -100,7 +106,20 @@ export interface SurveyData {
   };
 }
 
-export type Step = "intro" | "items" | "questions" | "addons" | "address" | "review" | "payment";
+export interface ModifierQuestionView {
+  modifierAddonId: string;
+  title: string;
+  imageUrl: string | null;
+  quantity: number;
+  targets: { rewardId: string; title: string; imageUrl: string | null; quantity: number; kind: "tier" | "addon" }[];
+  selections: (string | null)[];
+  auto: boolean;
+}
+
+/** modifierAddonId -> rewardId per copy (index = unit). */
+export type ModifierSelections = Record<string, (string | null)[]>;
+
+export type Step = "intro" | "items" | "upgrades" | "questions" | "addons" | "address" | "review" | "payment";
 
 export type ShippingAddressForm = {
   name: string;

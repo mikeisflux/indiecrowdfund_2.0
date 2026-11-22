@@ -37,8 +37,16 @@ const responseValueSchema = z.union([z.string().max(10000), z.array(z.string().m
 import { getIndiekitSettings } from "@/lib/indiekit-settings";
 import { createNotification } from "@/lib/notifications/core";
 import { itemQuantity, unitKey, unitLabel } from "@/lib/surveys/item-units";
+import { buildModifierQuestions, forcedSelections, validateSelections } from "@/lib/fulfillment/modifiers";
+import { autoAssignPledge, loadProjectRewardMap, writeAssignments } from "@/lib/fulfillment/modifiers-db";
 
 const responseSchema = z.object({
+  // Upgrade add-ons: modifierAddonId -> rewardId per copy (index = unit).
+  // See @/lib/fulfillment/modifiers.
+  modifierSelections: z
+    .record(z.string().max(100), z.array(z.string().max(100).nullable()).max(100))
+    .refine((r) => Object.keys(r).length <= 50, "Too many upgrade selections")
+    .optional(),
   itemResponses: z.record(
     z.string().max(100),
     z.object({
@@ -83,6 +91,9 @@ export async function GET(
               select: { id: true, title: true },
             },
           },
+        },
+        modifierAssignments: {
+          select: { id: true, rewardId: true, modifierAddonId: true, unitIndex: true, source: true },
         },
       },
     });
@@ -187,15 +198,30 @@ export async function GET(
       update: {},
     });
 
+    // Upgrade add-ons ("Upgrade to foil") are asked as a structured pick —
+    // which of the backer's own items each copy applies to — not as a
+    // free-text item question. Forced answers (only one possible target)
+    // are written now so the backer just sees a confirmation.
+    const rewardsById = await loadProjectRewardMap(pledge.projectId);
+    await autoAssignPledge(pledge, rewardsById);
+    const freshRows = await db.pledgeModifierAssignment.findMany({
+      where: { pledgeId },
+      select: { id: true, rewardId: true, modifierAddonId: true, unitIndex: true, source: true },
+    });
+    const modifierQuestions = buildModifierQuestions({ ...pledge, modifierAssignments: freshRows }, rewardsById);
+    const isModifierReward = (rewardId: string) => !!rewardsById.get(rewardId)?.isModifier;
+
     // Filter item questions to only show those relevant to this backer's reward
     const relevantItemQuestions = survey.itemQuestions.filter(
-      (iq: { rewardId: string }) => iq.rewardId === pledge.rewardId
+      (iq: { rewardId: string }) => iq.rewardId === pledge.rewardId && !isModifierReward(iq.rewardId)
     );
 
-    // Also include item questions for any addons
+    // Also include item questions for any addons. A modifier add-on's own
+    // item question (the old "which cover?" open text) is superseded by
+    // the structured pick above.
     const addonIds = pledge.addons.map((a: { addonId: string }) => a.addonId);
     const addonItemQuestions = survey.itemQuestions.filter(
-      (iq: { rewardId: string }) => addonIds.includes(iq.rewardId)
+      (iq: { rewardId: string }) => addonIds.includes(iq.rewardId) && !isModifierReward(iq.rewardId)
     );
 
     // Each item carries how many of it the backer holds (an add-on bought
@@ -333,6 +359,7 @@ export async function GET(
         })),
       },
       itemQuestions: [...relevantItemQuestions, ...addonItemQuestions].map(decorateItem),
+      modifierQuestions,
       backerQuestions: relevantBackerQuestions,
       availableAddons: purchasableAddons,
       response: {
@@ -513,6 +540,30 @@ export async function POST(
     const body = await req.json();
     const data = responseSchema.parse(body);
 
+    // Upgrade picks. Every modifier in the pledge is checked on submit;
+    // on a progress save only fully-chosen, valid ones are written.
+    const rewardsById = await loadProjectRewardMap(pledge.projectId);
+    const existingRows = await db.pledgeModifierAssignment.findMany({
+      where: { pledgeId },
+      select: { id: true, rewardId: true, modifierAddonId: true, unitIndex: true, source: true },
+    });
+    const modifierQuestions = buildModifierQuestions({ ...pledge, modifierAssignments: existingRows }, rewardsById);
+    const isModifierReward = (rewardId: string) => !!rewardsById.get(rewardId)?.isModifier;
+    const modifierWrites: { modifierAddonId: string; picks: string[]; source: "AUTO" | "SURVEY" }[] = [];
+    for (const q of modifierQuestions) {
+      if (q.auto) {
+        modifierWrites.push({ modifierAddonId: q.modifierAddonId, picks: forcedSelections(q.targets, q.quantity)!, source: "AUTO" });
+        continue;
+      }
+      const picks = data.modifierSelections?.[q.modifierAddonId] ?? q.selections;
+      const problem = validateSelections(q, picks);
+      if (problem) {
+        if (data.submit) return NextResponse.json({ error: problem }, { status: 400 });
+        continue;
+      }
+      modifierWrites.push({ modifierAddonId: q.modifierAddonId, picks: picks.slice(0, q.quantity) as string[], source: "SURVEY" });
+    }
+
     // A locked order's address was confirmed at lock time and is final:
     // the survey keeps that address regardless of what the form sends.
     if (orderLocked && pledge.shippingAddress) {
@@ -551,10 +602,11 @@ export async function POST(
 
       // Check required item questions
       for (const itemQ of survey.itemQuestions) {
-        // Check if this item applies to this backer
+        // Check if this item applies to this backer. A modifier add-on's
+        // legacy item question is replaced by the structured pick above.
         const applies =
-          itemQ.rewardId === pledge.rewardId ||
-          addonIds.includes(itemQ.rewardId);
+          (itemQ.rewardId === pledge.rewardId ||
+          addonIds.includes(itemQ.rewardId)) && !isModifierReward(itemQ.rewardId);
 
         if (applies) {
           // Check variants are selected. Accept either the variant.id
@@ -702,6 +754,15 @@ export async function POST(
       });
     }
 
+    // Persist upgrade picks (after the response row, so a validation 400
+    // above never leaves half-written assignments).
+    for (const w of modifierWrites) {
+      await writeAssignments({ pledgeId, modifierAddonId: w.modifierAddonId, picks: w.picks, source: w.source });
+    }
+    if (data.submit) {
+      await db.pledge.updateMany({ where: { id: pledgeId }, data: { needsModifierAssignment: false } });
+    }
+
     // Update pledge survey status
     if (data.submit) {
       await db.pledge.update({
@@ -803,6 +864,12 @@ export async function POST(
                 if (value && value.trim()) selections.push({ label: `${name} — ${cq.question}`, value });
               }
             }
+          }
+
+          for (const w of modifierWrites) {
+            const title = rewardsById.get(w.modifierAddonId)?.title || "Upgrade";
+            const names = w.picks.map((id) => rewardsById.get(id)?.title || id);
+            selections.push({ label: title, value: names.join(", ") });
           }
 
           for (const bq of survey.backerQuestions) {

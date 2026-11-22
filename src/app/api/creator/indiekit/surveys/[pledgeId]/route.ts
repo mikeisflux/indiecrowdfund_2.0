@@ -10,6 +10,8 @@ import { itemQuantity } from "@/lib/surveys/item-units";
 import { auditLog } from "@/lib/audit";
 import { sendEmail } from "@/lib/email/email-config";
 import { z } from "zod";
+import { buildModifierQuestions, forcedSelections, validateSelections } from "@/lib/fulfillment/modifiers";
+import { autoAssignPledge, loadProjectRewardMap, writeAssignments } from "@/lib/fulfillment/modifiers-db";
 
 export const dynamic = "force-dynamic";
 
@@ -51,6 +53,9 @@ export async function GET(
               select: { id: true, title: true },
             },
           },
+        },
+        modifierAssignments: {
+          select: { id: true, rewardId: true, modifierAddonId: true, unitIndex: true, source: true },
         },
         user: {
           select: { name: true, email: true },
@@ -150,8 +155,21 @@ export async function GET(
     // Which item questions apply to THIS pledge, how many of each the backer
     // holds, and a picture, for the creator fill-in form. Same rules as the
     // backer's own survey (quantity per add-on unit, reward image fallback).
+    // Upgrade add-ons are a structured pick (which item each copy applies
+    // to), not an item question; forced ones are written now.
+    const rewardsById = await loadProjectRewardMap(pledge.projectId);
+    await autoAssignPledge(pledge, rewardsById);
+    const freshRows = await db.pledgeModifierAssignment.findMany({
+      where: { pledgeId },
+      select: { id: true, rewardId: true, modifierAddonId: true, unitIndex: true, source: true },
+    });
+    const modifierQuestions = buildModifierQuestions({ ...pledge, modifierAssignments: freshRows }, rewardsById);
+    const isModifierReward = (rewardId: string) => !!rewardsById.get(rewardId)?.isModifier;
+
     const addonIds = pledge.addons.map((a: { addonId: string }) => a.addonId);
-    const relevant = survey.itemQuestions.filter((iq: { rewardId: string }) => iq.rewardId === pledge.rewardId || addonIds.includes(iq.rewardId));
+    const relevant = survey.itemQuestions.filter(
+      (iq: { rewardId: string }) => (iq.rewardId === pledge.rewardId || addonIds.includes(iq.rewardId)) && !isModifierReward(iq.rewardId)
+    );
     const rewardImages = relevant.length
       ? await db.reward.findMany({ where: { id: { in: relevant.map((iq: { rewardId: string }) => iq.rewardId) } }, select: { id: true, imageUrl: true } })
       : [];
@@ -193,6 +211,7 @@ export async function GET(
         backerQuestions: survey.backerQuestions,
       },
       relevantItemQuestions,
+      modifierQuestions,
       response: response
         ? {
             itemResponses: response.itemResponses,
@@ -240,6 +259,8 @@ const fillSchema = z.object({
     })
     .optional()
     .nullable(),
+  // Upgrade add-ons: modifierAddonId -> rewardId per copy.
+  modifierSelections: z.record(z.string().max(100), z.array(z.string().max(100).nullable()).max(100)).optional(),
   notifyBacker: z.boolean().default(true),
 });
 
@@ -295,6 +316,39 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ pled
     if (!parsed.success) return NextResponse.json({ error: "Invalid survey data", details: parsed.error.flatten().fieldErrors }, { status: 400 });
     const data = parsed.data;
 
+    // Upgrade picks, same rules as the backer's own survey. Items with
+    // nothing eligible are skipped rather than blocking the save.
+    const pledgeForModifiers = await db.pledge.findFirst({
+      where: { id: pledgeId },
+      select: {
+        id: true,
+        rewardId: true,
+        addons: { select: { addonId: true, quantity: true } },
+        modifierAssignments: { select: { id: true, rewardId: true, modifierAddonId: true, unitIndex: true, source: true } },
+      },
+    });
+    const rewardsById = await loadProjectRewardMap(pledge.projectId);
+    const upgradeLines: string[] = [];
+    if (pledgeForModifiers) {
+      for (const q of buildModifierQuestions(pledgeForModifiers, rewardsById)) {
+        let picks: string[];
+        let source: "AUTO" | "CREATOR";
+        if (q.auto) {
+          picks = forcedSelections(q.targets, q.quantity)!;
+          source = "AUTO";
+        } else {
+          const given = data.modifierSelections?.[q.modifierAddonId] ?? q.selections;
+          if (q.targets.length === 0 || given.every((g) => g === null)) continue;
+          const problem = validateSelections(q, given);
+          if (problem) return NextResponse.json({ error: problem }, { status: 400 });
+          picks = given.slice(0, q.quantity) as string[];
+          source = "CREATOR";
+        }
+        await writeAssignments({ pledgeId, modifierAddonId: q.modifierAddonId, picks, source, assignedBy: session.user.id });
+        upgradeLines.push(`${q.title}: ${picks.map((id) => rewardsById.get(id)?.title || id).join(", ")}`);
+      }
+    }
+
     const existing = await db.surveyResponse.findUnique({ where: { pledgeId } });
     const now = new Date();
     const response = await db.surveyResponse.upsert({
@@ -325,6 +379,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ pled
       where: { id: pledgeId },
       data: {
         surveyCompleted: true,
+        needsModifierAssignment: false,
         ...(data.shippingAddress ? { shippingAddress: data.shippingAddress } : {}),
         surveyResponses: { itemResponses: response.itemResponses, backerResponses: response.backerResponses },
       },
@@ -358,6 +413,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ pled
           if (val) lines.push(`${iq.itemName}${unit} — ${cq.question}: ${val}`);
         }
       }
+      lines.push(...upgradeLines);
       const backerAnswers = (response.backerResponses ?? {}) as Record<string, string | string[]>;
       for (const bq of survey.backerQuestions) {
         const a = backerAnswers[bq.id];

@@ -248,7 +248,9 @@ export async function POST(req: NextRequest) {
                 pledgeId: pledge.id,
                 rewardId: baseReward.id,
                 modifierAddonId: modifierAddons[0].addonId,
+                unitIndex: 0,
                 isAutoAssigned: true,
+                source: "AUTO",
               },
             });
 
@@ -329,11 +331,13 @@ export async function POST(req: NextRequest) {
         );
       }
 
-      // Check if assignment already exists for this modifier
+      // Legacy single-copy assignment: writes unit 0. Per-copy assignment
+      // (quantity > 1, add-on targets) goes through /production assign_units.
       const existingAssignment = await db.pledgeModifierAssignment.findFirst({
         where: {
           pledgeId,
           modifierAddonId,
+          unitIndex: 0,
         },
       });
 
@@ -345,6 +349,7 @@ export async function POST(req: NextRequest) {
             rewardId,
             isAutoAssigned: false,
             assignedBy: session.user.id,
+            source: "CREATOR",
           },
         });
 
@@ -360,8 +365,10 @@ export async function POST(req: NextRequest) {
             pledgeId,
             rewardId,
             modifierAddonId,
+            unitIndex: 0,
             isAutoAssigned: false,
             assignedBy: session.user.id,
+            source: "CREATOR",
           },
         });
 
@@ -417,9 +424,11 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // MARK ADDON AS MODIFIER
+    // MARK ADDON AS MODIFIER. (The Production tab's set_modifier also
+    // takes the SKU suffix and eligible add-ons; this one is kept for the
+    // SKU Mapping tab's "mark as modifier" button.)
     if (action === "set_modifier") {
-      const { addonId, isModifier, modifiesRewardIds } = body;
+      const { addonId, isModifier, modifiesRewardIds, modifierSkuSuffix } = body;
 
       if (!addonId) {
         return NextResponse.json({ error: "addonId required" }, { status: 400 });
@@ -444,6 +453,7 @@ export async function POST(req: NextRequest) {
         data: {
           isModifier: isModifier ?? false,
           modifiesRewardIds: modifiesRewardIds ?? [],
+          ...(typeof modifierSkuSuffix === "string" ? { modifierSkuSuffix: modifierSkuSuffix.trim() || null } : {}),
         },
       });
 

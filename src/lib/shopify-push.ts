@@ -1,5 +1,7 @@
 import { db } from "@/lib/db";
 import { resolvePledgeShippingAddress } from "@/lib/fulfillment/shipping-address";
+import { loadProjectRewardMap } from "@/lib/fulfillment/modifiers-db";
+import { resolvePledgeLines, type SkuContext } from "@/lib/fulfillment/production-counts";
 
 import { logger } from "@/lib/logger";
 
@@ -281,49 +283,22 @@ export async function pushOrdersToShopify(
     select: { title: true },
   });
 
-  // Get SKU mappings for this project
-  const skuMappings = await db.shopifySkuMapping.findMany({
-    where: { projectId },
-  });
+  // SKU resolution is shared with the Production tab (see
+  // lib/fulfillment/production-counts): a ShopifySkuMapping row, else
+  // Reward.sku; for an upgraded item a ModifierSkuMapping row, else base
+  // SKU + the modifier's suffix. The draft order and the production count
+  // therefore name the same product for the same backer.
+  const [rewardsById, skuMappings, modifierSkuMappings] = await Promise.all([
+    loadProjectRewardMap(projectId),
+    db.shopifySkuMapping.findMany({ where: { projectId } }),
+    db.modifierSkuMapping.findMany({ where: { projectId } }),
+  ]);
+  const skuContext: SkuContext = { rewardsById, skuMappings, modifierSkuMappings };
 
-  // Get modifier SKU mappings for this project
-  const modifierSkuMappings = await db.modifierSkuMapping.findMany({
-    where: { projectId },
-  });
-
-  // Create lookup maps for quick access
-  const rewardSkuMap = new Map<string, { sku: string; variantId?: string; quantity: number }>();
-  const addonSkuMap = new Map<string, { sku: string; variantId?: string; quantity: number }>();
-  // Map key: "baseRewardId-modifierAddonId" -> combined SKU
-  const modifierSkuMap = new Map<string, { sku: string; variantId?: string }>();
-
-  for (const mapping of skuMappings) {
-    const skuData = {
-      sku: mapping.shopifySku,
-      variantId: mapping.shopifyVariantId || undefined,
-      quantity: mapping.quantity,
-    };
-
-    if (mapping.sourceType === "REWARD") {
-      rewardSkuMap.set(mapping.sourceId, skuData);
-    } else if (mapping.sourceType === "ADDON") {
-      addonSkuMap.set(mapping.sourceId, skuData);
-    }
-  }
-
-  // Build modifier SKU lookup map
-  for (const mapping of modifierSkuMappings) {
-    const key = `${mapping.baseRewardId}-${mapping.modifierAddonId}`;
-    modifierSkuMap.set(key, {
-      sku: mapping.shopifySku,
-      variantId: mapping.shopifyVariantId || undefined,
-    });
-  }
-
-  shopifyPushLogger.info("[pushOrdersToShopify] SKU mappings loaded:");
-  shopifyPushLogger.info({ data: Array.from(rewardSkuMap.entries()) }, "  - Reward SKUs:");
-  shopifyPushLogger.info({ data: Array.from(addonSkuMap.entries()) }, "  - Addon SKUs:");
-  shopifyPushLogger.info({ data: Array.from(modifierSkuMap.entries()) }, "  - Modifier SKUs:");
+  shopifyPushLogger.info(
+    { rewardSkus: skuMappings.length, modifierSkus: modifierSkuMappings.length },
+    "[pushOrdersToShopify] SKU mappings loaded"
+  );
 
   // Get backers to push (either specified or all unpushed)
   const whereClause: {
@@ -373,6 +348,8 @@ export async function pushOrdersToShopify(
         select: {
           rewardId: true,
           modifierAddonId: true,
+          unitIndex: true,
+          source: true,
         },
       },
     },
@@ -424,139 +401,62 @@ export async function pushOrdersToShopify(
         taxable?: boolean;
       }> = [];
 
-      if (pledge.reward) {
-        // Check if this reward has a modifier applied
-        // First check explicit assignment, then auto-detect from modifier addons
-        let modifierAssignment = pledge.modifierAssignments?.find(
-          (ma: { rewardId: string }) => ma.rewardId === pledge.reward?.id
-        );
+      // Every physical unit the pledge owes, upgrades applied per copy
+      // (an "Upgrade to foil" assigned to SW3-18 is one SW3-18-F line and
+      // one fewer SW3-18). Modifier add-ons never appear on their own.
+      const lines = resolvePledgeLines(
+        {
+          id: pledge.id,
+          rewardId: pledge.reward?.id ?? null,
+          addons: pledge.addons.map((a: { addon: { id: string }; quantity: number }) => ({ addonId: a.addon.id, quantity: a.quantity })),
+          modifierAssignments: pledge.modifierAssignments,
+        },
+        skuContext
+      );
 
-        // If no explicit assignment, auto-detect modifier from addons
-        if (!modifierAssignment) {
-          // Find any modifier addon in this pledge's addons
-          const modifierAddon = pledge.addons.find(
-            (a: { addon: { isModifier: boolean } }) => a.addon.isModifier
-          );
-          if (modifierAddon) {
-            // Check if we have a SKU mapping for this reward + modifier combo
-            const potentialKey = `${pledge.reward.id}-${modifierAddon.addon.id}`;
-            if (modifierSkuMap.has(potentialKey)) {
-              // Auto-create the assignment for this push
-              modifierAssignment = {
-                rewardId: pledge.reward.id,
-                modifierAddonId: modifierAddon.addon.id,
-              };
-              shopifyPushLogger.info(`[pushOrdersToShopify] Auto-detected modifier: ${pledge.reward.title} + ${modifierAddon.addon.title}`);
-            }
-          }
-        }
+      // Per-unit prices for custom (unmatched) line items, from what the
+      // backer actually paid: the tier snapshot and each PledgeAddon's
+      // line total / quantity. An upgraded item is base + upgrade.
+      const unitPrice = (rewardId: string): number => {
+        if (pledge.reward?.id === rewardId) return Number(pledge.rewardAmount ?? pledge.amount ?? 0);
+        const row = pledge.addons.find((a: { addon: { id: string } }) => a.addon.id === rewardId);
+        if (!row) return 0;
+        return Number(row.amount ?? 0) / Math.max(1, row.quantity || 1);
+      };
 
-        let sku: string | undefined;
-        let variantId: number | undefined;
-        let title = pledge.reward.title;
+      for (const line of lines) {
+        const quantity = line.quantity * line.unitsPerItem;
 
-        if (modifierAssignment) {
-          // Use modifier combination SKU
-          const modifierKey = `${pledge.reward.id}-${modifierAssignment.modifierAddonId}`;
-          const modifierSku = modifierSkuMap.get(modifierKey);
-
-          if (modifierSku) {
-            sku = modifierSku.sku;
-            variantId = modifierSku.variantId ? parseInt(modifierSku.variantId) : undefined;
-            // Find the modifier addon name for the title
-            const modifierAddon = pledge.addons.find(
-              (a: { addon: { id: string } }) => a.addon.id === modifierAssignment.modifierAddonId
-            );
-            if (modifierAddon) {
-              title = `${pledge.reward.title} + ${modifierAddon.addon.title}`;
-            }
-          } else {
-            // Fallback to base reward SKU if no modifier mapping exists
-            const rewardSku = rewardSkuMap.get(pledge.reward.id);
-            sku = rewardSku?.sku;
-            variantId = rewardSku?.variantId ? parseInt(rewardSku.variantId) : undefined;
-          }
-        } else {
-          // No modifier - use base reward SKU
-          const rewardSku = rewardSkuMap.get(pledge.reward.id);
-          sku = rewardSku?.sku;
-          variantId = rewardSku?.variantId ? parseInt(rewardSku.variantId) : undefined;
-        }
-
-        // Resolve the Shopify variant. When a SKU is present the live
-        // lookup is authoritative (and cached per SKU) -- this is what
-        // "match by SKU" means: Shopify owns the price + requires_shipping
-        // flag and we only reference the variant, instead of writing the
-        // whole product as a custom line item. We prefer the live lookup
-        // over a stored variantId because stored IDs can be stale or in
-        // GID format ("gid://..." -> parseInt -> NaN). A stored variantId
-        // is only the fallback when there's no SKU to look up.
-        if (sku) {
-          const looked = await lookupVariantBySku(credentials.shopDomain, credentials.accessToken, sku);
-          if (looked) variantId = looked;
-        }
-
-        const rewardSkuData = rewardSkuMap.get(pledge.reward.id);
-        const quantity = rewardSkuData?.quantity || 1;
-
-        // Matched a Shopify variant -> reference it ONLY. Shopify fills in
-        // title, price, and requires_shipping from the product itself.
-        if (variantId && !Number.isNaN(variantId)) {
+        if (line.kind === "unassigned_upgrade") {
+          // The backer hasn't said which item this applies to. Keep the
+          // money and the fact on the order as a custom line so nothing is
+          // silently dropped; the Production tab lists it for resolving.
           lineItems.push({
-            variant_id: variantId,
+            title: line.label,
             quantity,
-          });
-        } else {
-          // No SKU match -- write a custom line item. Use the reward's
-          // own pledged price: pledge.rewardAmount. (The old code read
-          // pledge.pledgeAmount, which never existed on the Pledge model,
-          // so every fallback line item was priced "0".) Mark it physical
-          // so Shopify treats it as a shippable good -- these pushes are
-          // for fulfilling physical rewards.
-          lineItems.push({
-            title,
-            quantity,
-            price: Number(pledge.rewardAmount ?? pledge.amount ?? 0).toFixed(2),
+            price: unitPrice(line.modifierAddonId!).toFixed(2),
             requires_shipping: true,
             taxable: true,
           });
-        }
-      }
-
-      for (const addon of pledge.addons) {
-        // Skip modifier addons entirely - they should only be included via modifier assignments
-        // If a modifier isn't assigned to a reward, it shouldn't be a separate line item
-        if (addon.addon.isModifier) {
           continue;
         }
 
-        const addonSku = addonSkuMap.get(addon.addon.id);
-        let addonVariantId = addonSku?.variantId ? parseInt(addonSku.variantId) : undefined;
-
-        // SKU lookup is authoritative when present (see reward block above).
-        if (addonSku?.sku) {
-          const looked = await lookupVariantBySku(credentials.shopDomain, credentials.accessToken, addonSku.sku);
-          if (looked) addonVariantId = looked;
+        let variantId = line.shopifyVariantId ? parseInt(line.shopifyVariantId) : undefined;
+        // The live SKU lookup is authoritative (cached per SKU); a stored
+        // variantId is only the fallback when there is no SKU.
+        if (line.sku) {
+          const looked = await lookupVariantBySku(credentials.shopDomain, credentials.accessToken, line.sku);
+          if (looked) variantId = looked;
         }
 
-        const addonQuantity = (addon.quantity ?? 1) * (addonSku?.quantity || 1);
-
-        if (addonVariantId && !Number.isNaN(addonVariantId)) {
-          lineItems.push({
-            variant_id: addonVariantId,
-            quantity: addonQuantity,
-          });
+        if (variantId && !Number.isNaN(variantId)) {
+          lineItems.push({ variant_id: variantId, quantity });
         } else {
-          // No SKU match -- custom line item. PledgeAddon.amount is the
-          // line total (unit price x quantity), so the unit price is
-          // amount / quantity. (The old code read addon.unitPrice, which
-          // never existed on the model, so every addon fell back to "0".)
-          const addonRowQty = addon.quantity || 1;
-          const addonUnitPrice = Number(addon.amount ?? 0) / addonRowQty;
+          const price = unitPrice(line.rewardId) + (line.modifierAddonId ? unitPrice(line.modifierAddonId) : 0);
           lineItems.push({
-            title: addon.addon.title,
-            quantity: addonQuantity,
-            price: addonUnitPrice.toFixed(2),
+            title: line.sku ? `${line.label} [${line.sku}]` : line.label,
+            quantity,
+            price: price.toFixed(2),
             requires_shipping: true,
             taxable: true,
           });

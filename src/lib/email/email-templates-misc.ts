@@ -172,6 +172,102 @@ export async function sendSurveyAvailableEmail(
 }
 
 /**
+ * Automated survey reminder (cron/survey-reminders). Distinct from the
+ * "survey available" email so a backer can tell a nudge from a new survey,
+ * and so it can say how many reminders this is, when answers are due, and
+ * what specifically is still missing (an upgrade that needs an item, a
+ * shipping address) — the things that hold up production.
+ */
+export async function sendSurveyReminderEmail(
+  email: string,
+  backerName: string,
+  projectTitle: string,
+  creatorName: string,
+  pledgeId: string,
+  opts: { reminderNumber: number; dueAt?: Date | null; overdue?: boolean; waitingOn?: string[] }
+) {
+  const surveyUrl = `${APP_URL}/dashboard/pledges/${pledgeId}/survey`;
+  const dashboardUrl = `${APP_URL}/dashboard/backer`;
+  const due = opts.dueAt
+    ? opts.dueAt.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })
+    : null;
+  const waiting = (opts.waitingOn || []).filter(Boolean);
+  const headline = opts.overdue
+    ? "Your survey is overdue"
+    : opts.reminderNumber <= 1
+      ? "Reminder: your survey is waiting"
+      : `Reminder ${opts.reminderNumber}: your survey is still waiting`;
+  const banner = opts.overdue ? "#dc2626" : "#f59e0b";
+
+  const html = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>${escapeHtml(headline)}</title>
+      </head>
+      <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="text-align: center; margin-bottom: 30px;">
+          <h1 style="color: #333; margin: 0;">${APP_NAME}</h1>
+        </div>
+
+        <div style="background: ${banner}; border-radius: 8px; padding: 30px; margin-bottom: 20px; color: white;">
+          <div style="text-align: center; margin-bottom: 20px;">
+            <div style="display: inline-block; background: rgba(255,255,255,0.2); padding: 10px 20px; border-radius: 50px; font-size: 14px; font-weight: 600;">
+              ${opts.overdue ? "⏰ OVERDUE" : "📋 SURVEY REMINDER"}
+            </div>
+          </div>
+          <h2 style="margin-top: 0; color: white; text-align: center;">${escapeHtml(headline)}</h2>
+          <p style="text-align: center;">Hi ${escapeHtml(backerName || "there")},</p>
+          <p style="text-align: center;"><strong>${escapeHtml(creatorName)}</strong> can't finish your order for <strong>&ldquo;${escapeHtml(projectTitle)}&rdquo;</strong> until your survey is in.${due ? ` Answers are due by <strong>${escapeHtml(due)}</strong>.` : ""}</p>
+        </div>
+
+        ${waiting.length ? `
+        <div style="background: #f9f9f9; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
+          <h3 style="margin-top: 0;">What we still need from you</h3>
+          <ul style="color: #666; margin: 10px 0 0 0; padding-left: 20px;">
+            ${waiting.map((w) => `<li>${escapeHtml(w)}</li>`).join("")}
+          </ul>
+        </div>` : ""}
+
+        <div style="background: #fffbeb; border-radius: 8px; padding: 15px; margin-bottom: 20px; border: 1px solid #fef3c7;">
+          <p style="margin: 0; font-size: 14px; color: #92400e;">
+            ${opts.overdue
+              ? "<strong>Production is being finalized.</strong> Orders without a survey may be made with default options or held until we hear from you."
+              : "<strong>It only takes a couple of minutes.</strong> Your choices go straight into the production count, so the sooner they're in, the sooner your rewards are made."}
+          </p>
+        </div>
+
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="${surveyUrl}" style="display: inline-block; background: #0ea5e9; color: #fff; padding: 14px 35px; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 16px;">
+            Complete My Survey
+          </a>
+        </div>
+
+        <div style="text-align: center; margin-bottom: 20px;">
+          <a href="${dashboardUrl}" style="color: #666; font-size: 14px; text-decoration: underline;">View all your pledges</a>
+        </div>
+
+        <div style="text-align: center; color: #999; font-size: 12px; margin-top: 30px;">
+          <p>You received this email because you backed "${escapeHtml(projectTitle)}" on ${APP_NAME}. Survey reminders can be turned off under Settings &rsaquo; Subscriptions.</p>
+          <p>&copy; ${new Date().getFullYear()} ${APP_NAME}. All rights reserved.</p>
+        </div>
+      </body>
+    </html>
+  `;
+
+  return queueEmail({
+    to: email,
+    subject: opts.overdue
+      ? `⏰ Overdue: survey for "${projectTitle}"`
+      : `📋 Reminder: survey for "${projectTitle}" is waiting`,
+    html,
+    priority: EMAIL_PRIORITY.CREATOR,
+  });
+}
+
+/**
  * Send an "confirm & lock your order" request email to a backer. Locking
  * confirms their address + selections so the creator can print & ship.
  */

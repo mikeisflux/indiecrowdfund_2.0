@@ -24,6 +24,7 @@ import {
 import { toast } from "sonner";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import Link from "next/link";
+import { SurveyReminderSettings } from "./survey-reminder-settings";
 
 interface SurveyItemQuestion {
   id: string;
@@ -54,6 +55,10 @@ interface Survey {
   addressesLocked: boolean;
   sentAt?: string;
   lockedAt?: string;
+  autoRemind?: boolean;
+  reminderIntervalDays?: number;
+  maxReminders?: number;
+  dueAt?: string | null;
   itemQuestions: SurveyItemQuestion[];
   backerQuestions: SurveyBackerQuestion[];
 }
@@ -497,6 +502,10 @@ export function ManageSurveyTab({ projectId }: ManageSurveyTabProps) {
           </div>
         </CardContent>
       </Card>
+
+      {survey.status === "SENT" && (
+        <SurveyReminderSettings projectId={projectId} survey={survey} onSaved={fetchSurvey} />
+      )}
 
       {/* Questions Management */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>

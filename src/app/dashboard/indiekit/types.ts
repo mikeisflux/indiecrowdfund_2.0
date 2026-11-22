@@ -129,7 +129,10 @@ export interface Backer {
     rewardTitle?: string;
     modifierAddonId: string;
     modifierAddonTitle?: string;
+    /** Which copy of the upgrade this row is (0-based). */
+    unitIndex?: number;
     isAutoAssigned: boolean;
+    source?: string | null;
   }[];
 }
 
@@ -290,7 +293,7 @@ export type AlwaysAvailableTab =
   | "account"
   | "projects";
 
-export type PreFulfillmentTab = "setup" | "surveys" | "order-lock" | "finalize" | "teaser-pages";
+export type PreFulfillmentTab = "setup" | "surveys" | "order-lock" | "production" | "finalize" | "teaser-pages";
 export type FulfillmentTab = "payments" | "shipping-charges" | "digital-delivery" | "physical-delivery";
 export type PostFulfillmentTab = "reports" | "late-backers";
 

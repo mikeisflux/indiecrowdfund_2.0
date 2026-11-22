@@ -9,13 +9,15 @@ import { RefreshCw, Lock } from "lucide-react";
 import { loadStripe, Stripe } from "@stripe/stripe-js";
 
 import { unitKey, unitLabel } from "@/lib/surveys/item-units";
-import { SurveyData, SavedAddress, Step, ShippingAddressForm } from "./components/types";
+import { validateSelections } from "@/lib/fulfillment/modifiers";
+import { SurveyData, SavedAddress, Step, ShippingAddressForm, ModifierSelections } from "./components/types";
 import { SurveyErrorState } from "./components/SurveyErrorState";
 import { SurveyLockedState } from "./components/SurveyLockedState";
 import { SurveyCompletedState } from "./components/SurveyCompletedState";
 import { SurveyHeader } from "./components/SurveyHeader";
 import { SurveyIntroStep } from "./components/SurveyIntroStep";
 import { SurveyItemsStep } from "./components/SurveyItemsStep";
+import { SurveyUpgradesStep } from "./components/SurveyUpgradesStep";
 import { SurveyQuestionsStep } from "./components/SurveyQuestionsStep";
 import { SurveyAddonsStep } from "./components/SurveyAddonsStep";
 import { SurveyAddressStep } from "./components/SurveyAddressStep";
@@ -37,6 +39,8 @@ export default function BackerSurveyPage() {
   // Form state
   const [itemResponses, setItemResponses] = useState<Record<string, { variants?: Record<string, string>; customAnswers?: Record<string, string | string[]> }>>({});
   const [backerResponses, setBackerResponses] = useState<Record<string, string | string[]>>({});
+  // Upgrade add-on picks: modifierAddonId -> rewardId per copy.
+  const [modifierSelections, setModifierSelections] = useState<ModifierSelections>({});
   const [shippingAddress, setShippingAddress] = useState<ShippingAddressForm>({
     name: "",
     line1: "",
@@ -69,6 +73,11 @@ export default function BackerSurveyPage() {
       if (response.ok) {
         const surveyData = await response.json();
         setData(surveyData);
+        if (Array.isArray(surveyData.modifierQuestions)) {
+          const initial: ModifierSelections = {};
+          for (const q of surveyData.modifierQuestions) initial[q.modifierAddonId] = [...q.selections];
+          setModifierSelections(initial);
+        }
 
         // Initialize form state from existing response
         if (surveyData.response) {
@@ -191,6 +200,7 @@ export default function BackerSurveyPage() {
         body: JSON.stringify({
           itemResponses,
           backerResponses,
+          modifierSelections,
           shippingAddress: showAddressStep && shippingAddress.name.trim()
             ? shippingAddress
             : null,
@@ -280,6 +290,15 @@ export default function BackerSurveyPage() {
         }
       }
      }
+    }
+
+    // Upgrade add-ons: one item per copy, mirroring validateSelections on
+    // the server. Auto-applied ones (only one possible target) and ones
+    // with nothing eligible pass through; the creator resolves the latter.
+    for (const q of data.modifierQuestions || []) {
+      if (q.auto || q.targets.length === 0) continue;
+      const problem = validateSelections(q, modifierSelections[q.modifierAddonId] ?? q.selections);
+      if (problem) return problem;
     }
 
     // Shipping address — required when survey collects addresses AND the
@@ -484,6 +503,7 @@ export default function BackerSurveyPage() {
   const getSteps = (): Step[] => {
     const steps: Step[] = ["intro"];
     if (data?.itemQuestions && data.itemQuestions.length > 0) steps.push("items");
+    if (data?.modifierQuestions && data.modifierQuestions.length > 0) steps.push("upgrades");
     if (data?.backerQuestions && data.backerQuestions.length > 0) steps.push("questions");
     if (data?.availableAddons && data.availableAddons.length > 0) steps.push("addons");
     if (showAddressStep) steps.push("address");
@@ -611,6 +631,16 @@ export default function BackerSurveyPage() {
         />
       )}
 
+      {currentStep === "upgrades" && data.modifierQuestions && (
+        <SurveyUpgradesStep
+          questions={data.modifierQuestions}
+          selections={modifierSelections}
+          setSelections={setModifierSelections}
+          onNext={nextStep}
+          onPrev={prevStep}
+        />
+      )}
+
       {currentStep === "questions" && (
         <SurveyQuestionsStep
           data={data}
@@ -649,6 +679,7 @@ export default function BackerSurveyPage() {
         <SurveyReviewStep
           data={data}
           itemResponses={itemResponses}
+          modifierSelections={modifierSelections}
           backerResponses={backerResponses}
           selectedAddons={selectedAddons}
           setSelectedAddons={setSelectedAddons}

@@ -57,7 +57,9 @@ interface PledgeForProcessing {
     id: string;
     rewardId: string;
     modifierAddonId: string;
+    unitIndex?: number;
     isAutoAssigned: boolean;
+    source?: string | null;
   }[];
 }
 
@@ -156,19 +158,30 @@ export function processBackers(
     }));
 
     // Check if backer has modifier addons that need assignment
+    // Upgrade add-ons: one assignment row per COPY ("Upgrade to foil" x4 =
+    // four rows), each naming the tier or add-on it applies to. The target
+    // title is looked up across the whole order, not just the tier.
     const hasModifierAddons = pledge.addons.some((a: any) => a.addon.isModifier);
+    const titleByRewardId = new Map<string, string>();
+    if (pledge.reward) titleByRewardId.set(pledge.reward.id, pledge.reward.title);
+    for (const a of pledge.addons) titleByRewardId.set(a.addon.id, a.addon.title);
     const modifierAssignments = (pledge.modifierAssignments || []).map((ma: any) => {
       const modifierAddon = pledge.addons.find((a: any) => a.addon.id === ma.modifierAddonId);
       return {
         id: ma.id,
         rewardId: ma.rewardId,
-        rewardTitle: pledge.reward?.title,
+        rewardTitle: titleByRewardId.get(ma.rewardId) ?? pledge.reward?.title,
         modifierAddonId: ma.modifierAddonId,
         modifierAddonTitle: modifierAddon?.addon?.title,
+        unitIndex: ma.unitIndex ?? 0,
         isAutoAssigned: ma.isAutoAssigned,
+        source: ma.source ?? null,
       };
     });
-    const needsModifierAssignment = hasModifierAddons && modifierAssignments.length < pledge.addons.filter((a: any) => a.addon.isModifier).length;
+    const modifierUnitsOwed = pledge.addons
+      .filter((a: any) => a.addon.isModifier)
+      .reduce((sum: number, a: any) => sum + Math.max(1, a.quantity ?? 1), 0);
+    const needsModifierAssignment = hasModifierAddons && modifierAssignments.length < modifierUnitsOwed;
 
     // Balance fields. Use the per-pledge SNAPSHOTS (Pledge.rewardAmount,
     // Pledge.addonsAmount) NOT the live Reward / PledgeAddon joins. The
