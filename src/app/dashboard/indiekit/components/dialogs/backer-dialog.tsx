@@ -50,7 +50,7 @@ import {
   ArrowRight,
   Send,
   Copy,
-  Trash2,
+  Trash2, ClipboardPen,
 } from "lucide-react";
 import { toast } from "sonner";
 import type { Backer } from "../../types";
@@ -118,6 +118,7 @@ interface SurveyData {
     shippingAddress?: Record<string, string>;
     isComplete: boolean;
     completedAt?: string;
+    completedBy?: string | null;
   } | null;
 }
 
@@ -960,21 +961,39 @@ export function BackerDialog({ open, onOpenChange, backer, availableAddons = [],
                         </p>
                       </div>
                     ) : backer.surveyCompleted ? (
-                      <p className="text-sm text-muted-foreground">
-                        This backer has completed their survey. View their responses below.
-                      </p>
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <p className="text-sm text-muted-foreground">
+                          {surveyData?.response?.completedBy === "CREATOR"
+                            ? "This survey was filled in on the backer's behalf. Responses below."
+                            : "This backer has completed their survey. View their responses below."}
+                        </p>
+                        {surveyData?.survey && (
+                          <Button variant="ghost" size="sm" onClick={() => window.open(`/dashboard/indiekit/survey/${backer.id}/fill`, "_blank")}>
+                            <ClipboardPen className="h-4 w-4 mr-1" />
+                            Edit answers
+                          </Button>
+                        )}
+                      </div>
                     ) : (
-                      <div className="flex items-center justify-between p-3 bg-amber-50 rounded-lg border border-amber-200">
+                      <div className="flex flex-wrap items-center justify-between gap-2 p-3 bg-amber-50 rounded-lg border border-amber-200">
                         <div className="flex items-center gap-2">
                           <AlertCircle className="h-4 w-4 text-amber-600" />
                           <p className="text-sm text-amber-800">
                             This backer has not yet completed their survey.
                           </p>
                         </div>
-                        <Button variant="outline" size="sm" onClick={handleResendSurvey}>
-                          <RefreshCw className="h-4 w-4 mr-1" />
-                          Remind
-                        </Button>
+                        <div className="flex items-center gap-2">
+                          <Button variant="outline" size="sm" onClick={handleResendSurvey}>
+                            <RefreshCw className="h-4 w-4 mr-1" />
+                            Remind
+                          </Button>
+                          {surveyData?.survey && (
+                            <Button size="sm" className="bg-teal-600 hover:bg-teal-700" onClick={() => window.open(`/dashboard/indiekit/survey/${backer.id}/fill`, "_blank")}>
+                              <ClipboardPen className="h-4 w-4 mr-1" />
+                              Fill out for them
+                            </Button>
+                          )}
+                        </div>
                       </div>
                     )}
 

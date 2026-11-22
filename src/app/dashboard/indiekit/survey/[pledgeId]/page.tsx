@@ -16,7 +16,7 @@ import {
   AlertCircle,
   RefreshCw,
   User,
-  Mail,
+  Mail, ClipboardPen,
 } from "lucide-react";
 import { fetchWithRetry } from "@/lib/fetch-utils";
 
@@ -68,6 +68,7 @@ interface SurveyData {
     };
     isComplete: boolean;
     completedAt?: string;
+    completedBy?: string | null;
   } | null;
 }
 
@@ -167,19 +168,29 @@ export default function CreatorSurveyViewPage() {
                 Viewing survey responses for this backer
               </CardDescription>
             </div>
-            <Badge variant={response?.isComplete ? "default" : "secondary"} className="text-sm">
-              {response?.isComplete ? (
-                <>
-                  <CheckCircle className="h-3 w-3 mr-1" />
-                  Completed
-                </>
-              ) : (
-                <>
-                  <AlertCircle className="h-3 w-3 mr-1" />
-                  Pending
-                </>
+            <div className="flex items-center gap-2">
+              {survey && (
+                <Button asChild size="sm" variant={response?.isComplete ? "outline" : "default"} className={response?.isComplete ? "" : "bg-teal-600 hover:bg-teal-700"}>
+                  <Link href={`/dashboard/indiekit/survey/${pledge.id}/fill`}>
+                    <ClipboardPen className="h-4 w-4 mr-1" />
+                    {response?.isComplete ? "Edit answers" : "Fill out for backer"}
+                  </Link>
+                </Button>
               )}
-            </Badge>
+              <Badge variant={response?.isComplete ? "default" : "secondary"} className="text-sm">
+                {response?.isComplete ? (
+                  <>
+                    <CheckCircle className="h-3 w-3 mr-1" />
+                    {response.completedBy === "CREATOR" ? "Filled in by creator" : "Completed"}
+                  </>
+                ) : (
+                  <>
+                    <AlertCircle className="h-3 w-3 mr-1" />
+                    Pending
+                  </>
+                )}
+              </Badge>
+            </div>
           </div>
         </CardHeader>
         <CardContent>

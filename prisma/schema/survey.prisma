@@ -168,6 +168,12 @@ model SurveyResponse {
   // Status
   isComplete  Boolean   @default(false)
   completedAt DateTime?
+  // Who filled it in: "BACKER" (the usual case) or "CREATOR" when the
+  // creator entered the answers on the backer's behalf from IndieKit (a
+  // backer who answered by email or never opened the survey). Added by
+  // add_survey_completed_by.sql.
+  completedBy   String?
+  completedById String?
 
   survey Survey @relation(fields: [surveyId], references: [id], onDelete: Cascade)
   pledge Pledge @relation(fields: [pledgeId], references: [id], onDelete: Cascade)

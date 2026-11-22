@@ -6,6 +6,10 @@ const creatorIndiekitSurveysLogger = logger.child({ module: "creator-indiekit-su
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { resolvePledgeShippingAddress } from "@/lib/fulfillment/shipping-address";
+import { itemQuantity } from "@/lib/surveys/item-units";
+import { auditLog } from "@/lib/audit";
+import { sendEmail } from "@/lib/email/email-config";
+import { z } from "zod";
 
 export const dynamic = "force-dynamic";
 
@@ -143,6 +147,21 @@ export async function GET(
       pledge.shippingAddress
     );
 
+    // Which item questions apply to THIS pledge, how many of each the backer
+    // holds, and a picture, for the creator fill-in form. Same rules as the
+    // backer's own survey (quantity per add-on unit, reward image fallback).
+    const addonIds = pledge.addons.map((a: { addonId: string }) => a.addonId);
+    const relevant = survey.itemQuestions.filter((iq: { rewardId: string }) => iq.rewardId === pledge.rewardId || addonIds.includes(iq.rewardId));
+    const rewardImages = relevant.length
+      ? await db.reward.findMany({ where: { id: { in: relevant.map((iq: { rewardId: string }) => iq.rewardId) } }, select: { id: true, imageUrl: true } })
+      : [];
+    const imageByReward = new Map<string, string | null>(rewardImages.map((r: { id: string; imageUrl: string | null }) => [r.id, r.imageUrl]));
+    const relevantItemQuestions = relevant.map((iq: { id: string; rewardId: string; imageUrl: string | null }) => ({
+      id: iq.id,
+      quantity: itemQuantity(iq.rewardId, pledge),
+      imageUrl: iq.imageUrl || imageByReward.get(iq.rewardId) || null,
+    }));
+
     // For creator view, return ALL survey questions (not filtered by reward)
     // This allows creators to see the complete survey configuration
     return NextResponse.json({
@@ -159,10 +178,12 @@ export async function GET(
         rewardTitle: pledge.reward?.title || "No Reward",
         backerName: pledge.user?.name,
         backerEmail: pledge.user?.email,
-        addons: pledge.addons.map((a: { addon: { id: string; title: string } }) => ({
+        addons: pledge.addons.map((a: { addon: { id: string; title: string }; quantity: number }) => ({
           id: a.addon.id,
           title: a.addon.title,
+          quantity: a.quantity,
         })),
+        pledgeShippingAddress: resolvePledgeShippingAddress(null, pledge.shippingAddress),
       },
       orderLock,
       questions: {
@@ -171,6 +192,7 @@ export async function GET(
         // Return all backer questions from the survey
         backerQuestions: survey.backerQuestions,
       },
+      relevantItemQuestions,
       response: response
         ? {
             itemResponses: response.itemResponses,
@@ -178,6 +200,7 @@ export async function GET(
             shippingAddress: resolvedAddress ?? response.shippingAddress,
             isComplete: response.isComplete,
             completedAt: response.completedAt,
+            completedBy: response.completedBy,
           }
         : resolvedAddress
           ? {
@@ -195,5 +218,171 @@ export async function GET(
       { error: "Failed to fetch survey response" },
       { status: 500 }
     );
+  }
+}
+
+const responseValue = z.union([z.string().max(10000), z.array(z.string().max(500)).max(50)]);
+const fillSchema = z.object({
+  itemResponses: z
+    .record(z.string().max(100), z.object({ variants: z.record(z.string().max(100), z.string().max(500)).optional(), customAnswers: z.record(z.string().max(100), responseValue).optional() }))
+    .optional(),
+  backerResponses: z.record(z.string().max(100), responseValue).optional(),
+  shippingAddress: z
+    .object({
+      name: z.string().max(100).optional(),
+      line1: z.string().max(200).optional(),
+      line2: z.string().max(200).optional(),
+      city: z.string().max(100).optional(),
+      state: z.string().max(100).optional(),
+      postalCode: z.string().max(20).optional(),
+      country: z.string().max(60).optional(),
+      phone: z.string().max(30).optional(),
+    })
+    .optional()
+    .nullable(),
+  notifyBacker: z.boolean().default(true),
+});
+
+function escapeHtml(str: string): string {
+  return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#x27;");
+}
+
+// PUT - Fill in (or correct) a backer's survey on their behalf.
+//
+// A backer who answered by email, DM, or at a convention table, or who never
+// opened the survey, still has to be shipped the right thing. The creator
+// enters the answers here; the response is marked complete and tagged
+// completedBy CREATOR so it is never mistaken for the backer's own
+// submission, and the backer gets an email listing what was recorded so a
+// wrong guess surfaces before anything ships.
+export async function PUT(req: NextRequest, { params }: { params: Promise<{ pledgeId: string }> }) {
+  try {
+    const session = await auth();
+    if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const { pledgeId } = await params;
+
+    const pledge = await db.pledge.findFirst({
+      where: { id: pledgeId, deletedAt: null },
+      include: {
+        project: {
+          select: {
+            id: true,
+            title: true,
+            slug: true,
+            creatorId: true,
+            creator: { select: { vanityUrl: true, name: true } },
+            collaborators: { where: { userId: session.user.id, status: "ACCEPTED" }, select: { canCoordinateFulfillment: true, canConfigurePledgeManager: true } },
+          },
+        },
+        reward: { select: { title: true } },
+        user: { select: { email: true, name: true } },
+      },
+    });
+    if (!pledge) return NextResponse.json({ error: "Pledge not found" }, { status: 404 });
+    const isOwner = pledge.project.creatorId === session.user.id;
+    const collab = pledge.project.collaborators[0];
+    if (!isOwner && !(collab && (collab.canCoordinateFulfillment || collab.canConfigurePledgeManager))) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    const survey = await db.survey.findUnique({
+      where: { projectId: pledge.projectId },
+      include: { itemQuestions: { include: { variants: true, customQuestions: true } }, backerQuestions: true },
+    });
+    if (!survey) return NextResponse.json({ error: "This campaign has no survey yet. Build one in Pledge Manager first." }, { status: 400 });
+
+    const parsed = fillSchema.safeParse(await req.json().catch(() => ({})));
+    if (!parsed.success) return NextResponse.json({ error: "Invalid survey data", details: parsed.error.flatten().fieldErrors }, { status: 400 });
+    const data = parsed.data;
+
+    const existing = await db.surveyResponse.findUnique({ where: { pledgeId } });
+    const now = new Date();
+    const response = await db.surveyResponse.upsert({
+      where: { pledgeId },
+      create: {
+        surveyId: survey.id,
+        pledgeId,
+        itemResponses: data.itemResponses ?? {},
+        backerResponses: data.backerResponses ?? {},
+        shippingAddress: data.shippingAddress ?? undefined,
+        isComplete: true,
+        completedAt: now,
+        completedBy: "CREATOR",
+        completedById: session.user.id,
+      },
+      update: {
+        itemResponses: data.itemResponses ?? existing?.itemResponses ?? {},
+        backerResponses: data.backerResponses ?? existing?.backerResponses ?? {},
+        ...(data.shippingAddress ? { shippingAddress: data.shippingAddress } : {}),
+        isComplete: true,
+        completedAt: existing?.completedAt ?? now,
+        completedBy: "CREATOR",
+        completedById: session.user.id,
+      },
+    });
+
+    await db.pledge.update({
+      where: { id: pledgeId },
+      data: {
+        surveyCompleted: true,
+        ...(data.shippingAddress ? { shippingAddress: data.shippingAddress } : {}),
+        surveyResponses: { itemResponses: response.itemResponses, backerResponses: response.backerResponses },
+      },
+    });
+
+    auditLog({
+      action: "SURVEY_FILLED_BY_CREATOR",
+      actorId: session.user.id,
+      actorEmail: session.user.email || undefined,
+      targetId: pledgeId,
+      targetType: "PROJECT",
+      details: { projectId: pledge.projectId, backerEmail: pledge.user?.email, wasComplete: !!existing?.isComplete, addressChanged: !!data.shippingAddress },
+    });
+
+    // Tell the backer what was recorded. Their copy to check, not a receipt
+    // for something they did.
+    if (data.notifyBacker && pledge.user?.email) {
+      const lines: string[] = [];
+      const items = (response.itemResponses ?? {}) as Record<string, { variants?: Record<string, string>; customAnswers?: Record<string, string | string[]> }>;
+      for (const [key, resp] of Object.entries(items)) {
+        const iq = survey.itemQuestions.find((q: { id: string }) => key === q.id || key.startsWith(`${q.id}#`));
+        if (!iq) continue;
+        const unit = key.includes("#") ? ` (#${key.split("#")[1]})` : "";
+        for (const v of iq.variants) {
+          const val = resp.variants?.[v.id] ?? resp.variants?.[v.variantType];
+          if (val) lines.push(`${iq.itemName}${unit} — ${v.variantType}: ${val}`);
+        }
+        for (const cq of iq.customQuestions) {
+          const a = resp.customAnswers?.[cq.id];
+          const val = Array.isArray(a) ? a.join(", ") : a;
+          if (val) lines.push(`${iq.itemName}${unit} — ${cq.question}: ${val}`);
+        }
+      }
+      const backerAnswers = (response.backerResponses ?? {}) as Record<string, string | string[]>;
+      for (const bq of survey.backerQuestions) {
+        const a = backerAnswers[bq.id];
+        const val = Array.isArray(a) ? a.join(", ") : a;
+        if (val) lines.push(`${bq.question}: ${val}`);
+      }
+      const addr = (response.shippingAddress ?? null) as { name?: string; line1?: string; line2?: string; city?: string; state?: string; postalCode?: string; country?: string } | null;
+      if (addr?.line1) lines.push(`Shipping to: ${[addr.name, addr.line1, addr.line2, addr.city, addr.state, addr.postalCode, addr.country].filter(Boolean).join(", ")}`);
+
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://indiecrowdfund.com";
+      const creatorName = pledge.project.creator?.name || "The creator";
+      await sendEmail({
+        to: pledge.user.email,
+        subject: `${creatorName} filled in your survey for "${pledge.project.title}"`,
+        html: `<p>Hi ${escapeHtml(pledge.user.name || "there")},</p>
+<p>${escapeHtml(creatorName)} entered your survey answers for <strong>${escapeHtml(pledge.project.title)}</strong> on your behalf${pledge.reward?.title ? ` (${escapeHtml(pledge.reward.title)})` : ""}. Here is what was recorded:</p>
+<ul>${lines.length ? lines.map((l) => `<li>${escapeHtml(l)}</li>`).join("") : "<li>No item choices were needed; the order and address were confirmed.</li>"}</ul>
+<p>If any of this is wrong, reply to this email or message the creator through your IndieCrowdfund inbox before the campaign ships. You can review it any time at <a href="${appUrl}/dashboard/pledges/${pledgeId}/survey">${appUrl}/dashboard/pledges/${pledgeId}/survey</a>.</p>`,
+        skipUnsubscribeCheck: true,
+      }).catch((err: unknown) => creatorIndiekitSurveysLogger.warn({ err: String(err), pledgeId }, "backer notice for creator-filled survey failed"));
+    }
+
+    return NextResponse.json({ ok: true, isComplete: true, completedBy: "CREATOR" });
+  } catch (error) {
+    creatorIndiekitSurveysLogger.error({ err: formatError(error) }, "Error filling survey for backer:");
+    return NextResponse.json({ error: "Failed to save survey" }, { status: 500 });
   }
 }

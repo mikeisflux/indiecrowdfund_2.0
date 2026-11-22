@@ -62,7 +62,9 @@ export type AuditAction =
   // Two-factor lifecycle on an account.
   | "MFA_ENABLED"
   | "MFA_DISABLED"
-  | "MFA_BACKUP_CODES_REGENERATED";
+  | "MFA_BACKUP_CODES_REGENERATED"
+  // Creator (or collaborator) entered a backer's survey answers for them.
+  | "SURVEY_FILLED_BY_CREATOR";
 
 // Fields that should have their values masked in audit logs
 const SENSITIVE_FIELDS = new Set([
