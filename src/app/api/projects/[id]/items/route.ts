@@ -239,8 +239,10 @@ export async function GET(
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
+    // Upgraded editions (SW3-22-F) are production rows, not things a
+    // creator attaches to rewards; they live on the production order only.
     const items = await db.projectItem.findMany({
-      where: { projectId },
+      where: { projectId, upgradeOfItemId: null },
       orderBy: [{ displayOrder: { sort: "asc", nulls: "last" } }, { createdAt: "asc" }],
     });
 

@@ -93,7 +93,7 @@ export function SurveyReviewStep({
                 {picks.map((p, unit) => (
                   <p key={unit} className="text-sm text-muted-foreground">
                     {q.quantity > 1 ? `#${unit + 1}: ` : "Applies to: "}
-                    <span className="text-foreground">{q.targets.find((t) => t.rewardId === p)?.title || "Not chosen"}</span>
+                    <span className="text-foreground">{q.targets.find((t) => t.key === p)?.title || "Not chosen"}</span>
                   </p>
                 ))}
               </div>

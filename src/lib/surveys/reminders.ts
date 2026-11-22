@@ -94,7 +94,7 @@ export async function runSurveyReminders(opts: { now?: Date; perRunLimit?: numbe
         createdAt: true,
         user: { select: { email: true, name: true } },
         addons: { select: { addonId: true, quantity: true } },
-        modifierAssignments: { select: { id: true, rewardId: true, modifierAddonId: true, unitIndex: true, source: true } },
+        modifierAssignments: { select: { id: true, rewardId: true, projectItemId: true, modifierAddonId: true, unitIndex: true, source: true } },
         surveyResponse: { select: { isComplete: true, shippingAddress: true } },
       },
       orderBy: { surveyReminderSentAt: { sort: "asc", nulls: "first" } },
@@ -193,7 +193,7 @@ function describeWaitingOn(
   pledge: {
     rewardId: string | null;
     addons: { addonId: string; quantity: number }[];
-    modifierAssignments: { id: string; rewardId: string; modifierAddonId: string; unitIndex: number; source: string | null }[];
+    modifierAssignments: { id: string; rewardId: string; projectItemId: string | null; modifierAddonId: string; unitIndex: number; source: string | null }[];
     surveyResponse: { shippingAddress: unknown } | null;
   },
   rewardsById: Awaited<ReturnType<typeof loadProjectRewardMap>>,

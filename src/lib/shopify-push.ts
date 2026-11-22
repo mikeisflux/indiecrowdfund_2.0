@@ -1,7 +1,7 @@
 import { db } from "@/lib/db";
 import { resolvePledgeShippingAddress } from "@/lib/fulfillment/shipping-address";
-import { loadProjectRewardMap } from "@/lib/fulfillment/modifiers-db";
-import { resolvePledgeLines, type SkuContext } from "@/lib/fulfillment/production-counts";
+import { loadSkuContext } from "@/lib/fulfillment/modifiers-db";
+import { resolvePledgeLines } from "@/lib/fulfillment/production-counts";
 
 import { logger } from "@/lib/logger";
 
@@ -288,16 +288,11 @@ export async function pushOrdersToShopify(
   // Reward.sku; for an upgraded item a ModifierSkuMapping row, else base
   // SKU + the modifier's suffix. The draft order and the production count
   // therefore name the same product for the same backer.
-  const [rewardsById, skuMappings, modifierSkuMappings] = await Promise.all([
-    loadProjectRewardMap(projectId),
-    db.shopifySkuMapping.findMany({ where: { projectId } }),
-    db.modifierSkuMapping.findMany({ where: { projectId } }),
-  ]);
-  const skuContext: SkuContext = { rewardsById, skuMappings, modifierSkuMappings };
+  const skuContext = await loadSkuContext(projectId);
 
   shopifyPushLogger.info(
-    { rewardSkus: skuMappings.length, modifierSkus: modifierSkuMappings.length },
-    "[pushOrdersToShopify] SKU mappings loaded"
+    { rewardSkus: skuContext.skuMappings.length, modifierSkus: skuContext.modifierSkuMappings.length, items: skuContext.projectItemsById.size },
+    "[pushOrdersToShopify] SKU context loaded"
   );
 
   // Get backers to push (either specified or all unpushed)
@@ -347,6 +342,7 @@ export async function pushOrdersToShopify(
       modifierAssignments: {
         select: {
           rewardId: true,
+          projectItemId: true,
           modifierAddonId: true,
           unitIndex: true,
           source: true,

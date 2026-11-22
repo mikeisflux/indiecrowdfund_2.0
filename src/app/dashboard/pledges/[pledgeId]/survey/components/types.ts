@@ -111,12 +111,12 @@ export interface ModifierQuestionView {
   title: string;
   imageUrl: string | null;
   quantity: number;
-  targets: { rewardId: string; title: string; imageUrl: string | null; quantity: number; kind: "tier" | "addon" }[];
+  targets: { key: string; rewardId: string; projectItemId: string | null; title: string; imageUrl: string | null; quantity: number; kind: "tier" | "addon" }[];
   selections: (string | null)[];
   auto: boolean;
 }
 
-/** modifierAddonId -> rewardId per copy (index = unit). */
+/** modifierAddonId -> target key per copy (index = unit). */
 export type ModifierSelections = Record<string, (string | null)[]>;
 
 export type Step = "intro" | "items" | "upgrades" | "questions" | "addons" | "address" | "review" | "payment";

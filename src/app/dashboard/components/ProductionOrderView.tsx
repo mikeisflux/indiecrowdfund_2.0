@@ -176,12 +176,12 @@ export function ProductionOrderView({ productionOrderStats, projectId }: Product
     lines.push("");
 
     lines.push("Items to Produce");
-    lines.push("Item Name,SKU,Quantity Needed,Locked Orders,Already Shipped,Still to Produce,In Stock");
+    lines.push("Item Name,SKU,Quantity Needed,Locked Orders,Already Shipped,Pushed to Fulfillment,Still to Produce,In Stock");
     for (const item of productionOrderStats.items) {
       const sku = getDisplaySku(item);
       const inStock = getInStock(item) ? "Yes" : "No";
-      const toProduce = Math.max(0, item.count - item.shippedCount);
-      lines.push(`${escapeCSV(item.name)},${escapeCSV(sku)},${item.count},${item.lockedCount ?? 0},${item.shippedCount},${toProduce},${inStock}`);
+      const toProduce = Math.max(0, item.count - item.shippedCount - (item.pushedCount ?? 0));
+      lines.push(`${escapeCSV(item.name)},${escapeCSV(sku)},${item.count},${item.lockedCount ?? 0},${item.shippedCount},${item.pushedCount ?? 0},${toProduce},${inStock}`);
     }
 
     const csvContent = lines.join("\n");
@@ -319,7 +319,7 @@ export function ProductionOrderView({ productionOrderStats, projectId }: Product
                 Items to Produce
               </CardTitle>
               <p className="text-xs text-muted-foreground mt-1">
-                Track production status and quantities for your campaign
+                One row per SKU, upgrades applied. Shipped (and &ldquo;+n&rdquo; pushed to a fulfillment service) come off To Produce as orders go out.
               </p>
             </div>
             <Button
@@ -356,15 +356,23 @@ export function ProductionOrderView({ productionOrderStats, projectId }: Product
                 const isSavingSku = item.projectItemId ? savingSkus[item.projectItemId] : false;
                 const isInStock = getInStock(item);
                 const isSavingStockItem = item.projectItemId ? savingStock[item.projectItemId] : false;
-                // Units still to make = needed − already shipped (never negative).
-                const toProduce = Math.max(0, item.count - item.shippedCount);
+                // Units still to make = needed − shipped − pushed to a
+                // fulfillment service (never negative). Shipped is set by
+                // manual tracking or a carrier sync; pushed by Shopify /
+                // ShipStation / Shippo / EasyPost / Stamps pushes.
+                const pushed = item.pushedCount ?? 0;
+                const toProduce = Math.max(0, item.count - item.shippedCount - pushed);
 
                 return (
                   <div
                     key={item.projectItemId || index}
                     className="grid grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)_56px_60px_64px_76px_80px] gap-2 px-3 py-2 text-sm border-t border-border/50 items-center hover:bg-muted/10 transition-colors"
                   >
-                    <div className="font-medium truncate">{item.name}</div>
+                    <div className="font-medium truncate">
+                      {item.name}
+                      {item.isUpgrade && <span className="ml-1.5 text-[10px] uppercase tracking-wide text-purple-500">upgrade</span>}
+                      {item.unassignedUpgrade && <span className="ml-1.5 text-[10px] uppercase tracking-wide text-amber-500">needs item</span>}
+                    </div>
                     <div className="flex items-center gap-1 min-w-0">
                       {item.projectItemId ? (
                         isEditing ? (
@@ -424,8 +432,9 @@ export function ProductionOrderView({ productionOrderStats, projectId }: Product
                     <div className="text-center">
                       <span className="font-semibold tabular-nums text-amber-500">{(item.lockedCount ?? 0).toLocaleString()}</span>
                     </div>
-                    <div className="text-center">
+                    <div className="text-center" title={pushed ? `${pushed} more pushed to a fulfillment service, not yet shipped` : undefined}>
                       <span className="text-muted-foreground tabular-nums">{item.shippedCount.toLocaleString()}</span>
+                      {pushed > 0 && <span className="text-xs text-muted-foreground"> +{pushed}</span>}
                     </div>
                     <div className="text-center">
                       <span className={`font-bold tabular-nums ${toProduce > 0 ? "text-purple-500" : "text-emerald-500"}`}>

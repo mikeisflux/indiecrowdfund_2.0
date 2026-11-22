@@ -93,7 +93,7 @@ export async function GET(
           },
         },
         modifierAssignments: {
-          select: { id: true, rewardId: true, modifierAddonId: true, unitIndex: true, source: true },
+          select: { id: true, rewardId: true, projectItemId: true, modifierAddonId: true, unitIndex: true, source: true },
         },
       },
     });
@@ -206,7 +206,7 @@ export async function GET(
     await autoAssignPledge(pledge, rewardsById);
     const freshRows = await db.pledgeModifierAssignment.findMany({
       where: { pledgeId },
-      select: { id: true, rewardId: true, modifierAddonId: true, unitIndex: true, source: true },
+      select: { id: true, rewardId: true, projectItemId: true, modifierAddonId: true, unitIndex: true, source: true },
     });
     const modifierQuestions = buildModifierQuestions({ ...pledge, modifierAssignments: freshRows }, rewardsById);
     const isModifierReward = (rewardId: string) => !!rewardsById.get(rewardId)?.isModifier;
@@ -545,7 +545,7 @@ export async function POST(
     const rewardsById = await loadProjectRewardMap(pledge.projectId);
     const existingRows = await db.pledgeModifierAssignment.findMany({
       where: { pledgeId },
-      select: { id: true, rewardId: true, modifierAddonId: true, unitIndex: true, source: true },
+      select: { id: true, rewardId: true, projectItemId: true, modifierAddonId: true, unitIndex: true, source: true },
     });
     const modifierQuestions = buildModifierQuestions({ ...pledge, modifierAssignments: existingRows }, rewardsById);
     const isModifierReward = (rewardId: string) => !!rewardsById.get(rewardId)?.isModifier;

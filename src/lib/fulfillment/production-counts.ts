@@ -17,7 +17,7 @@
  */
 
 import type { ModifierRewardShape, ModifierPledgeShape } from "./modifiers";
-import { pledgeModifiers } from "./modifiers";
+import { pledgeModifiers, rewardUnits, rowTargetKey, eligibleTargets, targetKey } from "./modifiers";
 
 export interface SkuMappingShape {
   sourceType: string;
@@ -34,8 +34,20 @@ export interface ModifierSkuMappingShape {
   shopifyVariantId?: string | null;
 }
 
+export interface ProjectItemShape {
+  id: string;
+  title: string;
+  sku?: string | null;
+  inStock?: boolean;
+  /** Set on an upgraded edition created from another item + a modifier. */
+  upgradeOfItemId?: string | null;
+  upgradeModifierId?: string | null;
+}
+
 export interface SkuContext {
   rewardsById: Map<string, ModifierRewardShape>;
+  /** Every ProjectItem of the project, upgraded editions included. */
+  projectItemsById: Map<string, ProjectItemShape>;
   skuMappings: SkuMappingShape[];
   modifierSkuMappings: ModifierSkuMappingShape[];
 }
@@ -43,15 +55,19 @@ export interface SkuContext {
 export type LineKind = "tier" | "addon" | "upgrade" | "unassigned_upgrade";
 
 export interface PledgeLine {
-  /** Stable grouping key: rewardId, "rewardId+modifierId", or "unassigned:modifierId". */
+  /** Stable grouping key: the target key, "<target>+<modifierId>", or "unassigned:<modifierId>". */
   key: string;
   kind: LineKind;
   rewardId: string;
+  /** The ProjectItem this line is (base item, or the upgraded edition's own item when one exists). */
+  projectItemId: string | null;
+  /** For an upgrade line, the item it was applied to. */
+  baseProjectItemId: string | null;
   modifierAddonId: string | null;
   /** "SW3-18", "SW3-18 + Upgrade to foil", "Upgrade to foil (not yet assigned)". */
   label: string;
   sku: string | null;
-  /** True when the SKU was derived from base SKU + suffix rather than mapped. */
+  /** True when the SKU was derived from base SKU + suffix rather than mapped or stored. */
   skuDerived: boolean;
   shopifyVariantId: string | null;
   /** Physical copies of this line in the pledge. */
@@ -60,7 +76,19 @@ export interface PledgeLine {
   unitsPerItem: number;
 }
 
-function baseSku(rewardId: string, ctx: SkuContext): { sku: string | null; variantId: string | null; unitsPerItem: number } {
+/**
+ * SKU of a base unit. An item's own code, else its title (creators name
+ * items by code and the production order has always shown the title as the
+ * SKU fallback). A reward with no item breakdown uses its Shopify mapping,
+ * then Reward.sku.
+ */
+function baseSku(rewardId: string, projectItemId: string | null, ctx: SkuContext): { sku: string | null; variantId: string | null; unitsPerItem: number } {
+  if (projectItemId) {
+    const item = ctx.projectItemsById.get(projectItemId);
+    const fromReward = ctx.rewardsById.get(rewardId)?.items?.find((i) => i.projectItemId === projectItemId);
+    const sku = item?.sku?.trim() || fromReward?.sku?.trim() || item?.title?.trim() || fromReward?.title?.trim() || null;
+    return { sku, variantId: null, unitsPerItem: 1 };
+  }
   const reward = ctx.rewardsById.get(rewardId);
   const mapping = ctx.skuMappings.find(
     (m) => (m.sourceType === "REWARD" || m.sourceType === "ADDON") && m.sourceId === rewardId,
@@ -96,23 +124,49 @@ export function effectiveModifierSuffix(modifier: Pick<ModifierRewardShape, "tit
   return modifier.modifierSkuSuffix?.trim() || defaultModifierSuffix(modifier.title);
 }
 
-/** SKU for an item with a modifier applied. */
+/** The upgraded edition's ProjectItem for (base item, modifier), if it has been created. */
+export function upgradeVariantItem(baseProjectItemId: string | null, modifierAddonId: string, ctx: SkuContext): ProjectItemShape | null {
+  if (!baseProjectItemId) return null;
+  for (const item of ctx.projectItemsById.values()) {
+    if (item.upgradeOfItemId === baseProjectItemId && item.upgradeModifierId === modifierAddonId) return item;
+  }
+  return null;
+}
+
+/**
+ * SKU for a unit with a modifier applied: the upgraded edition's own item
+ * when one exists, else a ModifierSkuMapping row for the reward/modifier
+ * combination, else base SKU + the modifier's suffix.
+ */
 export function comboSku(
   baseRewardId: string,
+  baseProjectItemId: string | null,
   modifierAddonId: string,
   ctx: SkuContext,
-): { sku: string | null; variantId: string | null; derived: boolean } {
+): { sku: string | null; variantId: string | null; derived: boolean; projectItemId: string | null } {
+  const variant = upgradeVariantItem(baseProjectItemId, modifierAddonId, ctx);
+  if (variant) return { sku: variant.sku?.trim() || variant.title, variantId: null, derived: false, projectItemId: variant.id };
   const mapped = ctx.modifierSkuMappings.find((m) => m.baseRewardId === baseRewardId && m.modifierAddonId === modifierAddonId);
-  if (mapped) return { sku: mapped.shopifySku, variantId: mapped.shopifyVariantId ?? null, derived: false };
-  const base = baseSku(baseRewardId, ctx);
+  if (mapped && !baseProjectItemId) return { sku: mapped.shopifySku, variantId: mapped.shopifyVariantId ?? null, derived: false, projectItemId: null };
+  const base = baseSku(baseRewardId, baseProjectItemId, ctx);
   const suffix = effectiveModifierSuffix(ctx.rewardsById.get(modifierAddonId));
-  if (base.sku && suffix) return { sku: `${base.sku}${suffix}`, variantId: null, derived: true };
-  return { sku: null, variantId: null, derived: true };
+  if (base.sku && suffix) return { sku: `${base.sku}${suffix}`, variantId: null, derived: true, projectItemId: null };
+  return { sku: null, variantId: null, derived: true, projectItemId: null };
 }
 
 export function itemLabel(rewardId: string, ctx: SkuContext): string {
   const reward = ctx.rewardsById.get(rewardId);
   return reward?.title || "Unknown item";
+}
+
+function unitLabel(rewardId: string, projectItemId: string | null, ctx: SkuContext): string {
+  const reward = ctx.rewardsById.get(rewardId);
+  if (!reward) return "Unknown item";
+  if (!projectItemId) return reward.title;
+  const units = rewardUnits(reward);
+  const u = units.find((x) => x.projectItemId === projectItemId);
+  const itemTitle = ctx.projectItemsById.get(projectItemId)?.title || u?.title || reward.title;
+  return units.length > 1 ? `${itemTitle} (from ${reward.title})` : itemTitle;
 }
 
 /**
@@ -124,65 +178,74 @@ export function itemLabel(rewardId: string, ctx: SkuContext): string {
  */
 export function resolvePledgeLines(pledge: ModifierPledgeShape, ctx: SkuContext): PledgeLine[] {
   const { rewardsById } = ctx;
-  const units = new Map<string, number>();
-  const order: string[] = [];
-  const add = (rewardId: string, qty: number) => {
+  // Units per target key, in first-seen order.
+  const units = new Map<string, { rewardId: string; projectItemId: string | null; kind: "tier" | "addon"; qty: number }>();
+  const add = (rewardId: string, qty: number, kind: "tier" | "addon") => {
     const reward = rewardsById.get(rewardId);
     if (!reward || reward.isModifier || qty <= 0) return;
-    if (!units.has(rewardId)) order.push(rewardId);
-    units.set(rewardId, (units.get(rewardId) ?? 0) + qty);
+    for (const u of rewardUnits(reward)) {
+      const key = targetKey(rewardId, u.projectItemId);
+      const cur = units.get(key);
+      if (cur) cur.qty += qty * u.perReward;
+      else units.set(key, { rewardId, projectItemId: u.projectItemId, kind, qty: qty * u.perReward });
+    }
   };
-  if (pledge.rewardId) add(pledge.rewardId, 1);
-  for (const a of pledge.addons) add(a.addonId, Math.max(0, a.quantity ?? 1));
+  if (pledge.rewardId) add(pledge.rewardId, 1, "tier");
+  for (const a of pledge.addons) add(a.addonId, Math.max(0, a.quantity ?? 1), "addon");
 
-  const upgrades = new Map<string, number>(); // "rewardId+modifierId" -> count
+  const upgrades = new Map<string, number>(); // "<targetKey>+<modifierId>" -> count
   const unassigned: { modifierAddonId: string; count: number }[] = [];
   const rows = (pledge.modifierAssignments || []).slice().sort((a, b) => (a.unitIndex ?? 0) - (b.unitIndex ?? 0));
 
   for (const { modifier, quantity } of pledgeModifiers(pledge, rewardsById)) {
+    const targets = eligibleTargets(modifier, pledge, rewardsById);
     let applied = 0;
     for (const row of rows) {
       if (row.modifierAddonId !== modifier.id) continue;
       if (applied >= quantity) break;
-      const left = units.get(row.rewardId) ?? 0;
-      if (left <= 0) continue; // target no longer in the order, or over-assigned
-      units.set(row.rewardId, left - 1);
-      const key = `${row.rewardId}+${modifier.id}`;
-      upgrades.set(key, (upgrades.get(key) ?? 0) + 1);
+      const key = rowTargetKey(row, targets);
+      if (!key) continue;
+      const unit = units.get(key);
+      if (!unit || unit.qty <= 0) continue; // target no longer in the order, or over-assigned
+      unit.qty -= 1;
+      const upKey = `${key}+${modifier.id}`;
+      upgrades.set(upKey, (upgrades.get(upKey) ?? 0) + 1);
       applied++;
     }
     if (applied < quantity) unassigned.push({ modifierAddonId: modifier.id, count: quantity - applied });
   }
 
   const lines: PledgeLine[] = [];
-  for (const rewardId of order) {
-    const qty = units.get(rewardId) ?? 0;
-    if (qty > 0) {
-      const base = baseSku(rewardId, ctx);
-      const reward = rewardsById.get(rewardId)!;
+  for (const [key, unit] of units) {
+    if (unit.qty > 0) {
+      const base = baseSku(unit.rewardId, unit.projectItemId, ctx);
       lines.push({
-        key: rewardId,
-        kind: pledge.rewardId === rewardId ? "tier" : "addon",
-        rewardId,
+        key,
+        kind: unit.kind,
+        rewardId: unit.rewardId,
+        projectItemId: unit.projectItemId,
+        baseProjectItemId: null,
         modifierAddonId: null,
-        label: reward.title,
+        label: unitLabel(unit.rewardId, unit.projectItemId, ctx),
         sku: base.sku,
         skuDerived: false,
         shopifyVariantId: base.variantId,
-        quantity: qty,
+        quantity: unit.qty,
         unitsPerItem: base.unitsPerItem,
       });
     }
-    for (const [key, count] of upgrades) {
-      if (!key.startsWith(`${rewardId}+`)) continue;
-      const modifierAddonId = key.slice(rewardId.length + 1);
-      const combo = comboSku(rewardId, modifierAddonId, ctx);
+    for (const [upKey, count] of upgrades) {
+      if (!upKey.startsWith(`${key}+`)) continue;
+      const modifierAddonId = upKey.slice(key.length + 1);
+      const combo = comboSku(unit.rewardId, unit.projectItemId, modifierAddonId, ctx);
       lines.push({
-        key,
+        key: upKey,
         kind: "upgrade",
-        rewardId,
+        rewardId: unit.rewardId,
+        projectItemId: combo.projectItemId,
+        baseProjectItemId: unit.projectItemId,
         modifierAddonId,
-        label: `${itemLabel(rewardId, ctx)} + ${itemLabel(modifierAddonId, ctx)}`,
+        label: `${unitLabel(unit.rewardId, unit.projectItemId, ctx)} + ${itemLabel(modifierAddonId, ctx)}`,
         sku: combo.sku,
         skuDerived: combo.derived,
         shopifyVariantId: combo.variantId,
@@ -196,6 +259,8 @@ export function resolvePledgeLines(pledge: ModifierPledgeShape, ctx: SkuContext)
       key: `unassigned:${u.modifierAddonId}`,
       kind: "unassigned_upgrade",
       rewardId: u.modifierAddonId,
+      projectItemId: null,
+      baseProjectItemId: null,
       modifierAddonId: u.modifierAddonId,
       label: `${itemLabel(u.modifierAddonId, ctx)} (not yet assigned)`,
       sku: null,
@@ -209,13 +274,16 @@ export function resolvePledgeLines(pledge: ModifierPledgeShape, ctx: SkuContext)
 }
 
 export interface ProductionLine {
-  /** "sku:<SKU>" when the line has a SKU (tier and add-on copies of one product merge), else the per-reward key. */
+  /** "sku:<SKU>" when the line has a SKU (tier and add-on copies of one product merge), else the per-unit key. */
   key: string;
   kind: LineKind;
   rewardId: string;
+  /** The ProjectItem behind this line (for the in-stock toggle / SKU edit), when there is exactly one. */
+  projectItemId: string | null;
+  baseProjectItemId: string | null;
   modifierAddonId: string | null;
   label: string;
-  /** Every reward title that fed this line ("SW3-01", "SW3-01 (Add-on)"). */
+  /** Every unit label that fed this line ("SW3-01", "SW3-01 (from The Rebel Box)"). */
   titles: string[];
   sku: string | null;
   skuDerived: boolean;
@@ -223,25 +291,41 @@ export interface ProductionLine {
   confirmed: number;
   /** Units from pledges still waiting on a survey; the base item could still be upgraded. */
   pending: number;
+  /** Units on pledges already shipped or delivered. */
+  shipped: number;
+  /** Units on pledges pushed to a fulfillment service (Shopify, ShipStation…) and not yet shipped. */
+  pushed: number;
+  /** Units on order-locked pledges (final). */
+  locked: number;
+  /** Everything owed, shipped or not. */
   total: number;
+  /** total − shipped − pushed: what still has to be made. */
+  toProduce: number;
   backers: number;
 }
 
 export interface ProductionPledgeInput extends ModifierPledgeShape {
   /** Survey finished (by backer or creator) or order locked. */
   surveyComplete: boolean;
+  fulfillmentStatus?: string | null;
+  orderLockStatus?: string | null;
 }
 
 /**
  * Totals across the campaign, one line per SKU. A cover sold as a tier and
  * again as an add-on is one product to print, so lines with the same SKU
  * merge ("SW3-01" + "SW3-01 (Add-on)" → SW3-01); so do upgraded copies
- * from either source (→ SW3-01-F). Lines without a SKU stay per reward.
+ * from either source (→ SW3-01-F). Lines without a SKU stay per unit.
+ * Shipped / pushed units come off "to produce" as orders go out, whether
+ * tracking was typed in or synced back from a fulfillment service.
  * Sorted: base items, then upgrades, then unassigned.
  */
 export function computeProductionCounts(pledges: ProductionPledgeInput[], ctx: SkuContext): ProductionLine[] {
-  const byKey = new Map<string, ProductionLine & { backerIds: Set<string>; titleSet: Set<string> }>();
+  const byKey = new Map<string, ProductionLine & { backerIds: Set<string>; titleSet: Set<string>; itemIds: Set<string> }>();
   for (const pledge of pledges) {
+    const shipped = pledge.fulfillmentStatus === "SHIPPED" || pledge.fulfillmentStatus === "DELIVERED";
+    const pushed = pledge.fulfillmentStatus === "IN_PROGRESS";
+    const locked = pledge.orderLockStatus === "LOCKED";
     for (const line of resolvePledgeLines(pledge, ctx)) {
       const key = line.sku && line.kind !== "unassigned_upgrade" ? `sku:${line.sku.toUpperCase()}` : line.key;
       let agg = byKey.get(key);
@@ -250,6 +334,8 @@ export function computeProductionCounts(pledges: ProductionPledgeInput[], ctx: S
           key,
           kind: line.kind,
           rewardId: line.rewardId,
+          projectItemId: null,
+          baseProjectItemId: line.baseProjectItemId,
           modifierAddonId: line.modifierAddonId,
           label: line.label,
           titles: [],
@@ -257,26 +343,35 @@ export function computeProductionCounts(pledges: ProductionPledgeInput[], ctx: S
           skuDerived: line.skuDerived,
           confirmed: 0,
           pending: 0,
+          shipped: 0,
+          pushed: 0,
+          locked: 0,
           total: 0,
+          toProduce: 0,
           backers: 0,
           backerIds: new Set<string>(),
           titleSet: new Set<string>(),
+          itemIds: new Set<string>(),
         };
         byKey.set(key, agg);
       }
       // A merged line is "tier" if any of its sources is the tier.
       if (line.kind === "tier" && agg.kind === "addon") agg.kind = "tier";
       agg.titleSet.add(line.label);
+      if (line.projectItemId) agg.itemIds.add(line.projectItemId);
       const units = line.quantity * line.unitsPerItem;
       if (pledge.surveyComplete) agg.confirmed += units;
       else agg.pending += units;
+      if (shipped) agg.shipped += units;
+      else if (pushed) agg.pushed += units;
+      if (locked) agg.locked += units;
       agg.total += units;
       agg.backerIds.add(pledge.id);
     }
   }
   const rank: Record<LineKind, number> = { tier: 0, addon: 0, upgrade: 1, unassigned_upgrade: 2 };
   return Array.from(byKey.values())
-    .map(({ backerIds, titleSet, ...line }) => {
+    .map(({ backerIds, titleSet, itemIds, ...line }) => {
       const titles = Array.from(titleSet);
       // Merged base lines read as the SKU; an upgrade line keeps
       // "<item> + <upgrade>" with the item named once.
@@ -284,9 +379,16 @@ export function computeProductionCounts(pledges: ProductionPledgeInput[], ctx: S
         titles.length === 1
           ? titles[0]
           : line.modifierAddonId
-            ? `${baseSku(line.rewardId, ctx).sku ?? titles[0].split(" + ")[0]} + ${itemLabel(line.modifierAddonId, ctx)}`
+            ? `${baseSku(line.rewardId, line.baseProjectItemId, ctx).sku ?? titles[0].split(" + ")[0]} + ${itemLabel(line.modifierAddonId, ctx)}`
             : line.sku ?? titles[0];
-      return { ...line, label, titles, backers: backerIds.size };
+      return {
+        ...line,
+        label,
+        titles,
+        projectItemId: itemIds.size === 1 ? Array.from(itemIds)[0] : null,
+        toProduce: Math.max(0, line.total - line.shipped - line.pushed),
+        backers: backerIds.size,
+      };
     })
     .sort((a, b) => rank[a.kind] - rank[b.kind] || (a.sku || a.label).localeCompare(b.sku || b.label, undefined, { numeric: true }));
 }
@@ -330,7 +432,7 @@ export function computeVariantCounts(
   for (const iq of itemQuestions) {
     const askable = iq.variants.length > 0 || iq.customQuestions.some((q) => q.questionType !== "OPEN_TEXT");
     if (!askable) continue;
-    const base = baseSku(iq.rewardId, ctx).sku;
+    const base = baseSku(iq.rewardId, null, ctx).sku;
     for (const pledge of pledges) {
       const held = pledge.rewardId === iq.rewardId ? 1 : pledge.addons.find((a) => a.addonId === iq.rewardId)?.quantity ?? 0;
       if (held <= 0) continue;
@@ -383,9 +485,9 @@ export function productionCsv(lines: ProductionLine[]): string {
     const s = v == null ? "" : String(v);
     return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
   };
-  const rows = [["SKU", "Item", "Type", "Confirmed", "Pending survey", "Total", "Backers"]];
+  const rows = [["SKU", "Item", "Type", "Needed", "Confirmed", "Pending survey", "Locked", "Shipped", "Pushed to fulfillment", "To produce", "Backers"]];
   for (const l of lines) {
-    rows.push([l.sku ?? "", l.label, l.kind.replace("_", " "), l.confirmed, l.pending, l.total, l.backers].map(esc));
+    rows.push([l.sku ?? "", l.label, l.kind.replace("_", " "), l.total, l.confirmed, l.pending, l.locked, l.shipped, l.pushed, l.toProduce, l.backers].map(esc));
   }
   return rows.map((r) => r.join(",")).join("\n");
 }

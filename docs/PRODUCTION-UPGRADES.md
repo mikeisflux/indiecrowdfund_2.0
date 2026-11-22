@@ -28,17 +28,28 @@ the numbers again after the print run was sized.
 3. **The survey asks the structured question** — the backer gets an
    "Apply Your Upgrades" step: one dropdown per copy of the upgrade, listing
    only their own eligible items, with quantities enforced (one SW3-18 can't
-   be upgraded twice). When there is only one way to apply it (one cover +
-   one upgrade; four add-on covers + four foil upgrades) it is assigned
-   automatically and shown as a confirmation. Each pick is a
-   `PledgeModifierAssignment` row (`pledgeId, modifierAddonId, unitIndex →
-   rewardId`, `source = AUTO | SURVEY | CREATOR`).
-4. **Production counts** — Production tab, one line per SKU: a cover sold as
-   a tier and again as an add-on is one line (`SW3-01` = both), an upgraded
-   copy moves off the base line onto its upgraded SKU (`SW3-18-F`), and
-   still-unassigned copies are called out. Confirmed (survey done or order
-   locked) vs pending. CSV export. Sizes and other survey choices are counted
-   below it.
+   be upgraded twice). Items are the campaign's ProjectItems: a bundle
+   reward ("The Rebel Box") offers each cover inside it separately. When
+   there is only one way to apply it (one cover + one upgrade; four add-on
+   covers + four foil upgrades) it is assigned automatically and shown as a
+   confirmation. Each pick is a `PledgeModifierAssignment` row (`pledgeId,
+   modifierAddonId, unitIndex → rewardId + projectItemId`, `source = AUTO |
+   SURVEY | CREATOR`).
+4. **Production counts** — in two places, both on the same resolver: the
+   IndieKit Production tab and the creator dashboard's Production Order.
+   One line per SKU: a cover sold as a tier, as an add-on and inside a box
+   set is one line (`SW3-22` = all of them), an upgraded copy moves off the
+   base line onto its upgraded SKU (`SW3-22-F`), and still-unassigned copies
+   are called out. Columns: needed, confirmed (survey done or order locked),
+   pending, locked, shipped, to produce. **Shipped comes off "to produce"
+   as orders go out**, whether tracking was typed in by hand or synced back
+   from Shopify, ShipStation, Shippo, EasyPost or Stamps; an order pushed to
+   one of those services and not yet shipped counts off too (shown as
+   "+n"). CSV export. Sizes and other survey choices are counted below.
+   The first time an upgrade is assigned to an item, the upgraded edition
+   becomes a ProjectItem of its own (`SW3-22-F`) so the Production Order
+   can track its stock like any other item; these are hidden from the
+   campaign builder's item list.
 5. **Resolving the rest** — backers whose upgrade has no item yet are listed
    on the Production tab with whatever they wrote in the old free-text
    question and a suggested match parsed from it. Confirm and save, or open
@@ -59,8 +70,9 @@ SKU resolution order (shared by counts and push, `src/lib/fulfillment/production
 
 | Item | SKU |
 | --- | --- |
-| Base item | `ShopifySkuMapping` row for the reward, else `Reward.sku` |
-| Upgraded item | `ModifierSkuMapping` row for the exact combination, else base SKU + `Reward.modifierSkuSuffix` (defaulting to the upgrade name's initials) |
+| Item inside a reward | `ProjectItem.sku`, else the item's title (creators name items by code) |
+| Reward with no item breakdown | `ShopifySkuMapping` row for the reward, else `Reward.sku` |
+| Upgraded item | its own upgraded-edition `ProjectItem` once created; else a `ModifierSkuMapping` row for the reward/upgrade pair; else base SKU + `Reward.modifierSkuSuffix` (defaulting to the upgrade name's initials) |
 
 ## Server setup
 
@@ -70,9 +82,10 @@ Daily reminder run (add to root's crontab on the app server):
 30 15 * * * . /root/indiecrowdfund_2.0/.env && curl -s -H "Authorization: Bearer $CRON_SECRET" http://localhost:3000/api/cron/survey-reminders > /dev/null 2>&1
 ```
 
-The migration `prisma/migrations/add_modifier_units_and_survey_reminders.sql`
-is applied by `build-and-swap.sh`. It is additive: new columns, and the
-assignment unique key becomes `(pledgeId, modifierAddonId, unitIndex)`.
+The migrations `prisma/migrations/add_modifier_units_and_survey_reminders.sql`
+and `add_item_level_upgrades.sql` are applied by `build-and-swap.sh`. They
+are additive: new columns, and the assignment unique key becomes
+`(pledgeId, modifierAddonId, unitIndex)`.
 
 ## Converting a campaign that already ran (e.g. one with free-text upgrade questions)
 

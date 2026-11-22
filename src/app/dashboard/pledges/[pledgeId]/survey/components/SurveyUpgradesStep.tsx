@@ -26,7 +26,7 @@ interface SurveyUpgradesStepProps {
  * cover?"), which production couldn't read; now the answer IS the item.
  */
 export function SurveyUpgradesStep({ questions, selections, setSelections, onNext, onPrev, embedded = false }: SurveyUpgradesStepProps) {
-  const targetLabel = (q: ModifierQuestionView, rewardId: string) => q.targets.find((t) => t.rewardId === rewardId)?.title || "";
+  const targetLabel = (q: ModifierQuestionView, key: string) => q.targets.find((t) => t.key === key)?.title || "";
 
   // How many times each target has been picked across this question's units,
   // so a backer with one SW3-18 can't put two upgrades on it.
@@ -121,9 +121,9 @@ export function SurveyUpgradesStep({ questions, selections, setSelections, onNex
                         </SelectTrigger>
                         <SelectContent>
                           {q.targets.map((t) => {
-                            const left = t.quantity - (used.get(t.rewardId) ?? 0);
+                            const left = t.quantity - (used.get(t.key) ?? 0);
                             return (
-                              <SelectItem key={t.rewardId} value={t.rewardId} disabled={left <= 0}>
+                              <SelectItem key={t.key} value={t.key} disabled={left <= 0}>
                                 {t.title}
                                 {t.quantity > 1 ? ` (${left} of ${t.quantity} left)` : ""}
                                 {left <= 0 ? " — already upgraded" : ""}

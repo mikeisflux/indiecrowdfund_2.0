@@ -38,7 +38,11 @@ interface ProductionLine {
   skuDerived: boolean;
   confirmed: number;
   pending: number;
+  shipped: number;
+  pushed: number;
+  locked: number;
   total: number;
+  toProduce: number;
   backers: number;
 }
 
@@ -56,7 +60,7 @@ export interface UpgradeQuestion {
   title: string;
   imageUrl: string | null;
   quantity: number;
-  targets: { rewardId: string; title: string; quantity: number; kind: "tier" | "addon"; sku: string | null }[];
+  targets: { key: string; rewardId: string; projectItemId: string | null; title: string; quantity: number; kind: "tier" | "addon"; sku: string | null }[];
   selections: (string | null)[];
   auto: boolean;
   legacyAnswer: string | null;
@@ -92,6 +96,7 @@ interface ProductionData {
   variantUnanswered: { itemQuestionId: string; itemName: string; units: number }[];
   unresolved: UnresolvedPledge[];
   rewards: RewardRow[];
+  projectItems: { id: string; title: string; sku: string | null; inStock: boolean }[];
   summary: {
     backers: number;
     surveysComplete: number;
@@ -100,6 +105,9 @@ interface ProductionData {
     unresolvedBackers: number;
     unitsConfirmed: number;
     unitsPending: number;
+    unitsShipped: number;
+    unitsPushed: number;
+    unitsToProduce: number;
     missingSku: number;
   };
 }
@@ -210,7 +218,9 @@ export function ProductionTab({ projectId }: { projectId: string }) {
         </div>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+        <Stat label="Still to produce" value={summary.unitsToProduce} hint="needed minus shipped and pushed" tone={summary.unitsToProduce ? "amber" : "green"} />
+        <Stat label="Units shipped" value={summary.unitsShipped} hint={summary.unitsPushed ? `+ ${summary.unitsPushed} pushed to fulfillment` : "manual tracking or carrier sync"} tone="green" />
         <Stat label="Units confirmed" value={summary.unitsConfirmed} hint="from finished surveys" tone="green" />
         <Stat label="Units pending" value={summary.unitsPending} hint={`${summary.surveysPending} survey${summary.surveysPending === 1 ? "" : "s"} outstanding`} tone="amber" />
         <Stat label="Upgrades unassigned" value={summary.unresolvedBackers} hint={`of ${summary.upgradeBackers} backers with upgrades`} tone={summary.unresolvedBackers ? "red" : "green"} />
@@ -251,7 +261,8 @@ export function ProductionTab({ projectId }: { projectId: string }) {
             Production counts
           </CardTitle>
           <CardDescription>
-            Confirmed = backers whose survey is done (or whose order is locked). Pending = still waiting on a survey; a pending base item may still turn into an upgraded one.
+            Needed is everything owed. Shipped comes off it as orders go out, whether you typed in tracking or a carrier synced it back (a &ldquo;+n&rdquo; is orders pushed to a fulfillment service and not shipped yet; they come off too). To produce = needed − shipped − pushed.
+            Confirmed = survey done or order locked; pending = still waiting on a survey, so a pending base item may still turn into an upgraded one.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -265,9 +276,12 @@ export function ProductionTab({ projectId }: { projectId: string }) {
                     <TableHead>SKU</TableHead>
                     <TableHead>Item</TableHead>
                     <TableHead>Type</TableHead>
+                    <TableHead className="text-right">Needed</TableHead>
                     <TableHead className="text-right">Confirmed</TableHead>
                     <TableHead className="text-right">Pending</TableHead>
-                    <TableHead className="text-right">Total</TableHead>
+                    <TableHead className="text-right">Locked</TableHead>
+                    <TableHead className="text-right">Shipped</TableHead>
+                    <TableHead className="text-right">To produce</TableHead>
                     <TableHead className="text-right">Backers</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -297,9 +311,15 @@ export function ProductionTab({ projectId }: { projectId: string }) {
                           {KIND_LABEL[l.kind]}
                         </Badge>
                       </TableCell>
+                      <TableCell className="text-right font-semibold">{l.total}</TableCell>
                       <TableCell className="text-right font-medium">{l.confirmed}</TableCell>
                       <TableCell className="text-right text-muted-foreground">{l.pending}</TableCell>
-                      <TableCell className="text-right font-semibold">{l.total}</TableCell>
+                      <TableCell className="text-right text-amber-600">{l.locked}</TableCell>
+                      <TableCell className="text-right text-muted-foreground" title={l.pushed ? `${l.pushed} more pushed to a fulfillment service, not yet shipped` : undefined}>
+                        {l.shipped}
+                        {l.pushed > 0 && <span className="text-xs"> +{l.pushed}</span>}
+                      </TableCell>
+                      <TableCell className={`text-right font-bold ${l.toProduce > 0 ? "text-purple-600" : "text-emerald-600"}`}>{l.toProduce}</TableCell>
                       <TableCell className="text-right text-muted-foreground">{l.backers}</TableCell>
                     </TableRow>
                   ))}
@@ -369,7 +389,7 @@ export function ProductionTab({ projectId }: { projectId: string }) {
             </span>
           </AccordionTrigger>
           <AccordionContent>
-            <UpgradeSettings rewards={data.rewards} busy={busy} onSave={async (addon, patch) => {
+            <UpgradeSettings rewards={data.rewards} projectItems={data.projectItems} busy={busy} onSave={async (addon, patch) => {
               const out = await post({ action: "set_modifier", addonId: addon.id, ...patch }, `mod:${addon.id}`);
               if (out) {
                 toast.success(patch.isModifier ? `"${addon.title}" is an upgrade${out.assigned ? ` — ${out.assigned} backer${out.assigned === 1 ? "" : "s"} auto-assigned` : ""}` : `"${addon.title}" is a regular add-on again`);
@@ -382,7 +402,7 @@ export function ProductionTab({ projectId }: { projectId: string }) {
           <AccordionTrigger className="text-base">
             <span className="flex items-center gap-2">
               <Tags className="h-4 w-4 text-teal-600" />
-              Item SKUs
+              Reward SKUs
               {summary.missingSku > 0 && <Badge className="bg-amber-100 text-amber-700">{summary.missingSku} missing</Badge>}
             </span>
           </AccordionTrigger>
@@ -495,9 +515,9 @@ export function UpgradeAssigner({
                   </SelectTrigger>
                   <SelectContent>
                     {question.targets.map((t) => {
-                      const left = t.quantity - (u.get(t.rewardId) ?? 0);
+                      const left = t.quantity - (u.get(t.key) ?? 0);
                       return (
-                        <SelectItem key={t.rewardId} value={t.rewardId} disabled={left <= 0}>
+                        <SelectItem key={t.key} value={t.key} disabled={left <= 0}>
                           {t.title}
                           {t.quantity > 1 ? ` (${left} of ${t.quantity} left)` : ""}
                           {t.sku ? ` → ${t.sku}` : ""}
@@ -565,15 +585,22 @@ function UnresolvedCard({
 
 function UpgradeSettings({
   rewards,
+  projectItems,
   busy,
   onSave,
 }: {
   rewards: RewardRow[];
+  projectItems: { id: string; title: string; sku: string | null }[];
   busy: string | null;
   onSave: (addon: RewardRow, patch: { isModifier: boolean; modifiesRewardIds?: string[]; modifierSkuSuffix?: string | null }) => Promise<void>;
 }) {
   const addons = rewards.filter((r) => r.type === "ADDON");
-  const candidates = rewards.filter((r) => !r.isModifier);
+  // Eligibility can be set per item (SW3-22 wherever it appears, inside a
+  // box set or on its own) or per reward (everything in that reward).
+  const candidates: { id: string; title: string; type: string }[] = [
+    ...projectItems.map((i) => ({ id: i.id, title: i.sku && i.sku !== i.title ? `${i.title} (${i.sku})` : i.title, type: "item" })),
+    ...rewards.filter((r) => !r.isModifier).map((r) => ({ id: r.id, title: r.title, type: r.type })),
+  ];
   const [drafts, setDrafts] = useState<Record<string, { suffix: string; ids: string[] }>>({});
   const draft = (r: RewardRow) => drafts[r.id] ?? { suffix: r.modifierSkuSuffix ?? "", ids: r.modifiesRewardIds };
 
@@ -616,7 +643,7 @@ function UpgradeSettings({
                   </p>
                 </div>
                 <div className="space-y-1">
-                  <Label className="text-xs">Eligible items <span className="text-muted-foreground">(none ticked = any physical item)</span></Label>
+                  <Label className="text-xs">Eligible items <span className="text-muted-foreground">(none ticked = any physical item; tick items or whole rewards)</span></Label>
                   <div className="max-h-40 overflow-y-auto rounded border bg-background p-2 grid gap-1 sm:grid-cols-2">
                     {candidates.map((c) => (
                       <label key={c.id} className="flex items-center gap-2 text-xs">
@@ -627,7 +654,7 @@ function UpgradeSettings({
                           }
                         />
                         <span className="truncate">{c.title}</span>
-                        <span className="text-muted-foreground">{c.type === "TIER" ? "tier" : "add-on"}</span>
+                        <span className="text-muted-foreground">{c.type === "item" ? "item" : c.type === "TIER" ? "tier" : "add-on"}</span>
                       </label>
                     ))}
                   </div>
@@ -664,7 +691,7 @@ function SkuSettings({
     <div className="space-y-3 py-2">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-sm text-muted-foreground">
-          The product code for each item. A SKU mapped in Setup → SKU Mapping takes precedence; this is the fallback the counts, exports and Shopify push use.
+          Rewards with an item breakdown take their codes from the items themselves (edit those on the dashboard&apos;s Production Order). This list is for rewards with no items: a SKU mapped in Setup → SKU Mapping takes precedence, then this code.
         </p>
         <Button size="sm" variant="outline" onClick={onFill} disabled={busy === "fill"}>
           {busy === "fill" ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Sparkles className="h-4 w-4 mr-1" />}

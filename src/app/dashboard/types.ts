@@ -128,9 +128,16 @@ export interface ProductionOrderItem {
   shippedCount: number;
   // Units on order-locked pledges (final, confirmed orders) for this item.
   lockedCount: number;
+  // Units on pledges pushed to a fulfillment service (Shopify, ShipStation…)
+  // and not yet marked shipped; they come off "to produce" too.
+  pushedCount?: number;
   projectItemId: string | null;
   sku: string | null;
   inStock: boolean;
+  /** An upgraded edition line (base item + upgrade add-on). */
+  isUpgrade?: boolean;
+  /** Upgrade copies no backer has tied to an item yet. */
+  unassignedUpgrade?: boolean;
 }
 
 export interface ProductionOrderStats {

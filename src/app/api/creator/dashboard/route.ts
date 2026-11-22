@@ -6,6 +6,8 @@ const creatorDashboardLogger = logger.child({ module: "creator-dashboard" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { resolveCampaignDisplay } from "@/lib/currency";
+import { ensureUpgradeVariantItems } from "@/lib/fulfillment/modifiers-db";
+import { computeProductionCounts } from "@/lib/fulfillment/production-counts";
 
 export const dynamic = "force-dynamic";
 
@@ -413,7 +415,8 @@ export async function GET(req: NextRequest) {
         orderBy: { pledgeAmount: "desc" },
       }),
 
-      // Fulfillment data - all pledges with their rewards and addons
+      // Fulfillment data - every completed pledge, in the shape the shared
+      // production resolver reads (rewards/items come from the SKU context).
       db.pledge.findMany({
         where: {
           projectId: selectedProjectId,
@@ -422,44 +425,12 @@ export async function GET(req: NextRequest) {
         },
         select: {
           id: true,
+          rewardId: true,
           fulfillmentStatus: true,
           orderLockStatus: true,
-          reward: {
-            select: {
-              id: true,
-              title: true,
-              items: {
-                select: {
-                  id: true,
-                  title: true,
-                  projectItemId: true,
-                  projectItem: {
-                    select: { id: true, title: true, sku: true },
-                  },
-                },
-              },
-            },
-          },
-          addons: {
-            select: {
-              quantity: true,
-              addon: {
-                select: {
-                  id: true,
-                  title: true,
-                  items: {
-                    select: {
-                      id: true,
-                      title: true,
-                      projectItemId: true,
-                      projectItem: {
-                        select: { id: true, title: true, sku: true },
-                      },
-                    },
-                  },
-                },
-              },
-            },
+          addons: { select: { addonId: true, quantity: true } },
+          modifierAssignments: {
+            select: { id: true, rewardId: true, projectItemId: true, modifierAddonId: true, unitIndex: true, source: true },
           },
         },
       }),
@@ -601,187 +572,46 @@ export async function GET(req: NextRequest) {
     ).length;
     const fulfillmentPercentage = totalBackers > 0 ? Math.round((shippedBackers / totalBackers) * 100) : 0;
 
-    // Count items needed for fulfillment (from rewards and addons)
-    // Key by projectItemId or item title to deduplicate items that appear in multiple reward tiers
-    const itemCounts = new Map<string, { name: string; count: number; shippedCount: number; lockedCount: number; projectItemId: string | null; sku: string | null; inStock: boolean }>();
-    // SKU-level aggregation: sums item qty across rewards + addons for every backer
-    // (aftersales add-ons create new PledgeAddon rows, so they're included automatically)
-    const skuCounts = new Map<string, { sku: string | null; name: string; quantity: number; backerIds: Set<string>; projectItemId: string | null }>();
+    // Items to produce, by SKU, through the same resolver as IndieKit's
+    // Production tab and the Shopify push (lib/fulfillment/production-counts):
+    // each reward's item breakdown, upgrade add-ons applied to the item each
+    // backer chose ("SW3-22" + foil → "SW3-22-F", which is its own
+    // ProjectItem with its own stock toggle), tier and add-on copies of one
+    // SKU merged, and shipped / pushed units subtracted from "to produce".
+    const { ctx: skuContext } = await ensureUpgradeVariantItems(selectedProjectId);
+    const productionLines = computeProductionCounts(
+      fulfillmentData.map((p) => ({ ...p, surveyComplete: true })),
+      skuContext
+    );
 
-    fulfillmentData.forEach((pledge) => {
-      // Units on an already-shipped/delivered pledge are counted into
-      // shippedCount so the Production Order view can show "still to
-      // produce = needed − shipped" and creators don't reprint units
-      // already sent (e.g. lock-and-ship-while-live backers).
-      const isShipped =
-        pledge.fulfillmentStatus === "SHIPPED" || pledge.fulfillmentStatus === "DELIVERED";
-      // Units on an order-locked pledge, so the Production view can show how
-      // many of each item are already locked in (final, won't change).
-      const isLocked = pledge.orderLockStatus === "LOCKED";
-      // Count items from reward tiers. Two shapes, mirroring the addon logic:
-      //   1. The tier has a RewardItem[] breakdown -- each ProjectItem becomes
-      //      its own production-order row.
-      //   2. The tier has NO RewardItem rows -- the tier itself IS the
-      //      deliverable (e.g., a single "Hardcover Book" reward the creator
-      //      never decomposed into sub-items). Fall back to counting the tier.
-      // Without the (2) fallback, undecomposed reward tiers silently dropped
-      // out of the production order even though the backer is owed the item —
-      // the same class of bug that used to hide survey-purchased addons.
-      if (pledge.reward) {
-        const rewardItems = pledge.reward.items || [];
-        if (rewardItems.length === 0) {
-          const itemKey = `reward_${pledge.reward.id}`;
-          const itemName = pledge.reward.title;
-          const existingItem = itemCounts.get(itemKey);
-          if (existingItem) {
-            existingItem.count += 1;
-            if (isShipped) existingItem.shippedCount += 1;
-            if (isLocked) existingItem.lockedCount += 1;
-          } else {
-            itemCounts.set(itemKey, { name: itemName, count: 1, shippedCount: isShipped ? 1 : 0, lockedCount: isLocked ? 1 : 0, projectItemId: null, sku: null, inStock: false });
-          }
-
-          const existingSku = skuCounts.get(itemKey);
-          if (existingSku) {
-            existingSku.quantity += 1;
-            existingSku.backerIds.add(pledge.id);
-          } else {
-            skuCounts.set(itemKey, {
-              sku: null,
-              name: itemName,
-              quantity: 1,
-              backerIds: new Set([pledge.id]),
-              projectItemId: null,
-            });
-          }
-        } else {
-          rewardItems.forEach((item: { id: string; title: string; projectItemId: string | null; projectItem?: { id: string; title: string; sku: string | null } | null }) => {
-            const itemName = item.projectItem?.title || item.title;
-            const itemKey = item.projectItemId
-              ? `projectItem_${item.projectItemId}`
-              : `itemTitle_${item.title}`;
-            const existingItem = itemCounts.get(itemKey);
-            if (existingItem) {
-              existingItem.count += 1;
-              if (isShipped) existingItem.shippedCount += 1;
-              if (isLocked) existingItem.lockedCount += 1;
-            } else {
-              itemCounts.set(itemKey, { name: itemName, count: 1, shippedCount: isShipped ? 1 : 0, lockedCount: isLocked ? 1 : 0, projectItemId: item.projectItemId, sku: null, inStock: false });
-            }
-
-            const skuValue = item.projectItem?.sku?.trim() || null;
-            const existingSku = skuCounts.get(itemKey);
-            if (existingSku) {
-              existingSku.quantity += 1;
-              existingSku.backerIds.add(pledge.id);
-            } else {
-              skuCounts.set(itemKey, {
-                sku: skuValue,
-                name: itemName,
-                quantity: 1,
-                backerIds: new Set([pledge.id]),
-                projectItemId: item.projectItemId,
-              });
-            }
-          });
-        }
-      }
-
-      // Count items from addons (with quantity multiplier).
-      //
-      // Two shapes show up here:
-      //   1. Addon has a RewardItem[] breakdown -- the creator
-      //      configured it as a bundle of ProjectItems (e.g., "Deluxe
-      //      Pack" containing a sticker + pin + patch). Each
-      //      RewardItem becomes its own production-order row.
-      //   2. Addon has NO RewardItem rows -- the addon itself IS the
-      //      deliverable (e.g., "Sticker Pack $5"). This is the common
-      //      shape for survey-purchased addons where the creator
-      //      doesn't decompose the addon into sub-items.
-      //
-      // Without the (2) fallback below, survey-purchased addons (and
-      // any other addon without RewardItems) silently disappear from
-      // the production order count even though the PledgeAddon row was
-      // created and the money was charged. That was the live bug.
-      pledge.addons?.forEach((pledgeAddon: { quantity: number; addon: { id: string; title: string; items?: { id: string; title: string; projectItemId: string | null; projectItem?: { id: string; title: string; sku: string | null } | null }[] } }) => {
-        const addonItems = pledgeAddon.addon.items || [];
-
-        if (addonItems.length === 0) {
-          // Fallback: count the addon Reward itself as the productable.
-          const itemKey = `addon_${pledgeAddon.addon.id}`;
-          const itemName = pledgeAddon.addon.title;
-          const existingItem = itemCounts.get(itemKey);
-          if (existingItem) {
-            existingItem.count += pledgeAddon.quantity;
-            if (isShipped) existingItem.shippedCount += pledgeAddon.quantity;
-            if (isLocked) existingItem.lockedCount += pledgeAddon.quantity;
-          } else {
-            itemCounts.set(itemKey, { name: itemName, count: pledgeAddon.quantity, shippedCount: isShipped ? pledgeAddon.quantity : 0, lockedCount: isLocked ? pledgeAddon.quantity : 0, projectItemId: null, sku: null, inStock: false });
-          }
-
-          const existingSku = skuCounts.get(itemKey);
-          if (existingSku) {
-            existingSku.quantity += pledgeAddon.quantity;
-            existingSku.backerIds.add(pledge.id);
-          } else {
-            skuCounts.set(itemKey, {
-              sku: null,
-              name: itemName,
-              quantity: pledgeAddon.quantity,
-              backerIds: new Set([pledge.id]),
-              projectItemId: null,
-            });
-          }
-          return;
-        }
-
-        addonItems.forEach((item) => {
-          const itemName = item.projectItem?.title || item.title;
-          const itemKey = item.projectItemId
-            ? `projectItem_${item.projectItemId}`
-            : `itemTitle_${item.title}`;
-          const existingItem = itemCounts.get(itemKey);
-          if (existingItem) {
-            existingItem.count += pledgeAddon.quantity;
-            if (isShipped) existingItem.shippedCount += pledgeAddon.quantity;
-            if (isLocked) existingItem.lockedCount += pledgeAddon.quantity;
-          } else {
-            itemCounts.set(itemKey, { name: itemName, count: pledgeAddon.quantity, shippedCount: isShipped ? pledgeAddon.quantity : 0, lockedCount: isLocked ? pledgeAddon.quantity : 0, projectItemId: item.projectItemId, sku: null, inStock: false });
-          }
-
-          const skuValue = item.projectItem?.sku?.trim() || null;
-          const existingSku = skuCounts.get(itemKey);
-          if (existingSku) {
-            existingSku.quantity += pledgeAddon.quantity;
-            existingSku.backerIds.add(pledge.id);
-          } else {
-            skuCounts.set(itemKey, {
-              sku: skuValue,
-              name: itemName,
-              quantity: pledgeAddon.quantity,
-              backerIds: new Set([pledge.id]),
-              projectItemId: item.projectItemId,
-            });
-          }
-        });
-      });
+    const fulfillmentItems = productionLines.map((line) => {
+      const item = line.projectItemId ? skuContext.projectItemsById.get(line.projectItemId) : null;
+      return {
+        name: line.label,
+        count: line.total,
+        shippedCount: line.shipped,
+        pushedCount: line.pushed,
+        lockedCount: line.locked,
+        projectItemId: line.projectItemId,
+        sku: line.sku,
+        inStock: !!item?.inStock,
+        isUpgrade: line.kind === "upgrade",
+        unassignedUpgrade: line.kind === "unassigned_upgrade",
+      };
     });
 
-    // Build SKU stats sorted by quantity sold desc
-    const skuStats = Array.from(skuCounts.entries())
-      .map(([key, s]) => ({
-        id: key,
-        projectItemId: s.projectItemId,
-        sku: s.sku,
-        name: s.name,
-        quantity: s.quantity,
-        backers: s.backerIds.size,
+    // SKU stats sorted by quantity sold desc
+    const skuStats = productionLines
+      .filter((l) => l.kind !== "unassigned_upgrade")
+      .map((l) => ({
+        id: l.key,
+        projectItemId: l.projectItemId,
+        sku: l.sku,
+        name: l.label,
+        quantity: l.total,
+        backers: l.backers,
       }))
       .sort((a, b) => b.quantity - a.quantity);
-
-    // Convert to array and sort by count descending
-    const fulfillmentItems = Array.from(itemCounts.values())
-      .sort((a, b) => b.count - a.count);
 
     // Calculate production progress based on inStock items
     const totalItems = fulfillmentItems.length;

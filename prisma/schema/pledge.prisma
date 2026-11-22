@@ -207,7 +207,12 @@ model PledgeAddon {
 model PledgeModifierAssignment {
   id              String @id @default(cuid())
   pledgeId        String
-  rewardId        String // The base item being modified (tier or add-on reward)
+  rewardId        String // The reward the modified unit came from (tier or add-on)
+  // Which item inside that reward, when the reward is a bundle of
+  // ProjectItems ("The Rebel Box" holds covers SW3-22 and SW3-24: foil on
+  // which one?). Null for rewards with no item breakdown, and on rows from
+  // before this column existed (read as the reward's first eligible item).
+  projectItemId   String?
   modifierAddonId String // The modifier addon being applied (e.g., Upgrade to Metal)
   unitIndex       Int    @default(0) // Which copy of the modifier this row is (0-based)
 

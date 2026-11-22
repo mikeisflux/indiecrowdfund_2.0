@@ -80,6 +80,9 @@ export default function FillSurveyForBackerPage() {
   const [address, setAddress] = useState<Required<Address>>(EMPTY_ADDRESS);
   const [includeAddress, setIncludeAddress] = useState(true);
   const [notifyBacker, setNotifyBacker] = useState(true);
+  // Last save failure, kept on screen (a toast is easy to miss) with the
+  // server's reason so the creator can tell what to change.
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -109,6 +112,7 @@ export default function FillSurveyForBackerPage() {
   const save = async () => {
     if (!data) return;
     setSaving(true);
+    setSaveError(null);
     try {
       const res = await apiFetch(`/api/creator/indiekit/surveys/${pledgeId}`, {
         method: "PUT",
@@ -121,11 +125,13 @@ export default function FillSurveyForBackerPage() {
         },
       });
       const out = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(out.error || "Failed to save");
+      if (!res.ok) throw new Error(out.error || `Failed to save (HTTP ${res.status})`);
       toast.success(`Survey saved for ${data.pledge.backerName || data.pledge.backerEmail || "this backer"}`);
       router.push(`/dashboard/indiekit/survey/${pledgeId}`);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to save");
+      const message = err instanceof Error ? err.message : "Failed to save";
+      setSaveError(message);
+      toast.error(message, { duration: 10000 });
     } finally {
       setSaving(false);
     }
@@ -343,6 +349,13 @@ export default function FillSurveyForBackerPage() {
               )}
             </CardContent>
           </Card>
+
+          {saveError && (
+            <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800 dark:border-red-900 dark:bg-red-950/30 dark:text-red-200">
+              <p className="font-medium">The survey was not saved.</p>
+              <p className="mt-0.5">{saveError}</p>
+            </div>
+          )}
 
           <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border bg-muted/30 p-4">
             <label className="flex items-center gap-2 text-sm">

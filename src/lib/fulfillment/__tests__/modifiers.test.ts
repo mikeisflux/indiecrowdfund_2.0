@@ -4,88 +4,143 @@ import {
   eligibleTargets,
   forcedSelections,
   suggestFromText,
+  targetKey,
   validateSelections,
+  type EligibleTarget,
   type ModifierRewardShape,
 } from "../modifiers";
-import { comboSku, computeProductionCounts, defaultModifierSuffix, resolvePledgeLines, type SkuContext } from "../production-counts";
+import {
+  comboSku,
+  computeProductionCounts,
+  defaultModifierSuffix,
+  guessSkuFromTitle,
+  resolvePledgeLines,
+  type ProjectItemShape,
+  type SkuContext,
+} from "../production-counts";
 
-const R = (
-  id: string,
-  title: string,
-  type: "TIER" | "ADDON",
-  extra: Partial<ModifierRewardShape> = {},
-): ModifierRewardShape => ({ id, title, type, shippingType: "WORLDWIDE", isModifier: false, modifiesRewardIds: [], sku: null, modifierSkuSuffix: null, ...extra });
+// Items are the real product codes (ProjectItem titles), as creators set
+// them up in the campaign builder; rewards point at them through RewardItem.
+const ITEMS: ProjectItemShape[] = [
+  { id: "i18", title: "SW3-18", sku: null, inStock: false },
+  { id: "i22", title: "SW3-22", sku: null, inStock: false },
+  { id: "i24", title: "SW3-24", sku: null, inStock: true },
+  { id: "i12", title: "SW3-12", sku: null, inStock: false },
+  { id: "ibox", title: "SW3-BOX", sku: null, inStock: false },
+  { id: "icoin", title: "SW3-CC", sku: null, inStock: false },
+];
+const item = (id: string) => ({ projectItemId: id, title: ITEMS.find((i) => i.id === id)!.title });
+
+const R = (id: string, title: string, type: "TIER" | "ADDON", extra: Partial<ModifierRewardShape> = {}): ModifierRewardShape => ({
+  id,
+  title,
+  type,
+  shippingType: "WORLDWIDE",
+  isModifier: false,
+  modifiesRewardIds: [],
+  sku: null,
+  modifierSkuSuffix: null,
+  items: [],
+  ...extra,
+});
 
 const rewards = new Map<string, ModifierRewardShape>(
   [
-    R("t18", "SW3-18", "TIER", { sku: "SW3-18" }),
-    R("t24", "SW3-24", "TIER", { sku: "SW3-24" }),
+    R("t18", "SW3-18", "TIER", { items: [item("i18")] }),
+    R("t24", "SW3-24", "TIER", { items: [item("i24")] }),
+    R("tbox", "The Rebel Box", "TIER", { items: [item("ibox"), item("i22"), item("i24")] }),
     R("tdig", "Digital Deluxe", "TIER", { shippingType: "NO_SHIPPING" }),
-    R("a24", "SW3-24 (Add-on)", "ADDON", { sku: "SW3-24" }),
-    R("a12", "SW3-12 (Add-on)", "ADDON", { sku: "SW3-12" }),
-    R("coin", "Challenge Coin", "ADDON", { sku: "SW3-COIN" }),
+    R("a24", "SW3-24 (Add-on)", "ADDON", { items: [item("i24")] }),
+    R("a12", "SW3-12 (Add-on)", "ADDON", { items: [item("i12")] }),
+    R("coin", "Challenge Coin", "ADDON", { items: [item("icoin")] }),
+    R("plain", "Sticker Pack", "ADDON", { sku: "SW3-STK" }), // no item breakdown
     R("foil", "Upgrade to foil", "ADDON", { isModifier: true, modifierSkuSuffix: "-F" }),
-    R("metal", "Upgrade to metal", "ADDON", { isModifier: true, modifierSkuSuffix: "-M", modifiesRewardIds: ["t18"] }),
+    R("metal", "Upgrade to metal", "ADDON", { isModifier: true, modifierSkuSuffix: "-M", modifiesRewardIds: ["i18"] }),
   ].map((r) => [r.id, r]),
 );
 
-const ctx: SkuContext = { rewardsById: rewards, skuMappings: [], modifierSkuMappings: [] };
+const ctx: SkuContext = {
+  rewardsById: rewards,
+  projectItemsById: new Map(ITEMS.map((i) => [i.id, i])),
+  skuMappings: [],
+  modifierSkuMappings: [],
+};
+
+const T = (rewardId: string, projectItemId: string | null, title: string, quantity: number, kind: "tier" | "addon" = "addon"): EligibleTarget => ({
+  key: targetKey(rewardId, projectItemId),
+  rewardId,
+  projectItemId,
+  title,
+  imageUrl: null,
+  quantity,
+  kind,
+});
 
 describe("eligibleTargets", () => {
-  it("includes the tier and physical add-ons, never digital items or other modifiers", () => {
+  it("lists physical items of the tier and add-ons, never digital rewards or other modifiers", () => {
     const pledge = { id: "p", rewardId: "tdig", addons: [{ addonId: "a24", quantity: 4 }, { addonId: "foil", quantity: 4 }, { addonId: "coin", quantity: 1 }] };
     const targets = eligibleTargets(rewards.get("foil")!, pledge, rewards);
-    expect(targets.map((t) => t.rewardId)).toEqual(["a24", "coin"]);
-    expect(targets[0].quantity).toBe(4);
+    expect(targets.map((t) => [t.projectItemId, t.quantity])).toEqual([["i24", 4], ["icoin", 1]]);
   });
 
-  it("respects a narrowed modifiesRewardIds list", () => {
+  it("breaks a bundle reward into its items", () => {
+    const pledge = { id: "p", rewardId: "tbox", addons: [{ addonId: "foil", quantity: 1 }] };
+    const targets = eligibleTargets(rewards.get("foil")!, pledge, rewards);
+    expect(targets.map((t) => t.title)).toEqual(["SW3-BOX (from The Rebel Box)", "SW3-22 (from The Rebel Box)", "SW3-24 (from The Rebel Box)"]);
+  });
+
+  it("merges the same item held through two rewards", () => {
+    const pledge = { id: "p", rewardId: "t24", addons: [{ addonId: "a24", quantity: 2 }, { addonId: "foil", quantity: 1 }] };
+    const targets = eligibleTargets(rewards.get("foil")!, pledge, rewards);
+    expect(targets).toHaveLength(2); // tier's i24 and add-on's i24 are different reward sources
+    expect(targets.reduce((s, t) => s + t.quantity, 0)).toBe(3);
+  });
+
+  it("respects a narrowed eligibility list of item ids or reward ids", () => {
     const pledge = { id: "p", rewardId: "t24", addons: [{ addonId: "a12", quantity: 1 }, { addonId: "metal", quantity: 1 }] };
     expect(eligibleTargets(rewards.get("metal")!, pledge, rewards)).toEqual([]);
     const pledge2 = { id: "p", rewardId: "t18", addons: [{ addonId: "metal", quantity: 1 }] };
-    expect(eligibleTargets(rewards.get("metal")!, pledge2, rewards).map((t) => t.rewardId)).toEqual(["t18"]);
+    expect(eligibleTargets(rewards.get("metal")!, pledge2, rewards).map((t) => t.projectItemId)).toEqual(["i18"]);
   });
 });
 
 describe("forcedSelections / buildModifierQuestions", () => {
   it("auto-assigns when copies held equal upgrades bought", () => {
-    expect(forcedSelections([{ rewardId: "t18", title: "SW3-18", imageUrl: null, quantity: 1, kind: "tier" }], 1)).toEqual(["t18"]);
-    expect(forcedSelections([{ rewardId: "a24", title: "x", imageUrl: null, quantity: 4, kind: "addon" }], 4)).toEqual(["a24", "a24", "a24", "a24"]);
-    expect(forcedSelections([{ rewardId: "a24", title: "x", imageUrl: null, quantity: 4, kind: "addon" }], 2)).toBeNull();
+    expect(forcedSelections([T("t18", "i18", "SW3-18", 1, "tier")], 1)).toEqual([targetKey("t18", "i18")]);
+    expect(forcedSelections([T("a24", "i24", "x", 4)], 4)).toEqual(Array(4).fill(targetKey("a24", "i24")));
+    expect(forcedSelections([T("a24", "i24", "x", 4)], 2)).toBeNull();
   });
 
-  it("asks one pick per copy when there is a real choice", () => {
+  it("asks one pick per copy and reads legacy reward-only rows as the reward's item", () => {
     const pledge = {
       id: "p",
       rewardId: "t18",
       addons: [{ addonId: "a24", quantity: 2 }, { addonId: "foil", quantity: 2 }],
-      modifierAssignments: [{ rewardId: "a24", modifierAddonId: "foil", unitIndex: 1, source: "SURVEY" }],
+      modifierAssignments: [{ rewardId: "a24", projectItemId: null, modifierAddonId: "foil", unitIndex: 1, source: "SURVEY" }],
     };
     const [q] = buildModifierQuestions(pledge, rewards);
     expect(q.auto).toBe(false);
     expect(q.quantity).toBe(2);
-    expect(q.selections).toEqual([null, "a24"]);
+    expect(q.selections).toEqual([null, targetKey("a24", "i24")]);
     expect(q.source).toBe("SURVEY");
   });
 });
 
 describe("validateSelections", () => {
-  const q = { title: "Upgrade to foil", quantity: 2, targets: [{ rewardId: "t18", title: "SW3-18", imageUrl: null, quantity: 1, kind: "tier" as const }, { rewardId: "a24", title: "SW3-24 (Add-on)", imageUrl: null, quantity: 1, kind: "addon" as const }] };
-  it("requires every copy", () => expect(validateSelections(q, ["t18", null])).toMatch(/2 needed/));
-  it("rejects upgrading the same single copy twice", () => expect(validateSelections(q, ["t18", "t18"])).toMatch(/only have 1/));
-  it("accepts a valid spread", () => expect(validateSelections(q, ["t18", "a24"])).toBeNull());
+  const q = { title: "Upgrade to foil", quantity: 2, targets: [T("t18", "i18", "SW3-18", 1, "tier"), T("a24", "i24", "SW3-24 (Add-on)", 1)] };
+  const k18 = targetKey("t18", "i18");
+  const k24 = targetKey("a24", "i24");
+  it("requires every copy", () => expect(validateSelections(q, [k18, null])).toMatch(/2 needed/));
+  it("rejects upgrading the same single copy twice", () => expect(validateSelections(q, [k18, k18])).toMatch(/only have 1/));
+  it("accepts a valid spread", () => expect(validateSelections(q, [k18, k24])).toBeNull());
 });
 
 describe("suggestFromText", () => {
-  const targets = [
-    { rewardId: "t18", title: "SW3-18", imageUrl: null, quantity: 1, kind: "tier" as const },
-    { rewardId: "a24", title: "SW3-24 (Add-on)", imageUrl: null, quantity: 1, kind: "addon" as const },
-    { rewardId: "a12", title: "SW3-12 (Add-on)", imageUrl: null, quantity: 1, kind: "addon" as const },
-  ];
+  const targets = [T("t18", "i18", "SW3-18", 1, "tier"), T("a24", "i24", "SW3-24 (Add-on)", 1), T("a12", "i12", "SW3-12 (Add-on)", 1)];
   it("reads codes and bare numbers out of free text", () => {
-    expect(suggestFromText("Sw3 12, 18 & 24", targets, 3, rewards).sort()).toEqual(["a12", "a24", "t18"]);
-    expect(suggestFromText("18", targets, 1, rewards)).toEqual(["t18"]);
-    expect(suggestFromText("SW3-24 please", targets, 1, rewards)).toEqual(["a24"]);
+    expect(suggestFromText("Sw3 12, 18 & 24", targets, 3, rewards).sort()).toEqual([targetKey("a12", "i12"), targetKey("a24", "i24"), targetKey("t18", "i18")].sort());
+    expect(suggestFromText("18", targets, 1, rewards)).toEqual([targetKey("t18", "i18")]);
+    expect(suggestFromText("SW3-24 please", targets, 1, rewards)).toEqual([targetKey("a24", "i24")]);
     expect(suggestFromText("LTD Jeweled Metal Cover", targets, 1, rewards)).toEqual([]);
   });
 });
@@ -97,17 +152,37 @@ describe("resolvePledgeLines / computeProductionCounts", () => {
       rewardId: "t18",
       addons: [{ addonId: "a24", quantity: 4 }, { addonId: "foil", quantity: 3 }],
       modifierAssignments: [
-        { rewardId: "a24", modifierAddonId: "foil", unitIndex: 0 },
-        { rewardId: "t18", modifierAddonId: "foil", unitIndex: 1 },
+        { rewardId: "a24", projectItemId: "i24", modifierAddonId: "foil", unitIndex: 0 },
+        { rewardId: "t18", projectItemId: "i18", modifierAddonId: "foil", unitIndex: 1 },
       ],
     };
     const lines = resolvePledgeLines(pledge, ctx);
-    const byKey = Object.fromEntries(lines.map((l) => [l.key, l]));
-    expect(byKey["t18"]).toBeUndefined(); // the only SW3-18 became foil
-    expect(byKey["t18+foil"]).toMatchObject({ sku: "SW3-18-F", quantity: 1, skuDerived: true });
-    expect(byKey["a24"]).toMatchObject({ sku: "SW3-24", quantity: 3 });
-    expect(byKey["a24+foil"]).toMatchObject({ sku: "SW3-24-F", quantity: 1 });
-    expect(byKey["unassigned:foil"]).toMatchObject({ kind: "unassigned_upgrade", quantity: 1 });
+    const bySku = Object.fromEntries(lines.map((l) => [l.sku ?? l.key, l]));
+    expect(bySku["SW3-18"]).toBeUndefined(); // the only SW3-18 became foil
+    expect(bySku["SW3-18-F"]).toMatchObject({ kind: "upgrade", quantity: 1, skuDerived: true, baseProjectItemId: "i18" });
+    expect(bySku["SW3-24"]).toMatchObject({ quantity: 3 });
+    expect(bySku["SW3-24-F"]).toMatchObject({ quantity: 1 });
+    expect(bySku["unassigned:foil"]).toMatchObject({ kind: "unassigned_upgrade", quantity: 1 });
+  });
+
+  it("upgrades one item inside a bundle, leaving the rest of the bundle alone", () => {
+    const pledge = {
+      id: "p",
+      rewardId: "tbox",
+      addons: [{ addonId: "foil", quantity: 1 }],
+      modifierAssignments: [{ rewardId: "tbox", projectItemId: "i22", modifierAddonId: "foil", unitIndex: 0 }],
+    };
+    const skus = resolvePledgeLines(pledge, ctx).map((l) => `${l.sku}×${l.quantity}`);
+    expect(skus.sort()).toEqual(["SW3-22-F×1", "SW3-24×1", "SW3-BOX×1"]);
+  });
+
+  it("uses the upgraded edition's own item once it exists", () => {
+    const withVariant: SkuContext = {
+      ...ctx,
+      projectItemsById: new Map([...ctx.projectItemsById, ["v", { id: "v", title: "SW3-18-F", sku: "SW3-18-FOIL", inStock: true, upgradeOfItemId: "i18", upgradeModifierId: "foil" }]]),
+    };
+    const pledge = { id: "p", rewardId: "t18", addons: [{ addonId: "foil", quantity: 1 }], modifierAssignments: [{ rewardId: "t18", projectItemId: "i18", modifierAddonId: "foil", unitIndex: 0 }] };
+    expect(resolvePledgeLines(pledge, withVariant).find((l) => l.kind === "upgrade")).toMatchObject({ sku: "SW3-18-FOIL", projectItemId: "v", skuDerived: false });
   });
 
   it("derives the suffix from the upgrade's name when none is set", () => {
@@ -116,43 +191,30 @@ describe("resolvePledgeLines / computeProductionCounts", () => {
     noSuffix.set("rm", R("rm", "Upgrade to Raised Metal", "ADDON", { isModifier: true }));
     noSuffix.set("gitd", R("gitd", "Upgrade to glow in the dark", "ADDON", { isModifier: true }));
     const c = { ...ctx, rewardsById: noSuffix };
-    expect(comboSku("t18", "foil", c).sku).toBe("SW3-18-F");
-    expect(comboSku("t18", "rm", c).sku).toBe("SW3-18-RM");
-    expect(comboSku("t18", "gitd", c).sku).toBe("SW3-18-GD");
+    expect(comboSku("t18", "i18", "foil", c).sku).toBe("SW3-18-F");
+    expect(comboSku("t18", "i18", "rm", c).sku).toBe("SW3-18-RM");
+    expect(comboSku("t18", "i18", "gitd", c).sku).toBe("SW3-18-GD");
+    expect(comboSku("plain", null, "foil", c).sku).toBe("SW3-STK-F");
     expect(defaultModifierSuffix("Upgrade")).toBeNull();
   });
 
-  it("merges tier and add-on copies of one SKU into a single production line", () => {
-    const a = { id: "a", rewardId: "t24", addons: [{ addonId: "a24", quantity: 2 }], modifierAssignments: [], surveyComplete: true };
-    const b = { id: "b", rewardId: "t24", addons: [{ addonId: "foil", quantity: 1 }], modifierAssignments: [{ rewardId: "t24", modifierAddonId: "foil", unitIndex: 0 }], surveyComplete: true };
-    const c = { id: "c", rewardId: "t18", addons: [{ addonId: "a24", quantity: 1 }, { addonId: "foil", quantity: 1 }], modifierAssignments: [{ rewardId: "a24", modifierAddonId: "foil", unitIndex: 0 }], surveyComplete: true };
+  it("merges tier and add-on copies of one SKU and subtracts shipped and pushed units", () => {
+    const a = { id: "a", rewardId: "t24", addons: [{ addonId: "a24", quantity: 2 }], modifierAssignments: [], surveyComplete: true, fulfillmentStatus: "SHIPPED", orderLockStatus: "LOCKED" };
+    const b = { id: "b", rewardId: "t24", addons: [{ addonId: "foil", quantity: 1 }], modifierAssignments: [{ rewardId: "t24", projectItemId: "i24", modifierAddonId: "foil", unitIndex: 0 }], surveyComplete: true, fulfillmentStatus: "IN_PROGRESS" };
+    const c = { id: "c", rewardId: "t18", addons: [{ addonId: "a24", quantity: 1 }, { addonId: "foil", quantity: 1 }], modifierAssignments: [{ rewardId: "a24", projectItemId: "i24", modifierAddonId: "foil", unitIndex: 0 }], surveyComplete: false, fulfillmentStatus: "NOT_STARTED" };
     const lines = computeProductionCounts([a, b, c], ctx);
     const base = lines.find((l) => l.sku === "SW3-24")!;
-    expect(base).toMatchObject({ total: 3, backers: 1, kind: "tier" });
-    expect(base.titles.sort()).toEqual(["SW3-24", "SW3-24 (Add-on)"]);
+    expect(base).toMatchObject({ total: 3, shipped: 3, pushed: 0, locked: 3, toProduce: 0, backers: 1, kind: "tier", projectItemId: "i24" });
+    expect(base.titles.sort()).toEqual(["SW3-24"]);
     const foil = lines.find((l) => l.sku === "SW3-24-F")!;
-    expect(foil).toMatchObject({ total: 2, backers: 2, kind: "upgrade", label: "SW3-24 + Upgrade to foil" });
+    expect(foil).toMatchObject({ total: 2, shipped: 0, pushed: 1, toProduce: 1, backers: 2, kind: "upgrade", label: "SW3-24 + Upgrade to foil", confirmed: 1, pending: 1 });
     expect(lines.filter((l) => l.sku === "SW3-24-F")).toHaveLength(1);
-  });
-
-  it("prefers an explicit modifier SKU mapping over the derived code", () => {
-    const mapped: SkuContext = { ...ctx, modifierSkuMappings: [{ baseRewardId: "t18", modifierAddonId: "foil", shopifySku: "SW3-18-FOIL-LTD" }] };
-    const pledge = { id: "p", rewardId: "t18", addons: [{ addonId: "foil", quantity: 1 }], modifierAssignments: [{ rewardId: "t18", modifierAddonId: "foil", unitIndex: 0 }] };
-    expect(resolvePledgeLines(pledge, mapped).find((l) => l.kind === "upgrade")).toMatchObject({ sku: "SW3-18-FOIL-LTD", skuDerived: false });
-  });
-
-  it("splits confirmed and pending by survey completion", () => {
-    const done = { id: "a", rewardId: "t18", addons: [], modifierAssignments: [], surveyComplete: true };
-    const open = { id: "b", rewardId: "t18", addons: [{ addonId: "coin", quantity: 2 }], modifierAssignments: [], surveyComplete: false };
-    const lines = computeProductionCounts([done, open], ctx);
-    expect(lines.find((l) => l.sku === "SW3-18")).toMatchObject({ confirmed: 1, pending: 1, total: 2, backers: 2 });
-    expect(lines.find((l) => l.sku === "SW3-COIN")).toMatchObject({ confirmed: 0, pending: 2, total: 2 });
+    expect(lines.find((l) => l.sku === "SW3-18")).toMatchObject({ total: 1, toProduce: 1 });
   });
 });
 
 describe("guessSkuFromTitle", () => {
-  it("pulls a product code out of an item name", async () => {
-    const { guessSkuFromTitle } = await import("../production-counts");
+  it("pulls a product code out of an item name", () => {
     expect(guessSkuFromTitle("SW3-18")).toBe("SW3-18");
     expect(guessSkuFromTitle("SW3-18 (Add-on)")).toBe("SW3-18");
     expect(guessSkuFromTitle("Lady Darth #1 CLEAN LD1-01")).toBe("LD1-01");

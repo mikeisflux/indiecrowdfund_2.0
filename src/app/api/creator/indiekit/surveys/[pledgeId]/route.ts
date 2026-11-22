@@ -55,7 +55,7 @@ export async function GET(
           },
         },
         modifierAssignments: {
-          select: { id: true, rewardId: true, modifierAddonId: true, unitIndex: true, source: true },
+          select: { id: true, rewardId: true, projectItemId: true, modifierAddonId: true, unitIndex: true, source: true },
         },
         user: {
           select: { name: true, email: true },
@@ -161,7 +161,7 @@ export async function GET(
     await autoAssignPledge(pledge, rewardsById);
     const freshRows = await db.pledgeModifierAssignment.findMany({
       where: { pledgeId },
-      select: { id: true, rewardId: true, modifierAddonId: true, unitIndex: true, source: true },
+      select: { id: true, rewardId: true, projectItemId: true, modifierAddonId: true, unitIndex: true, source: true },
     });
     const modifierQuestions = buildModifierQuestions({ ...pledge, modifierAssignments: freshRows }, rewardsById);
     const isModifierReward = (rewardId: string) => !!rewardsById.get(rewardId)?.isModifier;
@@ -312,9 +312,25 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ pled
     });
     if (!survey) return NextResponse.json({ error: "This campaign has no survey yet. Build one in Pledge Manager first." }, { status: 400 });
 
-    const parsed = fillSchema.safeParse(await req.json().catch(() => ({})));
-    if (!parsed.success) return NextResponse.json({ error: "Invalid survey data", details: parsed.error.flatten().fieldErrors }, { status: 400 });
+    const raw = await req.json().catch(() => null);
+    if (!raw) {
+      creatorIndiekitSurveysLogger.warn({ pledgeId, actor: session.user.id }, "Creator survey fill: empty or unparseable body");
+      return NextResponse.json({ error: "Nothing was sent to save. Reload the page and try again." }, { status: 400 });
+    }
+    const parsed = fillSchema.safeParse(raw);
+    if (!parsed.success) {
+      const fieldErrors = parsed.error.flatten().fieldErrors;
+      creatorIndiekitSurveysLogger.warn({ pledgeId, actor: session.user.id, fieldErrors }, "Creator survey fill rejected");
+      const where = Object.entries(fieldErrors)
+        .map(([k, v]) => `${k}: ${(v as string[] | undefined)?.[0] ?? "invalid"}`)
+        .join("; ");
+      return NextResponse.json({ error: `Couldn't save: ${where || "invalid survey data"}`, details: fieldErrors }, { status: 400 });
+    }
     const data = parsed.data;
+    creatorIndiekitSurveysLogger.info(
+      { pledgeId, actor: session.user.id, items: Object.keys(data.itemResponses ?? {}).length, upgrades: Object.keys(data.modifierSelections ?? {}).length, address: !!data.shippingAddress },
+      "Creator survey fill received"
+    );
 
     // Upgrade picks, same rules as the backer's own survey. Items with
     // nothing eligible are skipped rather than blocking the save.
@@ -324,7 +340,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ pled
         id: true,
         rewardId: true,
         addons: { select: { addonId: true, quantity: true } },
-        modifierAssignments: { select: { id: true, rewardId: true, modifierAddonId: true, unitIndex: true, source: true } },
+        modifierAssignments: { select: { id: true, rewardId: true, projectItemId: true, modifierAddonId: true, unitIndex: true, source: true } },
       },
     });
     const rewardsById = await loadProjectRewardMap(pledge.projectId);
@@ -436,9 +452,11 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ pled
       }).catch((err: unknown) => creatorIndiekitSurveysLogger.warn({ err: String(err), pledgeId }, "backer notice for creator-filled survey failed"));
     }
 
+    creatorIndiekitSurveysLogger.info({ pledgeId, actor: session.user.id, responseId: response.id }, "Creator survey fill saved");
     return NextResponse.json({ ok: true, isComplete: true, completedBy: "CREATOR" });
   } catch (error) {
     creatorIndiekitSurveysLogger.error({ err: formatError(error) }, "Error filling survey for backer:");
-    return NextResponse.json({ error: "Failed to save survey" }, { status: 500 });
+    const message = error instanceof Error ? error.message : "";
+    return NextResponse.json({ error: `Failed to save survey${message ? `: ${message.slice(0, 200)}` : ""}` }, { status: 500 });
   }
 }

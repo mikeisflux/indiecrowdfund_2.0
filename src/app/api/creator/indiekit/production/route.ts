@@ -11,7 +11,7 @@ import {
   validateSelections,
   type ModifierQuestion,
 } from "@/lib/fulfillment/modifiers";
-import { autoAssignPledge, loadProjectRewardMap, writeAssignments } from "@/lib/fulfillment/modifiers-db";
+import { autoAssignPledge, ensureUpgradeVariantItems, loadProjectRewardMap, loadSkuContext, writeAssignments } from "@/lib/fulfillment/modifiers-db";
 import {
   computeProductionCounts,
   computeVariantCounts,
@@ -55,9 +55,10 @@ const PLEDGE_SELECT = {
   rewardId: true,
   surveyCompleted: true,
   orderLockStatus: true,
+  fulfillmentStatus: true,
   user: { select: { name: true, email: true } },
   addons: { select: { addonId: true, quantity: true } },
-  modifierAssignments: { select: { id: true, rewardId: true, modifierAddonId: true, unitIndex: true, source: true } },
+  modifierAssignments: { select: { id: true, rewardId: true, projectItemId: true, modifierAddonId: true, unitIndex: true, source: true } },
   surveyResponse: { select: { isComplete: true, itemResponses: true } },
 } as const;
 
@@ -67,26 +68,12 @@ type PledgeRow = {
   rewardId: string | null;
   surveyCompleted: boolean;
   orderLockStatus: string;
+  fulfillmentStatus: string | null;
   user: { name: string | null; email: string | null };
   addons: { addonId: string; quantity: number }[];
-  modifierAssignments: { id: string; rewardId: string; modifierAddonId: string; unitIndex: number; source: string | null }[];
+  modifierAssignments: { id: string; rewardId: string; projectItemId: string | null; modifierAddonId: string; unitIndex: number; source: string | null }[];
   surveyResponse: { isComplete: boolean; itemResponses: unknown } | null;
 };
-
-async function loadSkuContext(projectId: string): Promise<SkuContext> {
-  const [rewardsById, skuMappings, modifierSkuMappings] = await Promise.all([
-    loadProjectRewardMap(projectId),
-    db.shopifySkuMapping.findMany({
-      where: { projectId },
-      select: { sourceType: true, sourceId: true, shopifySku: true, shopifyVariantId: true, quantity: true },
-    }),
-    db.modifierSkuMapping.findMany({
-      where: { projectId },
-      select: { baseRewardId: true, modifierAddonId: true, shopifySku: true, shopifyVariantId: true },
-    }),
-  ]);
-  return { rewardsById, skuMappings, modifierSkuMappings };
-}
 
 /**
  * The old free-text answer for a modifier add-on's item question ("which
@@ -126,7 +113,9 @@ export async function GET(req: NextRequest) {
     const project = await projectForUser(projectId, session.user.id);
     if (!project) return NextResponse.json({ error: "Project not found or access denied" }, { status: 404 });
 
-    const ctx = await loadSkuContext(projectId);
+    // Upgraded editions ("SW3-22-F") become items of their own the first
+    // time they are needed, so the production order can track their stock.
+    const { ctx } = await ensureUpgradeVariantItems(projectId);
     const survey = await db.survey.findUnique({
       where: { projectId },
       select: {
@@ -150,7 +139,7 @@ export async function GET(req: NextRequest) {
       await autoAssignPledge(pledge, ctx.rewardsById);
       const rows = await db.pledgeModifierAssignment.findMany({
         where: { pledgeId },
-        select: { id: true, rewardId: true, modifierAddonId: true, unitIndex: true, source: true },
+        select: { id: true, rewardId: true, projectItemId: true, modifierAddonId: true, unitIndex: true, source: true },
       });
       const questions = buildModifierQuestions({ ...pledge, modifierAssignments: rows }, ctx.rewardsById).map((q) => decorate(q, pledge, itemQuestions, ctx));
       return NextResponse.json({ questions });
@@ -215,9 +204,14 @@ export async function GET(req: NextRequest) {
         shippingType: r.shippingType ?? null,
       }));
 
+    const projectItems = Array.from(ctx.projectItemsById.values())
+      .filter((i) => !i.upgradeOfItemId)
+      .map((i) => ({ id: i.id, title: i.title, sku: i.sku ?? null, inStock: !!i.inStock }));
+
     const surveysComplete = forCounts.filter((p) => p.surveyComplete).length;
     return NextResponse.json({
       lines,
+      projectItems,
       variantLines: variants.lines,
       variantUnanswered: variants.unanswered,
       unresolved,
@@ -230,6 +224,9 @@ export async function GET(req: NextRequest) {
         unresolvedBackers: unresolved.length,
         unitsConfirmed: lines.filter((l) => l.kind !== "unassigned_upgrade").reduce((s, l) => s + l.confirmed, 0),
         unitsPending: lines.filter((l) => l.kind !== "unassigned_upgrade").reduce((s, l) => s + l.pending, 0),
+        unitsShipped: lines.filter((l) => l.kind !== "unassigned_upgrade").reduce((s, l) => s + l.shipped, 0),
+        unitsPushed: lines.filter((l) => l.kind !== "unassigned_upgrade").reduce((s, l) => s + l.pushed, 0),
+        unitsToProduce: lines.filter((l) => l.kind !== "unassigned_upgrade").reduce((s, l) => s + l.toProduce, 0),
         missingSku: lines.filter((l) => l.kind !== "unassigned_upgrade" && !l.sku).length,
       },
     });
@@ -251,7 +248,7 @@ function decorate(
     ...q,
     legacyAnswer: legacy,
     suggested,
-    targets: q.targets.map((t) => ({ ...t, sku: comboSku(t.rewardId, q.modifierAddonId, ctx).sku })),
+    targets: q.targets.map((t) => ({ ...t, sku: comboSku(t.rewardId, t.projectItemId, q.modifierAddonId, ctx).sku })),
   };
 }
 
@@ -311,6 +308,7 @@ export async function POST(req: NextRequest) {
       const fresh = (await db.pledge.findFirst({ where: { id: pledge.id }, select: PLEDGE_SELECT })) as PledgeRow;
       const stillOpen = buildModifierQuestions(fresh, rewardsById).some((x) => !x.auto && x.selections.some((s) => s === null));
       await db.pledge.update({ where: { id: pledge.id }, data: { needsModifierAssignment: stillOpen } });
+      await ensureUpgradeVariantItems(projectId);
       return NextResponse.json({ success: true, needsModifierAssignment: stillOpen });
     }
 
@@ -327,6 +325,7 @@ export async function POST(req: NextRequest) {
         assigned += r.assigned;
         unresolved += r.unresolved;
       }
+      await ensureUpgradeVariantItems(projectId);
       return NextResponse.json({ success: true, assigned, unresolved });
     }
 
@@ -343,8 +342,13 @@ export async function POST(req: NextRequest) {
       if (!addon) return NextResponse.json({ error: "Add-on not found" }, { status: 404 });
       const modifiesRewardIds = body.modifiesRewardIds ?? [];
       if (modifiesRewardIds.length) {
-        const count = await db.reward.count({ where: { id: { in: modifiesRewardIds }, projectId } });
-        if (count !== new Set(modifiesRewardIds).size) return NextResponse.json({ error: "Eligible items must belong to this campaign" }, { status: 400 });
+        // Eligible ids may be rewards or project items of this campaign.
+        const ids = Array.from(new Set(modifiesRewardIds));
+        const [rewardCount, itemCount] = await Promise.all([
+          db.reward.count({ where: { id: { in: ids }, projectId } }),
+          db.projectItem.count({ where: { id: { in: ids }, projectId } }),
+        ]);
+        if (rewardCount + itemCount !== ids.length) return NextResponse.json({ error: "Eligible items must belong to this campaign" }, { status: 400 });
       }
       // No suffix typed → the one implied by the name ("Upgrade to foil" →
       // "-F"), persisted so it is visible and editable, never silently
@@ -375,6 +379,7 @@ export async function POST(req: NextRequest) {
           select: PLEDGE_SELECT,
         })) as PledgeRow[];
         for (const p of pledges) assigned += (await autoAssignPledge(p, rewardsById)).assigned;
+        await ensureUpgradeVariantItems(projectId);
       }
       return NextResponse.json({ success: true, assigned });
     }

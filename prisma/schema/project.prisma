@@ -236,6 +236,13 @@ model ProjectItem {
   title        String
   sku          String? // Editable SKU for fulfillment, defaults to item title in UI
   inStock      Boolean   @default(false) // Whether this item has been produced/received
+  // An upgraded edition of another item, created automatically the first
+  // time an upgrade add-on is assigned to it ("SW3-22" + "Upgrade to foil"
+  // → "SW3-22-F"). Gives the upgraded product its own production-order row
+  // and in-stock toggle. Hidden from the campaign builder's item list.
+  // Added by migrations/add_item_level_upgrades.sql.
+  upgradeOfItemId   String?
+  upgradeModifierId String?
   description  String?   @db.Text
   imageUrl     String?
   endedAt      DateTime? // If set, item is no longer available for new pledges
@@ -248,6 +255,7 @@ model ProjectItem {
   project     Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
   rewardItems RewardItem[]
 
+  @@unique([projectId, upgradeOfItemId, upgradeModifierId])
   @@index([projectId])
 }
 
