@@ -156,7 +156,7 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     ...baseMetadata,
     ...overrides,
-    icons: { icon: branding.faviconUrl || "/favicon.ico" },
+    icons: { icon: branding.faviconUrl || "/favicon.ico", apple: "/apple-touch-icon.png" },
   };
 }
 

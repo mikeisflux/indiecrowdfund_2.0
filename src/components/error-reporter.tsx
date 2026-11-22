@@ -135,6 +135,9 @@ export function ErrorReporter() {
       /TypeError: Failed to fetch/,
       /TypeError: NetworkError/,
       /Load failed/,
+      // Safari's wording for the same thing (dropped wifi, VPN hop, tab
+      // backgrounded mid-request). Nothing of ours to fix.
+      /A network error occurred\.?$/,
       // Safari: a dynamic import() for a route chunk was cancelled because
       // the user navigated away (or hit back) before it finished loading.
       /Importing a module script is canceled/,
@@ -209,6 +212,14 @@ export function ErrorReporter() {
       // security.txt, GPC, change-password, etc.). Real users never
       // navigate to /.well-known/anything. 404s here are always bot probes.
       /\/\.well-known\//,
+      // Icons iOS/Safari/Android request on their own regardless of what
+      // <head> declares. /apple-touch-icon.png is now served; the sized
+      // and precomposed variants are not and never will be.
+      /\/apple-touch-icon(-precomposed)?(-\d+x\d+)?\.png$/,
+      /\/favicon(-\d+x\d+)?\.(png|ico)$/,
+      /\/android-chrome-\d+x\d+\.png$/,
+      /\/site\.webmanifest$/,
+      /\/browserconfig\.xml$/,
       // IAB / programmatic ads (WebPageTest, Pingdom, ad network probes)
       /\/ads\.txt$/,
       /\/sellers\.json$/,

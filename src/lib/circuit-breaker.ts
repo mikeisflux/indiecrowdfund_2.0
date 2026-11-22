@@ -42,6 +42,9 @@ const DEFAULT_CONFIG: CircuitConfig = {
   failureWindowMs: 60_000, // 1 minute
 };
 
+// Dependencies whose outage degrades nothing a visitor sees.
+const NON_CRITICAL_SERVICES = new Set(["ip-geo"]);
+
 const SERVICE_CONFIGS: Record<string, Partial<CircuitConfig>> = {
   stripe: { failureThreshold: 5, cooldownMs: 30_000 },
   sendgrid: { failureThreshold: 3, cooldownMs: 60_000 },
@@ -139,10 +142,15 @@ class CircuitBreaker {
     } else if (circuit.failures >= config.failureThreshold) {
       circuit.state = "OPEN";
       circuit.openedAt = now;
-      logger.error(
-        { service, failures: circuit.failures, threshold: config.failureThreshold },
-        "Circuit breaker opened"
-      );
+      // Opening is the breaker doing its job. For a best-effort dependency
+      // (IP geolocation for analytics) that is a warning: nothing a user
+      // sees changes. For a payment or email dependency it pages.
+      const detail = { service, failures: circuit.failures, threshold: config.failureThreshold, lastError: error instanceof Error ? error.message : String(error) };
+      if (NON_CRITICAL_SERVICES.has(service)) {
+        logger.warn(detail, `Circuit breaker opened: ${service} (non-critical, requests skipped for cooldown)`);
+      } else {
+        logger.error(detail, `Circuit breaker opened: ${service}`);
+      }
     }
   }
 
