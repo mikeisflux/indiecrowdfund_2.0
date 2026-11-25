@@ -1,8 +1,16 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useTheme } from "next-themes";
 import { Loader2 } from "lucide-react";
 import { apiFetch } from "@/lib/fetch-utils";
+import {
+  checkoutThemeMessage,
+  readSiteCheckoutTheme,
+  sameCheckoutTheme,
+  withCheckoutTheme,
+  type CheckoutTheme,
+} from "@/lib/payments/divinitycoin/checkout-theme";
 
 // Embeds DC's white-label hosted checkout page in an iframe on our
 // pledge step so the user never visually leaves indiecrowdfund.com.
@@ -38,6 +46,14 @@ import { apiFetch } from "@/lib/fetch-utils";
 // DC's success page with no way back (and our wizard would still
 // show the broken iframe). The frame-ancestors allowlist on DC's
 // side is the actual fix; this component depends on that working.
+//
+// Theming: the checkout matches our page. Colours are read from the
+// live CSS tokens (see lib/payments/divinitycoin/checkout-theme.ts) and
+// sent twice — on the iframe URL (no flash of DC's light theme, and the
+// only channel that survives DC's iOS "Continue securely" handoff) and
+// as a `theme` postMessage on every `ready` plus whenever the visitor
+// flips our light/dark toggle. The URL is fixed once at mount: changing
+// an iframe's src reloads it, which would wipe a half-typed card.
 
 interface DCHostedCheckoutFrameProps {
   checkoutUrl: string;
@@ -83,6 +99,34 @@ export default function DCHostedCheckoutFrame({
   // Latch so a late-arriving duplicate complete (rare DC retry) doesn't
   // double-fire onSuccess / onFailure.
   const finishedRef = useRef(false);
+  const iframeRef = useRef<HTMLIFrameElement>(null);
+
+  // Site colours at mount, baked into the iframe URL exactly once.
+  const [theme, setTheme] = useState<CheckoutTheme | null>(() => readSiteCheckoutTheme("iframe"));
+  const [themedUrl] = useState(() => withCheckoutTheme(checkoutUrl, theme));
+  const { resolvedTheme } = useTheme();
+
+  // Re-read the tokens when the visitor toggles light/dark. next-themes
+  // flips the <html> class in the same pass it updates resolvedTheme, so
+  // computed styles are already the new palette here.
+  useEffect(() => {
+    const next = readSiteCheckoutTheme("iframe");
+    setTheme((prev) => (sameCheckoutTheme(prev, next) ? prev : next));
+  }, [resolvedTheme]);
+
+  const postTheme = useCallback(
+    (t: CheckoutTheme | null) => {
+      iframeRef.current?.contentWindow?.postMessage(checkoutThemeMessage(t), DC_ORIGIN);
+    },
+    []
+  );
+
+  // Push the theme into the frame whenever it changes after the frame
+  // is up. The `ready` handler covers the initial send (and every reload
+  // DC does, e.g. after a 3D Secure round-trip).
+  useEffect(() => {
+    if (iframeReady) postTheme(theme);
+  }, [iframeReady, theme, postTheme]);
 
   const handleComplete = useCallback(
     async (status: "complete" | "failed" | "expired" | "canceled") => {
@@ -155,6 +199,10 @@ export default function DCHostedCheckoutFrame({
       const msg = event.data;
 
       if (msg.type === "ready") {
+        // DC sends `ready` on every load of the frame, including after
+        // 3DS; answering each one keeps the theme applied. The message
+        // wins over the URL params and any earlier message.
+        postTheme(theme);
         setIframeReady(true);
         return;
       }
@@ -183,7 +231,7 @@ export default function DCHostedCheckoutFrame({
 
     window.addEventListener("message", handler);
     return () => window.removeEventListener("message", handler);
-  }, [sessionId, handleComplete]);
+  }, [sessionId, handleComplete, postTheme, theme]);
 
   // Polling fallback. DC's "complete" postMessage occasionally never
   // reaches us (origin mismatch, sessionId rotation, mobile webview that
@@ -253,7 +301,8 @@ export default function DCHostedCheckoutFrame({
           </div>
         )}
         <iframe
-          src={checkoutUrl}
+          ref={iframeRef}
+          src={themedUrl}
           title="Secure checkout"
           allow="payment *; publickey-credentials-get *"
           className="block w-full"

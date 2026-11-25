@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { ExternalLink, Loader2, Lock, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { readSiteCheckoutTheme, withCheckoutTheme } from "@/lib/payments/divinitycoin/checkout-theme";
 
 // The non-iframe DivinityCoin checkout: hand the whole browser to DC's
 // hosted page and let DC send it back to the pledge page's returnUrl
@@ -18,12 +19,17 @@ import { Button } from "@/components/ui/button";
 // A button rather than an automatic navigation: the Grant Program terms
 // and statement-descriptor checks above this must be ticked first, and a
 // page that jumps away on its own the moment they are looks like a hijack.
+//
+// The site's colours ride along on the URL (bg/text/accent, read from the
+// page's CSS tokens at the moment of the tap) so DC's page looks like the
+// one the backer just left. There is no iframe here, so the query params
+// are the only channel.
 export function DCHostedCheckoutRedirect({ checkoutUrl, total }: { checkoutUrl: string; total: number }) {
   const [leaving, setLeaving] = useState(false);
 
   const go = () => {
     setLeaving(true);
-    window.location.assign(checkoutUrl);
+    window.location.assign(withCheckoutTheme(checkoutUrl, readSiteCheckoutTheme("redirect")));
   };
 
   return (
