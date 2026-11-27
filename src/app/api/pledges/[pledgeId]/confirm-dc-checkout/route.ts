@@ -59,6 +59,7 @@ export async function POST(
         chargedImmediately: true,
         divinityCoinCheckoutSessionId: true,
         divinityCoinPaymentId: true,
+        amount: true,
       },
     });
 
@@ -193,6 +194,20 @@ export async function POST(
     // the pledge if we haven't already so the cron + verify-payment
     // safety net can find it; the webhook (or the cron) will flip
     // status to COMPLETED.
+    //
+    // The session's amount is fixed when it is opened; the pledge row is
+    // rewritten every time the backer changes the cart. The pledge page
+    // drops its session whenever the cart changes, and the server keys
+    // sessions on the amount, so these should always agree. If they ever
+    // don't, the backer was charged a different total than the order
+    // shows — shout so support can reconcile it.
+    const expectedCents = Math.round(Number(pledge.amount) * 100);
+    if (typeof dcSession.amount === "number" && dcSession.amount !== expectedCents) {
+      log.error(
+        { pledgeId: pledge.id, sessionId: dcSession.sessionId, chargedCents: dcSession.amount, pledgeCents: expectedCents },
+        "[confirm-dc-checkout] DC session amount differs from the pledge amount (cart changed after checkout opened?)"
+      );
+    }
     if (dcSession.paymentIntentId && pledge.divinityCoinPaymentId !== dcSession.paymentIntentId) {
       await db.pledge.update({
         where: { id: pledge.id },

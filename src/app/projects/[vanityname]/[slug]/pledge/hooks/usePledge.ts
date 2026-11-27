@@ -315,11 +315,51 @@ export function usePledge() {
     if (!clientSecret && !paypalOrderId && !whopSessionId && !dcCheckoutUrl && !paymentError && !isProcessing) creatingPaymentRef.current = false;
   }, [clientSecret, paypalOrderId, whopSessionId, dcCheckoutUrl, paymentError, isProcessing]);
 
+  // The cart as it was when the payment handle (DC checkout session,
+  // PaymentIntent, Whop session, PayPal order) was created. Every one of
+  // those carries a fixed amount. A backer who reaches Payment, goes back
+  // to Add-ons, changes the cart and comes forward again used to be shown
+  // the OLD session: the auto-create effect bails while a handle exists,
+  // so our summary said $145 and DC's checkout still charged $180. When
+  // the cart no longer matches the handle, drop the handle; the
+  // auto-create effect then opens a fresh session for the real total
+  // (the server reuses the same PENDING pledge row and keys the DC
+  // session on the amount, so a changed cart always gets a new one).
+  const cartSignature = JSON.stringify({
+    reward: selectedReward?.id ?? null,
+    noReward: pledgeWithoutReward,
+    custom: pledgeWithoutReward ? customPledgeAmount : null,
+    addons: Object.entries(selectedAddons).sort(([a], [b]) => a.localeCompare(b)),
+    bonus: bonusSupport,
+    country: shippingCountry,
+  });
+  const cartAtPaymentRef = useRef<string | null>(null);
+  useEffect(() => {
+    const at = cartAtPaymentRef.current;
+    if (at === null || at === cartSignature) return;
+    if (step === "success") return;
+    cartAtPaymentRef.current = null;
+    const hasHandle = !!(dcCheckoutUrl || clientSecret || whopSessionId || paypalOrderId || currentPledgeId);
+    if (!hasHandle) return;
+    setDcCheckoutUrl(null);
+    setDcSessionId(null);
+    setClientSecret(null);
+    setWhopSessionId(null);
+    setWhopPlanId(null);
+    setPaypalOrderId(null);
+    setCurrentPledgeId(null);
+    setModifyChargeAmount(null);
+    setPaymentError(null);
+    setIsProcessing(false);
+    creatingPaymentRef.current = false;
+  }, [cartSignature, step, dcCheckoutUrl, clientSecret, whopSessionId, paypalOrderId, currentPledgeId]);
+
   const createAdditionalItemsPurchase = async () => {
     if (!project || !existingPledgeId || Object.keys(selectedAddons).length === 0) return;
     if (clientSecret || currentPledgeId) return;
     if (creatingPaymentRef.current) return;
     creatingPaymentRef.current = true;
+    cartAtPaymentRef.current = cartSignature;
     setIsProcessing(true);
     setPaymentError(null);
     try {
@@ -355,6 +395,7 @@ export function usePledge() {
     if (currentPledgeId) return;
     if (creatingPaymentRef.current) return;
     creatingPaymentRef.current = true;
+    cartAtPaymentRef.current = cartSignature;
     setIsProcessing(true);
     setPaymentError(null);
     try {
@@ -432,6 +473,7 @@ export function usePledge() {
       return;
     }
     creatingPaymentRef.current = true;
+    cartAtPaymentRef.current = cartSignature;
     setIsProcessing(true);
     setPaymentError(null);
     try {
