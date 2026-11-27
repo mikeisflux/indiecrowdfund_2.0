@@ -238,6 +238,7 @@ export function BackerDialog({ open, onOpenChange, backer, availableAddons = [],
   const [surveyData, setSurveyData] = useState<SurveyData | null>(null);
   const [surveyLoading, setSurveyLoading] = useState(false);
   const [surveyError, setSurveyError] = useState<string | null>(null);
+  const [reopeningSurvey, setReopeningSurvey] = useState(false);
 
   // Upgrade add-on assignments: fetched per pledge from the production API
   // (eligible items, per-copy picks, suggestion parsed from any old
@@ -393,6 +394,34 @@ export function BackerDialog({ open, onOpenChange, backer, availableAddons = [],
     } catch (error) {
       toast.error("Failed to resend survey");
       console.error("Resend survey error:", error);
+    }
+  };
+
+  // Reopen this one backer's submitted survey so they can fix their own
+  // answers (e.g. a 4-pack that was only asked about once). Leaves every
+  // other backer alone, unlike "Request Updated Survey".
+  const handleReopenSurvey = async () => {
+    const note = window.prompt(
+      `Reopen ${backer.name || backer.email}'s survey so they can change their answers? They'll get an email with a link.\n\nOptional note to include (what to fix):`,
+      ""
+    );
+    if (note === null) return;
+    setReopeningSurvey(true);
+    try {
+      const res = await apiFetch(`/api/creator/indiekit/surveys/${backer.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "reopen", note: note.trim() || undefined }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Failed to reopen survey");
+      toast.success(data.emailed ? `Survey reopened and ${backer.email} was emailed` : "Survey reopened");
+      fetchSurveyData();
+      onRefresh?.();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to reopen survey");
+    } finally {
+      setReopeningSurvey(false);
     }
   };
 
@@ -928,10 +957,16 @@ export function BackerDialog({ open, onOpenChange, backer, availableAddons = [],
                             : "This backer has completed their survey. View their responses below."}
                         </p>
                         {surveyData?.survey && (
-                          <Button variant="ghost" size="sm" onClick={() => window.open(`/dashboard/indiekit/survey/${backer.id}/fill`, "_blank")}>
-                            <ClipboardPen className="h-4 w-4 mr-1" />
-                            Edit answers
-                          </Button>
+                          <div className="flex items-center gap-1">
+                            <Button variant="ghost" size="sm" onClick={() => window.open(`/dashboard/indiekit/survey/${backer.id}/fill`, "_blank")}>
+                              <ClipboardPen className="h-4 w-4 mr-1" />
+                              Edit answers
+                            </Button>
+                            <Button variant="ghost" size="sm" onClick={handleReopenSurvey} disabled={reopeningSurvey} title="Let the backer change their own answers">
+                              <RefreshCw className={`h-4 w-4 mr-1 ${reopeningSurvey ? "animate-spin" : ""}`} />
+                              Reopen for backer
+                            </Button>
+                          </div>
                         )}
                       </div>
                     ) : (

@@ -64,7 +64,9 @@ export type AuditAction =
   | "MFA_DISABLED"
   | "MFA_BACKUP_CODES_REGENERATED"
   // Creator (or collaborator) entered a backer's survey answers for them.
-  | "SURVEY_FILLED_BY_CREATOR";
+  | "SURVEY_FILLED_BY_CREATOR"
+  // Creator reopened one backer's submitted survey so they can edit it.
+  | "SURVEY_REOPENED_FOR_BACKER";
 
 // Fields that should have their values masked in audit logs
 const SENSITIVE_FIELDS = new Set([

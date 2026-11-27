@@ -460,3 +460,113 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ pled
     return NextResponse.json({ error: `Failed to save survey${message ? `: ${message.slice(0, 200)}` : ""}` }, { status: 500 });
   }
 }
+
+const reopenSchema = z.object({
+  action: z.literal("reopen"),
+  /** Optional line from the creator telling the backer what to fix. */
+  note: z.string().trim().max(500).optional(),
+  notifyBacker: z.boolean().optional().default(true),
+});
+
+// PATCH { action: "reopen" } - Reopen ONE backer's submitted survey so they
+// can change their own answers.
+//
+// "Request Updated Survey" on the Surveys tab reopens every response in the
+// campaign, which is the wrong tool when a single backer answered before a
+// question changed (a 4-pack add-on that was asked once, a cover picked by
+// mistake). This flips just their response back to in-progress, keeps every
+// answer they already gave as the starting point, restarts their reminder
+// cadence, and emails them a link — with the creator's note on what to look
+// at. A survey the creator has locked, or an order the backer has locked,
+// stays shut.
+export async function PATCH(req: NextRequest, { params }: { params: Promise<{ pledgeId: string }> }) {
+  try {
+    const session = await auth();
+    if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const { pledgeId } = await params;
+
+    const raw = await req.json().catch(() => null);
+    const parsed = reopenSchema.safeParse(raw);
+    if (!parsed.success) return NextResponse.json({ error: "Invalid request" }, { status: 400 });
+    const { note, notifyBacker } = parsed.data;
+
+    const pledge = await db.pledge.findFirst({
+      where: { id: pledgeId, deletedAt: null },
+      include: {
+        project: {
+          select: {
+            id: true,
+            title: true,
+            creatorId: true,
+            creator: { select: { name: true } },
+            collaborators: { where: { userId: session.user.id, status: "ACCEPTED" }, select: { canCoordinateFulfillment: true, canConfigurePledgeManager: true } },
+          },
+        },
+        user: { select: { email: true, name: true } },
+      },
+    });
+    if (!pledge) return NextResponse.json({ error: "Pledge not found" }, { status: 404 });
+    const isOwner = pledge.project.creatorId === session.user.id;
+    const collab = pledge.project.collaborators[0];
+    if (!isOwner && !(collab && (collab.canCoordinateFulfillment || collab.canConfigurePledgeManager))) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    const survey = await db.survey.findUnique({ where: { projectId: pledge.projectId }, select: { id: true, status: true } });
+    if (!survey) return NextResponse.json({ error: "This campaign has no survey." }, { status: 400 });
+    if (survey.status === "LOCKED") {
+      return NextResponse.json({ error: "The survey is locked. Unlock it on the Surveys tab before reopening a response." }, { status: 400 });
+    }
+    if (survey.status !== "SENT") {
+      return NextResponse.json({ error: "The survey hasn't been sent yet, so there is nothing to reopen." }, { status: 400 });
+    }
+    if (pledge.orderLockStatus === "LOCKED") {
+      return NextResponse.json({ error: "This backer locked their order. Unlock the order first if they need to change it." }, { status: 400 });
+    }
+
+    const existing = await db.surveyResponse.findFirst({ where: { pledgeId, surveyId: survey.id }, select: { id: true, isComplete: true } });
+    if (existing) {
+      await db.surveyResponse.update({ where: { id: existing.id }, data: { isComplete: false, completedAt: null } });
+    }
+    await db.pledge.update({
+      where: { id: pledgeId },
+      data: { surveyCompleted: false, surveyReminderCount: 0, surveyReminderSentAt: null },
+    });
+
+    auditLog({
+      action: "SURVEY_REOPENED_FOR_BACKER",
+      actorId: session.user.id,
+      actorEmail: session.user.email || undefined,
+      targetId: pledgeId,
+      targetType: "PROJECT",
+      details: { projectId: pledge.projectId, backerEmail: pledge.user?.email, wasComplete: !!existing?.isComplete, note: note || null },
+    });
+
+    let emailed = false;
+    if (notifyBacker && pledge.user?.email) {
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://indiecrowdfund.com";
+      const creatorName = pledge.project.creator?.name || "The creator";
+      const surveyUrl = `${appUrl}/dashboard/pledges/${pledgeId}/survey`;
+      await sendEmail({
+        to: pledge.user.email,
+        subject: `Your survey for "${pledge.project.title}" is open again`,
+        html: `<p>Hi ${escapeHtml(pledge.user.name || "there")},</p>
+<p>${escapeHtml(creatorName)} has reopened your survey for <strong>${escapeHtml(pledge.project.title)}</strong> so you can update your answers. Everything you already entered is still there; change what needs changing and submit again.</p>
+${note ? `<p style="padding:12px 16px;border-left:3px solid #0d9488;background:#f0fdfa;"><strong>From ${escapeHtml(creatorName)}:</strong> ${escapeHtml(note)}</p>` : ""}
+<p><a href="${surveyUrl}" style="display:inline-block;background:#0d9488;color:#fff;padding:12px 24px;border-radius:6px;text-decoration:none;font-weight:600;">Update my survey</a></p>
+<p style="color:#666;font-size:14px;">Or open it at <a href="${surveyUrl}">${surveyUrl}</a>.</p>`,
+        skipUnsubscribeCheck: true,
+      })
+        .then(() => {
+          emailed = true;
+        })
+        .catch((err: unknown) => creatorIndiekitSurveysLogger.warn({ err: String(err), pledgeId }, "survey reopen email failed"));
+    }
+
+    creatorIndiekitSurveysLogger.info({ pledgeId, actor: session.user.id, emailed }, "Survey reopened for backer");
+    return NextResponse.json({ ok: true, emailed });
+  } catch (error) {
+    creatorIndiekitSurveysLogger.error({ err: formatError(error) }, "Error reopening survey for backer:");
+    return NextResponse.json({ error: "Failed to reopen survey" }, { status: 500 });
+  }
+}

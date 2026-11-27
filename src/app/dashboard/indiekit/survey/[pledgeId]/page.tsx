@@ -18,7 +18,8 @@ import {
   User,
   Mail, ClipboardPen,
 } from "lucide-react";
-import { fetchWithRetry } from "@/lib/fetch-utils";
+import { fetchWithRetry, apiFetch } from "@/lib/fetch-utils";
+import { toast } from "sonner";
 
 interface SurveyData {
   /** Set when the backer confirmed their order through Order Lock. */
@@ -107,6 +108,32 @@ export default function CreatorSurveyViewPage() {
     fetchSurvey();
   }, [fetchSurvey]);
 
+  // Hand the survey back to the backer so they can fix their own answers.
+  const [reopening, setReopening] = useState(false);
+  const reopenForBacker = async () => {
+    const note = window.prompt(
+      "Reopen this backer's survey so they can change their answers? They'll get an email with a link.\n\nOptional note to include (what to fix):",
+      ""
+    );
+    if (note === null) return;
+    setReopening(true);
+    try {
+      const res = await apiFetch(`/api/creator/indiekit/surveys/${pledgeId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "reopen", note: note.trim() || undefined }),
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(body.error || "Failed to reopen survey");
+      toast.success(body.emailed ? "Survey reopened and the backer was emailed" : "Survey reopened");
+      fetchSurvey();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to reopen survey");
+    } finally {
+      setReopening(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -175,6 +202,12 @@ export default function CreatorSurveyViewPage() {
                     <ClipboardPen className="h-4 w-4 mr-1" />
                     {response?.isComplete ? "Edit answers" : "Fill out for backer"}
                   </Link>
+                </Button>
+              )}
+              {survey && response?.isComplete && !data.orderLock && (
+                <Button size="sm" variant="outline" onClick={reopenForBacker} disabled={reopening} title="Let the backer change their own answers">
+                  <RefreshCw className={`h-4 w-4 mr-1 ${reopening ? "animate-spin" : ""}`} />
+                  Reopen for backer
                 </Button>
               )}
               <Badge variant={response?.isComplete ? "default" : "secondary"} className="text-sm">
